@@ -838,6 +838,114 @@ func ConfigCDNAutoWithRateLimiterDictionaryRemoved(serviceName, domainName, rate
 	)
 }
 
+// ConfigCDNAutoWithDirector returns a CDN auto service config with a domain, a backend, and a
+// director mapped to that backend.
+func ConfigCDNAutoWithDirector(serviceName, domainName, backendName, directorName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":  serviceName,
+			"DOMAIN_NAME":   domainName,
+			"BACKEND_NAME":  backendName,
+			"DIRECTOR_NAME": directorName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/director_single.tf",
+	)
+}
+
+// ConfigCDNAutoWithDirectorUpdated returns a CDN auto service config with the same director and
+// backend names as ConfigCDNAutoWithDirector, but with comment/quorum/retries/shield/type changed.
+func ConfigCDNAutoWithDirectorUpdated(serviceName, domainName, backendName, directorName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":  serviceName,
+			"DOMAIN_NAME":   domainName,
+			"BACKEND_NAME":  backendName,
+			"DIRECTOR_NAME": directorName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/director_updated.tf",
+	)
+}
+
+// ConfigCDNAutoWithDirectorBackendSwapped returns a CDN auto service config with the same
+// director name as ConfigCDNAutoWithDirector, but the original backend removed entirely and a
+// new backend added and referenced instead - exercising the ordering between backend
+// create/delete and director reconciliation (see servicecdnauto's Update).
+func ConfigCDNAutoWithDirectorBackendSwapped(serviceName, domainName, backendName2, directorName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":   serviceName,
+			"DOMAIN_NAME":    domainName,
+			"BACKEND_NAME_2": backendName2,
+			"DIRECTOR_NAME":  directorName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/director_backend_swapped.tf",
+	)
+}
+
+// ConfigCDNAutoWithTwoOrderedDirectors returns a CDN auto service config with two directors,
+// directorA (type "hash") followed by directorB (type omitted, defaults to "random").
+func ConfigCDNAutoWithTwoOrderedDirectors(serviceName, domainName, backendNameA, backendNameB, directorNameA, directorNameB string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"DOMAIN_NAME":     domainName,
+			"BACKEND_NAME_A":  backendNameA,
+			"BACKEND_NAME_B":  backendNameB,
+			"DIRECTOR_NAME_A": directorNameA,
+			"DIRECTOR_NAME_B": directorNameB,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/director_two_ordered.tf",
+	)
+}
+
+// ConfigCDNAutoWithDirectorInsertedAhead returns a CDN auto service config with the same
+// directorA/directorB names and backends as ConfigCDNAutoWithTwoOrderedDirectors, but with a new
+// directorC (and its backend) inserted ahead of directorA in the config, and the explicit
+// type = "hash" removed from directorA. directorA's type should reset to the default ("random")
+// on omit, not stick to "hash" - see the typeStickyDefault doc comment in
+// internal/resources/director/schema.go.
+func ConfigCDNAutoWithDirectorInsertedAhead(serviceName, domainName, backendNameA, backendNameB, backendNameC, directorNameA, directorNameB, directorNameC string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"DOMAIN_NAME":     domainName,
+			"BACKEND_NAME_A":  backendNameA,
+			"BACKEND_NAME_B":  backendNameB,
+			"BACKEND_NAME_C":  backendNameC,
+			"DIRECTOR_NAME_A": directorNameA,
+			"DIRECTOR_NAME_B": directorNameB,
+			"DIRECTOR_NAME_C": directorNameC,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/director_reordered_insert.tf",
+	)
+}
+
+// ConfigCDNAutoWithDirectorNegativeRetries returns a CDN auto service config with a director
+// whose retries is negative, exercising the retries int64validator.AtLeast(0) plan-time check.
+func ConfigCDNAutoWithDirectorNegativeRetries(serviceName, domainName, backendName, directorName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":  serviceName,
+			"DOMAIN_NAME":   domainName,
+			"BACKEND_NAME":  backendName,
+			"DIRECTOR_NAME": directorName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/director_negative_retries.tf",
+	)
+}
+
 // ConfigCDNAutoWithGzip returns a CDN auto service config with a domain and a gzip configuration
 func ConfigCDNAutoWithGzip(serviceName, domainName, gzipName string) string {
 	return BuildConfig(
