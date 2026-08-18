@@ -20,6 +20,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/resources/loggingnewrelicotlp"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/loggings3"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/loggingsplunk"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/resourcelink"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 
@@ -70,6 +71,7 @@ type Model struct {
 	LoggingGCS          []logginggcs.ComputeNestedModel          `tfsdk:"logging_gcs"`
 	LoggingSplunk       []loggingsplunk.ComputeNestedModel       `tfsdk:"logging_splunk"`
 	LoggingHTTPS        []logginghttps.ComputeNestedModel        `tfsdk:"logging_https"`
+	LoggingSumologic    []loggingsumologic.ComputeNestedModel    `tfsdk:"logging_sumologic"`
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -134,6 +136,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_gcs":          logginggcs.ComputeNestedBlockSchema(),
 			"logging_splunk":       loggingsplunk.ComputeNestedBlockSchema(),
 			"logging_https":        logginghttps.ComputeNestedBlockSchema(),
+			"logging_sumologic":    loggingsumologic.ComputeNestedBlockSchema(),
 		},
 	}
 }
@@ -357,6 +360,18 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	plan.LoggingHTTPS = logginghttps.ComputeMatchOrder(loggingHTTPS, plan.LoggingHTTPS)
 
+	if err := loggingsumologic.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingSumologic); err != nil {
+		resp.Diagnostics.AddError("Error reconciling Sumologic logging endpoints", err.Error())
+		return
+	}
+
+	loggingSumologics, err := loggingsumologic.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Sumologic logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingSumologic = loggingsumologic.ComputeMatchOrder(loggingSumologics, plan.LoggingSumologic)
+
 	if err := computepackage.Update(ctx, r.providerData.AutoClient(), serviceID, version, plan.Package); err != nil {
 		resp.Diagnostics.AddError("Error updating Compute package", err.Error())
 		return
@@ -502,6 +517,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading HTTPS logging endpoints", err.Error())
 		return
 	}
+	loggingSumologics, err := loggingsumologic.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Sumologic logging endpoints", err.Error())
+		return
+	}
 	state.Domain = domain.MatchOrder(domains, state.Domain)
 	state.HealthCheck = healthcheck.MatchOrder(healthChecks, state.HealthCheck)
 	state.Backend = backend.MatchOrder(backends, state.Backend)
@@ -515,6 +535,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.LoggingGCS = logginggcs.ComputeMatchOrder(loggingGCSs, state.LoggingGCS)
 	state.LoggingSplunk = loggingsplunk.ComputeMatchOrder(loggingSplunks, state.LoggingSplunk)
 	state.LoggingHTTPS = logginghttps.ComputeMatchOrder(loggingHTTPS, state.LoggingHTTPS)
+	state.LoggingSumologic = loggingsumologic.ComputeMatchOrder(loggingSumologics, state.LoggingSumologic)
 
 	resourceLinks, err := resourcelink.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
@@ -573,6 +594,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!logginggcs.ComputeEqual(plan.LoggingGCS, state.LoggingGCS) ||
 		!loggingsplunk.ComputeEqual(plan.LoggingSplunk, state.LoggingSplunk) ||
 		!logginghttps.ComputeEqual(plan.LoggingHTTPS, state.LoggingHTTPS) ||
+		!loggingsumologic.ComputeEqual(plan.LoggingSumologic, state.LoggingSumologic) ||
 		false
 	needsVersionChange := nestedChanged
 
@@ -778,6 +800,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 		plan.LoggingHTTPS = logginghttps.ComputeMatchOrder(loggingHTTPS, plan.LoggingHTTPS)
 
+		if err := loggingsumologic.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingSumologic); err != nil {
+			resp.Diagnostics.AddError("Error reconciling Sumologic logging endpoints", err.Error())
+			return
+		}
+
+		loggingSumologics, err := loggingsumologic.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading Sumologic logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingSumologic = loggingsumologic.ComputeMatchOrder(loggingSumologics, plan.LoggingSumologic)
+
 		if len(state.Package) > 0 && len(plan.Package) == 0 {
 			resp.Diagnostics.AddError(
 				"Removing Compute packages is not supported",
@@ -832,6 +866,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.LoggingGCS = logginggcs.ComputeMatchOrder(state.LoggingGCS, plan.LoggingGCS)
 		plan.LoggingSplunk = loggingsplunk.ComputeMatchOrder(state.LoggingSplunk, plan.LoggingSplunk)
 		plan.LoggingHTTPS = logginghttps.ComputeMatchOrder(state.LoggingHTTPS, plan.LoggingHTTPS)
+		plan.LoggingSumologic = loggingsumologic.ComputeMatchOrder(state.LoggingSumologic, plan.LoggingSumologic)
 	}
 
 	plan.ID = state.ID
