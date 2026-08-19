@@ -1201,6 +1201,42 @@ func TestAccFastlyServiceCDNAuto_responseObjectWithConditions(t *testing.T) {
 	})
 }
 
+func TestAccFastlyServiceCDNAuto_responseObjectWithConditionsRemoved(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	responseObjectName := fmt.Sprintf("response-object-%s", acctest.RandString(10))
+	requestConditionName := fmt.Sprintf("request-condition-%s", acctest.RandString(10))
+	cacheConditionName := fmt.Sprintf("cache-condition-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn_auto"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigCDNAutoWithResponseObjectConditions(serviceName, domainName, responseObjectName, requestConditionName, cacheConditionName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "condition.#", "2"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.#", "1"),
+				),
+			},
+			{
+				// Removing the response object and both conditions it references in the same
+				// update must not fail: the condition deletes must not be attempted while the
+				// response object still names them.
+				Config: ConfigCDNAutoBasic(serviceName, domainName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "condition.#", "0"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.#", "0"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccFastlyServiceCDNAuto_importWithResponseObject(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
