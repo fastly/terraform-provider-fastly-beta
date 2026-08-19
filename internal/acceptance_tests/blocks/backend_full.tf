@@ -70,7 +70,6 @@ EOT
   connect_timeout       = 2000
   first_byte_timeout    = 10000
   between_bytes_timeout = 5000
-  error_threshold       = 5
   keepalive_time        = 60
   max_lifetime          = 30000
   max_use               = 10
