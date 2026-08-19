@@ -2,6 +2,7 @@ package settings
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/fastly/terraform-provider-fastly/internal/errors"
@@ -157,13 +158,18 @@ func reconcileHTTP3(ctx context.Context, client *fastly.Client, serviceID string
 }
 
 func waitForHTTP3Consistency(ctx context.Context, client *fastly.Client, serviceID string, version int, desired bool) error {
-	for attempt := 0; ; attempt++ {
-		enabled, err := getHTTP3Enabled(ctx, client, serviceID, version)
+	var enabled bool
+	for attempt := 0; attempt < http3ConsistencyAttempts; attempt++ {
+		var err error
+		enabled, err = getHTTP3Enabled(ctx, client, serviceID, version)
 		if err != nil {
 			return err
 		}
-		if enabled == desired || attempt == http3ConsistencyAttempts-1 {
+		if enabled == desired {
 			return nil
+		}
+		if attempt == http3ConsistencyAttempts-1 {
+			break
 		}
 
 		select {
@@ -172,6 +178,8 @@ func waitForHTTP3Consistency(ctx context.Context, client *fastly.Client, service
 		case <-time.After(http3ConsistencyDelay):
 		}
 	}
+
+	return fmt.Errorf("HTTP/3 status did not reach desired state (%t) after %d attempts; last observed state was %t", desired, http3ConsistencyAttempts, enabled)
 }
 
 // getHTTP3Enabled reports whether HTTP/3 is enabled for a service version. The API returns a
