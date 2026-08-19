@@ -41,7 +41,7 @@ jobs:
         run: make test-unit
 
   docs:
-    runs-on: ubuntu-latest
+    runs-on: forge-amd64-small
     if: "!contains(github.event.pull_request.labels.*.name, 'Skip-Docs')"
     steps:
       - name: Checkout code
