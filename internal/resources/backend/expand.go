@@ -15,7 +15,6 @@ func BuildCreateInput(serviceID string, version int, m NestedModel) *fastly.Crea
 		Port:                new(int(service.Int64Value(m.Port))),
 		BetweenBytesTimeout: new(int(service.Int64Value(m.BetweenBytesTimeout))),
 		ConnectTimeout:      new(int(service.Int64Value(m.ConnectTimeout))),
-		ErrorThreshold:      new(int(service.Int64Value(m.ErrorThreshold))),
 		FirstByteTimeout:    new(int(service.Int64Value(m.FirstByteTimeout))),
 		HealthCheck:         new(service.StringValue(m.HealthCheck)),
 		MaxConn:             new(int(service.Int64Value(m.MaxConn))),
@@ -48,7 +47,6 @@ func BuildUpdateInput(serviceID string, version int, plan NestedModel) *fastly.U
 	input.Port = new(int(service.Int64Value(plan.Port)))
 	input.BetweenBytesTimeout = new(int(service.Int64Value(plan.BetweenBytesTimeout)))
 	input.ConnectTimeout = new(int(service.Int64Value(plan.ConnectTimeout)))
-	input.ErrorThreshold = new(int(service.Int64Value(plan.ErrorThreshold)))
 	input.FirstByteTimeout = new(int(service.Int64Value(plan.FirstByteTimeout)))
 	input.HealthCheck = new(service.StringValue(plan.HealthCheck))
 	input.MaxConn = new(int(service.Int64Value(plan.MaxConn)))
