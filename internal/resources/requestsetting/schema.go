@@ -12,10 +12,35 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
+
+// caseInsensitiveState preserves the prior state value when the configured value is
+// case-insensitively equal to it. actionPointer/xffPointer always lowercase the value sent to
+// the API, and ToModel reads state back in that lowercase form, so without this a
+// differently-cased config value (e.g. "PASS") would never converge with state and Terraform
+// would show a persistent plan diff on every run.
+type caseInsensitiveState struct{}
+
+func (m caseInsensitiveState) Description(_ context.Context) string {
+	return "Preserves the prior state value when the configured value differs only in case."
+}
+
+func (m caseInsensitiveState) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m caseInsensitiveState) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.StateValue.IsNull() || req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	if strings.EqualFold(req.StateValue.ValueString(), req.ConfigValue.ValueString()) {
+		resp.PlanValue = req.StateValue
+	}
+}
 
 type NestedModel struct {
 	Name             types.String `tfsdk:"name"`
@@ -33,7 +58,7 @@ type NestedModel struct {
 
 func (n NestedModel) ModelsEqual(other NestedModel) bool {
 	return service.StringValue(n.Name) == service.StringValue(other.Name) &&
-		service.StringValue(n.Action) == service.StringValue(other.Action) &&
+		strings.EqualFold(service.StringValue(n.Action), service.StringValue(other.Action)) &&
 		service.BoolValue(n.BypassBusyWait) == service.BoolValue(other.BypassBusyWait) &&
 		service.StringValue(n.DefaultHost) == service.StringValue(other.DefaultHost) &&
 		service.BoolValue(n.ForceMiss) == service.BoolValue(other.ForceMiss) &&
@@ -42,7 +67,7 @@ func (n NestedModel) ModelsEqual(other NestedModel) bool {
 		service.Int64Value(n.MaxStaleAge) == service.Int64Value(other.MaxStaleAge) &&
 		service.StringValue(n.RequestCondition) == service.StringValue(other.RequestCondition) &&
 		service.BoolValue(n.TimerSupport) == service.BoolValue(other.TimerSupport) &&
-		service.StringValue(n.XFF) == service.StringValue(other.XFF)
+		strings.EqualFold(service.StringValue(n.XFF), service.StringValue(other.XFF))
 }
 
 func CommonAttributes() map[string]schema.Attribute {
@@ -56,6 +81,9 @@ func CommonAttributes() map[string]schema.Attribute {
 			Description: "Allows you to terminate request handling and immediately perform an action. When set it can be `lookup` or `pass` (ignore the cache completely).",
 			Validators: []validator.String{
 				stringvalidator.OneOfCaseInsensitive("lookup", "pass"),
+			},
+			PlanModifiers: []planmodifier.String{
+				caseInsensitiveState{},
 			},
 		},
 		"bypass_busy_wait": schema.BoolAttribute{
@@ -111,6 +139,9 @@ func CommonAttributes() map[string]schema.Attribute {
 			Description: "X-Forwarded-For, should be `clear`, `leave`, `append`, `append_all`, or `overwrite`.",
 			Validators: []validator.String{
 				stringvalidator.OneOfCaseInsensitive("clear", "leave", "append", "append_all", "overwrite"),
+			},
+			PlanModifiers: []planmodifier.String{
+				caseInsensitiveState{},
 			},
 		},
 	}
