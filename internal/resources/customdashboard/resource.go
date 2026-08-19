@@ -372,6 +372,48 @@ func flattenDashboard(state *Model, dashboard *fastly.ObservabilityCustomDashboa
 	state.DashboardItem = flattenItems(dashboard.Items, previous)
 }
 
+func dashboardItemModelFromRemote(item fastly.DashboardItem, key string) DashboardItemModel {
+	metrics := make([]string, len(item.DataSource.Config.Metrics))
+	copy(metrics, item.DataSource.Config.Metrics)
+
+	metricsValue, _ := types.ListValueFrom(
+		context.Background(),
+		types.StringType,
+		metrics,
+	)
+
+	vizConfig := VisualizationConfigModel{
+		PlotType: types.StringValue(string(item.Visualization.Config.PlotType)),
+		Format:   types.StringValue(DefaultVisualizationFormat),
+	}
+	if item.Visualization.Config.CalculationMethod != nil {
+		vizConfig.CalculationMethod = types.StringValue(string(*item.Visualization.Config.CalculationMethod))
+	} else {
+		vizConfig.CalculationMethod = types.StringNull()
+	}
+	if item.Visualization.Config.Format != nil && *item.Visualization.Config.Format != "" {
+		vizConfig.Format = types.StringValue(string(*item.Visualization.Config.Format))
+	}
+
+	return DashboardItemModel{
+		Key:      types.StringValue(key),
+		ID:       types.StringValue(item.ID),
+		Title:    types.StringValue(item.Title),
+		Subtitle: types.StringValue(item.Subtitle),
+		Span:     types.Int64Value(int64(item.Span)),
+		DataSource: []DataSourceModel{{
+			Type: types.StringValue(string(item.DataSource.Type)),
+			Config: []DataSourceConfigModel{{
+				Metrics: metricsValue,
+			}},
+		}},
+		Visualization: []VisualizationModel{{
+			Type:   types.StringValue(string(item.Visualization.Type)),
+			Config: []VisualizationConfigModel{vizConfig},
+		}},
+	}
+}
+
 func flattenItems(items []fastly.DashboardItem, previous []DashboardItemModel) []DashboardItemModel {
 	if len(items) == 0 {
 		return nil
@@ -401,11 +443,14 @@ func flattenItems(items []fastly.DashboardItem, previous []DashboardItemModel) [
 			// Create/new-item responses do not have a previous API ID to match.
 			// Match the returned content to the desired item so the Terraform key
 			// survives even if the API changes item ordering.
+			remoteModel := dashboardItemModelFromRemote(item, "")
 			for i := range previous {
-				if usedPrevious[i] || (!previous[i].ID.IsNull() && !previous[i].ID.IsUnknown() && previous[i].ID.ValueString() != "") {
+				if usedPrevious[i] ||
+					previous[i].Key.IsNull() || previous[i].Key.IsUnknown() ||
+					(!previous[i].ID.IsNull() && !previous[i].ID.IsUnknown() && previous[i].ID.ValueString() != "") {
 					continue
 				}
-				if modelMatchesRemote(previous[i], item) {
+				if dashboardItemModelsEquivalent(previous[i], remoteModel) {
 					key = previous[i].Key.ValueString()
 					usedPrevious[i] = true
 					known = true
@@ -419,98 +464,9 @@ func flattenItems(items []fastly.DashboardItem, previous []DashboardItemModel) [
 			key = item.ID
 		}
 
-		metrics := make([]string, len(item.DataSource.Config.Metrics))
-		copy(metrics, item.DataSource.Config.Metrics)
-		metricsValue, _ := types.ListValueFrom(context.Background(), types.StringType, metrics)
-
-		vizConfig := VisualizationConfigModel{
-			PlotType: types.StringValue(string(item.Visualization.Config.PlotType)),
-			Format:   types.StringValue(DefaultVisualizationFormat),
-		}
-		if item.Visualization.Config.CalculationMethod != nil {
-			vizConfig.CalculationMethod = types.StringValue(string(*item.Visualization.Config.CalculationMethod))
-		} else {
-			vizConfig.CalculationMethod = types.StringNull()
-		}
-		if item.Visualization.Config.Format != nil && *item.Visualization.Config.Format != "" {
-			vizConfig.Format = types.StringValue(string(*item.Visualization.Config.Format))
-		}
-
-		result = append(result, DashboardItemModel{
-			Key:      types.StringValue(key),
-			ID:       types.StringValue(item.ID),
-			Title:    types.StringValue(item.Title),
-			Subtitle: types.StringValue(item.Subtitle),
-			Span:     types.Int64Value(int64(item.Span)),
-			DataSource: []DataSourceModel{{
-				Type: types.StringValue(string(item.DataSource.Type)),
-				Config: []DataSourceConfigModel{{
-					Metrics: metricsValue,
-				}},
-			}},
-			Visualization: []VisualizationModel{{
-				Type:   types.StringValue(string(item.Visualization.Type)),
-				Config: []VisualizationConfigModel{vizConfig},
-			}},
-		})
+		result = append(result, dashboardItemModelFromRemote(item, key))
 	}
 	return result
-}
-
-func modelMatchesRemote(model DashboardItemModel, remote fastly.DashboardItem) bool {
-	if model.Key.IsNull() || model.Key.IsUnknown() {
-		return false
-	}
-	if model.Title.ValueString() != remote.Title ||
-		model.Subtitle.ValueString() != remote.Subtitle ||
-		model.Span.ValueInt64() != int64(remote.Span) ||
-		len(model.DataSource) != 1 ||
-		len(model.DataSource[0].Config) != 1 ||
-		len(model.Visualization) != 1 ||
-		len(model.Visualization[0].Config) != 1 {
-		return false
-	}
-
-	if model.DataSource[0].Type.ValueString() != string(remote.DataSource.Type) ||
-		model.Visualization[0].Type.ValueString() != string(remote.Visualization.Type) ||
-		model.Visualization[0].Config[0].PlotType.ValueString() != string(remote.Visualization.Config.PlotType) {
-		return false
-	}
-
-	var metrics []string
-	if diags := model.DataSource[0].Config[0].Metrics.ElementsAs(context.Background(), &metrics, false); diags.HasError() {
-		return false
-	}
-	if len(metrics) != len(remote.DataSource.Config.Metrics) {
-		return false
-	}
-	for i := range metrics {
-		if metrics[i] != remote.DataSource.Config.Metrics[i] {
-			return false
-		}
-	}
-
-	modelCalc := ""
-	if !model.Visualization[0].Config[0].CalculationMethod.IsNull() && !model.Visualization[0].Config[0].CalculationMethod.IsUnknown() {
-		modelCalc = model.Visualization[0].Config[0].CalculationMethod.ValueString()
-	}
-	remoteCalc := ""
-	if remote.Visualization.Config.CalculationMethod != nil {
-		remoteCalc = string(*remote.Visualization.Config.CalculationMethod)
-	}
-	if modelCalc != remoteCalc {
-		return false
-	}
-
-	modelFormat := DefaultVisualizationFormat
-	if !model.Visualization[0].Config[0].Format.IsNull() && !model.Visualization[0].Config[0].Format.IsUnknown() && model.Visualization[0].Config[0].Format.ValueString() != "" {
-		modelFormat = model.Visualization[0].Config[0].Format.ValueString()
-	}
-	remoteFormat := DefaultVisualizationFormat
-	if remote.Visualization.Config.Format != nil && *remote.Visualization.Config.Format != "" {
-		remoteFormat = string(*remote.Visualization.Config.Format)
-	}
-	return modelFormat == remoteFormat
 }
 
 func expandItems(ctx context.Context, items []DashboardItemModel) ([]fastly.DashboardItem, diag.Diagnostics) {
