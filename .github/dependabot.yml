@@ -1,0 +1,41 @@
+version: 2
+updates:
+  # Dependencies listed in go.mod
+  - package-ecosystem: "gomod"
+    directory: "/" # Location of package manifests
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+      exclude:
+        - "github.com/fastly/go-fastly/*"
+    groups:
+      go-dependencies:
+        patterns:
+          - "*"
+  # Dependencies listed in tools/go.mod
+  - package-ecosystem: "gomod"
+    directory: "/tools"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    labels:
+      - "tools"
+    groups:
+      tools-dependencies:
+        patterns:
+          - "*"
+  # Dependencies listed in .github/workflows/*.yml
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    labels:
+      - "github_actions"
+    groups:
+      gha-dependencies:
+        patterns:
+          - "*"
