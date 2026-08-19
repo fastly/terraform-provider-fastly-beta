@@ -9,7 +9,7 @@ on:
       - labeled
       - unlabeled
     branches:
-      - dual-model-framework-rewrite
+      - main
 
 permissions:
   contents: read
