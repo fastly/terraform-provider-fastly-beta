@@ -1004,6 +1004,272 @@ func TestAccFastlyServiceCDNAuto_requestSettingWithRequestCondition(t *testing.T
 	})
 }
 
+func TestAccFastlyServiceCDNAuto_withResponseObject(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	responseObjectName := fmt.Sprintf("response-object-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn_auto"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigCDNAutoBasic(serviceName, domainName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.#", "0"),
+					// Initial version should be 1
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "active_version", "1"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "managed_version", "1"),
+				),
+			},
+			{
+				Config: ConfigCDNAutoWithResponseObject(serviceName, domainName, responseObjectName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.#", "1"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.name", responseObjectName),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.status", "200"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.response", "OK"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.content", "test content"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.content_type", "text/html"),
+					// Adding a response object should create and activate version 2
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "active_version", "2"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "managed_version", "2"),
+				),
+			},
+			{
+				Config: ConfigCDNAutoBasic(serviceName, domainName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.#", "0"),
+					// Removing the response object should create and activate version 3
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "active_version", "3"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "managed_version", "3"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccFastlyServiceCDNAuto_responseObjectMinimal(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	responseObjectName := fmt.Sprintf("response-object-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn_auto"),
+		Steps: []resource.TestStep{
+			{
+				// Every optional attribute left unset must default to its documented value
+				// rather than drifting on every plan. content_type is the exception: it is
+				// nullable on the API, so leaving it unset surfaces as null rather than "".
+				Config: ConfigCDNAutoWithResponseObjectMinimal(serviceName, domainName, responseObjectName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.#", "1"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.name", responseObjectName),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.status", "200"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.response", "OK"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.content", ""),
+					resource.TestCheckNoResourceAttr("fastly_service_cdn_auto.test", "response_object.0.content_type"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.request_condition", ""),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.cache_condition", ""),
+				),
+			},
+			{
+				Config:   ConfigCDNAutoWithResponseObjectMinimal(serviceName, domainName, responseObjectName),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func TestAccFastlyServiceCDNAuto_responseObjectUpdated(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	responseObjectName := fmt.Sprintf("response-object-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn_auto"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigCDNAutoWithResponseObject(serviceName, domainName, responseObjectName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.status", "200"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.response", "OK"),
+				),
+			},
+			{
+				// Same name, different attribute values - this is an in-place update, not a
+				// delete+recreate, since the name (the reconciler's identity key) hasn't
+				// changed.
+				Config: ConfigCDNAutoWithResponseObjectUpdated(serviceName, domainName, responseObjectName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.#", "1"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.name", responseObjectName),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.status", "404"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.response", "Not Found"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.content", "some, other, content"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.content_type", "text/csv"),
+				),
+			},
+			{
+				// Removing every optional attribute from config must clear them back to their
+				// documented defaults remotely, not just hide the drift in state. content_type is
+				// the exception: it is nullable on the API and omitted (not cleared to "") when
+				// unset in config, so removing it here leaves the previously-set "text/csv" as-is,
+				// matching how the API leaves an omitted field untouched.
+				Config: ConfigCDNAutoWithResponseObjectMinimal(serviceName, domainName, responseObjectName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.status", "200"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.response", "OK"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.content", ""),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.content_type", "text/csv"),
+				),
+			},
+			{
+				Config:   ConfigCDNAutoWithResponseObjectMinimal(serviceName, domainName, responseObjectName),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func TestAccFastlyServiceCDNAuto_multipleResponseObjects(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	responseObjectName1 := fmt.Sprintf("response-object-a-%s", acctest.RandString(10))
+	responseObjectName2 := fmt.Sprintf("response-object-b-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn_auto"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigCDNAutoWithMultipleResponseObjects(serviceName, domainName, responseObjectName1, responseObjectName2),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.#", "2"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.name", responseObjectName1),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.status", "200"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.1.name", responseObjectName2),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.1.status", "404"),
+				),
+			},
+			{
+				Config:   ConfigCDNAutoWithMultipleResponseObjects(serviceName, domainName, responseObjectName1, responseObjectName2),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func TestAccFastlyServiceCDNAuto_responseObjectWithConditions(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	responseObjectName := fmt.Sprintf("response-object-%s", acctest.RandString(10))
+	requestConditionName := fmt.Sprintf("request-condition-%s", acctest.RandString(10))
+	cacheConditionName := fmt.Sprintf("cache-condition-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn_auto"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigCDNAutoWithResponseObjectConditions(serviceName, domainName, responseObjectName, requestConditionName, cacheConditionName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "condition.#", "2"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.name", responseObjectName),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.request_condition", requestConditionName),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.cache_condition", cacheConditionName),
+				),
+			},
+		},
+	})
+}
+
+func TestAccFastlyServiceCDNAuto_responseObjectWithConditionsRemoved(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	responseObjectName := fmt.Sprintf("response-object-%s", acctest.RandString(10))
+	requestConditionName := fmt.Sprintf("request-condition-%s", acctest.RandString(10))
+	cacheConditionName := fmt.Sprintf("cache-condition-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn_auto"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigCDNAutoWithResponseObjectConditions(serviceName, domainName, responseObjectName, requestConditionName, cacheConditionName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "condition.#", "2"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.#", "1"),
+				),
+			},
+			{
+				// Removing the response object and both conditions it references in the same
+				// update must not fail: the condition deletes must not be attempted while the
+				// response object still names them.
+				Config: ConfigCDNAutoBasic(serviceName, domainName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "condition.#", "0"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccFastlyServiceCDNAuto_importWithResponseObject(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	responseObjectName := fmt.Sprintf("response-object-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn_auto"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigCDNAutoWithResponseObject(serviceName, domainName, responseObjectName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.#", "1"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.name", responseObjectName),
+				),
+			},
+			{
+				ResourceName:            "fastly_service_cdn_auto.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"force_destroy", "reuse"},
+			},
+		},
+	})
+}
+
 func TestAccFastlyServiceCDNAuto_withRateLimiter(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))

@@ -47,6 +47,7 @@ Automatic-lifecycle Fastly CDN service resource with nested versioned configurat
 - `logging_syslog` (Block List) Syslog logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_syslog))
 - `rate_limiter` (Block List) Rate limiters attached to this service. (see [below for nested schema](#nestedblock--rate_limiter))
 - `request_setting` (Block List) Request settings attached to this service. (see [below for nested schema](#nestedblock--request_setting))
+- `response_object` (Block List) Response objects attached to this service. (see [below for nested schema](#nestedblock--response_object))
 - `reuse` (Boolean) Deactivate the active version but do not delete the service, allowing it to be reused/imported elsewhere. Default `false`.
 - `snippet` (Block List) Regular VCL snippets attached to this service version. (see [below for nested schema](#nestedblock--snippet))
 - `vcl` (Block List) Custom VCL files attached to this service. (see [below for nested schema](#nestedblock--vcl))
@@ -700,6 +701,23 @@ Optional:
 - `request_condition` (String) Name of already defined `condition` to determine if this request setting should be applied. Should be unique across multiple instances of `request_setting`, including any left unset (Fastly rejects more than one request setting sharing the same, or unset, `request_condition`).
 - `timer_support` (Boolean) Injects the X-Timer info into the request for viewing origin fetch durations. Default `false`.
 - `xff` (String) X-Forwarded-For, should be `clear`, `leave`, `append`, `append_all`, or `overwrite`.
+
+
+<a id="nestedblock--response_object"></a>
+### Nested Schema for `response_object`
+
+Required:
+
+- `name` (String) A unique name to identify this Response Object. Changing this attribute will delete and recreate the resource.
+
+Optional:
+
+- `cache_condition` (String) Name of already defined `condition` to check after we have retrieved an object. If the condition passes then deliver this Response Object instead. This `condition` must be of type `CACHE`. For detailed information about Conditionals, see [Fastly's Documentation on Conditionals](https://docs.fastly.com/en/guides/using-conditions)
+- `content` (String) The content to deliver for the response object.
+- `content_type` (String) The MIME type of the content, can be empty.
+- `request_condition` (String) Name of already defined `condition` to be checked during the request phase. If the condition passes then this object will be delivered. This `condition` must be of type `REQUEST`.
+- `response` (String) The HTTP Response. Default `OK`.
+- `status` (Number) The HTTP Status Code. Default `200`.
 
 
 <a id="nestedblock--snippet"></a>

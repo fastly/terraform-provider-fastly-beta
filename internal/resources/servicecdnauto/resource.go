@@ -31,6 +31,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/resources/loggingsyslog"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/ratelimiter"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/requestsetting"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/responseobject"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/snippet"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/vcl"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
@@ -84,6 +85,7 @@ type Model struct {
 	Gzip                          []gzip.NestedModel                          `tfsdk:"gzip"`
 	CacheSetting                  []cachesetting.NestedModel                  `tfsdk:"cache_setting"`
 	RequestSetting                []requestsetting.NestedModel                `tfsdk:"request_setting"`
+	ResponseObject                []responseobject.NestedModel                `tfsdk:"response_object"`
 	Dictionary                    []dictionary.NestedModel                    `tfsdk:"dictionary"`
 	RateLimiter                   []ratelimiter.NestedModel                   `tfsdk:"rate_limiter"`
 	LoggingBlobStorage            []loggingblobstorage.NestedModel            `tfsdk:"logging_blobstorage"`
@@ -160,6 +162,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"gzip":                             gzip.NestedBlockSchema(),
 			"cache_setting":                    cachesetting.NestedBlockSchema(),
 			"request_setting":                  requestsetting.NestedBlockSchema(),
+			"response_object":                  responseobject.NestedBlockSchema(),
 			"dictionary":                       dictionary.NestedBlockSchema(),
 			"rate_limiter":                     ratelimiter.NestedBlockSchema(),
 			"logging_blobstorage":              loggingblobstorage.NestedBlockSchema(),
@@ -336,10 +339,10 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	plan.Domain = domain.MatchOrder(domains, plan.Domain)
 
-	// Conditions must be reconciled before backend/gzip/cache_setting/request_setting/header: all
-	// five can reference a condition by name (request_condition, cache_condition,
-	// response_condition), and the Fastly API rejects a create that names a condition which
-	// doesn't exist yet in this version.
+	// Conditions must be reconciled before backend/gzip/cache_setting/request_setting/
+	// response_object/header: all six can reference a condition by name (request_condition,
+	// cache_condition, response_condition), and the Fastly API rejects a create that names a
+	// condition which doesn't exist yet in this version.
 	if err := condition.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.Condition); err != nil {
 		resp.Diagnostics.AddError("Error reconciling conditions", err.Error())
 		return
@@ -453,6 +456,18 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 	plan.RequestSetting = requestsetting.MatchOrder(requestSettings, plan.RequestSetting)
+
+	if err := responseobject.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.ResponseObject); err != nil {
+		resp.Diagnostics.AddError("Error reconciling response objects", err.Error())
+		return
+	}
+
+	responseObjects, err := responseobject.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading service response objects", err.Error())
+		return
+	}
+	plan.ResponseObject = responseobject.MatchOrder(responseObjects, plan.ResponseObject)
 
 	if err := dictionary.ReconcileWithPrevious(ctx, r.providerData.AutoClient(), serviceID, version, nil, plan.Dictionary); err != nil {
 		resp.Diagnostics.AddError("Error reconciling dictionaries", err.Error())
@@ -779,6 +794,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading service request settings", err.Error())
 		return
 	}
+	responseObjects, err := responseobject.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading service response objects", err.Error())
+		return
+	}
 	dictionaries, err := dictionary.ReadForVersionWithPlan(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion, state.Dictionary)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading service dictionaries", err.Error())
@@ -854,6 +874,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.Gzip = gzip.MatchOrder(gzips, state.Gzip)
 	state.CacheSetting = cachesetting.MatchOrder(cacheSettings, state.CacheSetting)
 	state.RequestSetting = requestsetting.MatchOrder(requestSettings, state.RequestSetting)
+	state.ResponseObject = responseobject.MatchOrder(responseObjects, state.ResponseObject)
 	state.Dictionary = dictionary.MatchOrder(dictionaries, state.Dictionary)
 	state.RateLimiter = ratelimiter.MatchOrder(rateLimiters, state.RateLimiter)
 	state.LoggingBlobStorage = loggingblobstorage.MatchOrder(loggingBlobStorages, state.LoggingBlobStorage)
@@ -980,6 +1001,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!gzip.Equal(plan.Gzip, state.Gzip) ||
 		!cachesetting.Equal(plan.CacheSetting, state.CacheSetting) ||
 		!requestsetting.Equal(plan.RequestSetting, state.RequestSetting) ||
+		!responseobject.Equal(plan.ResponseObject, state.ResponseObject) ||
 		!dictionary.Equal(plan.Dictionary, state.Dictionary) ||
 		!ratelimiter.Equal(plan.RateLimiter, state.RateLimiter) ||
 		!loggingblobstorage.Equal(plan.LoggingBlobStorage, state.LoggingBlobStorage) ||
@@ -1043,10 +1065,10 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 		plan.Domain = domain.MatchOrder(domains, plan.Domain)
 
-		// Conditions must be reconciled before backend/gzip/cache_setting/request_setting/header:
-		// all five can reference a condition by name (request_condition, cache_condition,
-		// response_condition), and the Fastly API rejects a create that names a condition which
-		// doesn't exist yet in this version.
+		// Conditions must be reconciled before backend/gzip/cache_setting/request_setting/
+		// response_object/header: all six can reference a condition by name (request_condition,
+		// cache_condition, response_condition), and the Fastly API rejects a create that names a
+		// condition which doesn't exist yet in this version.
 		if err := condition.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Condition); err != nil {
 			resp.Diagnostics.AddError("Error reconciling conditions", err.Error())
 			return
@@ -1193,6 +1215,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 			return
 		}
 		plan.RequestSetting = requestsetting.MatchOrder(requestSettings, plan.RequestSetting)
+
+		if err := responseobject.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.ResponseObject); err != nil {
+			resp.Diagnostics.AddError("Error reconciling response objects", err.Error())
+			return
+		}
+
+		responseObjects, err := responseobject.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading service response objects", err.Error())
+			return
+		}
+		plan.ResponseObject = responseobject.MatchOrder(responseObjects, plan.ResponseObject)
 
 		// Dictionaries and rate limiters are reconciled in three passes, not the usual single
 		// ReconcileWithPrevious + Reconcile pair, because uri_dictionary_name creates a
@@ -1446,6 +1480,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.Gzip = gzip.MatchOrder(state.Gzip, plan.Gzip)
 		plan.CacheSetting = cachesetting.MatchOrder(state.CacheSetting, plan.CacheSetting)
 		plan.RequestSetting = requestsetting.MatchOrder(state.RequestSetting, plan.RequestSetting)
+		plan.ResponseObject = responseobject.MatchOrder(state.ResponseObject, plan.ResponseObject)
 		plan.Dictionary = dictionary.MatchOrder(state.Dictionary, plan.Dictionary)
 		plan.RateLimiter = ratelimiter.MatchOrder(state.RateLimiter, plan.RateLimiter)
 		plan.LoggingBlobStorage = loggingblobstorage.MatchOrder(state.LoggingBlobStorage, plan.LoggingBlobStorage)
