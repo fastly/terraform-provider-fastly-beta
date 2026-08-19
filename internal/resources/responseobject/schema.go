@@ -48,7 +48,7 @@ func CommonAttributes() map[string]schema.Attribute {
 			Optional:    true,
 			Computed:    true,
 			Default:     stringdefault.StaticString(""),
-			Description: "Name of already defined `condition` to check after we have retrieved an object. If the condition passes then deliver this Response Object instead. This `condition` must be of type `CACHE`.",
+			Description: "Name of already defined `condition` to check after we have retrieved an object. If the condition passes then deliver this Response Object instead. This `condition` must be of type `CACHE`. For detailed information about Conditionals, see [Fastly's Documentation on Conditionals](https://docs.fastly.com/en/guides/using-conditions)",
 		},
 		"content": schema.StringAttribute{
 			Optional:    true,
