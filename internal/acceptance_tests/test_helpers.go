@@ -4680,6 +4680,207 @@ func ConfigComputeAutoWithLoggingSumologicFormat(serviceName, domainName, logger
 	)
 }
 
+func ConfigLoggingSyslogBasic(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     "1",
+			"LOGGING_SYSLOG_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_syslog_basic.tf",
+	)
+}
+
+func ConfigLoggingSyslogUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     "1",
+			"LOGGING_SYSLOG_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_syslog_updated.tf",
+	)
+}
+
+func ConfigLoggingSyslogAtVersion(serviceName, domainName, loggerName string, version int) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     fmt.Sprintf("%d", version),
+			"LOGGING_SYSLOG_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_syslog_basic.tf",
+	)
+}
+
+func ConfigLoggingSyslogForImport(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     "1",
+			"LOGGING_SYSLOG_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_syslog_basic.tf",
+	)
+}
+
+// ConfigLoggingSyslogComputeFormat returns a config attaching
+// fastly_service_logging_syslog to an explicit Compute service with format
+// set, a VCL-only attribute. The standalone resource's schema is shared by both
+// service types, so this is expected to fail at apply time via
+// ValidateNoVCLOnlyAttributesForCompute rather than at Terraform's own
+// schema-validation stage.
+func ConfigLoggingSyslogComputeFormat(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"SERVICE_VERSION":     "1",
+			"LOGGING_SYSLOG_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_syslog_compute_format.tf",
+	)
+}
+
+// ConfigLoggingSyslogCompute returns a config attaching
+// fastly_service_logging_syslog to an explicit Compute service with no
+// VCL-only attributes set. ClearVCLOnlyCreateFields strips format from the
+// create request, so the endpoint ends up with whatever format the Fastly API
+// defaults to - see TestAccFastlyServiceLoggingSyslog_formatDefault.
+func ConfigLoggingSyslogCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"SERVICE_VERSION":     "1",
+			"LOGGING_SYSLOG_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_syslog_compute.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingSyslog(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_SYSLOG_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_syslog_nested.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingSyslogPlacementNone(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_SYSLOG_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_syslog_nested_placement_none.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingSyslogUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_SYSLOG_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_syslog_nested_updated.tf",
+	)
+}
+
+func ConfigCDNAutoWithMultipleLoggingSyslog(serviceName, domainName, loggerName1, loggerName2 string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":          serviceName,
+			"DOMAIN_NAME":           domainName,
+			"LOGGING_SYSLOG_NAME_1": loggerName1,
+			"LOGGING_SYSLOG_NAME_2": loggerName2,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_syslog_nested_multi.tf",
+	)
+}
+
+func ConfigCDNAutoWithBackendAndLoggingSyslog(serviceName, domainName, backendName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"BACKEND_NAME":        backendName,
+			"LOGGING_SYSLOG_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/backend_single.tf",
+		"internal/acceptance_tests/blocks/logging_syslog_nested.tf",
+	)
+}
+
+func ConfigComputeAutoWithLoggingSyslog(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_SYSLOG_NAME": loggerName,
+			"PACKAGE_PATH":        GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_syslog_nested.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigComputeAutoWithLoggingSyslogFormat returns a Compute auto service
+// config whose nested logging_syslog block sets format, a VCL-only
+// attribute. service_compute_auto's logging_syslog schema
+// (ComputeNestedBlockSchema) omits format/format_version/placement/response_condition
+// entirely, so this is expected to fail Terraform's own schema validation
+// ("Unsupported argument") rather than reach the Fastly API.
+func ConfigComputeAutoWithLoggingSyslogFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_SYSLOG_NAME": loggerName,
+			"PACKAGE_PATH":        GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_syslog_nested_compute_format.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
 // productEnablementBlock renders a single "internal/acceptance_tests/blocks/service_product_<product>.tf"
 // template, merging SERVICE_ID_REF (the Terraform expression for the owning
 // service's id, e.g. "fastly_service_cdn_auto.test.id") with any

@@ -28,6 +28,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/resources/loggings3"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/loggingsplunk"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/loggingsumologic"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/loggingsyslog"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/ratelimiter"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/snippet"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/vcl"
@@ -93,6 +94,7 @@ type Model struct {
 	LoggingSplunk                 []loggingsplunk.NestedModel                 `tfsdk:"logging_splunk"`
 	LoggingHTTPS                  []logginghttps.NestedModel                  `tfsdk:"logging_https"`
 	LoggingSumologic              []loggingsumologic.NestedModel              `tfsdk:"logging_sumologic"`
+	LoggingSyslog                 []loggingsyslog.NestedModel                 `tfsdk:"logging_syslog"`
 	ImageOptimizerDefaultSettings []imageoptimizerdefaultsettings.NestedModel `tfsdk:"image_optimizer_default_settings"`
 	Snippet                       []snippet.NestedModel                       `tfsdk:"snippet"`
 	DynamicSnippet                []dynamicsnippet.NestedModel                `tfsdk:"dynamic_snippet"`
@@ -167,6 +169,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_splunk":                   loggingsplunk.NestedBlockSchema(),
 			"logging_https":                    logginghttps.NestedBlockSchema(),
 			"logging_sumologic":                loggingsumologic.NestedBlockSchema(),
+			"logging_syslog":                   loggingsyslog.NestedBlockSchema(),
 			"image_optimizer_default_settings": imageoptimizerdefaultsettings.NestedBlockSchema(),
 			"snippet":                          snippet.NestedBlockSchema(),
 			"dynamic_snippet":                  dynamicsnippet.NestedBlockSchema(),
@@ -583,6 +586,18 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	plan.LoggingSumologic = loggingsumologic.MatchOrder(loggingSumologics, plan.LoggingSumologic)
 
+	if err := loggingsyslog.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingSyslog); err != nil {
+		resp.Diagnostics.AddError("Error reconciling Syslog logging endpoints", err.Error())
+		return
+	}
+
+	loggingSyslogs, err := loggingsyslog.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Syslog logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingSyslog = loggingsyslog.MatchOrder(loggingSyslogs, plan.LoggingSyslog)
+
 	if err := imageoptimizerdefaultsettings.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, nil, plan.ImageOptimizerDefaultSettings); err != nil {
 		resp.Diagnostics.AddError("Error reconciling Image Optimizer default settings", err.Error())
 		return
@@ -804,6 +819,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading Sumologic logging endpoints", err.Error())
 		return
 	}
+	loggingSyslogs, err := loggingsyslog.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Syslog logging endpoints", err.Error())
+		return
+	}
 	state.Domain = domain.MatchOrder(domains, state.Domain)
 	state.Backend = backend.MatchOrder(backends, state.Backend)
 	state.Director = director.MatchOrder(directors, state.Director)
@@ -825,6 +845,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.LoggingSplunk = loggingsplunk.MatchOrder(loggingSplunks, state.LoggingSplunk)
 	state.LoggingHTTPS = logginghttps.MatchOrder(loggingHTTPS, state.LoggingHTTPS)
 	state.LoggingSumologic = loggingsumologic.MatchOrder(loggingSumologics, state.LoggingSumologic)
+	state.LoggingSyslog = loggingsyslog.MatchOrder(loggingSyslogs, state.LoggingSyslog)
 
 	snippets, err := snippet.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
@@ -949,6 +970,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!loggingsplunk.Equal(plan.LoggingSplunk, state.LoggingSplunk) ||
 		!logginghttps.Equal(plan.LoggingHTTPS, state.LoggingHTTPS) ||
 		!loggingsumologic.Equal(plan.LoggingSumologic, state.LoggingSumologic) ||
+		!loggingsyslog.Equal(plan.LoggingSyslog, state.LoggingSyslog) ||
 		!imageoptimizerdefaultsettings.Equal(plan.ImageOptimizerDefaultSettings, state.ImageOptimizerDefaultSettings) ||
 		!snippet.Equal(plan.Snippet, state.Snippet) ||
 		!dynamicsnippet.Equal(plan.DynamicSnippet, state.DynamicSnippet) ||
@@ -1300,6 +1322,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 		plan.LoggingSumologic = loggingsumologic.MatchOrder(loggingSumologics, plan.LoggingSumologic)
 
+		if err := loggingsyslog.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingSyslog); err != nil {
+			resp.Diagnostics.AddError("Error reconciling Syslog logging endpoints", err.Error())
+			return
+		}
+
+		loggingSyslogs, err := loggingsyslog.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading Syslog logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingSyslog = loggingsyslog.MatchOrder(loggingSyslogs, plan.LoggingSyslog)
+
 		if err := imageoptimizerdefaultsettings.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, state.ImageOptimizerDefaultSettings, plan.ImageOptimizerDefaultSettings); err != nil {
 			resp.Diagnostics.AddError("Error reconciling Image Optimizer default settings", err.Error())
 			return
@@ -1389,6 +1423,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.LoggingSplunk = loggingsplunk.MatchOrder(state.LoggingSplunk, plan.LoggingSplunk)
 		plan.LoggingHTTPS = logginghttps.MatchOrder(state.LoggingHTTPS, plan.LoggingHTTPS)
 		plan.LoggingSumologic = loggingsumologic.MatchOrder(state.LoggingSumologic, plan.LoggingSumologic)
+		plan.LoggingSyslog = loggingsyslog.MatchOrder(state.LoggingSyslog, plan.LoggingSyslog)
 		plan.ImageOptimizerDefaultSettings = state.ImageOptimizerDefaultSettings
 		plan.Snippet = snippet.MatchOrderPreservePlanContent(state.Snippet, plan.Snippet)
 		plan.DynamicSnippet = dynamicsnippet.MatchOrderPreservePlanFields(state.DynamicSnippet, plan.DynamicSnippet)
