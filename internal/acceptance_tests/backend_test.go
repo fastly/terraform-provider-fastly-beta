@@ -102,7 +102,6 @@ func TestAccFastlyServiceBackend_fullConfig(t *testing.T) {
 					resource.TestCheckResourceAttr("fastly_service_backend.origin", "connect_timeout", "2000"),
 					resource.TestCheckResourceAttr("fastly_service_backend.origin", "first_byte_timeout", "10000"),
 					resource.TestCheckResourceAttr("fastly_service_backend.origin", "between_bytes_timeout", "5000"),
-					resource.TestCheckResourceAttr("fastly_service_backend.origin", "error_threshold", "5"),
 					resource.TestCheckResourceAttr("fastly_service_backend.origin", "keepalive_time", "60"),
 					resource.TestCheckResourceAttr("fastly_service_backend.origin", "max_lifetime", "30000"),
 					resource.TestCheckResourceAttr("fastly_service_backend.origin", "max_use", "10"),
