@@ -714,7 +714,7 @@ Optional:
 
 - `cache_condition` (String) Name of already defined `condition` to check after we have retrieved an object. If the condition passes then deliver this Response Object instead. This `condition` must be of type `CACHE`. For detailed information about Conditionals, see [Fastly's Documentation on Conditionals](https://docs.fastly.com/en/guides/using-conditions)
 - `content` (String) The content to deliver for the response object.
-- `content_type` (String) The MIME type of the content.
+- `content_type` (String) The MIME type of the content, can be empty.
 - `request_condition` (String) Name of already defined `condition` to be checked during the request phase. If the condition passes then this object will be delivered. This `condition` must be of type `REQUEST`.
 - `response` (String) The HTTP Response. Default `OK`.
 - `status` (Number) The HTTP Status Code. Default `200`.

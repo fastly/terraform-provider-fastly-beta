@@ -9,7 +9,9 @@ import (
 	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -57,10 +59,16 @@ func CommonAttributes() map[string]schema.Attribute {
 			Description: "The content to deliver for the response object.",
 		},
 		"content_type": schema.StringAttribute{
-			Optional:    true,
-			Computed:    true,
-			Default:     stringdefault.StaticString(""),
-			Description: "The MIME type of the content.",
+			Optional: true,
+			Computed: true,
+			// content_type is nullable on the API and omitted from create/read responses when
+			// unset; a static default would diverge from what flatten writes to state.
+			// UseStateForUnknown preserves the prior state value when the field is omitted from
+			// config, preventing (known after apply) drift on unrelated updates.
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+			Description: "The MIME type of the content, can be empty.",
 		},
 		"request_condition": schema.StringAttribute{
 			Optional:    true,
@@ -120,7 +128,7 @@ func (o ops) Create(ctx context.Context, client *fastly.Client, serviceID string
 		Name:             new(service.StringValue(desired.Name)),
 		CacheCondition:   new(service.StringValue(desired.CacheCondition)),
 		Content:          new(service.StringValue(desired.Content)),
-		ContentType:      new(service.StringValue(desired.ContentType)),
+		ContentType:      fastly.NullString(service.StringValue(desired.ContentType)),
 		RequestCondition: new(service.StringValue(desired.RequestCondition)),
 		Response:         new(service.StringValue(desired.Response)),
 		Status:           new(int(service.Int64Value(desired.Status))),
@@ -138,7 +146,7 @@ func (o ops) Update(ctx context.Context, client *fastly.Client, serviceID string
 		Name:             service.StringValue(desired.Name),
 		CacheCondition:   new(service.StringValue(desired.CacheCondition)),
 		Content:          new(service.StringValue(desired.Content)),
-		ContentType:      new(service.StringValue(desired.ContentType)),
+		ContentType:      fastly.NullString(service.StringValue(desired.ContentType)),
 		RequestCondition: new(service.StringValue(desired.RequestCondition)),
 		Response:         new(service.StringValue(desired.Response)),
 		Status:           new(int(service.Int64Value(desired.Status))),
@@ -150,7 +158,7 @@ func (o ops) ToModel(api *fastly.ResponseObject) NestedModel {
 		Name:             types.StringValue(fastly.ToValue(api.Name)),
 		CacheCondition:   service.StringPointerOrDefault(api.CacheCondition, ""),
 		Content:          service.StringPointerOrDefault(api.Content, ""),
-		ContentType:      service.StringPointerOrDefault(api.ContentType, ""),
+		ContentType:      service.StringPointerOrNull(api.ContentType),
 		RequestCondition: service.StringPointerOrDefault(api.RequestCondition, ""),
 		Response:         service.StringPointerOrDefault(api.Response, DefaultResponse),
 		Status:           service.Int64PointerOrDefault(api.Status, DefaultStatus),

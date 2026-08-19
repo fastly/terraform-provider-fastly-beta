@@ -1067,7 +1067,8 @@ func TestAccFastlyServiceCDNAuto_responseObjectMinimal(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				// Every optional attribute left unset must default to its documented value
-				// rather than drifting on every plan.
+				// rather than drifting on every plan. content_type is the exception: it is
+				// nullable on the API, so leaving it unset surfaces as null rather than "".
 				Config: ConfigCDNAutoWithResponseObjectMinimal(serviceName, domainName, responseObjectName),
 				Check: resource.ComposeTestCheckFunc(
 					CheckServiceExists("fastly_service_cdn_auto.test"),
@@ -1076,7 +1077,7 @@ func TestAccFastlyServiceCDNAuto_responseObjectMinimal(t *testing.T) {
 					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.status", "200"),
 					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.response", "OK"),
 					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.content", ""),
-					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.content_type", ""),
+					resource.TestCheckNoResourceAttr("fastly_service_cdn_auto.test", "response_object.0.content_type"),
 					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.request_condition", ""),
 					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.cache_condition", ""),
 				),
@@ -1125,14 +1126,17 @@ func TestAccFastlyServiceCDNAuto_responseObjectUpdated(t *testing.T) {
 			},
 			{
 				// Removing every optional attribute from config must clear them back to their
-				// documented defaults remotely, not just hide the drift in state.
+				// documented defaults remotely, not just hide the drift in state. content_type is
+				// the exception: it is nullable on the API and omitted (not cleared to "") when
+				// unset in config, so removing it here leaves the previously-set "text/csv" as-is,
+				// matching how the API leaves an omitted field untouched.
 				Config: ConfigCDNAutoWithResponseObjectMinimal(serviceName, domainName, responseObjectName),
 				Check: resource.ComposeTestCheckFunc(
 					CheckServiceExists("fastly_service_cdn_auto.test"),
 					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.status", "200"),
 					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.response", "OK"),
 					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.content", ""),
-					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.content_type", ""),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.content_type", "text/csv"),
 				),
 			},
 			{
