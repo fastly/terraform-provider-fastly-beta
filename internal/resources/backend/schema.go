@@ -23,7 +23,6 @@ const (
 	DefaultAutoLoadbalance     = false
 	DefaultBetweenBytesTimeout = 10000
 	DefaultConnectTimeout      = 1000
-	DefaultErrorThreshold      = 0
 	DefaultFirstByteTimeout    = 15000
 	DefaultHealthCheck         = ""
 	DefaultMaxConn             = 200
@@ -55,7 +54,6 @@ type NestedModel struct {
 	AutoLoadbalance     types.Bool   `tfsdk:"auto_loadbalance"`
 	BetweenBytesTimeout types.Int64  `tfsdk:"between_bytes_timeout"`
 	ConnectTimeout      types.Int64  `tfsdk:"connect_timeout"`
-	ErrorThreshold      types.Int64  `tfsdk:"error_threshold"`
 	FirstByteTimeout    types.Int64  `tfsdk:"first_byte_timeout"`
 	HealthCheck         types.String `tfsdk:"healthcheck"`
 	KeepaliveTime       types.Int64  `tfsdk:"keepalive_time"`
@@ -135,7 +133,6 @@ func (n NestedModel) ModelsEqual(other NestedModel) bool {
 		service.BoolValue(n.AutoLoadbalance) == service.BoolValue(other.AutoLoadbalance) &&
 		service.Int64Value(n.BetweenBytesTimeout) == service.Int64Value(other.BetweenBytesTimeout) &&
 		service.Int64Value(n.ConnectTimeout) == service.Int64Value(other.ConnectTimeout) &&
-		service.Int64Value(n.ErrorThreshold) == service.Int64Value(other.ErrorThreshold) &&
 		service.Int64Value(n.FirstByteTimeout) == service.Int64Value(other.FirstByteTimeout) &&
 		service.StringValue(n.HealthCheck) == service.StringValue(other.HealthCheck) &&
 		service.Int64Value(n.KeepaliveTime) == service.Int64Value(other.KeepaliveTime) &&
@@ -197,12 +194,6 @@ func CommonAttributes() map[string]schema.Attribute {
 			Computed:    true,
 			Default:     int64default.StaticInt64(DefaultConnectTimeout),
 			Description: "How long to wait for a timeout in milliseconds. Default `1000`.",
-		},
-		"error_threshold": schema.Int64Attribute{
-			Optional:    true,
-			Computed:    true,
-			Default:     int64default.StaticInt64(DefaultErrorThreshold),
-			Description: "Number of errors to allow before the backend is marked as down. Default `0`.",
 		},
 		"first_byte_timeout": schema.Int64Attribute{
 			Optional:    true,

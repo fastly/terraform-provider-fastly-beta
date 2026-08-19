@@ -1349,6 +1349,84 @@ func ConfigCDNAutoWithRequestSettingRequestCondition(serviceName, domainName, re
 	)
 }
 
+// ConfigCDNAutoWithResponseObject returns a CDN auto service config with a single response
+// object with every optional attribute set to a non-default value.
+func ConfigCDNAutoWithResponseObject(serviceName, domainName, responseObjectName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"DOMAIN_NAME":          domainName,
+			"RESPONSE_OBJECT_NAME": responseObjectName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/response_object_single.tf",
+	)
+}
+
+// ConfigCDNAutoWithResponseObjectMinimal returns a CDN auto service config with a response
+// object that leaves every optional attribute unset.
+func ConfigCDNAutoWithResponseObjectMinimal(serviceName, domainName, responseObjectName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"DOMAIN_NAME":          domainName,
+			"RESPONSE_OBJECT_NAME": responseObjectName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/response_object_minimal.tf",
+	)
+}
+
+// ConfigCDNAutoWithResponseObjectUpdated returns a CDN auto service config with the same
+// response object name but different attribute values.
+func ConfigCDNAutoWithResponseObjectUpdated(serviceName, domainName, responseObjectName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"DOMAIN_NAME":          domainName,
+			"RESPONSE_OBJECT_NAME": responseObjectName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/response_object_updated.tf",
+	)
+}
+
+// ConfigCDNAutoWithMultipleResponseObjects returns a CDN auto service config with two response
+// objects.
+func ConfigCDNAutoWithMultipleResponseObjects(serviceName, domainName, responseObjectName1, responseObjectName2 string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"DOMAIN_NAME":            domainName,
+			"RESPONSE_OBJECT_NAME_1": responseObjectName1,
+			"RESPONSE_OBJECT_NAME_2": responseObjectName2,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/response_object_multi.tf",
+	)
+}
+
+// ConfigCDNAutoWithResponseObjectConditions returns a CDN auto service config with a response
+// object whose request_condition and cache_condition reference real nested condition blocks.
+func ConfigCDNAutoWithResponseObjectConditions(serviceName, domainName, responseObjectName, requestConditionName, cacheConditionName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"DOMAIN_NAME":            domainName,
+			"RESPONSE_OBJECT_NAME":   responseObjectName,
+			"REQUEST_CONDITION_NAME": requestConditionName,
+			"CACHE_CONDITION_NAME":   cacheConditionName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/response_object_with_conditions.tf",
+	)
+}
+
 // ConfigACLForImport returns a test configuration for importing an ACL
 func ConfigACLForImport(serviceName, domainName, aclName string) string {
 	return BuildConfig(
