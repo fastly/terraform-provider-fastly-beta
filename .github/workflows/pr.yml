@@ -9,7 +9,7 @@ on:
       - labeled
       - unlabeled
     branches:
-      - dual-model-framework-rewrite
+      - main
 
 permissions:
   contents: read
@@ -20,10 +20,11 @@ defaults:
 
 jobs:
   test:
+    name: Test (${{ matrix.platform }})
     strategy:
       matrix:
         go-version: [1.26.x]
-        platform: [ubuntu-latest]
+        platform: [forge-amd64-small]
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout code
