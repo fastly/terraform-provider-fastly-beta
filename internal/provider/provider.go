@@ -43,6 +43,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/resources/loggings3"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/loggingsplunk"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/loggingsumologic"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/loggingsyslog"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/productenablement"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/resourcelink"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/servicecdn"
@@ -134,6 +135,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		loggings3.NewResource,
 		loggingsplunk.NewResource,
 		loggingsumologic.NewResource,
+		loggingsyslog.NewResource,
 		kvstore.NewResource,
 		vcl.NewResource,
 		snippet.NewResource,
@@ -185,6 +187,7 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		loggings3.NewListResource,
 		loggingsplunk.NewListResource,
 		loggingsumologic.NewListResource,
+		loggingsyslog.NewListResource,
 		servicecdn.NewListResource,
 		servicecompute.NewListResource,
 	}

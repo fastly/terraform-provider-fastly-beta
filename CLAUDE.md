@@ -11,7 +11,7 @@ Two resource families encoded in the resource type name (never a `mode`/`type` f
 - **Explicit** (`fastly_service_cdn`, `fastly_service_compute`, `fastly_service_domain`, `fastly_service_backend`) — caller manages version lifecycle. Provider writes to the version specified; rejects writes to active/locked versions.  
 - **Automatic** (`fastly_service_cdn_auto`, `fastly_service_compute_auto`) — provider auto-clones, validates, and activates every CRUD. Nested blocks own versioned config. No staging support.
 
-`terraform query` and actions (`version_clone`, `version_activate`, `version_stage`, `compute_package_upload`) are explicit-only.
+`terraform query` and actions (`version_clone`, `version_activate`, `version_stage`, `compute_package_upload`) are explicit-only. 
 
 ## Project structure
 

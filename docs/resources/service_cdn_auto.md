@@ -44,6 +44,7 @@ Automatic-lifecycle Fastly CDN service resource with nested versioned configurat
 - `logging_s3` (Block List) S3 logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_s3))
 - `logging_splunk` (Block List) Splunk logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_splunk))
 - `logging_sumologic` (Block List) Sumo Logic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_sumologic))
+- `logging_syslog` (Block List) Syslog logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_syslog))
 - `rate_limiter` (Block List) Rate limiters attached to this service. (see [below for nested schema](#nestedblock--rate_limiter))
 - `reuse` (Boolean) Deactivate the active version but do not delete the service, allowing it to be reused/imported elsewhere. Default `false`.
 - `snippet` (Block List) Regular VCL snippets attached to this service version. (see [below for nested schema](#nestedblock--snippet))
@@ -601,6 +602,47 @@ Optional:
 - `placement` (String) Where in the generated VCL the logging call should be placed. If not set, endpoints with `format_version` of `2` are placed in `vcl_log` and those with `format_version` of `1` are placed in `vcl_deliver`. Valid value is `none`.
 - `processing_region` (String) The geographic region where the logs will be processed before streaming. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
 - `response_condition` (String) The name of an existing condition in the configured endpoint, or leave blank to always execute.
+
+
+<a id="nestedblock--logging_syslog"></a>
+### Nested Schema for `logging_syslog`
+
+Required:
+
+- `address` (String) A hostname or IPv4 address of the Syslog endpoint.
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+
+Optional:
+
+- `authentication` (Attributes) Syslog authentication credentials. (see [below for nested schema](#nestedatt--logging_syslog--authentication))
+- `format` (String) A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/).
+- `format_version` (Number) The version of the custom logging format used for the configured endpoint. The logging call gets placed by default in `vcl_log` if `format_version` is set to `2` and in `vcl_deliver` if `format_version` is set to `1`.
+- `message_type` (String) How the message should be formatted. Valid values are `classic`, `loggly`, `logplex`, and `blank`. Default `classic`.
+- `placement` (String) Where in the generated VCL the logging call should be placed. If not set, endpoints with `format_version` of `2` are placed in `vcl_log` and those with `format_version` of `1` are placed in `vcl_deliver`. Valid value is `none`.
+- `port` (Number) The port associated with the address where the Syslog endpoint can be accessed. Default `514`.
+- `processing_region` (String) The geographic region where the logs will be processed before streaming. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+- `response_condition` (String) The name of an existing condition in the configured endpoint, or leave blank to always execute.
+- `tls` (Attributes) TLS configuration used when `use_tls` is enabled. When this block is omitted entirely, `ca_cert`, `client_cert`, and `client_key` default to the `FASTLY_SYSLOG_CA_CERT`, `FASTLY_SYSLOG_CLIENT_CERT`, and `FASTLY_SYSLOG_CLIENT_KEY` environment variables. (see [below for nested schema](#nestedatt--logging_syslog--tls))
+- `use_tls` (Boolean) Whether to use TLS for secure logging. Default: `false`.
+
+<a id="nestedatt--logging_syslog--authentication"></a>
+### Nested Schema for `logging_syslog.authentication`
+
+Optional:
+
+- `token` (String, Sensitive) Whether to prepend each message with a specific token.
+
+
+<a id="nestedatt--logging_syslog--tls"></a>
+### Nested Schema for `logging_syslog.tls`
+
+Optional:
+
+- `ca_cert` (String) A secure certificate to authenticate the server with. Must be in PEM format. Can be set via the `FASTLY_SYSLOG_CA_CERT` environment variable.
+- `client_cert` (String) The client certificate used to make authenticated requests. Must be in PEM format. Can be set via the `FASTLY_SYSLOG_CLIENT_CERT` environment variable.
+- `client_key` (String, Sensitive) The client private key used to make authenticated requests. Must be in PEM format. Can be set via the `FASTLY_SYSLOG_CLIENT_KEY` environment variable.
+- `hostname` (String) The hostname used to verify the server's certificate. This should be one of the Subject Alternative Name (SAN) fields for the certificate. Common Names (CN) are not supported.
+
 
 
 <a id="nestedblock--rate_limiter"></a>
