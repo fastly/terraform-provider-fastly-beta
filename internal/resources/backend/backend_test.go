@@ -21,7 +21,6 @@ func defaultNestedModel() NestedModel {
 		AutoLoadbalance:     types.BoolValue(false),
 		BetweenBytesTimeout: types.Int64Value(10000),
 		ConnectTimeout:      types.Int64Value(1000),
-		ErrorThreshold:      types.Int64Value(0),
 		FirstByteTimeout:    types.Int64Value(15000),
 		HealthCheck:         types.StringValue(""),
 		KeepaliveTime:       types.Int64Null(),
@@ -56,7 +55,6 @@ func fullNestedModel() NestedModel {
 		AutoLoadbalance:     types.BoolValue(true),
 		BetweenBytesTimeout: types.Int64Value(5000),
 		ConnectTimeout:      types.Int64Value(2000),
-		ErrorThreshold:      types.Int64Value(5),
 		FirstByteTimeout:    types.Int64Value(10000),
 		HealthCheck:         types.StringValue("health-check-1"),
 		KeepaliveTime:       types.Int64Value(300),
@@ -115,7 +113,6 @@ func TestFlattenToNestedModel(t *testing.T) {
 				AutoLoadbalance:     new(true),
 				BetweenBytesTimeout: new(5000),
 				ConnectTimeout:      new(2000),
-				ErrorThreshold:      new(5),
 				FirstByteTimeout:    new(10000),
 				HealthCheck:         new("health-check-1"),
 				KeepAliveTime:       new(300),
@@ -310,7 +307,6 @@ func TestBuildCreateInput(t *testing.T) {
 				assert.Equal(t, 80, *input.Port)
 				assert.Equal(t, 10000, *input.BetweenBytesTimeout)
 				assert.Equal(t, 1000, *input.ConnectTimeout)
-				assert.Equal(t, 0, *input.ErrorThreshold)
 				assert.Equal(t, 15000, *input.FirstByteTimeout)
 				assert.Equal(t, "", *input.HealthCheck)
 				assert.Equal(t, 200, *input.MaxConn)
@@ -347,7 +343,6 @@ func TestBuildCreateInput(t *testing.T) {
 				assert.Equal(t, fastly.Compatibool(true), *input.AutoLoadbalance)
 				assert.Equal(t, 5000, *input.BetweenBytesTimeout)
 				assert.Equal(t, 2000, *input.ConnectTimeout)
-				assert.Equal(t, 5, *input.ErrorThreshold)
 				assert.Equal(t, 10000, *input.FirstByteTimeout)
 				assert.Equal(t, "health-check-1", *input.HealthCheck)
 				assert.Equal(t, 300, *input.KeepAliveTime)
@@ -674,7 +669,6 @@ func TestModelToNested(t *testing.T) {
 					AutoLoadbalance:     types.BoolValue(false),
 					BetweenBytesTimeout: types.Int64Value(10000),
 					ConnectTimeout:      types.Int64Value(1000),
-					ErrorThreshold:      types.Int64Value(0),
 					FirstByteTimeout:    types.Int64Value(15000),
 					HealthCheck:         types.StringValue(""),
 					MaxConn:             types.Int64Value(200),
@@ -709,7 +703,6 @@ func TestModelToNested(t *testing.T) {
 				AutoLoadbalance:     types.BoolValue(false),
 				BetweenBytesTimeout: types.Int64Value(10000),
 				ConnectTimeout:      types.Int64Value(1000),
-				ErrorThreshold:      types.Int64Value(0),
 				FirstByteTimeout:    types.Int64Value(15000),
 				HealthCheck:         types.StringValue(""),
 				MaxConn:             types.Int64Value(200),
