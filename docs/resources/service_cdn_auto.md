@@ -49,6 +49,7 @@ Automatic-lifecycle Fastly CDN service resource with nested versioned configurat
 - `request_setting` (Block List) Request settings attached to this service. (see [below for nested schema](#nestedblock--request_setting))
 - `response_object` (Block List) Response objects attached to this service. (see [below for nested schema](#nestedblock--response_object))
 - `reuse` (Boolean) Deactivate the active version but do not delete the service, allowing it to be reused/imported elsewhere. Default `false`.
+- `settings` (Block List) General settings for this service version. At most one block is supported. Removing this block from configuration resets these settings back to their API defaults. (see [below for nested schema](#nestedblock--settings))
 - `snippet` (Block List) Regular VCL snippets attached to this service version. (see [below for nested schema](#nestedblock--snippet))
 - `vcl` (Block List) Custom VCL files attached to this service. (see [below for nested schema](#nestedblock--vcl))
 
@@ -718,6 +719,18 @@ Optional:
 - `request_condition` (String) Name of already defined `condition` to be checked during the request phase. If the condition passes then this object will be delivered. This `condition` must be of type `REQUEST`.
 - `response` (String) The HTTP Response. Default `OK`.
 - `status` (Number) The HTTP Status Code. Default `200`.
+
+
+<a id="nestedblock--settings"></a>
+### Nested Schema for `settings`
+
+Optional:
+
+- `default_host` (String) The default hostname.
+- `default_ttl` (Number) The default Time-to-live (TTL) for requests. Default `3600`.
+- `http3` (Boolean) Enables support for the HTTP/3 (QUIC) protocol. Default `false`.
+- `stale_if_error` (Boolean) Enables serving a stale object if there is an error. Default `false`.
+- `stale_if_error_ttl` (Number) The default time-to-live (TTL) for serving the stale object for the version. Default `43200`.
 
 
 <a id="nestedblock--snippet"></a>
