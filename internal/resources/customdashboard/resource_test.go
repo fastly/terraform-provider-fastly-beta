@@ -143,10 +143,10 @@ func TestFlattenDashboardPreservesTerraformKeysByFastlyID(t *testing.T) {
 	flattenDashboard(&state, remote)
 
 	require.Len(t, state.DashboardItem, 2)
-	require.Equal(t, "errors", state.DashboardItem[0].Key.ValueString())
-	require.Equal(t, "api-b", state.DashboardItem[0].ID.ValueString())
-	require.Equal(t, "requests", state.DashboardItem[1].Key.ValueString())
-	require.Equal(t, "api-a", state.DashboardItem[1].ID.ValueString())
+	require.Equal(t, "requests", state.DashboardItem[0].Key.ValueString())
+	require.Equal(t, "api-a", state.DashboardItem[0].ID.ValueString())
+	require.Equal(t, "errors", state.DashboardItem[1].Key.ValueString())
+	require.Equal(t, "api-b", state.DashboardItem[1].ID.ValueString())
 }
 
 func TestFlattenDashboardAssociatesNewFastlyIDWithDesiredKey(t *testing.T) {

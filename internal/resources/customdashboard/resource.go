@@ -466,7 +466,49 @@ func flattenItems(items []fastly.DashboardItem, previous []DashboardItemModel) [
 
 		result = append(result, dashboardItemModelFromRemote(item, key))
 	}
-	return result
+	return restoreTerraformItemOrder(result, previous)
+}
+
+func restoreTerraformItemOrder(items, previous []DashboardItemModel) []DashboardItemModel {
+	if len(previous) == 0 || len(items) < 2 {
+		return items
+	}
+
+	byKey := make(map[string]int, len(items))
+	for i := range items {
+		if items[i].Key.IsNull() || items[i].Key.IsUnknown() {
+			continue
+		}
+		byKey[items[i].Key.ValueString()] = i
+	}
+
+	used := make([]bool, len(items))
+	ordered := make([]DashboardItemModel, 0, len(items))
+
+	// Preserve the Terraform plan/state ordering for items we already know.
+	for _, previousItem := range previous {
+		if previousItem.Key.IsNull() || previousItem.Key.IsUnknown() {
+			continue
+		}
+
+		i, ok := byKey[previousItem.Key.ValueString()]
+		if !ok || used[i] {
+			continue
+		}
+
+		ordered = append(ordered, items[i])
+		used[i] = true
+	}
+
+	// New or out-of-band items have no previous Terraform position.
+	// Append them in the order Fastly returned them.
+	for i := range items {
+		if !used[i] {
+			ordered = append(ordered, items[i])
+		}
+	}
+
+	return ordered
 }
 
 func expandItems(ctx context.Context, items []DashboardItemModel) ([]fastly.DashboardItem, diag.Diagnostics) {
