@@ -10,6 +10,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
 	regularsnippet "github.com/fastly/terraform-provider-fastly/internal/resources/snippet"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
+	"github.com/fastly/terraform-provider-fastly/internal/validation"
 
 	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -83,62 +84,40 @@ func NestedBlockSchema() schema.ListNestedBlock {
 	}
 }
 
+func trimmedName(name types.String) types.String {
+	if name.IsUnknown() || name.IsNull() {
+		return name
+	}
+	return types.StringValue(strings.TrimSpace(name.ValueString()))
+}
+
 func ValidateConfig(snippets []NestedModel) error {
-	seenNames := make(map[string]struct{}, len(snippets))
-
 	for _, item := range snippets {
-		if item.Name.IsUnknown() || item.Name.IsNull() {
-			continue
-		}
-
-		name := strings.TrimSpace(item.Name.ValueString())
-		if name == "" {
+		if !item.Name.IsUnknown() && !item.Name.IsNull() && strings.TrimSpace(item.Name.ValueString()) == "" {
 			return fmt.Errorf("dynamic VCL snippet name cannot be empty")
 		}
-
-		if _, ok := seenNames[name]; ok {
-			return fmt.Errorf("multiple dynamic snippets with the same name %q; names must be unique within a service version", name)
-		}
-		seenNames[name] = struct{}{}
 	}
 
-	return nil
+	return validation.UniqueNames(snippets, "dynamic snippet", func(m NestedModel) types.String { return trimmedName(m.Name) })
 }
 
 func Validate(snippets []NestedModel) error {
-	seenNames := make(map[string]struct{}, len(snippets))
-
 	for _, item := range snippets {
 		name := strings.TrimSpace(service.StringValue(item.Name))
 		if name == "" {
 			return fmt.Errorf("dynamic VCL snippet name cannot be empty")
 		}
 
-		if _, ok := seenNames[name]; ok {
-			return fmt.Errorf("multiple dynamic snippets with the same name %q; names must be unique within a service version", name)
-		}
-		seenNames[name] = struct{}{}
-
 		if !isValidType(service.StringValue(item.Type)) {
 			return fmt.Errorf("invalid dynamic VCL snippet type %q; must be one of %s", service.StringValue(item.Type), strings.Join(validTypes, ", "))
 		}
 	}
 
-	return nil
+	return validation.UniqueNames(snippets, "dynamic snippet", func(m NestedModel) types.String { return trimmedName(m.Name) })
 }
 
 func ValidateNoNameConflicts(dynamicSnippets []NestedModel, regularSnippets []regularsnippet.NestedModel) error {
-	regularByName := make(map[string]struct{}, len(regularSnippets))
-	for _, item := range regularSnippets {
-		if item.Name.IsUnknown() || item.Name.IsNull() {
-			continue
-		}
-		name := strings.TrimSpace(item.Name.ValueString())
-		if name == "" {
-			continue
-		}
-		regularByName[name] = struct{}{}
-	}
+	regularByName := validation.NameSet(regularSnippets, func(m regularsnippet.NestedModel) types.String { return trimmedName(m.Name) })
 
 	for _, item := range dynamicSnippets {
 		if item.Name.IsUnknown() || item.Name.IsNull() {
