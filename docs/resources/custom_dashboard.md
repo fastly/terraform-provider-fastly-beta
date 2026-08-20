@@ -100,7 +100,7 @@ Optional:
 
 Required:
 
-- `metrics` (List of String) Metrics to visualize. Valid metric names depend on the selected data source.
+- `metrics` (List of String) The metrics to visualize. Valid options are defined by the selected data source: [stats.edge](https://www.fastly.com/documentation/reference/api/observability/custom-dashboards/metrics/edge/), [stats.domain](https://www.fastly.com/documentation/reference/api/observability/custom-dashboards/metrics/domain/), [stats.origin](https://www.fastly.com/documentation/reference/api/observability/custom-dashboards/metrics/origin/).
 
 
 
