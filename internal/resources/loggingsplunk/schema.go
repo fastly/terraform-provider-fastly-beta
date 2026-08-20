@@ -8,6 +8,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/defaults"
 	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
+	"github.com/fastly/terraform-provider-fastly/internal/validation"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 
@@ -505,6 +506,18 @@ func Reconcile(ctx context.Context, client *fastly.Client, serviceID string, ver
 
 func Equal(a, b []NestedModel) bool {
 	return reconcile.ModelsEqual(a, b, func(m NestedModel) string { return service.StringValue(m.Name) }, NestedModel.ModelsEqual, true)
+}
+
+// ValidateConditionReferences rejects a response_condition naming a condition block absent from config.
+func ValidateConditionReferences(endpoints []NestedModel, conditionNames map[string]struct{}) error {
+	return validation.References(endpoints, "Splunk logging endpoint", func(m NestedModel) types.String { return m.Name }, "response_condition",
+		func(m NestedModel) []string {
+			if m.ResponseCondition.IsUnknown() || m.ResponseCondition.IsNull() {
+				return nil
+			}
+			return []string{service.StringValue(m.ResponseCondition)}
+		},
+		"condition", conditionNames)
 }
 
 func MatchOrder(items, order []NestedModel) []NestedModel {

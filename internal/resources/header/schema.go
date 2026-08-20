@@ -5,6 +5,7 @@ import (
 
 	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
+	"github.com/fastly/terraform-provider-fastly/internal/validation"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -293,4 +294,40 @@ func Equal(a, b []NestedModel) bool {
 
 func MatchOrder(items, order []NestedModel) []NestedModel {
 	return reconcile.MatchOrder(items, order, func(m NestedModel) string { return service.StringValue(m.Name) })
+}
+
+// ValidateConditionReferences rejects a cache_condition/request_condition/response_condition naming a condition block absent from config.
+func ValidateConditionReferences(headers []NestedModel, conditionNames map[string]struct{}) error {
+	getName := func(m NestedModel) types.String { return m.Name }
+
+	if err := validation.References(headers, "header", getName, "cache_condition",
+		func(m NestedModel) []string {
+			if m.CacheCondition.IsUnknown() || m.CacheCondition.IsNull() {
+				return nil
+			}
+			return []string{service.StringValue(m.CacheCondition)}
+		},
+		"condition", conditionNames); err != nil {
+		return err
+	}
+
+	if err := validation.References(headers, "header", getName, "request_condition",
+		func(m NestedModel) []string {
+			if m.RequestCondition.IsUnknown() || m.RequestCondition.IsNull() {
+				return nil
+			}
+			return []string{service.StringValue(m.RequestCondition)}
+		},
+		"condition", conditionNames); err != nil {
+		return err
+	}
+
+	return validation.References(headers, "header", getName, "response_condition",
+		func(m NestedModel) []string {
+			if m.ResponseCondition.IsUnknown() || m.ResponseCondition.IsNull() {
+				return nil
+			}
+			return []string{service.StringValue(m.ResponseCondition)}
+		},
+		"condition", conditionNames)
 }
