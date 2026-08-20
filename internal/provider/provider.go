@@ -29,6 +29,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/resources/cdnacl"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/cdnaclentries"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/condition"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/customdashboard"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/domain"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/dynamicsnippetcontent"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/dynamicvclsnippet"
@@ -124,6 +125,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		cdnacl.NewResource,
 		cdnaclentries.NewResource,
 		condition.NewResource,
+		customdashboard.NewResource,
 		domain.NewResource,
 		loggingbigquery.NewResource,
 		loggingblobstorage.NewResource,

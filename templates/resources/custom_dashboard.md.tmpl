@@ -1,0 +1,81 @@
+---
+page_title: "fastly_custom_dashboard Resource - fastly"
+subcategory: ""
+description: |-
+  Manages a Fastly custom Observability dashboard.
+---
+
+# fastly_custom_dashboard (Resource)
+
+Manages a Fastly custom dashboard displayed in the Fastly Observability web interface.
+
+Custom dashboards are versionless and are not attached to a Fastly CDN or Compute
+service version. This resource can therefore be used alongside either service
+lifecycle family: `fastly_service_cdn_auto` / `fastly_service_compute_auto`, or
+the explicit/default service resources.
+
+## Example Usage
+
+```terraform
+resource "fastly_custom_dashboard" "example" {
+  name        = "Example Custom Dashboard"
+  description = "Traffic overview"
+
+  dashboard_item {
+    key      = "requests"
+    title    = "Total Requests"
+    subtitle = "Number of requests processed."
+    span     = 4
+
+    data_source {
+      type = "stats.edge"
+
+      config {
+        metrics = ["requests"]
+      }
+    }
+
+    visualization {
+      config {
+        format    = "requests"
+        plot_type = "line"
+      }
+    }
+  }
+}
+```
+
+`dashboard_item.key` is Terraform-owned identity for a dashboard item and is
+never sent to Fastly. Fastly assigns the read-only `dashboard_item.id`.
+Keeping these concepts separate allows items to be updated or reordered without
+requiring users to manufacture API identifiers.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Custom dashboards are imported by their Fastly dashboard ID:
+
+```shell
+terraform import fastly_custom_dashboard.example DASHBOARD_ID
+```
+
+When importing an existing dashboard, the provider initially seeds each item's
+Terraform `key` from that item's Fastly-generated `id`, because Fastly does not
+store Terraform's configuration-only key. On the first apply after import, an
+unchanged item may adopt a friendly configured `key` while preserving its
+existing Fastly `id`. The provider only performs this adoption when the imported
+item can be matched unambiguously.
+
+## Dashboard item identity
+
+Each dashboard item has two distinct identifiers:
+
+- `key` is required configuration and is owned by Terraform. It must be unique
+  within the dashboard and remains stable across ordinary edits and reordering.
+- `id` is computed and owned by Fastly. It is assigned by the API when an item
+  is created and is reused by the provider for subsequent updates.
+
+Changing `key` causes Terraform to treat the item as a new logical dashboard
+item. The provider omits an API ID for that new item and Fastly assigns a new
+one.
