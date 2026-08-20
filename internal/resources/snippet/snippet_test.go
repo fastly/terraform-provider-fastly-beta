@@ -130,6 +130,14 @@ func TestValidateConfig(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "duplicate names differing only in surrounding whitespace are invalid",
+			items: []NestedModel{
+				{Name: types.StringValue("one"), Type: types.StringValue("recv"), Priority: types.Int64Value(100), Content: content},
+				{Name: types.StringValue(" one "), Type: types.StringValue("deliver"), Priority: types.Int64Value(100), Content: content},
+			},
+			wantErr: true,
+		},
+		{
 			name: "blank known name is invalid",
 			items: []NestedModel{
 				{Name: types.StringValue(" "), Type: types.StringValue("recv"), Priority: types.Int64Value(100), Content: content},
@@ -176,6 +184,14 @@ func TestValidate(t *testing.T) {
 			items: []NestedModel{
 				{Name: types.StringValue("one"), Type: types.StringValue("recv"), Priority: types.Int64Value(100), Content: content},
 				{Name: types.StringValue("one"), Type: types.StringValue("deliver"), Priority: types.Int64Value(100), Content: content},
+			},
+			wantErr: true,
+		},
+		{
+			name: "duplicate names differing only in surrounding whitespace are invalid",
+			items: []NestedModel{
+				{Name: types.StringValue("one"), Type: types.StringValue("recv"), Priority: types.Int64Value(100), Content: content},
+				{Name: types.StringValue(" one "), Type: types.StringValue("deliver"), Priority: types.Int64Value(100), Content: content},
 			},
 			wantErr: true,
 		},

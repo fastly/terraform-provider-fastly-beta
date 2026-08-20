@@ -131,6 +131,13 @@ func ID(serviceID string, version int, name string) string {
 	return fmt.Sprintf("%s-%d-%s", serviceID, version, name)
 }
 
+func trimmedName(name types.String) types.String {
+	if name.IsUnknown() || name.IsNull() {
+		return name
+	}
+	return types.StringValue(strings.TrimSpace(name.ValueString()))
+}
+
 func ValidateConfig(snippets []NestedModel) error {
 	for _, item := range snippets {
 		if !item.Name.IsUnknown() && !item.Name.IsNull() && strings.TrimSpace(item.Name.ValueString()) == "" {
@@ -138,7 +145,7 @@ func ValidateConfig(snippets []NestedModel) error {
 		}
 	}
 
-	return validation.UniqueNames(snippets, "snippet", func(m NestedModel) types.String { return m.Name })
+	return validation.UniqueNames(snippets, "snippet", func(m NestedModel) types.String { return trimmedName(m.Name) })
 }
 
 func Validate(snippets []NestedModel) error {
@@ -153,7 +160,7 @@ func Validate(snippets []NestedModel) error {
 		}
 	}
 
-	return validation.UniqueNames(snippets, "snippet", func(m NestedModel) types.String { return m.Name })
+	return validation.UniqueNames(snippets, "snippet", func(m NestedModel) types.String { return trimmedName(m.Name) })
 }
 
 type ops struct{}
