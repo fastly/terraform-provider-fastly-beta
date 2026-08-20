@@ -126,7 +126,7 @@ Required:
 
 Optional:
 
-- `calculation_method` (String) Aggregation function to apply to the dataset.
+- `calculation_method` (String) The aggregation function to apply to the dataset. One of: `avg`, `sum`, `min`, `max`, `latest`, `p95`.
 - `format` (String) Units used to format the data. Defaults to `number`.
 
 ## Import

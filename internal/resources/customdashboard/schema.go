@@ -204,7 +204,7 @@ func VisualizationConfigBlock() schema.ListNestedBlock {
 			Attributes: map[string]schema.Attribute{
 				"calculation_method": schema.StringAttribute{
 					Optional:    true,
-					Description: "Aggregation function to apply to the dataset.",
+                    Description: "The aggregation function to apply to the dataset. One of: `avg`, `sum`, `min`, `max`, `latest`, `p95`.",
 					Validators: []validator.String{
 						stringvalidator.OneOf("avg", "sum", "min", "max", "latest", "p95"),
 					},
