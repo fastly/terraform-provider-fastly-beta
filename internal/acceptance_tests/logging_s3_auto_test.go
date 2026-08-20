@@ -184,6 +184,47 @@ func TestAccFastlyServiceCDNAuto_withMultipleLoggingS3(t *testing.T) {
 	})
 }
 
+// TestAccFastlyServiceCDNAuto_loggingS3ConditionRemoved verifies that removing a condition
+// block while a logging_s3 endpoint's response_condition still names it is rejected at plan
+// time by loggings3.ValidateConditionReferences, instead of reaching the Fastly API as a
+// version-validation failure once the condition is actually deleted.
+func TestAccFastlyServiceCDNAuto_loggingS3ConditionRemoved(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("s3-logger-%s", acctest.RandString(10))
+	bucketName := fmt.Sprintf("tf-test-bucket-%s", acctest.RandString(10))
+	conditionName := fmt.Sprintf("condition-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn_auto"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigCDNAutoWithLoggingS3Condition(serviceName, domainName, loggerName, bucketName, conditionName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "condition.0.name", conditionName),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "logging_s3.0.response_condition", conditionName),
+				),
+			},
+			{
+				Config:      ConfigCDNAutoWithLoggingS3ConditionRemoved(serviceName, domainName, loggerName, bucketName, conditionName),
+				ExpectError: regexp.MustCompile(`does not match any configured condition`),
+			},
+			{
+				// Revert to a valid config so CheckDestroy's cleanup doesn't hit the same
+				// plan-time validation error the previous step intentionally triggered.
+				Config: ConfigCDNAutoWithLoggingS3Condition(serviceName, domainName, loggerName, bucketName, conditionName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+				),
+			},
+		},
+	})
+}
+
 // TestAccFastlyServiceCDNAuto_withBackendAndLoggingS3 verifies S3 logging reconciles
 // alongside another nested block type in the same auto service.
 func TestAccFastlyServiceCDNAuto_withBackendAndLoggingS3(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/dictionary"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/responseobject"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 	"github.com/fastly/terraform-provider-fastly/internal/validation"
 
@@ -566,4 +567,19 @@ func ValidateDictionaryReferences(rateLimiters []NestedModel, dictionaries []dic
 			return []string{service.StringValue(m.URIDictionaryName)}
 		},
 		"dictionary", dictionaryNames)
+}
+
+// ValidateResponseObjectReferences rejects a response_object_name naming a response_object block
+// absent from config - mirrors the uri_dictionary_name check above.
+func ValidateResponseObjectReferences(rateLimiters []NestedModel, responseObjects []responseobject.NestedModel) error {
+	responseObjectNames := validation.NameSet(responseObjects, func(r responseobject.NestedModel) types.String { return r.Name })
+
+	return validation.References(rateLimiters, "rate limiter", func(m NestedModel) types.String { return m.Name }, "response_object_name",
+		func(m NestedModel) []string {
+			if m.ResponseObjectName.IsUnknown() || m.ResponseObjectName.IsNull() {
+				return nil
+			}
+			return []string{service.StringValue(m.ResponseObjectName)}
+		},
+		"response object", responseObjectNames)
 }

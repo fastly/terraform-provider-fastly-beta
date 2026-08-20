@@ -904,3 +904,37 @@ func TestSecretKeyRejectsUntrimmedValues(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateConditionReferences(t *testing.T) {
+	conditionNames := map[string]struct{}{"my-condition": {}}
+
+	t.Run("no response_condition set", func(t *testing.T) {
+		item := minimalNestedModel()
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, nil))
+	})
+
+	t.Run("references a configured condition", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.ResponseCondition = types.StringValue("my-condition")
+
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, conditionNames))
+	})
+
+	t.Run("references a condition that isn't configured", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.ResponseCondition = types.StringValue("missing-condition")
+
+		err := ValidateConditionReferences([]NestedModel{item}, conditionNames)
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), `"test-bigquery"`)
+			assert.Contains(t, err.Error(), `"missing-condition"`)
+		}
+	})
+
+	t.Run("skips unknown condition", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.ResponseCondition = types.StringUnknown()
+
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, nil))
+	})
+}

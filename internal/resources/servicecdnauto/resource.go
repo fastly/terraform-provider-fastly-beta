@@ -36,6 +36,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/resources/snippet"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/vcl"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
+	"github.com/fastly/terraform-provider-fastly/internal/validation"
 
 	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -264,6 +265,160 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		resp.Diagnostics.AddAttributeError(
 			path.Root("director"),
 			"Invalid director configuration",
+			err.Error(),
+		)
+	}
+
+	if err := ratelimiter.ValidateResponseObjectReferences(config.RateLimiter, config.ResponseObject); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("rate_limiter"),
+			"Invalid rate limiter configuration",
+			err.Error(),
+		)
+	}
+
+	if err := backend.ValidateHealthcheckReferences(config.Backend, config.HealthCheck); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("backend"),
+			"Invalid backend configuration",
+			err.Error(),
+		)
+	}
+
+	conditionNames := validation.NameSet(config.Condition, func(m condition.NestedModel) types.String { return m.Name })
+
+	if err := backend.ValidateConditionReferences(config.Backend, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("backend"),
+			"Invalid backend configuration",
+			err.Error(),
+		)
+	}
+
+	if err := cachesetting.ValidateConditionReferences(config.CacheSetting, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("cache_setting"),
+			"Invalid cache setting configuration",
+			err.Error(),
+		)
+	}
+
+	if err := gzip.ValidateConditionReferences(config.Gzip, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("gzip"),
+			"Invalid gzip configuration",
+			err.Error(),
+		)
+	}
+
+	if err := header.ValidateConditionReferences(config.Header, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("header"),
+			"Invalid header configuration",
+			err.Error(),
+		)
+	}
+
+	if err := requestsetting.ValidateConditionReferences(config.RequestSetting, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("request_setting"),
+			"Invalid request setting configuration",
+			err.Error(),
+		)
+	}
+
+	if err := responseobject.ValidateConditionReferences(config.ResponseObject, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("response_object"),
+			"Invalid response object configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingbigquery.ValidateConditionReferences(config.LoggingBigQuery, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_bigquery"),
+			"Invalid BigQuery logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingblobstorage.ValidateConditionReferences(config.LoggingBlobStorage, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_blobstorage"),
+			"Invalid Blob Storage logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingdatadog.ValidateConditionReferences(config.LoggingDatadog, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_datadog"),
+			"Invalid Datadog logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := logginggcs.ValidateConditionReferences(config.LoggingGCS, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_gcs"),
+			"Invalid GCS logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := logginghttps.ValidateConditionReferences(config.LoggingHTTPS, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_https"),
+			"Invalid HTTPS logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingnewrelic.ValidateConditionReferences(config.LoggingNewRelic, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_newrelic"),
+			"Invalid New Relic logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingnewrelicotlp.ValidateConditionReferences(config.LoggingNewRelicOTLP, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_newrelicotlp"),
+			"Invalid New Relic OTLP logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggings3.ValidateConditionReferences(config.LoggingS3, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_s3"),
+			"Invalid S3 logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingsplunk.ValidateConditionReferences(config.LoggingSplunk, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_splunk"),
+			"Invalid Splunk logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingsumologic.ValidateConditionReferences(config.LoggingSumologic, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_sumologic"),
+			"Invalid Sumologic logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingsyslog.ValidateConditionReferences(config.LoggingSyslog, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_syslog"),
+			"Invalid Syslog logging configuration",
 			err.Error(),
 		)
 	}

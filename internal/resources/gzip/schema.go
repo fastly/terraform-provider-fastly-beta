@@ -7,6 +7,7 @@ import (
 
 	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
+	"github.com/fastly/terraform-provider-fastly/internal/validation"
 
 	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -299,4 +300,16 @@ func Equal(a, b []NestedModel) bool {
 
 func MatchOrder(items, order []NestedModel) []NestedModel {
 	return reconcile.MatchOrder(items, order, func(m NestedModel) string { return service.StringValue(m.Name) })
+}
+
+// ValidateConditionReferences rejects a cache_condition naming a condition block absent from config.
+func ValidateConditionReferences(gzips []NestedModel, conditionNames map[string]struct{}) error {
+	return validation.References(gzips, "gzip", func(m NestedModel) types.String { return m.Name }, "cache_condition",
+		func(m NestedModel) []string {
+			if m.CacheCondition.IsUnknown() || m.CacheCondition.IsNull() {
+				return nil
+			}
+			return []string{service.StringValue(m.CacheCondition)}
+		},
+		"condition", conditionNames)
 }

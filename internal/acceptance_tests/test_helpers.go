@@ -1027,6 +1027,22 @@ func ConfigCDNAutoWithRateLimiterDictionaryRemoved(serviceName, domainName, rate
 	)
 }
 
+// ConfigCDNAutoWithRateLimiterResponseObject returns a CDN auto service config with a rate
+// limiter whose response_object_name references a real nested response_object block.
+func ConfigCDNAutoWithRateLimiterResponseObject(serviceName, domainName, rateLimiterName, responseObjectName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"DOMAIN_NAME":          domainName,
+			"RATE_LIMITER_NAME":    rateLimiterName,
+			"RESPONSE_OBJECT_NAME": responseObjectName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/rate_limiter_with_response_object.tf",
+	)
+}
+
 // ConfigCDNAutoWithDirector returns a CDN auto service config with a domain, a backend, and a
 // director mapped to that backend.
 func ConfigCDNAutoWithDirector(serviceName, domainName, backendName, directorName string) string {
@@ -2499,6 +2515,41 @@ func ConfigCDNAutoWithLoggingS3Updated(serviceName, domainName, loggerName, buck
 		},
 		"internal/acceptance_tests/blocks/domain_single.tf",
 		"internal/acceptance_tests/blocks/logging_s3_nested_updated.tf",
+	)
+}
+
+// ConfigCDNAutoWithLoggingS3Condition returns a CDN auto service config with a nested S3
+// logging block whose response_condition references a real nested condition block.
+func ConfigCDNAutoWithLoggingS3Condition(serviceName, domainName, loggerName, bucketName, conditionName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"DOMAIN_NAME":     domainName,
+			"LOGGING_S3_NAME": loggerName,
+			"BUCKET_NAME":     bucketName,
+			"CONDITION_NAME":  conditionName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_s3_with_condition.tf",
+	)
+}
+
+// ConfigCDNAutoWithLoggingS3ConditionRemoved returns a CDN auto service config with the same
+// logging_s3 block as ConfigCDNAutoWithLoggingS3Condition, but with the condition block removed
+// entirely - response_condition is left unchanged, still naming the now-unmanaged condition.
+func ConfigCDNAutoWithLoggingS3ConditionRemoved(serviceName, domainName, loggerName, bucketName, conditionName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"DOMAIN_NAME":     domainName,
+			"LOGGING_S3_NAME": loggerName,
+			"BUCKET_NAME":     bucketName,
+			"CONDITION_NAME":  conditionName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_s3_condition_removed.tf",
 	)
 }
 
