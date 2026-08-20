@@ -122,7 +122,7 @@ Optional:
 
 Required:
 
-- `plot_type` (String) The type of chart to display.
+- `plot_type` (String) The type of chart to display. One of: `line`, `bar`, `single-metric`, `donut`.
 
 Optional:
 

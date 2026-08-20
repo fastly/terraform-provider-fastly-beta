@@ -220,7 +220,7 @@ func VisualizationConfigBlock() schema.ListNestedBlock {
 				},
 				"plot_type": schema.StringAttribute{
 					Required:    true,
-					Description: "The type of chart to display.",
+                    Description: "The type of chart to display. One of: `line`, `bar`, `single-metric`, `donut`.",
 					Validators: []validator.String{
 						stringvalidator.OneOf("line", "bar", "single-metric", "donut"),
 					},
