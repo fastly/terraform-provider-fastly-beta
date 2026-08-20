@@ -6,6 +6,7 @@ import (
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
 	"github.com/fastly/terraform-provider-fastly/internal/errors"
+	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/backend"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/cachesetting"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/cdnacl"
@@ -485,361 +486,75 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		"version":    version,
 	})
 
-	settingsResult, err := settings.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, nil, plan.Settings)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reconciling settings", err.Error())
-		return
-	}
-	plan.Settings = settingsResult
+	client := r.providerData.AutoClient()
+	previous := &Model{}
 
-	if err := domain.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.Domain); err != nil {
-		resp.Diagnostics.AddError("Error reconciling domains", err.Error())
+	if label, phase, err := runMutateSteps(ctx, client, serviceID, version, beforeBackendAndDirectorSteps(&plan, previous)); err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("Error %s %s", phase, label), err.Error())
 		return
 	}
 
-	domains, err := domain.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service domains", err.Error())
-		return
-	}
-	plan.Domain = domain.MatchOrder(domains, plan.Domain)
-
-	// Conditions must be reconciled before backend/gzip/cache_setting/request_setting/
-	// response_object/header: all six can reference a condition by name (request_condition,
-	// cache_condition, response_condition), and the Fastly API rejects a create that names a
-	// condition which doesn't exist yet in this version.
-	if err := condition.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.Condition); err != nil {
-		resp.Diagnostics.AddError("Error reconciling conditions", err.Error())
-		return
-	}
-
-	conditions, err := condition.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service conditions", err.Error())
-		return
-	}
-	plan.Condition = condition.MatchOrder(conditions, plan.Condition)
-
-	// Health checks must be reconciled before backends: a backend can reference a health check
-	// by name, and the Fastly API rejects a backend create that names a health check which
-	// doesn't exist yet in this version.
-	if err := healthcheck.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.HealthCheck); err != nil {
-		resp.Diagnostics.AddError("Error reconciling health checks", err.Error())
-		return
-	}
-
-	healthChecks, err := healthcheck.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service health checks", err.Error())
-		return
-	}
-	plan.HealthCheck = healthcheck.MatchOrder(healthChecks, plan.HealthCheck)
-
-	if err := backend.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.Backend); err != nil {
+	if err := backend.Reconcile(ctx, client, serviceID, version, plan.Backend); err != nil {
 		resp.Diagnostics.AddError("Error reconciling backends", err.Error())
 		return
 	}
 
-	backends, err := backend.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	backends, err := backend.ReadForVersion(ctx, client, serviceID, version)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading service backends", err.Error())
 		return
 	}
 	plan.Backend = backend.MatchOrder(backends, plan.Backend)
 
-	// Directors must be reconciled after backends: a director's backends can reference a backend
-	// by name, and the Fastly API rejects a director create that names one which doesn't exist
-	// yet in this version.
-	if err := director.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.Director); err != nil {
+	// Directors reconcile after backends: a director's backends can reference one by name, and
+	// creating a director naming one that doesn't exist yet fails.
+	if err := director.Reconcile(ctx, client, serviceID, version, plan.Director); err != nil {
 		resp.Diagnostics.AddError("Error reconciling directors", err.Error())
 		return
 	}
 
-	directors, err := director.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	directors, err := director.ReadForVersion(ctx, client, serviceID, version)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading service directors", err.Error())
 		return
 	}
 	plan.Director = director.MatchOrder(directors, plan.Director)
 
-	if err := cdnacl.ReconcileWithPrevious(ctx, r.providerData.AutoClient(), serviceID, version, nil, plan.ACL); err != nil {
-		resp.Diagnostics.AddError("Error reconciling ACLs", err.Error())
+	if label, phase, err := runMutateSteps(ctx, client, serviceID, version, beforeDictionaryAndRateLimiterSteps(&plan, previous)); err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("Error %s %s", phase, label), err.Error())
 		return
 	}
 
-	acls, err := cdnacl.ReadForVersionWithPlan(ctx, r.providerData.AutoClient(), serviceID, version, plan.ACL)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service ACLs", err.Error())
-		return
-	}
-	plan.ACL = acls
-
-	if err := header.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.Header); err != nil {
-		resp.Diagnostics.AddError("Error reconciling headers", err.Error())
-		return
-	}
-
-	headers, err := header.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service headers", err.Error())
-		return
-	}
-	plan.Header = header.MatchOrder(headers, plan.Header)
-
-	if err := gzip.ReconcileWithPrevious(ctx, r.providerData.AutoClient(), serviceID, version, nil, plan.Gzip); err != nil {
-		resp.Diagnostics.AddError("Error reconciling gzip configurations", err.Error())
-		return
-	}
-
-	gzips, err := gzip.ReadForVersionWithPlan(ctx, r.providerData.AutoClient(), serviceID, version, plan.Gzip)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service gzip configurations", err.Error())
-		return
-	}
-	plan.Gzip = gzip.MatchOrder(gzips, plan.Gzip)
-
-	if err := cachesetting.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.CacheSetting); err != nil {
-		resp.Diagnostics.AddError("Error reconciling cache settings", err.Error())
-		return
-	}
-
-	cacheSettings, err := cachesetting.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service cache settings", err.Error())
-		return
-	}
-	plan.CacheSetting = cachesetting.MatchOrder(cacheSettings, plan.CacheSetting)
-
-	if err := requestsetting.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.RequestSetting); err != nil {
-		resp.Diagnostics.AddError("Error reconciling request settings", err.Error())
-		return
-	}
-
-	requestSettings, err := requestsetting.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service request settings", err.Error())
-		return
-	}
-	plan.RequestSetting = requestsetting.MatchOrder(requestSettings, plan.RequestSetting)
-
-	if err := responseobject.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.ResponseObject); err != nil {
-		resp.Diagnostics.AddError("Error reconciling response objects", err.Error())
-		return
-	}
-
-	responseObjects, err := responseobject.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service response objects", err.Error())
-		return
-	}
-	plan.ResponseObject = responseobject.MatchOrder(responseObjects, plan.ResponseObject)
-
-	if err := dictionary.ReconcileWithPrevious(ctx, r.providerData.AutoClient(), serviceID, version, nil, plan.Dictionary); err != nil {
+	if err := dictionary.ReconcileWithPrevious(ctx, client, serviceID, version, nil, plan.Dictionary); err != nil {
 		resp.Diagnostics.AddError("Error reconciling dictionaries", err.Error())
 		return
 	}
 
-	dictionaries, err := dictionary.ReadForVersionWithPlan(ctx, r.providerData.AutoClient(), serviceID, version, plan.Dictionary)
+	dictionaries, err := dictionary.ReadForVersionWithPlan(ctx, client, serviceID, version, plan.Dictionary)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading service dictionaries", err.Error())
 		return
 	}
 	plan.Dictionary = dictionary.MatchOrder(dictionaries, plan.Dictionary)
 
-	// Rate limiters must be reconciled after dictionaries: uri_dictionary_name can reference a
-	// dictionary by name, and the Fastly API rejects a create that names one which doesn't exist
-	// yet in this version.
-	if err := ratelimiter.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.RateLimiter); err != nil {
+	// Rate limiters reconcile after dictionaries: uri_dictionary_name can reference one by name,
+	// and creating a rate limiter naming one that doesn't exist yet fails.
+	if err := ratelimiter.Reconcile(ctx, client, serviceID, version, plan.RateLimiter); err != nil {
 		resp.Diagnostics.AddError("Error reconciling rate limiters", err.Error())
 		return
 	}
 
-	rateLimiters, err := ratelimiter.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	rateLimiters, err := ratelimiter.ReadForVersion(ctx, client, serviceID, version)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading service rate limiters", err.Error())
 		return
 	}
 	plan.RateLimiter = ratelimiter.MatchOrder(rateLimiters, plan.RateLimiter)
 
-	if err := loggingblobstorage.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingBlobStorage); err != nil {
-		resp.Diagnostics.AddError("Error reconciling Blob Storage logging endpoints", err.Error())
+	if label, phase, err := runMutateSteps(ctx, client, serviceID, version, afterDictionaryAndRateLimiterSteps(&plan, previous)); err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("Error %s %s", phase, label), err.Error())
 		return
 	}
-
-	loggingBlobStorages, err := loggingblobstorage.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading Blob Storage logging endpoints", err.Error())
-		return
-	}
-	plan.LoggingBlobStorage = loggingblobstorage.MatchOrder(loggingBlobStorages, plan.LoggingBlobStorage)
-
-	if err := loggings3.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingS3); err != nil {
-		resp.Diagnostics.AddError("Error reconciling S3 logging endpoints", err.Error())
-		return
-	}
-
-	loggingS3s, err := loggings3.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading S3 logging endpoints", err.Error())
-		return
-	}
-	plan.LoggingS3 = loggings3.MatchOrder(loggingS3s, plan.LoggingS3)
-
-	if err := loggingnewrelicotlp.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingNewRelicOTLP); err != nil {
-		resp.Diagnostics.AddError("Error reconciling New Relic OTLP logging endpoints", err.Error())
-		return
-	}
-
-	loggingNewRelicOTLPs, err := loggingnewrelicotlp.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading New Relic OTLP logging endpoints", err.Error())
-		return
-	}
-	plan.LoggingNewRelicOTLP = loggingnewrelicotlp.MatchOrder(loggingNewRelicOTLPs, plan.LoggingNewRelicOTLP)
-
-	if err := loggingnewrelic.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingNewRelic); err != nil {
-		resp.Diagnostics.AddError("Error reconciling New Relic logging endpoints", err.Error())
-		return
-	}
-
-	loggingNewRelics, err := loggingnewrelic.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading New Relic logging endpoints", err.Error())
-		return
-	}
-	plan.LoggingNewRelic = loggingnewrelic.MatchOrder(loggingNewRelics, plan.LoggingNewRelic)
-
-	if err := loggingdatadog.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingDatadog); err != nil {
-		resp.Diagnostics.AddError("Error reconciling Datadog logging endpoints", err.Error())
-		return
-	}
-
-	loggingDatadogs, err := loggingdatadog.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading Datadog logging endpoints", err.Error())
-		return
-	}
-	plan.LoggingDatadog = loggingdatadog.MatchOrder(loggingDatadogs, plan.LoggingDatadog)
-
-	if err := loggingbigquery.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingBigQuery); err != nil {
-		resp.Diagnostics.AddError("Error reconciling BigQuery logging endpoints", err.Error())
-		return
-	}
-
-	loggingBigQueries, err := loggingbigquery.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading BigQuery logging endpoints", err.Error())
-		return
-	}
-	plan.LoggingBigQuery = loggingbigquery.MatchOrder(loggingBigQueries, plan.LoggingBigQuery)
-
-	if err := logginggcs.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingGCS); err != nil {
-		resp.Diagnostics.AddError("Error reconciling GCS logging endpoints", err.Error())
-		return
-	}
-
-	loggingGCSs, err := logginggcs.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading GCS logging endpoints", err.Error())
-		return
-	}
-	plan.LoggingGCS = logginggcs.MatchOrder(loggingGCSs, plan.LoggingGCS)
-
-	if err := loggingsplunk.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingSplunk); err != nil {
-		resp.Diagnostics.AddError("Error reconciling Splunk logging endpoints", err.Error())
-		return
-	}
-
-	loggingSplunks, err := loggingsplunk.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading Splunk logging endpoints", err.Error())
-		return
-	}
-	plan.LoggingSplunk = loggingsplunk.MatchOrder(loggingSplunks, plan.LoggingSplunk)
-
-	if err := logginghttps.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingHTTPS); err != nil {
-		resp.Diagnostics.AddError("Error reconciling HTTPS logging endpoints", err.Error())
-		return
-	}
-
-	loggingHTTPS, err := logginghttps.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading HTTPS logging endpoints", err.Error())
-		return
-	}
-	plan.LoggingHTTPS = logginghttps.MatchOrder(loggingHTTPS, plan.LoggingHTTPS)
-
-	if err := loggingsumologic.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingSumologic); err != nil {
-		resp.Diagnostics.AddError("Error reconciling Sumologic logging endpoints", err.Error())
-		return
-	}
-
-	loggingSumologics, err := loggingsumologic.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading Sumologic logging endpoints", err.Error())
-		return
-	}
-	plan.LoggingSumologic = loggingsumologic.MatchOrder(loggingSumologics, plan.LoggingSumologic)
-
-	if err := loggingsyslog.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingSyslog); err != nil {
-		resp.Diagnostics.AddError("Error reconciling Syslog logging endpoints", err.Error())
-		return
-	}
-
-	loggingSyslogs, err := loggingsyslog.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading Syslog logging endpoints", err.Error())
-		return
-	}
-	plan.LoggingSyslog = loggingsyslog.MatchOrder(loggingSyslogs, plan.LoggingSyslog)
-
-	if err := imageoptimizerdefaultsettings.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, nil, plan.ImageOptimizerDefaultSettings); err != nil {
-		resp.Diagnostics.AddError("Error reconciling Image Optimizer default settings", err.Error())
-		return
-	}
-
-	imageOptimizerDefaultSettings, err := imageoptimizerdefaultsettings.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version, plan.ImageOptimizerDefaultSettings, false)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service Image Optimizer default settings", err.Error())
-		return
-	}
-	plan.ImageOptimizerDefaultSettings = imageOptimizerDefaultSettings
-
-	if err := snippet.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.Snippet); err != nil {
-		resp.Diagnostics.AddError("Error reconciling VCL snippets", err.Error())
-		return
-	}
-
-	snippets, err := snippet.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading VCL snippets", err.Error())
-		return
-	}
-	plan.Snippet = snippet.MatchOrderPreservePlanContent(snippets, plan.Snippet)
-
-	if err := dynamicsnippet.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.DynamicSnippet); err != nil {
-		resp.Diagnostics.AddError("Error reconciling dynamic VCL snippets", err.Error())
-		return
-	}
-
-	dynamicSnippets, err := dynamicsnippet.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading dynamic VCL snippets", err.Error())
-		return
-	}
-	plan.DynamicSnippet = dynamicsnippet.MatchOrderPreservePlanFields(dynamicSnippets, plan.DynamicSnippet)
-
-	if err := vcl.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.VCL); err != nil {
-		resp.Diagnostics.AddError("Error reconciling custom VCL files", err.Error())
-		return
-	}
-
-	vcls, err := vcl.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading custom VCL files", err.Error())
-		return
-	}
-	plan.VCL = vcl.MatchOrderPreservePlanContent(vcls, plan.VCL)
 
 	if err := service.ValidateVersion(ctx, r.providerData.AutoClient(), serviceID, version); err != nil {
 		resp.Diagnostics.AddError("Error validating service version", err.Error())
@@ -909,172 +624,6 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 	state.ManagedVersion = types.Int64Value(int64(readVersion))
 
-	domains, err := domain.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service domains", err.Error())
-		return
-	}
-	backends, err := backend.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service backends", err.Error())
-		return
-	}
-	directors, err := director.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service directors", err.Error())
-		return
-	}
-	acls, err := cdnacl.ReadForVersionWithPlan(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion, state.ACL)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service ACLs", err.Error())
-		return
-	}
-	conditions, err := condition.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service conditions", err.Error())
-		return
-	}
-	healthChecks, err := healthcheck.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service health checks", err.Error())
-		return
-	}
-	headers, err := header.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service headers", err.Error())
-		return
-	}
-	gzips, err := gzip.ReadForVersionWithPlan(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion, state.Gzip)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service gzip configurations", err.Error())
-		return
-	}
-	cacheSettings, err := cachesetting.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service cache settings", err.Error())
-		return
-	}
-	requestSettings, err := requestsetting.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service request settings", err.Error())
-		return
-	}
-	responseObjects, err := responseobject.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service response objects", err.Error())
-		return
-	}
-	dictionaries, err := dictionary.ReadForVersionWithPlan(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion, state.Dictionary)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service dictionaries", err.Error())
-		return
-	}
-	rateLimiters, err := ratelimiter.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service rate limiters", err.Error())
-		return
-	}
-	loggingBlobStorages, err := loggingblobstorage.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading Blob Storage logging endpoints", err.Error())
-		return
-	}
-	loggingS3s, err := loggings3.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading S3 logging endpoints", err.Error())
-		return
-	}
-	loggingNewRelicOTLPs, err := loggingnewrelicotlp.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading New Relic OTLP logging endpoints", err.Error())
-		return
-	}
-	loggingNewRelics, err := loggingnewrelic.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading New Relic logging endpoints", err.Error())
-		return
-	}
-	loggingDatadogs, err := loggingdatadog.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading Datadog logging endpoints", err.Error())
-		return
-	}
-	loggingBigQueries, err := loggingbigquery.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading BigQuery logging endpoints", err.Error())
-		return
-	}
-	loggingGCSs, err := logginggcs.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading GCS logging endpoints", err.Error())
-		return
-	}
-	loggingSplunks, err := loggingsplunk.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading Splunk logging endpoints", err.Error())
-		return
-	}
-	loggingHTTPS, err := logginghttps.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading HTTPS logging endpoints", err.Error())
-		return
-	}
-	loggingSumologics, err := loggingsumologic.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading Sumologic logging endpoints", err.Error())
-		return
-	}
-	loggingSyslogs, err := loggingsyslog.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading Syslog logging endpoints", err.Error())
-		return
-	}
-	state.Domain = domain.MatchOrder(domains, state.Domain)
-	state.Backend = backend.MatchOrder(backends, state.Backend)
-	state.Director = director.MatchOrder(directors, state.Director)
-	state.ACL = cdnacl.MatchOrder(acls, state.ACL)
-	state.Condition = condition.MatchOrder(conditions, state.Condition)
-	state.HealthCheck = healthcheck.MatchOrder(healthChecks, state.HealthCheck)
-	state.Header = header.MatchOrder(headers, state.Header)
-	state.Gzip = gzip.MatchOrder(gzips, state.Gzip)
-	state.CacheSetting = cachesetting.MatchOrder(cacheSettings, state.CacheSetting)
-	state.RequestSetting = requestsetting.MatchOrder(requestSettings, state.RequestSetting)
-	state.ResponseObject = responseobject.MatchOrder(responseObjects, state.ResponseObject)
-	state.Dictionary = dictionary.MatchOrder(dictionaries, state.Dictionary)
-	state.RateLimiter = ratelimiter.MatchOrder(rateLimiters, state.RateLimiter)
-	state.LoggingBlobStorage = loggingblobstorage.MatchOrder(loggingBlobStorages, state.LoggingBlobStorage)
-	state.LoggingS3 = loggings3.MatchOrder(loggingS3s, state.LoggingS3)
-	state.LoggingNewRelicOTLP = loggingnewrelicotlp.MatchOrder(loggingNewRelicOTLPs, state.LoggingNewRelicOTLP)
-	state.LoggingNewRelic = loggingnewrelic.MatchOrder(loggingNewRelics, state.LoggingNewRelic)
-	state.LoggingDatadog = loggingdatadog.MatchOrder(loggingDatadogs, state.LoggingDatadog)
-	state.LoggingBigQuery = loggingbigquery.MatchOrder(loggingBigQueries, state.LoggingBigQuery)
-	state.LoggingGCS = logginggcs.MatchOrder(loggingGCSs, state.LoggingGCS)
-	state.LoggingSplunk = loggingsplunk.MatchOrder(loggingSplunks, state.LoggingSplunk)
-	state.LoggingHTTPS = logginghttps.MatchOrder(loggingHTTPS, state.LoggingHTTPS)
-	state.LoggingSumologic = loggingsumologic.MatchOrder(loggingSumologics, state.LoggingSumologic)
-	state.LoggingSyslog = loggingsyslog.MatchOrder(loggingSyslogs, state.LoggingSyslog)
-
-	snippets, err := snippet.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading VCL snippets", err.Error())
-		return
-	}
-	state.Snippet = snippet.MatchOrder(snippets, state.Snippet)
-
-	dynamicSnippets, err := dynamicsnippet.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading dynamic VCL snippets", err.Error())
-		return
-	}
-	state.DynamicSnippet = dynamicsnippet.MatchOrder(dynamicSnippets, state.DynamicSnippet)
-
-	vcls, err := vcl.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading custom VCL files", err.Error())
-		return
-	}
-	state.VCL = vcl.MatchOrder(vcls, state.VCL)
-
 	importedBytes, diags := req.Private.GetKey(ctx, imageOptimizerImportedPrivateKey)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -1085,19 +634,10 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.Append(resp.Private.SetKey(ctx, imageOptimizerImportedPrivateKey, nil)...)
 	}
 
-	imageOptimizerDefaultSettings, err := imageoptimizerdefaultsettings.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion, state.ImageOptimizerDefaultSettings, imported)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service Image Optimizer default settings", err.Error())
+	if label, err := runReadSteps(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion, readSteps(&state, imported)); err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("Error reading %s", label), err.Error())
 		return
 	}
-	state.ImageOptimizerDefaultSettings = imageOptimizerDefaultSettings
-
-	settingsResult, err := settings.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion, state.Settings)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading service settings", err.Error())
-		return
-	}
-	state.Settings = settingsResult
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -1163,36 +703,14 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	nestedChanged := !settings.Equal(plan.Settings, state.Settings) ||
-		!domain.Equal(plan.Domain, state.Domain) ||
-		!backend.Equal(plan.Backend, state.Backend) ||
-		!director.Equal(plan.Director, state.Director) ||
-		!cdnacl.Equal(plan.ACL, state.ACL) ||
-		!condition.Equal(plan.Condition, state.Condition) ||
-		!healthcheck.Equal(plan.HealthCheck, state.HealthCheck) ||
-		!header.Equal(plan.Header, state.Header) ||
-		!gzip.Equal(plan.Gzip, state.Gzip) ||
-		!cachesetting.Equal(plan.CacheSetting, state.CacheSetting) ||
-		!requestsetting.Equal(plan.RequestSetting, state.RequestSetting) ||
-		!responseobject.Equal(plan.ResponseObject, state.ResponseObject) ||
-		!dictionary.Equal(plan.Dictionary, state.Dictionary) ||
-		!ratelimiter.Equal(plan.RateLimiter, state.RateLimiter) ||
-		!loggingblobstorage.Equal(plan.LoggingBlobStorage, state.LoggingBlobStorage) ||
-		!loggings3.Equal(plan.LoggingS3, state.LoggingS3) ||
-		!loggingnewrelicotlp.Equal(plan.LoggingNewRelicOTLP, state.LoggingNewRelicOTLP) ||
-		!loggingnewrelic.Equal(plan.LoggingNewRelic, state.LoggingNewRelic) ||
-		!loggingdatadog.Equal(plan.LoggingDatadog, state.LoggingDatadog) ||
-		!loggingbigquery.Equal(plan.LoggingBigQuery, state.LoggingBigQuery) ||
-		!logginggcs.Equal(plan.LoggingGCS, state.LoggingGCS) ||
-		!loggingsplunk.Equal(plan.LoggingSplunk, state.LoggingSplunk) ||
-		!logginghttps.Equal(plan.LoggingHTTPS, state.LoggingHTTPS) ||
-		!loggingsumologic.Equal(plan.LoggingSumologic, state.LoggingSumologic) ||
-		!loggingsyslog.Equal(plan.LoggingSyslog, state.LoggingSyslog) ||
-		!imageoptimizerdefaultsettings.Equal(plan.ImageOptimizerDefaultSettings, state.ImageOptimizerDefaultSettings) ||
-		!snippet.Equal(plan.Snippet, state.Snippet) ||
-		!dynamicsnippet.Equal(plan.DynamicSnippet, state.DynamicSnippet) ||
-		!vcl.Equal(plan.VCL, state.VCL) ||
-		false
+	steps := planSteps(&plan, &state)
+	nestedChanged := false
+	for _, s := range steps {
+		if !s.equal() {
+			nestedChanged = true
+			break
+		}
+	}
 	needsVersionChange := nestedChanged
 
 	targetVersion := 0
@@ -1226,418 +744,139 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 			"nested_changed": nestedChanged,
 		})
 
-		settingsResult, err := settings.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, state.Settings, plan.Settings)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reconciling settings", err.Error())
-			return
-		}
-		plan.Settings = settingsResult
+		client := r.providerData.AutoClient()
 
-		if err := domain.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Domain); err != nil {
-			resp.Diagnostics.AddError("Error reconciling domains", err.Error())
+		if label, phase, err := runMutateSteps(ctx, client, serviceID, targetVersion, beforeBackendAndDirectorSteps(&plan, &state)); err != nil {
+			resp.Diagnostics.AddError(fmt.Sprintf("Error %s %s", phase, label), err.Error())
 			return
 		}
 
-		domains, err := domain.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading service domains", err.Error())
+		// Backends and directors reconcile as a ThreePassUpdate pair: a backend create must run
+		// before the director referencing it, but a backend delete must wait until directors no
+		// longer reference it.
+		if err := reconcile.ThreePassUpdate(
+			len(plan.Director) > 0 || len(state.Director) > 0,
+			func() error {
+				if err := backend.Reconcile(ctx, client, serviceID, targetVersion, plan.Backend); err != nil {
+					resp.Diagnostics.AddError("Error reconciling backends", err.Error())
+					return err
+				}
+				return nil
+			},
+			func() error {
+				if err := backend.CreateOrUpdate(ctx, client, serviceID, targetVersion, plan.Backend); err != nil {
+					resp.Diagnostics.AddError("Error creating or updating backends", err.Error())
+					return err
+				}
+				return nil
+			},
+			func() error {
+				if err := director.Reconcile(ctx, client, serviceID, targetVersion, plan.Director); err != nil {
+					resp.Diagnostics.AddError("Error reconciling directors", err.Error())
+					return err
+				}
+
+				directors, err := director.ReadForVersion(ctx, client, serviceID, targetVersion)
+				if err != nil {
+					resp.Diagnostics.AddError("Error reading service directors", err.Error())
+					return err
+				}
+				plan.Director = director.MatchOrder(directors, plan.Director)
+				return nil
+			},
+			func() error {
+				if err := backend.DeleteRemoved(ctx, client, serviceID, targetVersion, plan.Backend); err != nil {
+					resp.Diagnostics.AddError("Error deleting removed backends", err.Error())
+					return err
+				}
+				return nil
+			},
+		); err != nil {
 			return
 		}
-		plan.Domain = domain.MatchOrder(domains, plan.Domain)
 
-		// Conditions must be reconciled before backend/gzip/cache_setting/request_setting/
-		// response_object/header: all six can reference a condition by name (request_condition,
-		// cache_condition, response_condition), and the Fastly API rejects a create that names a
-		// condition which doesn't exist yet in this version.
-		if err := condition.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Condition); err != nil {
-			resp.Diagnostics.AddError("Error reconciling conditions", err.Error())
-			return
-		}
-
-		conditions, err := condition.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading service conditions", err.Error())
-			return
-		}
-		plan.Condition = condition.MatchOrder(conditions, plan.Condition)
-
-		// Health checks must be reconciled before backends: a backend can reference a health
-		// check by name, and the Fastly API rejects a backend create that names a health check
-		// which doesn't exist yet in this version.
-		if err := healthcheck.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.HealthCheck); err != nil {
-			resp.Diagnostics.AddError("Error reconciling health checks", err.Error())
-			return
-		}
-
-		healthChecks, err := healthcheck.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading service health checks", err.Error())
-			return
-		}
-		plan.HealthCheck = healthcheck.MatchOrder(healthChecks, plan.HealthCheck)
-
-		// A director's backends can reference a backend by name, so whenever directors are (or
-		// were) in play, backends and directors must be reconciled in three passes rather than
-		// the usual single ReconcileWithPrevious + Reconcile pair: a backend create must run
-		// before the director that references it, but a backend delete must wait until any
-		// director no longer referencing it has already been updated - otherwise the API rejects
-		// deleting a backend still named by a director's association. So: create/update backends
-		// first (satisfies the create direction), reconcile directors fully (any director losing
-		// a backend reference is updated/deleted here), then delete backends no longer desired
-		// (now safe - no director still references them). Services with no directors configured
-		// before or after this update skip straight to the single-pass Reconcile, which deletes
-		// before creating and so never transiently holds an extra backend against the service's
-		// backend-count limit.
-		if len(plan.Director) > 0 || len(state.Director) > 0 {
-			if err := backend.CreateOrUpdate(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Backend); err != nil {
-				resp.Diagnostics.AddError("Error creating or updating backends", err.Error())
-				return
-			}
-
-			if err := director.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Director); err != nil {
-				resp.Diagnostics.AddError("Error reconciling directors", err.Error())
-				return
-			}
-
-			directors, err := director.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-			if err != nil {
-				resp.Diagnostics.AddError("Error reading service directors", err.Error())
-				return
-			}
-			plan.Director = director.MatchOrder(directors, plan.Director)
-
-			if err := backend.DeleteRemoved(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Backend); err != nil {
-				resp.Diagnostics.AddError("Error deleting removed backends", err.Error())
-				return
-			}
-		} else {
-			if err := backend.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Backend); err != nil {
-				resp.Diagnostics.AddError("Error reconciling backends", err.Error())
-				return
-			}
-
-			if err := director.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Director); err != nil {
-				resp.Diagnostics.AddError("Error reconciling directors", err.Error())
-				return
-			}
-
-			directors, err := director.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-			if err != nil {
-				resp.Diagnostics.AddError("Error reading service directors", err.Error())
-				return
-			}
-			plan.Director = director.MatchOrder(directors, plan.Director)
-		}
-
-		backends, err := backend.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		backends, err := backend.ReadForVersion(ctx, client, serviceID, targetVersion)
 		if err != nil {
 			resp.Diagnostics.AddError("Error reading service backends", err.Error())
 			return
 		}
 		plan.Backend = backend.MatchOrder(backends, plan.Backend)
 
-		if err := cdnacl.ReconcileWithPrevious(ctx, r.providerData.AutoClient(), serviceID, targetVersion, state.ACL, plan.ACL); err != nil {
-			resp.Diagnostics.AddError("Error reconciling ACLs", err.Error())
+		if label, phase, err := runMutateSteps(ctx, client, serviceID, targetVersion, beforeDictionaryAndRateLimiterSteps(&plan, &state)); err != nil {
+			resp.Diagnostics.AddError(fmt.Sprintf("Error %s %s", phase, label), err.Error())
 			return
 		}
 
-		acls, err := cdnacl.ReadForVersionWithPlan(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.ACL)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading service ACLs", err.Error())
-			return
-		}
-		plan.ACL = acls
-
-		if err := header.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Header); err != nil {
-			resp.Diagnostics.AddError("Error reconciling headers", err.Error())
-			return
-		}
-
-		headers, err := header.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading service headers", err.Error())
-			return
-		}
-		plan.Header = header.MatchOrder(headers, plan.Header)
-
-		if err := gzip.ReconcileWithPrevious(ctx, r.providerData.AutoClient(), serviceID, targetVersion, state.Gzip, plan.Gzip); err != nil {
-			resp.Diagnostics.AddError("Error reconciling gzip configurations", err.Error())
-			return
-		}
-
-		gzips, err := gzip.ReadForVersionWithPlan(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Gzip)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading service gzip configurations", err.Error())
-			return
-		}
-		plan.Gzip = gzip.MatchOrder(gzips, plan.Gzip)
-
-		if err := cachesetting.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.CacheSetting); err != nil {
-			resp.Diagnostics.AddError("Error reconciling cache settings", err.Error())
-			return
-		}
-
-		cacheSettings, err := cachesetting.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading service cache settings", err.Error())
-			return
-		}
-		plan.CacheSetting = cachesetting.MatchOrder(cacheSettings, plan.CacheSetting)
-
-		if err := requestsetting.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.RequestSetting); err != nil {
-			resp.Diagnostics.AddError("Error reconciling request settings", err.Error())
-			return
-		}
-
-		requestSettings, err := requestsetting.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading service request settings", err.Error())
-			return
-		}
-		plan.RequestSetting = requestsetting.MatchOrder(requestSettings, plan.RequestSetting)
-
-		if err := responseobject.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.ResponseObject); err != nil {
-			resp.Diagnostics.AddError("Error reconciling response objects", err.Error())
-			return
-		}
-
-		responseObjects, err := responseobject.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading service response objects", err.Error())
-			return
-		}
-		plan.ResponseObject = responseobject.MatchOrder(responseObjects, plan.ResponseObject)
-
-		// Dictionaries and rate limiters are reconciled in three passes, not the usual single
-		// ReconcileWithPrevious + Reconcile pair, because uri_dictionary_name creates a
-		// dependency in both directions: a rate limiter create needs its dictionary to already
-		// exist, but a dictionary delete fails version validation if a not-yet-updated rate
-		// limiter's generated VCL still references it by name. So: create/update dictionaries
-		// first (satisfies the create direction), reconcile rate limiters fully (any rate
-		// limiter losing its dictionary reference is updated/deleted here), then delete
-		// dictionaries no longer desired (now safe - nothing still references them).
-		if err := dictionary.CheckRemovalGuards(ctx, r.providerData.AutoClient(), serviceID, state.Dictionary, plan.Dictionary); err != nil {
+		// Dictionaries and rate limiters reconcile as a ThreePassUpdate pair: a rate limiter
+		// create needs its dictionary first, but a dictionary delete must wait until rate
+		// limiters stop referencing it. CheckRemovalGuards runs first regardless, guarding
+		// dictionary-item loss - a separate concern from that ordering.
+		if err := dictionary.CheckRemovalGuards(ctx, client, serviceID, state.Dictionary, plan.Dictionary); err != nil {
 			resp.Diagnostics.AddError("Error reconciling dictionaries", err.Error())
 			return
 		}
 
-		if err := dictionary.CreateOrUpdate(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Dictionary); err != nil {
-			resp.Diagnostics.AddError("Error reconciling dictionaries", err.Error())
+		if err := reconcile.ThreePassUpdate(
+			len(plan.RateLimiter) > 0 || len(state.RateLimiter) > 0,
+			func() error {
+				if err := dictionary.Reconcile(ctx, client, serviceID, targetVersion, plan.Dictionary); err != nil {
+					resp.Diagnostics.AddError("Error reconciling dictionaries", err.Error())
+					return err
+				}
+				return nil
+			},
+			func() error {
+				if err := dictionary.CreateOrUpdate(ctx, client, serviceID, targetVersion, plan.Dictionary); err != nil {
+					resp.Diagnostics.AddError("Error reconciling dictionaries", err.Error())
+					return err
+				}
+				return nil
+			},
+			func() error {
+				if err := ratelimiter.Reconcile(ctx, client, serviceID, targetVersion, plan.RateLimiter); err != nil {
+					resp.Diagnostics.AddError("Error reconciling rate limiters", err.Error())
+					return err
+				}
+
+				rateLimiters, err := ratelimiter.ReadForVersion(ctx, client, serviceID, targetVersion)
+				if err != nil {
+					resp.Diagnostics.AddError("Error reading service rate limiters", err.Error())
+					return err
+				}
+				plan.RateLimiter = ratelimiter.MatchOrder(rateLimiters, plan.RateLimiter)
+				return nil
+			},
+			func() error {
+				if err := dictionary.DeleteRemoved(ctx, client, serviceID, targetVersion, plan.Dictionary); err != nil {
+					resp.Diagnostics.AddError("Error reconciling dictionaries", err.Error())
+					return err
+				}
+				return nil
+			},
+		); err != nil {
 			return
 		}
 
-		if err := ratelimiter.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.RateLimiter); err != nil {
-			resp.Diagnostics.AddError("Error reconciling rate limiters", err.Error())
-			return
-		}
-
-		rateLimiters, err := ratelimiter.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading service rate limiters", err.Error())
-			return
-		}
-		plan.RateLimiter = ratelimiter.MatchOrder(rateLimiters, plan.RateLimiter)
-
-		if err := dictionary.DeleteRemoved(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Dictionary); err != nil {
-			resp.Diagnostics.AddError("Error reconciling dictionaries", err.Error())
-			return
-		}
-
-		dictionaries, err := dictionary.ReadForVersionWithPlan(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Dictionary)
+		dictionaries, err := dictionary.ReadForVersionWithPlan(ctx, client, serviceID, targetVersion, plan.Dictionary)
 		if err != nil {
 			resp.Diagnostics.AddError("Error reading service dictionaries", err.Error())
 			return
 		}
 		plan.Dictionary = dictionary.MatchOrder(dictionaries, plan.Dictionary)
 
-		if err := loggingblobstorage.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingBlobStorage); err != nil {
-			resp.Diagnostics.AddError("Error reconciling Blob Storage logging endpoints", err.Error())
+		if label, phase, err := runMutateSteps(ctx, client, serviceID, targetVersion, afterDictionaryAndRateLimiterSteps(&plan, &state)); err != nil {
+			resp.Diagnostics.AddError(fmt.Sprintf("Error %s %s", phase, label), err.Error())
 			return
 		}
 
-		loggingBlobStorages, err := loggingblobstorage.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading Blob Storage logging endpoints", err.Error())
-			return
-		}
-		plan.LoggingBlobStorage = loggingblobstorage.MatchOrder(loggingBlobStorages, plan.LoggingBlobStorage)
-
-		if err := loggings3.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingS3); err != nil {
-			resp.Diagnostics.AddError("Error reconciling S3 logging endpoints", err.Error())
-			return
-		}
-
-		loggingS3s, err := loggings3.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading S3 logging endpoints", err.Error())
-			return
-		}
-		plan.LoggingS3 = loggings3.MatchOrder(loggingS3s, plan.LoggingS3)
-
-		if err := loggingnewrelicotlp.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingNewRelicOTLP); err != nil {
-			resp.Diagnostics.AddError("Error reconciling New Relic OTLP logging endpoints", err.Error())
-			return
-		}
-
-		loggingNewRelicOTLPs, err := loggingnewrelicotlp.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading New Relic OTLP logging endpoints", err.Error())
-			return
-		}
-		plan.LoggingNewRelicOTLP = loggingnewrelicotlp.MatchOrder(loggingNewRelicOTLPs, plan.LoggingNewRelicOTLP)
-
-		if err := loggingnewrelic.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingNewRelic); err != nil {
-			resp.Diagnostics.AddError("Error reconciling New Relic logging endpoints", err.Error())
-			return
-		}
-
-		loggingNewRelics, err := loggingnewrelic.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading New Relic logging endpoints", err.Error())
-			return
-		}
-		plan.LoggingNewRelic = loggingnewrelic.MatchOrder(loggingNewRelics, plan.LoggingNewRelic)
-
-		if err := loggingdatadog.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingDatadog); err != nil {
-			resp.Diagnostics.AddError("Error reconciling Datadog logging endpoints", err.Error())
-			return
-		}
-
-		loggingDatadogs, err := loggingdatadog.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading Datadog logging endpoints", err.Error())
-			return
-		}
-		plan.LoggingDatadog = loggingdatadog.MatchOrder(loggingDatadogs, plan.LoggingDatadog)
-
-		if err := loggingbigquery.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingBigQuery); err != nil {
-			resp.Diagnostics.AddError("Error reconciling BigQuery logging endpoints", err.Error())
-			return
-		}
-
-		loggingBigQueries, err := loggingbigquery.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading BigQuery logging endpoints", err.Error())
-			return
-		}
-		plan.LoggingBigQuery = loggingbigquery.MatchOrder(loggingBigQueries, plan.LoggingBigQuery)
-
-		if err := logginggcs.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingGCS); err != nil {
-			resp.Diagnostics.AddError("Error reconciling GCS logging endpoints", err.Error())
-			return
-		}
-
-		loggingGCSs, err := logginggcs.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading GCS logging endpoints", err.Error())
-			return
-		}
-		plan.LoggingGCS = logginggcs.MatchOrder(loggingGCSs, plan.LoggingGCS)
-
-		if err := loggingsplunk.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingSplunk); err != nil {
-			resp.Diagnostics.AddError("Error reconciling Splunk logging endpoints", err.Error())
-			return
-		}
-
-		loggingSplunks, err := loggingsplunk.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading Splunk logging endpoints", err.Error())
-			return
-		}
-		plan.LoggingSplunk = loggingsplunk.MatchOrder(loggingSplunks, plan.LoggingSplunk)
-
-		if err := logginghttps.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingHTTPS); err != nil {
-			resp.Diagnostics.AddError("Error reconciling HTTPS logging endpoints", err.Error())
-			return
-		}
-
-		loggingHTTPS, err := logginghttps.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading HTTPS logging endpoints", err.Error())
-			return
-		}
-		plan.LoggingHTTPS = logginghttps.MatchOrder(loggingHTTPS, plan.LoggingHTTPS)
-
-		if err := loggingsumologic.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingSumologic); err != nil {
-			resp.Diagnostics.AddError("Error reconciling Sumologic logging endpoints", err.Error())
-			return
-		}
-
-		loggingSumologics, err := loggingsumologic.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading Sumologic logging endpoints", err.Error())
-			return
-		}
-		plan.LoggingSumologic = loggingsumologic.MatchOrder(loggingSumologics, plan.LoggingSumologic)
-
-		if err := loggingsyslog.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingSyslog); err != nil {
-			resp.Diagnostics.AddError("Error reconciling Syslog logging endpoints", err.Error())
-			return
-		}
-
-		loggingSyslogs, err := loggingsyslog.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading Syslog logging endpoints", err.Error())
-			return
-		}
-		plan.LoggingSyslog = loggingsyslog.MatchOrder(loggingSyslogs, plan.LoggingSyslog)
-
-		if err := imageoptimizerdefaultsettings.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, state.ImageOptimizerDefaultSettings, plan.ImageOptimizerDefaultSettings); err != nil {
-			resp.Diagnostics.AddError("Error reconciling Image Optimizer default settings", err.Error())
-			return
-		}
-
-		imageOptimizerDefaultSettings, err := imageoptimizerdefaultsettings.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.ImageOptimizerDefaultSettings, false)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading service Image Optimizer default settings", err.Error())
-			return
-		}
-		plan.ImageOptimizerDefaultSettings = imageOptimizerDefaultSettings
-
-		if err := snippet.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Snippet); err != nil {
-			resp.Diagnostics.AddError("Error reconciling VCL snippets", err.Error())
-			return
-		}
-
-		snippets, err := snippet.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading VCL snippets", err.Error())
-			return
-		}
-		plan.Snippet = snippet.MatchOrderPreservePlanContent(snippets, plan.Snippet)
-
-		if err := dynamicsnippet.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.DynamicSnippet); err != nil {
-			resp.Diagnostics.AddError("Error reconciling dynamic VCL snippets", err.Error())
-			return
-		}
-
-		dynamicSnippets, err := dynamicsnippet.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading dynamic VCL snippets", err.Error())
-			return
-		}
-		plan.DynamicSnippet = dynamicsnippet.MatchOrderPreservePlanFields(dynamicSnippets, plan.DynamicSnippet)
-
-		if err := vcl.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.VCL); err != nil {
-			resp.Diagnostics.AddError("Error reconciling custom VCL files", err.Error())
-			return
-		}
-
-		vcls, err := vcl.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading custom VCL files", err.Error())
-			return
-		}
-		plan.VCL = vcl.MatchOrderPreservePlanContent(vcls, plan.VCL)
-
-		if err := service.ValidateVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion); err != nil {
+		if err := service.ValidateVersion(ctx, client, serviceID, targetVersion); err != nil {
 			resp.Diagnostics.AddError("Error validating service version", err.Error())
 			return
 		}
 
 		plan.ManagedVersion = types.Int64Value(int64(targetVersion))
 
-		if _, err := r.providerData.AutoClient().ActivateVersion(ctx, &fastly.ActivateVersionInput{
+		if _, err := client.ActivateVersion(ctx, &fastly.ActivateVersionInput{
 			ServiceID:      serviceID,
 			ServiceVersion: targetVersion,
 		}); err != nil {
@@ -1650,35 +889,9 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.ManagedVersion = state.ManagedVersion
 		plan.ActiveVersion = state.ActiveVersion
 
-		plan.Settings = state.Settings
-		plan.Domain = domain.MatchOrder(state.Domain, plan.Domain)
-		plan.Backend = backend.MatchOrder(state.Backend, plan.Backend)
-		plan.Director = director.MatchOrder(state.Director, plan.Director)
-		plan.ACL = cdnacl.MatchOrder(state.ACL, plan.ACL)
-		plan.Condition = condition.MatchOrder(state.Condition, plan.Condition)
-		plan.HealthCheck = healthcheck.MatchOrder(state.HealthCheck, plan.HealthCheck)
-		plan.Header = header.MatchOrder(state.Header, plan.Header)
-		plan.Gzip = gzip.MatchOrder(state.Gzip, plan.Gzip)
-		plan.CacheSetting = cachesetting.MatchOrder(state.CacheSetting, plan.CacheSetting)
-		plan.RequestSetting = requestsetting.MatchOrder(state.RequestSetting, plan.RequestSetting)
-		plan.ResponseObject = responseobject.MatchOrder(state.ResponseObject, plan.ResponseObject)
-		plan.Dictionary = dictionary.MatchOrder(state.Dictionary, plan.Dictionary)
-		plan.RateLimiter = ratelimiter.MatchOrder(state.RateLimiter, plan.RateLimiter)
-		plan.LoggingBlobStorage = loggingblobstorage.MatchOrder(state.LoggingBlobStorage, plan.LoggingBlobStorage)
-		plan.LoggingS3 = loggings3.MatchOrder(state.LoggingS3, plan.LoggingS3)
-		plan.LoggingNewRelicOTLP = loggingnewrelicotlp.MatchOrder(state.LoggingNewRelicOTLP, plan.LoggingNewRelicOTLP)
-		plan.LoggingNewRelic = loggingnewrelic.MatchOrder(state.LoggingNewRelic, plan.LoggingNewRelic)
-		plan.LoggingDatadog = loggingdatadog.MatchOrder(state.LoggingDatadog, plan.LoggingDatadog)
-		plan.LoggingBigQuery = loggingbigquery.MatchOrder(state.LoggingBigQuery, plan.LoggingBigQuery)
-		plan.LoggingGCS = logginggcs.MatchOrder(state.LoggingGCS, plan.LoggingGCS)
-		plan.LoggingSplunk = loggingsplunk.MatchOrder(state.LoggingSplunk, plan.LoggingSplunk)
-		plan.LoggingHTTPS = logginghttps.MatchOrder(state.LoggingHTTPS, plan.LoggingHTTPS)
-		plan.LoggingSumologic = loggingsumologic.MatchOrder(state.LoggingSumologic, plan.LoggingSumologic)
-		plan.LoggingSyslog = loggingsyslog.MatchOrder(state.LoggingSyslog, plan.LoggingSyslog)
-		plan.ImageOptimizerDefaultSettings = state.ImageOptimizerDefaultSettings
-		plan.Snippet = snippet.MatchOrderPreservePlanContent(state.Snippet, plan.Snippet)
-		plan.DynamicSnippet = dynamicsnippet.MatchOrderPreservePlanFields(state.DynamicSnippet, plan.DynamicSnippet)
-		plan.VCL = vcl.MatchOrderPreservePlanContent(state.VCL, plan.VCL)
+		for _, s := range steps {
+			s.matchOnly()
+		}
 	}
 
 	plan.ID = state.ID
