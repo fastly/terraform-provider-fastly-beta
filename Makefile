@@ -49,8 +49,8 @@ clean:
 	@rm -rf $(BIN_DIR)
 
 lint: install-linter check-linter-version
-	@echo "==> Running golangci-lint..."
-	@$(GOLANGCI_LINT) run --verbose
+	@echo "==> Running golangci-lint --fix..."
+	@$(GOLANGCI_LINT) run --fix --verbose
 
 install-linter:
 	@echo "==> Installing golangci-lint $(GOLANGCI_LINT_VERSION)..."
