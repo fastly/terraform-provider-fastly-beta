@@ -28,9 +28,11 @@ type testOps struct {
 	deletedItems []string
 	createdItems []testModel
 	updatedItems []testModel
+	listCalls    int
 }
 
 func (o *testOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*testAPI, error) {
+	o.listCalls++
 	if o.listError != nil {
 		return nil, o.listError
 	}
@@ -241,6 +243,53 @@ func TestResource_Run(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "update failed")
 	})
+
+	t.Run("lists remote items only once", func(t *testing.T) {
+		ops := &testOps{
+			listResult: []*testAPI{
+				{Name: "item1", Value: "oldvalue"},
+				{Name: "item2", Value: "value2"},
+			},
+		}
+		r := &Resource[testModel, testAPI]{
+			Ops:      ops,
+			GetName:  func(m testModel) string { return m.Name },
+			Sortable: true,
+		}
+
+		desired := []testModel{
+			{Name: "item1", Value: "newvalue"},
+			{Name: "item3", Value: "value3"},
+		}
+
+		err := r.Run(ctx, nil, "service123", 1, desired)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, ops.listCalls)
+		assert.Equal(t, []string{"item2"}, ops.deletedItems)
+		assert.Len(t, ops.updatedItems, 1)
+		assert.Len(t, ops.createdItems, 1)
+	})
+}
+
+func TestResource_DeleteRemovedAndCreateOrUpdate_independentLists(t *testing.T) {
+	ctx := context.Background()
+
+	ops := &testOps{
+		listResult: []*testAPI{
+			{Name: "item1", Value: "value1"},
+		},
+	}
+	r := &Resource[testModel, testAPI]{
+		Ops:      ops,
+		GetName:  func(m testModel) string { return m.Name },
+		Sortable: true,
+	}
+
+	desired := []testModel{{Name: "item1", Value: "value1"}}
+
+	assert.NoError(t, r.DeleteRemoved(ctx, nil, "service123", 1, desired))
+	assert.NoError(t, r.CreateOrUpdate(ctx, nil, "service123", 1, desired))
+	assert.Equal(t, 2, ops.listCalls)
 }
 
 func TestResource_ReadForVersion(t *testing.T) {
