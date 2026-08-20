@@ -170,9 +170,8 @@ func reconcileHTTP3(ctx context.Context, client *fastly.Client, serviceID string
 	return waitForHTTP3Consistency(ctx, client, serviceID, version, desired)
 }
 
-// waitForHTTP3Consistency polls on a time budget, not a fixed attempt count: the prior
-// 5-attempts/200ms (~1s) budget fired sporadically, since the status endpoint's lag isn't
-// bounded to a small fixed window.
+// waitForHTTP3Consistency polls on a time budget, not a fixed attempt count: the status
+// endpoint's lag behind the Enable/Disable write path isn't bounded to a small fixed window.
 func waitForHTTP3Consistency(ctx context.Context, client *fastly.Client, serviceID string, version int, desired bool) error {
 	ctx, cancel := context.WithTimeout(ctx, http3ConsistencyTimeout)
 	defer cancel()
