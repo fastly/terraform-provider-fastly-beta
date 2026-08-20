@@ -485,14 +485,9 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		"version":    version,
 	})
 
-	if err := settings.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, nil, plan.Settings); err != nil {
-		resp.Diagnostics.AddError("Error reconciling settings", err.Error())
-		return
-	}
-
-	settingsResult, err := settings.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version, plan.Settings)
+	settingsResult, err := settings.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, nil, plan.Settings)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading service settings", err.Error())
+		resp.Diagnostics.AddError("Error reconciling settings", err.Error())
 		return
 	}
 	plan.Settings = settingsResult
@@ -1231,14 +1226,9 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 			"nested_changed": nestedChanged,
 		})
 
-		if err := settings.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, state.Settings, plan.Settings); err != nil {
-			resp.Diagnostics.AddError("Error reconciling settings", err.Error())
-			return
-		}
-
-		settingsResult, err := settings.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Settings)
+		settingsResult, err := settings.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, state.Settings, plan.Settings)
 		if err != nil {
-			resp.Diagnostics.AddError("Error reading service settings", err.Error())
+			resp.Diagnostics.AddError("Error reconciling settings", err.Error())
 			return
 		}
 		plan.Settings = settingsResult
