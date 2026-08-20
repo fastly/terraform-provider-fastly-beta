@@ -213,7 +213,7 @@ func VisualizationConfigBlock() schema.ListNestedBlock {
 					Optional:    true,
 					Computed:    true,
 					Default:     stringdefault.StaticString(DefaultVisualizationFormat),
-					Description: "Units used to format the data. Defaults to `number`.",
+                    Description: "The units to use to format the data. Defaults to `number`. One of: `number`, `bytes`, `percent`, `requests`, `responses`, `seconds`, `milliseconds`, `ratio`, `bitrate`.",
 					Validators: []validator.String{
 						stringvalidator.OneOf("number", "bytes", "percent", "requests", "responses", "seconds", "milliseconds", "ratio", "bitrate"),
 					},

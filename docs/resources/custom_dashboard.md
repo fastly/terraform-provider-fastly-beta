@@ -127,7 +127,7 @@ Required:
 Optional:
 
 - `calculation_method` (String) The aggregation function to apply to the dataset. One of: `avg`, `sum`, `min`, `max`, `latest`, `p95`.
-- `format` (String) Units used to format the data. Defaults to `number`.
+- `format` (String) The units to use to format the data. Defaults to `number`. One of: `number`, `bytes`, `percent`, `requests`, `responses`, `seconds`, `milliseconds`, `ratio`, `bitrate`.
 
 ## Import
 
