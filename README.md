@@ -1,25 +1,18 @@
-# Fastly Terraform Provider Dual-Model Rewrite
+# Fastly Terraform Provider - Beta
 
-This branch is the clean development branch for the Fastly Terraform provider
-rewrite using the Terraform Plugin Framework.
+This repository contains the source code for the 'fastly-beta'
+Terraform provider, a new implementation of the existing 'fastly'
+Terraform provider. The provider is built on the HashiCorp Terraform
+plugin framework unlike the previous provider which is built on the
+Terraform Plugin SDK v2.
 
-The rewrite is developed on the orphan branch:
-
-```text
-dual-model-framework-rewrite
-```
-
-Feature pull requests for the rewrite should target this branch while the new
-provider implementation is in progress.
-
-The current `main` branch remains the existing provider line while the rewrite is
-being developed. Once the rewrite is complete and stable, this branch is intended
-to become the new main development line for the next major version of the Fastly
-Terraform provider.
+Fastly expects to deliver the first release of this new provider in
+September of 2026, and expects to deliver the first non-beta release
+before the end of 2026.
 
 ## Design overview
 
-The rewrite uses a **dual-model provider design** with two separate resource
+This providers offers a **dual-model design** with two separate resource
 families:
 
 - an **automatic compatibility resource family** for users who want
@@ -108,7 +101,7 @@ service configuration:
 
 ## Important design rule
 
-One Fastly service should be managed through **one resource family only**.
+A Fastly service should be managed through **one resource family only**.
 
 Do not manage the same Fastly service with both:
 
@@ -117,17 +110,3 @@ Do not manage the same Fastly service with both:
 - explicit/default resources such as `fastly_service_cdn`,
   `fastly_service_compute`, `fastly_service_domain`, or
   `fastly_service_backend`
-
-## Contributing to the rewrite
-
-Rewrite work should happen through focused feature branches and pull requests
-targeting `dual-model-framework-rewrite`.
-
-Suggested workflow:
-
-1. branch from `dual-model-framework-rewrite`
-2. implement one focused part of the rewrite
-3. open a pull request back into `dual-model-framework-rewrite`
-4. repeat until the rewrite is complete and stable
-
-Do not target rewrite pull requests at the current `main` branch.
