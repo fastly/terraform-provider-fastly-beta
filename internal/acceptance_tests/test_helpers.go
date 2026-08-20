@@ -15,6 +15,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/errors"
 	"github.com/fastly/terraform-provider-fastly/internal/provider"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/imageoptimizerdefaultsettings"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/settings"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -287,6 +288,75 @@ func CheckImageOptimizerDefaultSettingsMatchAPIDefaults(resourceName string) res
 	}
 }
 
+// CheckSettingsMatchAPIDefaults returns a TestCheckFunc that fetches the general settings (and
+// HTTP/3 status) directly from the Fastly API (bypassing Terraform state) and fails if any
+// field still holds a previously-configured, non-default value. This exists because the read
+// path only surfaces the settings block when it's present in config, so a state-only check of
+// the block being absent can pass even if the remote settings were never actually reset.
+func CheckSettingsMatchAPIDefaults(resourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("not found: %s", resourceName)
+		}
+
+		version, err := strconv.Atoi(rs.Primary.Attributes["active_version"])
+		if err != nil {
+			return fmt.Errorf("error parsing active_version: %w", err)
+		}
+
+		client, err := NewFastlyClient()
+		if err != nil {
+			return fmt.Errorf("error creating Fastly client: %w", err)
+		}
+
+		remote, err := client.GetSettings(context.Background(), &fastly.GetSettingsInput{
+			ServiceID:      rs.Primary.ID,
+			ServiceVersion: version,
+		})
+		if err != nil {
+			return fmt.Errorf("error fetching settings: %w", err)
+		}
+
+		var mismatches []string
+		if fastly.ToValue(remote.DefaultHost) != settings.DefaultDefaultHost {
+			mismatches = append(mismatches, fmt.Sprintf("default_host=%q, want %q", fastly.ToValue(remote.DefaultHost), settings.DefaultDefaultHost))
+		}
+		if int(fastly.ToValue(remote.DefaultTTL)) != settings.DefaultDefaultTTL {
+			mismatches = append(mismatches, fmt.Sprintf("default_ttl=%d, want %d", fastly.ToValue(remote.DefaultTTL), settings.DefaultDefaultTTL))
+		}
+		if fastly.ToValue(remote.StaleIfError) != settings.DefaultStaleIfError {
+			mismatches = append(mismatches, fmt.Sprintf("stale_if_error=%v, want %v", fastly.ToValue(remote.StaleIfError), settings.DefaultStaleIfError))
+		}
+		if int(fastly.ToValue(remote.StaleIfErrorTTL)) != settings.DefaultStaleIfErrorTTL {
+			mismatches = append(mismatches, fmt.Sprintf("stale_if_error_ttl=%d, want %d", fastly.ToValue(remote.StaleIfErrorTTL), settings.DefaultStaleIfErrorTTL))
+		}
+
+		_, http3Err := client.GetHTTP3(context.Background(), &fastly.GetHTTP3Input{
+			ServiceID:      rs.Primary.ID,
+			ServiceVersion: version,
+		})
+		var http3Enabled bool
+		switch {
+		case http3Err == nil:
+			http3Enabled = true
+		case errors.IsNotFound(http3Err):
+			http3Enabled = false
+		default:
+			return fmt.Errorf("error fetching HTTP/3 status: %w", http3Err)
+		}
+		if http3Enabled != settings.DefaultHTTP3 {
+			mismatches = append(mismatches, fmt.Sprintf("http3=%v, want %v", http3Enabled, settings.DefaultHTTP3))
+		}
+
+		if len(mismatches) > 0 {
+			return fmt.Errorf("settings were not reset to API defaults in Fastly: %s", strings.Join(mismatches, ", "))
+		}
+
+		return nil
+	}
+}
+
 // GetPackagePath returns the path to the valid.tar.gz test package
 // Assumes tests are always run from the acceptance_tests package directory
 func GetPackagePath() string {
@@ -510,6 +580,62 @@ func ConfigCDNAutoWithImageOptimizerDefaultSettingsUpdated(serviceName, domainNa
 		"internal/acceptance_tests/blocks/domain_single.tf",
 		"internal/acceptance_tests/blocks/image_optimizer_default_settings_updated.tf",
 	) + imageOptimizerProductEnablement("fastly_service_cdn_auto.test")
+}
+
+// ConfigCDNAutoWithSettings returns a CDN auto service config with a domain and a settings
+// block with every optional attribute set to a non-default value.
+func ConfigCDNAutoWithSettings(serviceName, domainName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME": serviceName,
+			"DOMAIN_NAME":  domainName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/settings_single.tf",
+	)
+}
+
+// ConfigCDNAutoWithSettingsMinimal returns a CDN auto service config with an empty settings
+// block, exercising the computed defaults for every attribute.
+func ConfigCDNAutoWithSettingsMinimal(serviceName, domainName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME": serviceName,
+			"DOMAIN_NAME":  domainName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/settings_minimal.tf",
+	)
+}
+
+// ConfigCDNAutoWithSettingsUpdated returns a CDN auto service config with a settings block
+// whose attribute values differ from ConfigCDNAutoWithSettings.
+func ConfigCDNAutoWithSettingsUpdated(serviceName, domainName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME": serviceName,
+			"DOMAIN_NAME":  domainName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/settings_updated.tf",
+	)
+}
+
+// ConfigCDNAutoWithTooManySettings returns a CDN auto service config with two settings blocks,
+// exercising the schema-level listvalidator.SizeAtMost(1) plan-time check.
+func ConfigCDNAutoWithTooManySettings(serviceName, domainName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME": serviceName,
+			"DOMAIN_NAME":  domainName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/settings_too_many.tf",
+	)
 }
 
 // ConfigCDNAutoWithACL returns a CDN auto service config with a domain and ACL

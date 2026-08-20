@@ -32,6 +32,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/resources/ratelimiter"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/requestsetting"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/responseobject"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/settings"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/snippet"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/vcl"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
@@ -75,6 +76,7 @@ type Model struct {
 	Reuse                         types.Bool                                  `tfsdk:"reuse"`
 	ActiveVersion                 types.Int64                                 `tfsdk:"active_version"`
 	ManagedVersion                types.Int64                                 `tfsdk:"managed_version"`
+	Settings                      []settings.NestedModel                      `tfsdk:"settings"`
 	Domain                        []domain.NestedModel                        `tfsdk:"domain"`
 	Backend                       []backend.NestedModel                       `tfsdk:"backend"`
 	Director                      []director.NestedModel                      `tfsdk:"director"`
@@ -152,6 +154,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			},
 		},
 		Blocks: map[string]schema.Block{
+			"settings":                         settings.NestedBlockSchema(),
 			"domain":                           domain.NestedBlockSchema(),
 			"backend":                          backend.NestedBlockSchema(),
 			"director":                         director.NestedBlockSchema(),
@@ -326,6 +329,18 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		"service_id": serviceID,
 		"version":    version,
 	})
+
+	if err := settings.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, nil, plan.Settings); err != nil {
+		resp.Diagnostics.AddError("Error reconciling settings", err.Error())
+		return
+	}
+
+	settingsResult, err := settings.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version, plan.Settings)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading service settings", err.Error())
+		return
+	}
+	plan.Settings = settingsResult
 
 	if err := domain.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.Domain); err != nil {
 		resp.Diagnostics.AddError("Error reconciling domains", err.Error())
@@ -927,6 +942,13 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 	state.ImageOptimizerDefaultSettings = imageOptimizerDefaultSettings
 
+	settingsResult, err := settings.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion, state.Settings)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading service settings", err.Error())
+		return
+	}
+	state.Settings = settingsResult
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -991,7 +1013,8 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	nestedChanged := !domain.Equal(plan.Domain, state.Domain) ||
+	nestedChanged := !settings.Equal(plan.Settings, state.Settings) ||
+		!domain.Equal(plan.Domain, state.Domain) ||
 		!backend.Equal(plan.Backend, state.Backend) ||
 		!director.Equal(plan.Director, state.Director) ||
 		!cdnacl.Equal(plan.ACL, state.ACL) ||
@@ -1052,6 +1075,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 			"cloned":         shouldClone,
 			"nested_changed": nestedChanged,
 		})
+
+		if err := settings.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, state.Settings, plan.Settings); err != nil {
+			resp.Diagnostics.AddError("Error reconciling settings", err.Error())
+			return
+		}
+
+		settingsResult, err := settings.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Settings)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading service settings", err.Error())
+			return
+		}
+		plan.Settings = settingsResult
 
 		if err := domain.Reconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Domain); err != nil {
 			resp.Diagnostics.AddError("Error reconciling domains", err.Error())
@@ -1470,6 +1505,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.ManagedVersion = state.ManagedVersion
 		plan.ActiveVersion = state.ActiveVersion
 
+		plan.Settings = state.Settings
 		plan.Domain = domain.MatchOrder(state.Domain, plan.Domain)
 		plan.Backend = backend.MatchOrder(state.Backend, plan.Backend)
 		plan.Director = director.MatchOrder(state.Director, plan.Director)
