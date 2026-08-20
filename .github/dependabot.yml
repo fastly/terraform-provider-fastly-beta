@@ -1,41 +1,51 @@
 version: 2
 updates:
-  # Dependencies listed in go.mod
   - package-ecosystem: "gomod"
-    directory: "/" # Location of package manifests
+    directory: "/"
     schedule:
       interval: "weekly"
-    cooldown:
-      default-days: 7
-      exclude:
-        - "github.com/fastly/go-fastly/*"
+    allow:
+      - dependency-type: "all"
+    labels:
+      - dependencies
+      - go
+      # TODO: Change this to Auto-Changelog after the first release
+      - Skip-Changelog
     groups:
       go-dependencies:
         patterns:
           - "*"
-  # Dependencies listed in tools/go.mod
+    cooldown:
+      default-days: 7
+      exclude:
+        - "github.com/fastly/go-fastly/*"
+
   - package-ecosystem: "gomod"
     directory: "/tools"
     schedule:
       interval: "weekly"
-    cooldown:
-      default-days: 7
     labels:
-      - "tools"
+      - tools
+      - go
+      - Skip-Changelog
     groups:
       tools-dependencies:
         patterns:
           - "*"
-  # Dependencies listed in .github/workflows/*.yml
+    cooldown:
+      default-days: 7
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
-    cooldown:
-      default-days: 7
     labels:
-      - "github_actions"
+      - dependencies
+      - github_actions
+      - Skip-Changelog
     groups:
       gha-dependencies:
         patterns:
           - "*"
+    cooldown:
+      default-days: 7
