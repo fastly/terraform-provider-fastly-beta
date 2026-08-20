@@ -168,3 +168,55 @@ func TestMatchOrder(t *testing.T) {
 
 	assert.Equal(t, []NestedModel{a, b}, result)
 }
+
+func TestValidateConditionReferences(t *testing.T) {
+	conditionNames := map[string]struct{}{"my-condition": {}}
+
+	t.Run("no conditions set", func(t *testing.T) {
+		item := minimalNestedModel()
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, nil))
+	})
+
+	t.Run("references configured conditions", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.CacheCondition = types.StringValue("my-condition")
+		item.RequestCondition = types.StringValue("my-condition")
+		item.ResponseCondition = types.StringValue("my-condition")
+
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, conditionNames))
+	})
+
+	t.Run("cache_condition references a condition that isn't configured", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.CacheCondition = types.StringValue("missing-condition")
+
+		err := ValidateConditionReferences([]NestedModel{item}, conditionNames)
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), `"header"`)
+			assert.Contains(t, err.Error(), `"missing-condition"`)
+		}
+	})
+
+	t.Run("request_condition references a condition that isn't configured", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.RequestCondition = types.StringValue("missing-condition")
+
+		assert.Error(t, ValidateConditionReferences([]NestedModel{item}, conditionNames))
+	})
+
+	t.Run("response_condition references a condition that isn't configured", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.ResponseCondition = types.StringValue("missing-condition")
+
+		assert.Error(t, ValidateConditionReferences([]NestedModel{item}, conditionNames))
+	})
+
+	t.Run("skips unknown conditions", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.CacheCondition = types.StringUnknown()
+		item.RequestCondition = types.StringUnknown()
+		item.ResponseCondition = types.StringUnknown()
+
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, nil))
+	})
+}

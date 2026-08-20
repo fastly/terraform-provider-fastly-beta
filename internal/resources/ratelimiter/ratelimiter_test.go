@@ -6,6 +6,7 @@ import (
 
 	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/dictionary"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/responseobject"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -578,6 +579,43 @@ func TestValidateDictionaryReferences(t *testing.T) {
 		item.URIDictionaryName = types.StringUnknown()
 
 		assert.NoError(t, ValidateDictionaryReferences([]NestedModel{item}, nil))
+	})
+}
+
+func TestValidateResponseObjectReferences(t *testing.T) {
+	ro := func(name string) responseobject.NestedModel {
+		return responseobject.NestedModel{Name: types.StringValue(name)}
+	}
+
+	t.Run("no response_object_name set", func(t *testing.T) {
+		item := minimalNestedModel()
+		assert.NoError(t, ValidateResponseObjectReferences([]NestedModel{item}, nil))
+	})
+
+	t.Run("references a configured response object", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.ResponseObjectName = types.StringValue("my-response-object")
+
+		assert.NoError(t, ValidateResponseObjectReferences([]NestedModel{item}, []responseobject.NestedModel{ro("my-response-object")}))
+	})
+
+	t.Run("references a response object that isn't configured", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.Name = types.StringValue("rate-limiter")
+		item.ResponseObjectName = types.StringValue("missing-response-object")
+
+		err := ValidateResponseObjectReferences([]NestedModel{item}, []responseobject.NestedModel{ro("other-response-object")})
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), `"rate-limiter"`)
+			assert.Contains(t, err.Error(), `"missing-response-object"`)
+		}
+	})
+
+	t.Run("skips unknown response_object_name", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.ResponseObjectName = types.StringUnknown()
+
+		assert.NoError(t, ValidateResponseObjectReferences([]NestedModel{item}, nil))
 	})
 }
 

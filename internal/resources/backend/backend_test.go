@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/fastly/terraform-provider-fastly/internal/resources/healthcheck"
+
 	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
@@ -925,4 +927,74 @@ func TestEqual(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestValidateHealthcheckReferences(t *testing.T) {
+	hc := func(name string) healthcheck.NestedModel {
+		return healthcheck.NestedModel{Name: types.StringValue(name)}
+	}
+
+	t.Run("no healthcheck set", func(t *testing.T) {
+		item := minimalNestedModel()
+		assert.NoError(t, ValidateHealthcheckReferences([]NestedModel{item}, nil))
+	})
+
+	t.Run("references a configured healthcheck", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.HealthCheck = types.StringValue("my-healthcheck")
+
+		assert.NoError(t, ValidateHealthcheckReferences([]NestedModel{item}, []healthcheck.NestedModel{hc("my-healthcheck")}))
+	})
+
+	t.Run("references a healthcheck that isn't configured", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.HealthCheck = types.StringValue("missing-healthcheck")
+
+		err := ValidateHealthcheckReferences([]NestedModel{item}, []healthcheck.NestedModel{hc("other-healthcheck")})
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), `"test-backend"`)
+			assert.Contains(t, err.Error(), `"missing-healthcheck"`)
+		}
+	})
+
+	t.Run("skips unknown healthcheck", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.HealthCheck = types.StringUnknown()
+
+		assert.NoError(t, ValidateHealthcheckReferences([]NestedModel{item}, nil))
+	})
+}
+
+func TestValidateConditionReferences(t *testing.T) {
+	conditionNames := map[string]struct{}{"my-condition": {}}
+
+	t.Run("no request_condition set", func(t *testing.T) {
+		item := minimalNestedModel()
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, nil))
+	})
+
+	t.Run("references a configured condition", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.RequestCondition = types.StringValue("my-condition")
+
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, conditionNames))
+	})
+
+	t.Run("references a condition that isn't configured", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.RequestCondition = types.StringValue("missing-condition")
+
+		err := ValidateConditionReferences([]NestedModel{item}, conditionNames)
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), `"test-backend"`)
+			assert.Contains(t, err.Error(), `"missing-condition"`)
+		}
+	})
+
+	t.Run("skips unknown condition", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.RequestCondition = types.StringUnknown()
+
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, nil))
+	})
 }
