@@ -73,7 +73,7 @@ requiring users to manufacture API identifiers.
 Required:
 
 - `key` (String) Stable Terraform identity for this dashboard item. Must be unique within the dashboard. Changing it causes the item to be treated as a new item.
-- `subtitle` (String) A human-readable subtitle for the dashboard item.
+- `subtitle` (String) A human-readable subtitle for the dashboard item. Often a description of the visualization.
 - `title` (String) A human-readable title for the dashboard item.
 
 Optional:

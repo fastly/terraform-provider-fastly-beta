@@ -106,7 +106,7 @@ func DashboardItemsBlock() schema.ListNestedBlock {
 				},
 				"subtitle": schema.StringAttribute{
 					Required:    true,
-					Description: "A human-readable subtitle for the dashboard item.",
+					Description: "A human-readable subtitle for the dashboard item. Often a description of the visualization.",
 				},
 				"span": schema.Int64Attribute{
 					Optional:    true,
