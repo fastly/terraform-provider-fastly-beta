@@ -6,10 +6,11 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestAccFastlyServiceCDNAuto_withACL(t *testing.T) {
@@ -250,7 +251,7 @@ func TestAccFastlyServiceCDNACL_import(t *testing.T) {
 			},
 			{
 				ResourceName: "fastly_service_cdn_acl.test",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+				ImportStateIdFunc: func(_ *terraform.State) (string, error) {
 					return fmt.Sprintf("%s/%s/%s", serviceID, versionNumber, aclName), nil
 				},
 				ImportState:       true,
@@ -386,7 +387,7 @@ func TestAccFastlyServiceCDNACL_importWithUnderscores(t *testing.T) {
 			},
 			{
 				ResourceName: "fastly_service_cdn_acl.test",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+				ImportStateIdFunc: func(_ *terraform.State) (string, error) {
 					return fmt.Sprintf("%s/%s/%s", serviceID, versionNumber, aclName), nil
 				},
 				ImportState:       true,

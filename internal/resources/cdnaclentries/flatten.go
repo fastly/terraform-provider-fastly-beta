@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 func flattenEntries(ctx context.Context, remoteState []*fastly.ACLEntry, plannedEntries types.Set, diags *diag.Diagnostics) types.Set {

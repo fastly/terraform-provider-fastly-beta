@@ -9,10 +9,11 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestAccFastlyServiceVCLSnippet_basicAndUpdate(t *testing.T) {
@@ -329,7 +330,7 @@ func writeSnippetFile(t *testing.T, name, content string) string {
 	}
 
 	path := filepath.Join(dir, name)
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatalf("error writing snippet fixture: %s", err)
 	}
 

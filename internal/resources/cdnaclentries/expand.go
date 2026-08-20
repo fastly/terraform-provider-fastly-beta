@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 func buildBatchACLEntry(ctx context.Context, entry EntryModel, op fastly.BatchOperation) *fastly.BatchACLEntry {

@@ -8,10 +8,11 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 type NestedModel struct {
@@ -142,10 +143,10 @@ func (o opsWithPrevious) Equal(desired NestedModel, remote *fastly.Gzip) bool {
 	remoteModel := o.ToModel(remote)
 	previous, hadPrevious := o.previousByName[service.StringValue(desired.Name)]
 
-	if listUnset(desired.ContentTypes) && !(hadPrevious && !listUnset(previous.ContentTypes)) {
+	if listUnset(desired.ContentTypes) && (!hadPrevious || listUnset(previous.ContentTypes)) {
 		remoteModel.ContentTypes = desired.ContentTypes
 	}
-	if listUnset(desired.Extensions) && !(hadPrevious && !listUnset(previous.Extensions)) {
+	if listUnset(desired.Extensions) && (!hadPrevious || listUnset(previous.Extensions)) {
 		remoteModel.Extensions = desired.Extensions
 	}
 	return desired.ModelsEqual(remoteModel)

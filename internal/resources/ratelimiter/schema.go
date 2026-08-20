@@ -11,7 +11,6 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 	"github.com/fastly/terraform-provider-fastly/internal/validation"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -21,6 +20,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 const DefaultFeatureRevision = 1
@@ -255,7 +256,7 @@ func (o ops) GetName(api *fastly.ERL) string {
 	return fastly.ToValue(api.Name)
 }
 
-func (o *ops) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
+func (o *ops) Delete(ctx context.Context, client *fastly.Client, _ string, _ int, name string) error {
 	remote := o.remoteByName[name]
 	if remote == nil {
 		return nil

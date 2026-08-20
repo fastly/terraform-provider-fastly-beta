@@ -17,9 +17,9 @@ var linkAttrTypes = map[string]attr.Type{
 	"link_id":     types.StringType,
 }
 
-func linkObj(name, resourceID, linkID string) attr.Value {
+func linkObj(name, resourceID string) attr.Value {
 	return types.ObjectValueMust(linkAttrTypes, map[string]attr.Value{
-		"name": types.StringValue(name), "resource_id": types.StringValue(resourceID), "link_id": types.StringValue(linkID),
+		"name": types.StringValue(name), "resource_id": types.StringValue(resourceID), "link_id": types.StringValue(""),
 	})
 }
 
@@ -27,8 +27,8 @@ func TestUniqueResourceLinkIdentity_RejectsDuplicateName(t *testing.T) {
 	ctx := context.Background()
 
 	list := types.ListValueMust(types.ObjectType{AttrTypes: linkAttrTypes}, []attr.Value{
-		linkObj("store", "resource_a", ""),
-		linkObj("store", "resource_b", ""),
+		linkObj("store", "resource_a"),
+		linkObj("store", "resource_b"),
 	})
 
 	req := validator.ListRequest{Path: path.Root("resource_link"), ConfigValue: list}
@@ -43,8 +43,8 @@ func TestUniqueResourceLinkIdentity_RejectsDuplicateResourceID(t *testing.T) {
 	ctx := context.Background()
 
 	list := types.ListValueMust(types.ObjectType{AttrTypes: linkAttrTypes}, []attr.Value{
-		linkObj("alias_a", "resource_1", ""),
-		linkObj("alias_b", "resource_1", ""),
+		linkObj("alias_a", "resource_1"),
+		linkObj("alias_b", "resource_1"),
 	})
 
 	req := validator.ListRequest{Path: path.Root("resource_link"), ConfigValue: list}
@@ -59,8 +59,8 @@ func TestUniqueResourceLinkIdentity_AllowsDistinctNameAndResourceID(t *testing.T
 	ctx := context.Background()
 
 	list := types.ListValueMust(types.ObjectType{AttrTypes: linkAttrTypes}, []attr.Value{
-		linkObj("alias_a", "resource_1", ""),
-		linkObj("alias_b", "resource_2", ""),
+		linkObj("alias_a", "resource_1"),
+		linkObj("alias_b", "resource_2"),
 	})
 
 	req := validator.ListRequest{Path: path.Root("resource_link"), ConfigValue: list}

@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 )
 
 type Data struct {
-	Client             *fastly.Client
-	VersionChecker     *service.VersionChecker
-	ServiceTypeChecker *service.ServiceTypeChecker
+	Client         *fastly.Client
+	VersionChecker *service.VersionChecker
+	TypeChecker    *service.TypeChecker
 }
 
 func NewData(client *fastly.Client, userAgentPrefix string) *Data {
@@ -39,9 +40,9 @@ func NewData(client *fastly.Client, userAgentPrefix string) *Data {
 	}
 
 	return &Data{
-		Client:             &wrapped,
-		VersionChecker:     service.NewVersionChecker(&wrapped),
-		ServiceTypeChecker: service.NewServiceTypeChecker(&wrapped),
+		Client:         &wrapped,
+		VersionChecker: service.NewVersionChecker(&wrapped),
+		TypeChecker:    service.NewTypeChecker(&wrapped),
 	}
 }
 

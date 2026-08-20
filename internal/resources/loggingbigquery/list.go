@@ -8,17 +8,20 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/listidentity"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/list"
 	listschema "github.com/hashicorp/terraform-plugin-framework/list/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
-var _ list.ListResource = &ListResource{}
-var _ list.ListResourceWithConfigure = &ListResource{}
+var (
+	_ list.ListResource              = &ListResource{}
+	_ list.ListResourceWithConfigure = &ListResource{}
+)
 
 type ListResource struct {
 	client *fastly.Client

@@ -37,7 +37,6 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/resources/vcl"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -47,6 +46,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 type Resource struct {
@@ -59,10 +60,12 @@ type Resource struct {
 // would incorrectly read back as absent - see ReadForVersion's forceRefresh parameter.
 const imageOptimizerImportedPrivateKey = "image_optimizer_default_settings_imported"
 
-var _ resource.Resource = &Resource{}
-var _ resource.ResourceWithConfigure = &Resource{}
-var _ resource.ResourceWithImportState = &Resource{}
-var _ resource.ResourceWithValidateConfig = &Resource{}
+var (
+	_ resource.Resource                   = &Resource{}
+	_ resource.ResourceWithConfigure      = &Resource{}
+	_ resource.ResourceWithImportState    = &Resource{}
+	_ resource.ResourceWithValidateConfig = &Resource{}
+)
 
 func NewResource() resource.Resource {
 	return &Resource{}

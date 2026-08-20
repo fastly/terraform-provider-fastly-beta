@@ -10,8 +10,9 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -220,7 +221,7 @@ func (n commonModel) equal(other commonModel) bool {
 }
 
 func (n NestedModel) ModelsEqual(other NestedModel) bool {
-	return n.commonModel.equal(other.commonModel) &&
+	return n.equal(other.commonModel) &&
 		service.StringValue(n.Format) == service.StringValue(other.Format) &&
 		service.Int64Value(n.FormatVersion) == service.Int64Value(other.FormatVersion) &&
 		service.StringValue(n.Placement) == service.StringValue(other.Placement) &&
@@ -228,7 +229,7 @@ func (n NestedModel) ModelsEqual(other NestedModel) bool {
 }
 
 func (c ComputeNestedModel) ModelsEqual(other ComputeNestedModel) bool {
-	return c.commonModel.equal(other.commonModel)
+	return c.equal(other.commonModel)
 }
 
 // CommonAttributes returns the full GCS logging attribute set — the shared

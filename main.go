@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 
 	"github.com/fastly/terraform-provider-fastly/internal/provider"
 
@@ -9,7 +10,10 @@ import (
 )
 
 func main() {
-	providerserver.Serve(context.Background(), provider.New, providerserver.ServeOpts{
+	err := providerserver.Serve(context.Background(), provider.New, providerserver.ServeOpts{
 		Address: "registry.terraform.io/fastly/fastly",
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 }

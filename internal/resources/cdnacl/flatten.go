@@ -4,9 +4,10 @@ import (
 	"context"
 	"strconv"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 func FlattenToNestedModel(a *fastly.ACL) NestedModel {

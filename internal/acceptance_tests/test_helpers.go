@@ -11,32 +11,33 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
 	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/fastly/terraform-provider-fastly/internal/errors"
 	"github.com/fastly/terraform-provider-fastly/internal/provider"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/imageoptimizerdefaultsettings"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/settings"
-	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
-// ProtoV6ProviderFactories returns the provider factories for acceptance tests
+// ProtoV6ProviderFactories returns the provider factories for acceptance tests.
 func ProtoV6ProviderFactories() map[string]func() (tfprotov6.ProviderServer, error) {
 	return map[string]func() (tfprotov6.ProviderServer, error){
 		"fastly": providerserver.NewProtocol6WithError(provider.New()),
 	}
 }
 
-// PreCheck ensures the required environment variables are set for acceptance tests
+// PreCheck ensures the required environment variables are set for acceptance tests.
 func PreCheck(t *testing.T) {
 	if v := os.Getenv("FASTLY_API_TOKEN"); v == "" {
 		t.Fatal("FASTLY_API_TOKEN must be set for acceptance tests")
 	}
 }
 
-// NewFastlyClient creates a new Fastly API client for testing
+// NewFastlyClient creates a new Fastly API client for testing.
 func NewFastlyClient() (*fastly.Client, error) {
 	apiToken := os.Getenv("FASTLY_API_TOKEN")
 	if apiToken == "" {
@@ -53,7 +54,7 @@ const (
 	serviceDestroyCheckInterval = 2 * time.Second
 )
 
-// CheckServiceDestroy returns a TestCheckFunc that verifies a service resource was destroyed
+// CheckServiceDestroy returns a TestCheckFunc that verifies a service resource was destroyed.
 func CheckServiceDestroy(resourceType string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client, err := NewFastlyClient()
@@ -106,7 +107,7 @@ func checkServiceDestroyed(client *fastly.Client, serviceID string) error {
 	return fmt.Errorf("service %s still exists", serviceID)
 }
 
-// CheckServiceExists returns a TestCheckFunc that verifies a service resource exists
+// CheckServiceExists returns a TestCheckFunc that verifies a service resource exists.
 func CheckServiceExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
@@ -281,7 +282,7 @@ func CheckImageOptimizerDefaultSettingsMatchAPIDefaults(resourceName string) res
 		}
 
 		if len(mismatches) > 0 {
-			return fmt.Errorf("Image Optimizer default settings were not reset to API defaults in Fastly: %s", strings.Join(mismatches, ", "))
+			return fmt.Errorf("image optimizer default settings were not reset to API defaults in Fastly: %s", strings.Join(mismatches, ", "))
 		}
 
 		return nil
@@ -358,7 +359,7 @@ func CheckSettingsMatchAPIDefaults(resourceName string) resource.TestCheckFunc {
 }
 
 // GetPackagePath returns the path to the valid.tar.gz test package
-// Assumes tests are always run from the acceptance_tests package directory
+// Assumes tests are always run from the acceptance_tests package directory.
 func GetPackagePath() string {
 	wd, err := os.Getwd()
 	if err != nil {
@@ -410,7 +411,6 @@ func AddACLEntry(resourceName string) resource.TestCheckFunc {
 			ACLID:     *acl.ACLID,
 			IP:        &ip,
 		})
-
 		if err != nil {
 			return fmt.Errorf("error adding entry to ACL %s on service %s: %w", *acl.ACLID, serviceID, err)
 		}
@@ -457,7 +457,7 @@ func AddDictionaryItem(resourceName, dictionaryAttrPrefix string) resource.TestC
 
 // Configuration helpers for CDN Auto service
 
-// ConfigCDNAutoBasic returns a basic CDN auto service config with a single domain
+// ConfigCDNAutoBasic returns a basic CDN auto service config with a single domain.
 func ConfigCDNAutoBasic(serviceName, domainName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -469,7 +469,7 @@ func ConfigCDNAutoBasic(serviceName, domainName string) string {
 	)
 }
 
-// ConfigCDNAutoWithBackend returns a CDN auto service config with a domain and backend
+// ConfigCDNAutoWithBackend returns a CDN auto service config with a domain and backend.
 func ConfigCDNAutoWithBackend(serviceName, domainName, backendName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -483,7 +483,7 @@ func ConfigCDNAutoWithBackend(serviceName, domainName, backendName string) strin
 	)
 }
 
-// ConfigCDNAutoMultipleBackends returns a CDN auto service config with multiple backends
+// ConfigCDNAutoMultipleBackends returns a CDN auto service config with multiple backends.
 func ConfigCDNAutoMultipleBackends(serviceName, domainName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -638,7 +638,7 @@ func ConfigCDNAutoWithTooManySettings(serviceName, domainName string) string {
 	)
 }
 
-// ConfigCDNAutoWithACL returns a CDN auto service config with a domain and ACL
+// ConfigCDNAutoWithACL returns a CDN auto service config with a domain and ACL.
 func ConfigCDNAutoWithACL(serviceName, domainName, aclName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -652,7 +652,7 @@ func ConfigCDNAutoWithACL(serviceName, domainName, aclName string) string {
 	)
 }
 
-// ConfigCDNAutoWithBackendAndACL returns a CDN auto service config with domain, backend, and ACL
+// ConfigCDNAutoWithBackendAndACL returns a CDN auto service config with domain, backend, and ACL.
 func ConfigCDNAutoWithBackendAndACL(serviceName, domainName, backendName, aclName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -668,7 +668,7 @@ func ConfigCDNAutoWithBackendAndACL(serviceName, domainName, backendName, aclNam
 	)
 }
 
-// ConfigCDNAutoWithMultipleACLs returns a CDN auto service config with multiple ACLs
+// ConfigCDNAutoWithMultipleACLs returns a CDN auto service config with multiple ACLs.
 func ConfigCDNAutoWithMultipleACLs(serviceName, domainName, aclName1, aclName2 string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -683,7 +683,7 @@ func ConfigCDNAutoWithMultipleACLs(serviceName, domainName, aclName1, aclName2 s
 	)
 }
 
-// ConfigCDNAutoWithACLForceDestroy returns a CDN auto service config with an ACL that has force_destroy enabled
+// ConfigCDNAutoWithACLForceDestroy returns a CDN auto service config with an ACL that has force_destroy enabled.
 func ConfigCDNAutoWithACLForceDestroy(serviceName, domainName, aclName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -697,7 +697,7 @@ func ConfigCDNAutoWithACLForceDestroy(serviceName, domainName, aclName string) s
 	)
 }
 
-// ConfigCDNAutoWithDictionary returns a CDN auto service config with a domain and a dictionary
+// ConfigCDNAutoWithDictionary returns a CDN auto service config with a domain and a dictionary.
 func ConfigCDNAutoWithDictionary(serviceName, domainName, dictionaryName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -712,7 +712,7 @@ func ConfigCDNAutoWithDictionary(serviceName, domainName, dictionaryName string)
 }
 
 // ConfigCDNAutoWithDictionaryWriteOnly returns a CDN auto service config with a domain and a
-// write_only dictionary
+// write_only dictionary.
 func ConfigCDNAutoWithDictionaryWriteOnly(serviceName, domainName, dictionaryName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -727,7 +727,7 @@ func ConfigCDNAutoWithDictionaryWriteOnly(serviceName, domainName, dictionaryNam
 }
 
 // ConfigCDNAutoWithDictionaryWriteOnlyForceDestroy returns a CDN auto service config with a
-// domain and a write_only dictionary that has force_destroy enabled
+// domain and a write_only dictionary that has force_destroy enabled.
 func ConfigCDNAutoWithDictionaryWriteOnlyForceDestroy(serviceName, domainName, dictionaryName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -741,7 +741,7 @@ func ConfigCDNAutoWithDictionaryWriteOnlyForceDestroy(serviceName, domainName, d
 	)
 }
 
-// ConfigCDNAutoWithMultipleDictionaries returns a CDN auto service config with multiple dictionaries
+// ConfigCDNAutoWithMultipleDictionaries returns a CDN auto service config with multiple dictionaries.
 func ConfigCDNAutoWithMultipleDictionaries(serviceName, domainName, dictionaryName1, dictionaryName2 string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -757,7 +757,7 @@ func ConfigCDNAutoWithMultipleDictionaries(serviceName, domainName, dictionaryNa
 }
 
 // ConfigCDNAutoWithDictionaryForceDestroy returns a CDN auto service config with a dictionary
-// that has force_destroy enabled
+// that has force_destroy enabled.
 func ConfigCDNAutoWithDictionaryForceDestroy(serviceName, domainName, dictionaryName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -771,7 +771,7 @@ func ConfigCDNAutoWithDictionaryForceDestroy(serviceName, domainName, dictionary
 	)
 }
 
-// ConfigCDNAutoWithHealthCheck returns a CDN auto service config with a domain and a health check
+// ConfigCDNAutoWithHealthCheck returns a CDN auto service config with a domain and a health check.
 func ConfigCDNAutoWithHealthCheck(serviceName, domainName, healthCheckName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -834,7 +834,7 @@ func ConfigCDNAutoWithHealthCheckAndBackend(serviceName, domainName, healthCheck
 	)
 }
 
-// ConfigCDNAutoWithHeader returns a CDN auto service config with a domain and a header
+// ConfigCDNAutoWithHeader returns a CDN auto service config with a domain and a header.
 func ConfigCDNAutoWithHeader(serviceName, domainName, headerName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -898,7 +898,7 @@ func ConfigCDNAutoWithHeaderInvalidAction(serviceName, domainName, headerName st
 }
 
 // ConfigCDNAutoWithRateLimiter returns a CDN auto service config with a domain and a rate
-// limiter
+// limiter.
 func ConfigCDNAutoWithRateLimiter(serviceName, domainName, rateLimiterName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -930,7 +930,7 @@ func ConfigCDNAutoWithRateLimiterResponseCleared(serviceName, domainName, rateLi
 
 // ConfigCDNAutoWithRateLimiterMinimal returns a CDN auto service config with a rate limiter
 // that leaves feature_revision, logger_type, response, response_object_name, and
-// uri_dictionary_name unset
+// uri_dictionary_name unset.
 func ConfigCDNAutoWithRateLimiterMinimal(serviceName, domainName, rateLimiterName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -946,7 +946,7 @@ func ConfigCDNAutoWithRateLimiterMinimal(serviceName, domainName, rateLimiterNam
 
 // ConfigCDNAutoWithRateLimiterUpdated returns a CDN auto service config with the same rate
 // limiter name but different action/client_key/http_methods/penalty_box_duration/rps_limit/
-// window_size values
+// window_size values.
 func ConfigCDNAutoWithRateLimiterUpdated(serviceName, domainName, rateLimiterName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -960,7 +960,7 @@ func ConfigCDNAutoWithRateLimiterUpdated(serviceName, domainName, rateLimiterNam
 	)
 }
 
-// ConfigCDNAutoWithMultipleRateLimiters returns a CDN auto service config with two rate limiters
+// ConfigCDNAutoWithMultipleRateLimiters returns a CDN auto service config with two rate limiters.
 func ConfigCDNAutoWithMultipleRateLimiters(serviceName, domainName, rateLimiterName1, rateLimiterName2 string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -1135,7 +1135,7 @@ func ConfigCDNAutoWithDirectorNegativeRetries(serviceName, domainName, backendNa
 	)
 }
 
-// ConfigCDNAutoWithGzip returns a CDN auto service config with a domain and a gzip configuration
+// ConfigCDNAutoWithGzip returns a CDN auto service config with a domain and a gzip configuration.
 func ConfigCDNAutoWithGzip(serviceName, domainName, gzipName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -1150,7 +1150,7 @@ func ConfigCDNAutoWithGzip(serviceName, domainName, gzipName string) string {
 }
 
 // ConfigCDNAutoWithGzipEmptyLists returns a CDN auto service config with a gzip configuration
-// that explicitly sets content_types and extensions to empty lists
+// that explicitly sets content_types and extensions to empty lists.
 func ConfigCDNAutoWithGzipEmptyLists(serviceName, domainName, gzipName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -1165,7 +1165,7 @@ func ConfigCDNAutoWithGzipEmptyLists(serviceName, domainName, gzipName string) s
 }
 
 // ConfigCDNAutoWithGzipContentTypesRemoved returns a CDN auto service config with a gzip
-// configuration whose content_types attribute has been removed, leaving extensions set
+// configuration whose content_types attribute has been removed, leaving extensions set.
 func ConfigCDNAutoWithGzipContentTypesRemoved(serviceName, domainName, gzipName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -1180,7 +1180,7 @@ func ConfigCDNAutoWithGzipContentTypesRemoved(serviceName, domainName, gzipName 
 }
 
 // ConfigCDNAutoWithGzipAllRemoved returns a CDN auto service config with a gzip configuration
-// whose content_types and extensions attributes have both been removed
+// whose content_types and extensions attributes have both been removed.
 func ConfigCDNAutoWithGzipAllRemoved(serviceName, domainName, gzipName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -1194,7 +1194,7 @@ func ConfigCDNAutoWithGzipAllRemoved(serviceName, domainName, gzipName string) s
 	)
 }
 
-// ConfigCDNAutoWithMultipleGzips returns a CDN auto service config with multiple gzip configurations
+// ConfigCDNAutoWithMultipleGzips returns a CDN auto service config with multiple gzip configurations.
 func ConfigCDNAutoWithMultipleGzips(serviceName, domainName, gzipName1, gzipName2 string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -1209,7 +1209,7 @@ func ConfigCDNAutoWithMultipleGzips(serviceName, domainName, gzipName1, gzipName
 	)
 }
 
-// ConfigCDNAutoWithCondition returns a CDN auto service config with a domain and a condition
+// ConfigCDNAutoWithCondition returns a CDN auto service config with a domain and a condition.
 func ConfigCDNAutoWithCondition(serviceName, domainName, conditionName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -1224,7 +1224,7 @@ func ConfigCDNAutoWithCondition(serviceName, domainName, conditionName string) s
 }
 
 // ConfigCDNAutoWithConditionUpdated returns a CDN auto service config with the same condition
-// name but an updated statement and priority
+// name but an updated statement and priority.
 func ConfigCDNAutoWithConditionUpdated(serviceName, domainName, conditionName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -1254,7 +1254,7 @@ func ConfigCDNAutoWithConditionTypeChanged(serviceName, domainName, conditionNam
 	)
 }
 
-// ConfigCDNAutoWithMultipleConditions returns a CDN auto service config with two conditions
+// ConfigCDNAutoWithMultipleConditions returns a CDN auto service config with two conditions.
 func ConfigCDNAutoWithMultipleConditions(serviceName, domainName, conditionName1, conditionName2 string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -1304,7 +1304,7 @@ func ConfigCDNAutoWithGzipCacheCondition(serviceName, domainName, gzipName, cond
 }
 
 // ConfigCDNAutoWithCacheSetting returns a CDN auto service config with a domain and a cache
-// setting
+// setting.
 func ConfigCDNAutoWithCacheSetting(serviceName, domainName, cacheSettingName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -1319,7 +1319,7 @@ func ConfigCDNAutoWithCacheSetting(serviceName, domainName, cacheSettingName str
 }
 
 // ConfigCDNAutoWithCacheSettingMinimal returns a CDN auto service config with a cache setting
-// that leaves action, ttl, and stale_ttl unset
+// that leaves action, ttl, and stale_ttl unset.
 func ConfigCDNAutoWithCacheSettingMinimal(serviceName, domainName, cacheSettingName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -1334,7 +1334,7 @@ func ConfigCDNAutoWithCacheSettingMinimal(serviceName, domainName, cacheSettingN
 }
 
 // ConfigCDNAutoWithCacheSettingUpdated returns a CDN auto service config with the same cache
-// setting name but different action, ttl, and stale_ttl values
+// setting name but different action, ttl, and stale_ttl values.
 func ConfigCDNAutoWithCacheSettingUpdated(serviceName, domainName, cacheSettingName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -1348,7 +1348,7 @@ func ConfigCDNAutoWithCacheSettingUpdated(serviceName, domainName, cacheSettingN
 	)
 }
 
-// ConfigCDNAutoWithMultipleCacheSettings returns a CDN auto service config with two cache settings
+// ConfigCDNAutoWithMultipleCacheSettings returns a CDN auto service config with two cache settings.
 func ConfigCDNAutoWithMultipleCacheSettings(serviceName, domainName, cacheSettingName1, cacheSettingName2 string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -1553,7 +1553,7 @@ func ConfigCDNAutoWithResponseObjectConditions(serviceName, domainName, response
 	)
 }
 
-// ConfigACLForImport returns a test configuration for importing an ACL
+// ConfigACLForImport returns a test configuration for importing an ACL.
 func ConfigACLForImport(serviceName, domainName, aclName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -1588,7 +1588,7 @@ func ConfigACLAtVersion(serviceName, domainName, aclName string, version int) st
 
 // Configuration helpers for Compute Auto service
 
-// ConfigComputeAutoBasic returns a basic Compute auto service config with a domain and package
+// ConfigComputeAutoBasic returns a basic Compute auto service config with a domain and package.
 func ConfigComputeAutoBasic(serviceName, domainName string) string {
 	return BuildConfig(
 		ServiceComputeAuto,
@@ -1602,7 +1602,7 @@ func ConfigComputeAutoBasic(serviceName, domainName string) string {
 	)
 }
 
-// ConfigComputeAutoWithBackend returns a Compute auto service config with a domain, backend, and package
+// ConfigComputeAutoWithBackend returns a Compute auto service config with a domain, backend, and package.
 func ConfigComputeAutoWithBackend(serviceName, domainName, backendName string) string {
 	return BuildConfig(
 		ServiceComputeAuto,
@@ -1618,7 +1618,7 @@ func ConfigComputeAutoWithBackend(serviceName, domainName, backendName string) s
 	)
 }
 
-// ConfigComputeAutoWithHealthCheck returns a Compute auto service config with a domain, package, and a health check
+// ConfigComputeAutoWithHealthCheck returns a Compute auto service config with a domain, package, and a health check.
 func ConfigComputeAutoWithHealthCheck(serviceName, domainName, healthCheckName string) string {
 	return BuildConfig(
 		ServiceComputeAuto,
@@ -1634,7 +1634,7 @@ func ConfigComputeAutoWithHealthCheck(serviceName, domainName, healthCheckName s
 	)
 }
 
-// ConfigComputeAutoWithDictionary returns a Compute auto service config with a domain, package, and a dictionary
+// ConfigComputeAutoWithDictionary returns a Compute auto service config with a domain, package, and a dictionary.
 func ConfigComputeAutoWithDictionary(serviceName, domainName, dictionaryName string) string {
 	return BuildConfig(
 		ServiceComputeAuto,
@@ -1651,7 +1651,7 @@ func ConfigComputeAutoWithDictionary(serviceName, domainName, dictionaryName str
 }
 
 // ConfigComputeAutoWithDictionaryForceDestroy returns a Compute auto service config with a
-// domain, package, and a dictionary that has force_destroy enabled
+// domain, package, and a dictionary that has force_destroy enabled.
 func ConfigComputeAutoWithDictionaryForceDestroy(serviceName, domainName, dictionaryName string) string {
 	return BuildConfig(
 		ServiceComputeAuto,
@@ -1827,7 +1827,7 @@ func ConfigComputeAutoWithACLResourceLinkTarget(serviceName, domainName, aclName
 	)
 }
 
-// ConfigComputeAutoMultipleBackends returns a Compute auto service config with multiple backends and a package
+// ConfigComputeAutoMultipleBackends returns a Compute auto service config with multiple backends and a package.
 func ConfigComputeAutoMultipleBackends(serviceName, domainName string) string {
 	return BuildConfig(
 		ServiceComputeAuto,
@@ -1879,7 +1879,7 @@ func ConfigComputeAutoReversedBackendAndDomainBlocks(serviceName, domainBName, d
 
 // Configuration helpers for CDN service (explicit version management)
 
-// ConfigServiceCDNBasic returns a basic CDN service config without any nested resources
+// ConfigServiceCDNBasic returns a basic CDN service config without any nested resources.
 func ConfigServiceCDNBasic(serviceName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -1890,7 +1890,7 @@ func ConfigServiceCDNBasic(serviceName string) string {
 	)
 }
 
-// ConfigServiceCDNWithComment returns a CDN service config with a comment
+// ConfigServiceCDNWithComment returns a CDN service config with a comment.
 func ConfigServiceCDNWithComment(serviceName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -1901,7 +1901,7 @@ func ConfigServiceCDNWithComment(serviceName string) string {
 	)
 }
 
-// ConfigServiceCDNWithDomain returns a CDN service config with a domain resource
+// ConfigServiceCDNWithDomain returns a CDN service config with a domain resource.
 func ConfigServiceCDNWithDomain(serviceName, domainName string, version int) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -1914,7 +1914,7 @@ func ConfigServiceCDNWithDomain(serviceName, domainName string, version int) str
 	)
 }
 
-// ConfigServiceCDNWithBackend returns a CDN service config with a domain and backend resource
+// ConfigServiceCDNWithBackend returns a CDN service config with a domain and backend resource.
 func ConfigServiceCDNWithBackend(serviceName, domainName, backendName string, version int) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -1929,7 +1929,7 @@ func ConfigServiceCDNWithBackend(serviceName, domainName, backendName string, ve
 	)
 }
 
-// ConfigServiceCDNWithVersionClone returns a CDN service config with a version clone action
+// ConfigServiceCDNWithVersionClone returns a CDN service config with a version clone action.
 func ConfigServiceCDNWithVersionClone(serviceName, domainName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -1943,7 +1943,7 @@ func ConfigServiceCDNWithVersionClone(serviceName, domainName string) string {
 	)
 }
 
-// ConfigServiceCDNWithVersionActivate returns a CDN service config with a version activate action
+// ConfigServiceCDNWithVersionActivate returns a CDN service config with a version activate action.
 func ConfigServiceCDNWithVersionActivate(serviceName, domainName string, version int) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -1957,7 +1957,7 @@ func ConfigServiceCDNWithVersionActivate(serviceName, domainName string, version
 	)
 }
 
-// ConfigServiceCDNWithCloneAndActivate returns a CDN service config with both clone and activate actions
+// ConfigServiceCDNWithCloneAndActivate returns a CDN service config with both clone and activate actions.
 func ConfigServiceCDNWithCloneAndActivate(serviceName, domainName, backendName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -1976,7 +1976,7 @@ func ConfigServiceCDNWithCloneAndActivate(serviceName, domainName, backendName s
 
 // Configuration helpers for Compute service (explicit version management)
 
-// ConfigServiceComputeBasic returns a basic Compute service config without any nested resources
+// ConfigServiceComputeBasic returns a basic Compute service config without any nested resources.
 func ConfigServiceComputeBasic(serviceName string) string {
 	return BuildConfig(
 		ServiceCompute,
@@ -1987,7 +1987,7 @@ func ConfigServiceComputeBasic(serviceName string) string {
 	)
 }
 
-// ConfigServiceComputeWithComment returns a Compute service config with a comment
+// ConfigServiceComputeWithComment returns a Compute service config with a comment.
 func ConfigServiceComputeWithComment(serviceName string) string {
 	return BuildConfig(
 		ServiceCompute,
@@ -2016,7 +2016,7 @@ func ConfigServiceComputeWithACLResourceLink(serviceName, aclName, linkName stri
 
 // Configuration helpers for backend resources (explicit version management)
 
-// ConfigBackendBasic returns a basic backend resource config
+// ConfigBackendBasic returns a basic backend resource config.
 func ConfigBackendBasic(serviceName, domainName, backendName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -2032,7 +2032,7 @@ func ConfigBackendBasic(serviceName, domainName, backendName string) string {
 	)
 }
 
-// ConfigBackendUpdated returns a backend resource config with updated values
+// ConfigBackendUpdated returns a backend resource config with updated values.
 func ConfigBackendUpdated(serviceName, domainName, backendName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -2048,7 +2048,7 @@ func ConfigBackendUpdated(serviceName, domainName, backendName string) string {
 	)
 }
 
-// ConfigBackendFull returns a backend resource config with all optional fields
+// ConfigBackendFull returns a backend resource config with all optional fields.
 func ConfigBackendFull(serviceName, domainName, backendName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -2079,7 +2079,7 @@ func ConfigBackendFullUpdated(serviceName, domainName, backendName string) strin
 	)
 }
 
-// ConfigBackendMultiple returns a config with multiple backend resources
+// ConfigBackendMultiple returns a config with multiple backend resources.
 func ConfigBackendMultiple(serviceName, domainName, backend1Name, backend2Name string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -2096,7 +2096,7 @@ func ConfigBackendMultiple(serviceName, domainName, backend1Name, backend2Name s
 	)
 }
 
-// ConfigBackendForImport returns a test configuration for importing a backend
+// ConfigBackendForImport returns a test configuration for importing a backend.
 func ConfigBackendForImport(serviceName, domainName, backendName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -2132,7 +2132,7 @@ func ConfigBackendWithRequestCondition(serviceName, domainName, backendName, con
 
 // Configuration helpers for condition resources (explicit version management)
 
-// ConfigConditionBasic returns a basic condition resource config
+// ConfigConditionBasic returns a basic condition resource config.
 func ConfigConditionBasic(serviceName, domainName, conditionName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -2148,7 +2148,7 @@ func ConfigConditionBasic(serviceName, domainName, conditionName string) string 
 	)
 }
 
-// ConfigConditionUpdated returns a condition resource config with an updated statement and priority
+// ConfigConditionUpdated returns a condition resource config with an updated statement and priority.
 func ConfigConditionUpdated(serviceName, domainName, conditionName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -2182,7 +2182,7 @@ func ConfigConditionTypeChanged(serviceName, domainName, conditionName string) s
 	)
 }
 
-// ConfigConditionMultiple returns a config with two condition resources
+// ConfigConditionMultiple returns a config with two condition resources.
 func ConfigConditionMultiple(serviceName, domainName, conditionName1, conditionName2 string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -2216,7 +2216,7 @@ func ConfigConditionHeredoc(serviceName, domainName, conditionName string) strin
 	)
 }
 
-// ConfigConditionForImport returns a test configuration for importing a condition
+// ConfigConditionForImport returns a test configuration for importing a condition.
 func ConfigConditionForImport(serviceName, domainName, conditionName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -2234,7 +2234,7 @@ func ConfigConditionForImport(serviceName, domainName, conditionName string) str
 
 // Configuration helpers for domain resources (explicit version management)
 
-// ConfigDomainBasic returns a basic domain resource config
+// ConfigDomainBasic returns a basic domain resource config.
 func ConfigDomainBasic(serviceName, domainName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -2248,7 +2248,7 @@ func ConfigDomainBasic(serviceName, domainName string) string {
 	)
 }
 
-// ConfigDomainWithComment returns a domain resource config with a comment
+// ConfigDomainWithComment returns a domain resource config with a comment.
 func ConfigDomainWithComment(serviceName, domainName, comment string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -2263,7 +2263,7 @@ func ConfigDomainWithComment(serviceName, domainName, comment string) string {
 	)
 }
 
-// ConfigDomainMultiple returns a config with multiple domain resources
+// ConfigDomainMultiple returns a config with multiple domain resources.
 func ConfigDomainMultiple(serviceName, domain1Name, domain2Name string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -2278,7 +2278,7 @@ func ConfigDomainMultiple(serviceName, domain1Name, domain2Name string) string {
 	)
 }
 
-// ConfigDomainForImport returns a test configuration for importing a domain
+// ConfigDomainForImport returns a test configuration for importing a domain.
 func ConfigDomainForImport(serviceName, domainName, additionalDomainName string) string {
 	return BuildConfig(
 		ServiceCDN,

@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/require"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 func testDashboardModel() Model {
