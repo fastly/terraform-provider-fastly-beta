@@ -336,7 +336,15 @@ func CheckSettingsMatchAPIDefaults(resourceName string) resource.TestCheckFunc {
 			ServiceID:      rs.Primary.ID,
 			ServiceVersion: version,
 		})
-		http3Enabled := http3Err == nil
+		var http3Enabled bool
+		switch {
+		case http3Err == nil:
+			http3Enabled = true
+		case errors.IsNotFound(http3Err):
+			http3Enabled = false
+		default:
+			return fmt.Errorf("error fetching HTTP/3 status: %w", http3Err)
+		}
 		if http3Enabled != settings.DefaultHTTP3 {
 			mismatches = append(mismatches, fmt.Sprintf("http3=%v, want %v", http3Enabled, settings.DefaultHTTP3))
 		}
