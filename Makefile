@@ -8,7 +8,7 @@ BIN_DIR := $(CURDIR)/bin
 BINARY := $(BIN_DIR)/terraform-provider-$(PKG_NAME)_$(VERSION)
 OVERRIDES_FILE := $(BIN_DIR)/developer_overrides.tfrc
 
-GOLANGCI_LINT_VERSION := v2.4.0
+GOLANGCI_LINT_VERSION := v2.12.2
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 
 .PHONY: fmt build dev-overrides clean test-unit test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle lint install-linter check-linter-version help
