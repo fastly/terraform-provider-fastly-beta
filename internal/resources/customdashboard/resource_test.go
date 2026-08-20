@@ -28,7 +28,6 @@ func testDashboardModel() Model {
 					}},
 				}},
 				Visualization: []VisualizationModel{{
-					Type: types.StringValue("chart"),
 					Config: []VisualizationConfigModel{{
 						PlotType:          types.StringValue("bar"),
 						CalculationMethod: types.StringValue("sum"),
@@ -49,6 +48,7 @@ func TestExpandItemsOmitsFastlyIDForNewItem(t *testing.T) {
 	require.Empty(t, got[0].ID)
 	require.Equal(t, "Requests", got[0].Title)
 	require.Equal(t, []string{"requests"}, got[0].DataSource.Config.Metrics)
+	require.Equal(t, fastly.VisualizationTypeChart, got[0].Visualization.Type)
 	require.Equal(t, fastly.PlotType("bar"), got[0].Visualization.Config.PlotType)
 	require.NotNil(t, got[0].Visualization.Config.CalculationMethod)
 	require.Equal(t, fastly.CalculationMethod("sum"), *got[0].Visualization.Config.CalculationMethod)

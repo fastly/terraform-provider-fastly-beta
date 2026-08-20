@@ -307,7 +307,6 @@ func dashboardItemModelsEquivalent(a, b DashboardItemModel) bool {
 	}
 
 	if a.DataSource[0].Type.ValueString() != b.DataSource[0].Type.ValueString() ||
-		a.Visualization[0].Type.ValueString() != b.Visualization[0].Type.ValueString() ||
 		a.Visualization[0].Config[0].PlotType.ValueString() != b.Visualization[0].Config[0].PlotType.ValueString() {
 		return false
 	}
@@ -408,7 +407,6 @@ func dashboardItemModelFromRemote(item fastly.DashboardItem, key string) Dashboa
 			}},
 		}},
 		Visualization: []VisualizationModel{{
-			Type:   types.StringValue(string(item.Visualization.Type)),
 			Config: []VisualizationConfigModel{vizConfig},
 		}},
 	}
@@ -551,7 +549,7 @@ func expandItems(ctx context.Context, items []DashboardItemModel) ([]fastly.Dash
 				},
 			},
 			Visualization: fastly.DashboardVisualization{
-				Type: fastly.VisualizationType(item.Visualization[0].Type.ValueString()),
+				Type: fastly.VisualizationTypeChart,
 				Config: fastly.VisualizationConfig{
 					PlotType: fastly.PlotType(viz.PlotType.ValueString()),
 				},

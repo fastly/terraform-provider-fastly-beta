@@ -18,7 +18,6 @@ resource "fastly_custom_dashboard" "test" {
     }
 
     visualization {
-      type = "chart"
       config {
         plot_type = "donut"
       }
@@ -40,7 +39,6 @@ resource "fastly_custom_dashboard" "test" {
     }
 
     visualization {
-      type = "chart"
       config {
         plot_type = "single-metric"
       }

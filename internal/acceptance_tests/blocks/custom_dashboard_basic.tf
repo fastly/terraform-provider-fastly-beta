@@ -16,7 +16,6 @@ resource "fastly_custom_dashboard" "test" {
     }
 
     visualization {
-      type = "chart"
       config {
         plot_type = "bar"
       }
@@ -37,7 +36,6 @@ resource "fastly_custom_dashboard" "test" {
     }
 
     visualization {
-      type = "chart"
       config {
         plot_type          = "line"
         calculation_method = "avg"

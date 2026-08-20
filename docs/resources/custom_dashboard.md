@@ -36,8 +36,6 @@ resource "fastly_custom_dashboard" "example" {
     }
 
     visualization {
-      type = "chart"
-
       config {
         format    = "requests"
         plot_type = "line"
@@ -108,10 +106,6 @@ Required:
 
 <a id="nestedblock--dashboard_item--visualization"></a>
 ### Nested Schema for `dashboard_item.visualization`
-
-Required:
-
-- `type` (String) The visualization type.
 
 Optional:
 

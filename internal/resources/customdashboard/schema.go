@@ -45,7 +45,6 @@ type DataSourceConfigModel struct {
 }
 
 type VisualizationModel struct {
-	Type   types.String               `tfsdk:"type"`
 	Config []VisualizationConfigModel `tfsdk:"config"`
 }
 
@@ -178,15 +177,6 @@ func VisualizationBlock() schema.ListNestedBlock {
 			listvalidator.SizeBetween(1, 1),
 		},
 		NestedObject: schema.NestedBlockObject{
-			Attributes: map[string]schema.Attribute{
-				"type": schema.StringAttribute{
-					Required:    true,
-					Description: "The visualization type.",
-					Validators: []validator.String{
-						stringvalidator.OneOf("chart"),
-					},
-				},
-			},
 			Blocks: map[string]schema.Block{
 				"config": VisualizationConfigBlock(),
 			},
@@ -204,7 +194,7 @@ func VisualizationConfigBlock() schema.ListNestedBlock {
 			Attributes: map[string]schema.Attribute{
 				"calculation_method": schema.StringAttribute{
 					Optional:    true,
-                    Description: "The aggregation function to apply to the dataset. One of: `avg`, `sum`, `min`, `max`, `latest`, `p95`.",
+					Description: "The aggregation function to apply to the dataset. One of: `avg`, `sum`, `min`, `max`, `latest`, `p95`.",
 					Validators: []validator.String{
 						stringvalidator.OneOf("avg", "sum", "min", "max", "latest", "p95"),
 					},
@@ -213,14 +203,14 @@ func VisualizationConfigBlock() schema.ListNestedBlock {
 					Optional:    true,
 					Computed:    true,
 					Default:     stringdefault.StaticString(DefaultVisualizationFormat),
-                    Description: "The units to use to format the data. Defaults to `number`. One of: `number`, `bytes`, `percent`, `requests`, `responses`, `seconds`, `milliseconds`, `ratio`, `bitrate`.",
+					Description: "The units to use to format the data. Defaults to `number`. One of: `number`, `bytes`, `percent`, `requests`, `responses`, `seconds`, `milliseconds`, `ratio`, `bitrate`.",
 					Validators: []validator.String{
 						stringvalidator.OneOf("number", "bytes", "percent", "requests", "responses", "seconds", "milliseconds", "ratio", "bitrate"),
 					},
 				},
 				"plot_type": schema.StringAttribute{
 					Required:    true,
-                    Description: "The type of chart to display. One of: `line`, `bar`, `single-metric`, `donut`.",
+					Description: "The type of chart to display. One of: `line`, `bar`, `single-metric`, `donut`.",
 					Validators: []validator.String{
 						stringvalidator.OneOf("line", "bar", "single-metric", "donut"),
 					},
