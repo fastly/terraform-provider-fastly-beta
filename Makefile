@@ -26,6 +26,7 @@ help:
 	@echo "                                Add KEYWORD=<word> to only run tests whose name matches <word>"
 	@echo "                                (KEYWORD is passed through to 'go test -run' as a regular expression,"
 	@echo "                                not a literal substring, so characters like . * + [ ] are special)"
+	@echo "                                Add PARALLEL=<n> to cap concurrent tests, TIMEOUT=<dur> to override the 30m default"
 	@echo "  make test-baseline          - Run the baseline regression suite, ~2.5m (requires FASTLY_API_TOKEN)"
 	@echo "                                See 'Baseline Regression Suite' in TESTING.md"
 	@echo "  make test-lifecycle-cdn     - Run CDN lifecycle tests (requires FASTLY_API_TOKEN)"
@@ -73,10 +74,12 @@ test-unit:
 	@echo "==> Running unit tests..."
 	@$(GO_BIN) test ./internal/...
 
+TIMEOUT ?= 30m
+
 test-acc:
 	@echo "==> Running acceptance tests..."
 	@echo "    Note: This requires FASTLY_API_TOKEN to be set"
-	@TF_ACC=1 $(GO_BIN) test -count=1 -v -timeout 30m ./internal/acceptance_tests -run 'TestAcc.*$(KEYWORD)'
+	@TF_ACC=1 $(GO_BIN) test -count=1 -v -timeout $(TIMEOUT) ./internal/acceptance_tests -run 'TestAcc.*$(KEYWORD)' $(if $(PARALLEL),-parallel $(PARALLEL))
 
 # One canonical happy-path test per resource family/feature, picked to fail fast (~2.5m)
 # on a broken build without running the full acceptance suite. See "Baseline regression

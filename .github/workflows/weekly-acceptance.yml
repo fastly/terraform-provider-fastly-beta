@@ -1,0 +1,61 @@
+name: Weekly acceptance suite
+
+on:
+  schedule:
+    - cron: "0 5 * * 0"
+  workflow_dispatch:
+    inputs:
+      parallel:
+        description: "Max acceptance tests to run concurrently (lower avoids tripping the account's service limit / API rate limit; must stay high enough for the full suite to finish within GitHub's 6h hosted-runner job limit)"
+        required: false
+        default: "4"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-acceptance
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  acceptance:
+    name: Full acceptance suite
+    runs-on: ubuntu-24.04-arm
+    # GitHub-hosted runners hard-kill any job at 6h regardless of timeout-minutes,
+    # so keep this comfortably under that and let `go test`'s own -timeout (below)
+    # fail cleanly first, leaving time for the final cleanup step to still run.
+    timeout-minutes: 340
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.26.x
+
+      - name: Clean up leftover tf-test-* services
+        env:
+          FASTLY_API_TOKEN: ${{ secrets.FASTLY_API_TOKEN }}
+        run: go run ./scripts/cleanup-test-services
+
+      - name: Run full acceptance suite
+        env:
+          FASTLY_API_TOKEN: ${{ secrets.FASTLY_API_TOKEN }}
+          PARALLEL_INPUT: ${{ github.event.inputs.parallel }}
+        run: |
+          make test-acc \
+            PARALLEL="${PARALLEL_INPUT:-4}" \
+            TIMEOUT=5h
+
+      - name: Clean up tf-test-* services created by this run
+        if: always()
+        env:
+          FASTLY_API_TOKEN: ${{ secrets.FASTLY_API_TOKEN }}
+        run: go run ./scripts/cleanup-test-services
