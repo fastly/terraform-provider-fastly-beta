@@ -8,8 +8,9 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/errors"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 const (

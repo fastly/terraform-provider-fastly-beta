@@ -7,8 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestMetadataChanged(t *testing.T) {

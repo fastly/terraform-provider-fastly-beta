@@ -90,7 +90,7 @@ const LoggingBigQueryDefaultFormat = `{
 }
 `
 
-// LoggingSplunkDefaultFormat is the default log format for Splunk logging,
+// LoggingSplunkDefaultFormat is the default log format for Splunk logging.
 const LoggingSplunkDefaultFormat = `{
   "time":%{time.start.sec}V,
   "host":"%{Fastly-Orig-Host}i",

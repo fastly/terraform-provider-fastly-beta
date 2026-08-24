@@ -8,7 +8,6 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 	"github.com/fastly/terraform-provider-fastly/internal/validation"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -17,6 +16,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 // caseInsensitiveState preserves the prior state value when the configured value is

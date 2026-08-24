@@ -8,8 +8,6 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/errors"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 
-	"github.com/fastly/go-fastly/v17/fastly"
-	ngwafproduct "github.com/fastly/go-fastly/v17/fastly/products/ngwaf"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -20,11 +18,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/fastly/go-fastly/v17/fastly"
+	ngwafproduct "github.com/fastly/go-fastly/v17/fastly/products/ngwaf"
 )
 
-var _ resource.Resource = &NGWAFResource{}
-var _ resource.ResourceWithImportState = &NGWAFResource{}
-var _ resource.ResourceWithModifyPlan = &NGWAFResource{}
+var (
+	_ resource.Resource                = &NGWAFResource{}
+	_ resource.ResourceWithImportState = &NGWAFResource{}
+	_ resource.ResourceWithModifyPlan  = &NGWAFResource{}
+)
 
 type NGWAFModel struct {
 	ID          types.String `tfsdk:"id"`
@@ -36,7 +39,7 @@ type NGWAFModel struct {
 
 type NGWAFResource struct {
 	client      *fastly.Client
-	typeChecker *service.ServiceTypeChecker
+	typeChecker *service.TypeChecker
 }
 
 func NewNGWAFResource() resource.Resource {
@@ -83,7 +86,7 @@ func (r *NGWAFResource) Configure(_ context.Context, req resource.ConfigureReque
 		return
 	}
 	r.client = data.Client
-	r.typeChecker = data.ServiceTypeChecker
+	r.typeChecker = data.TypeChecker
 }
 
 func validateNGWAFTrafficRamp(plan *NGWAFModel, serviceType string) diag.Diagnostics {

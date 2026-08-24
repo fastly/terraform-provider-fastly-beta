@@ -4,14 +4,15 @@ import (
 	"context"
 	"testing"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 // Test helpers
 
-// defaultNestedModel returns a NestedModel with default values for all fields
+// defaultNestedModel returns a NestedModel with default values for all fields.
 func defaultNestedModel() NestedModel {
 	return NestedModel{
 		Name:      types.StringValue(""),
@@ -21,7 +22,7 @@ func defaultNestedModel() NestedModel {
 	}
 }
 
-// fullNestedModel returns a NestedModel with all fields populated with non-default values
+// fullNestedModel returns a NestedModel with all fields populated with non-default values.
 func fullNestedModel() NestedModel {
 	return NestedModel{
 		Name:      types.StringValue("test-condition"),
@@ -31,7 +32,7 @@ func fullNestedModel() NestedModel {
 	}
 }
 
-// minimalNestedModel returns a NestedModel with only required fields for BuildCreateInput
+// minimalNestedModel returns a NestedModel with only required fields for BuildCreateInput.
 func minimalNestedModel() NestedModel {
 	m := defaultNestedModel()
 	m.Name = types.StringValue("test-condition")

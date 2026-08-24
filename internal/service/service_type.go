@@ -7,21 +7,21 @@ import (
 	"github.com/fastly/go-fastly/v17/fastly"
 )
 
-type ServiceTypeChecker struct {
+type TypeChecker struct {
 	client *fastly.Client
 
 	mu    sync.Mutex
 	cache map[string]string
 }
 
-func NewServiceTypeChecker(client *fastly.Client) *ServiceTypeChecker {
-	return &ServiceTypeChecker{
+func NewTypeChecker(client *fastly.Client) *TypeChecker {
+	return &TypeChecker{
 		client: client,
 		cache:  make(map[string]string),
 	}
 }
 
-func (c *ServiceTypeChecker) GetType(
+func (c *TypeChecker) GetType(
 	ctx context.Context,
 	serviceID string,
 ) (string, error) {

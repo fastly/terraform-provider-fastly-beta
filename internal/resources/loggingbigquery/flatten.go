@@ -4,9 +4,10 @@ import (
 	"context"
 	"strconv"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 
 	"github.com/fastly/terraform-provider-fastly/internal/constants"
 	"github.com/fastly/terraform-provider-fastly/internal/service"

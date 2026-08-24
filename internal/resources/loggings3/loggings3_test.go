@@ -4,11 +4,12 @@ import (
 	"context"
 	"testing"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	fwdefaults "github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 
 	"github.com/fastly/terraform-provider-fastly/internal/constants"
 )

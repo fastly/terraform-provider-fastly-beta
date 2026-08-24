@@ -97,7 +97,7 @@ func beforeBackendAndDirectorSteps(plan, previous *Model) []mutateStep {
 				plan.Settings = result
 				return nil
 			},
-			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+			readBack: func(_ context.Context, _ *fastly.Client, _ string, _ int) error {
 				return nil
 			},
 		},
@@ -455,7 +455,7 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 }
 
 // readSteps covers all 28 nested resource types, including backend/director/dictionary/
-// rate_limiter
+// rate_limiter.
 func readSteps(state *Model, imported bool) []readStep {
 	return []readStep{
 		{
@@ -781,7 +781,7 @@ func readSteps(state *Model, imported bool) []readStep {
 }
 
 // planSteps covers all 28 nested resource types for Update's change-detection check and the
-// reorder-only branch that follows it
+// reorder-only branch that follows it.
 func planSteps(plan, state *Model) []planStep {
 	return []planStep{
 		{

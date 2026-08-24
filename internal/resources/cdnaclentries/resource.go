@@ -5,20 +5,23 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/fastly/go-fastly/v17/fastly"
-	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
-	"github.com/fastly/terraform-provider-fastly/internal/service"
-	"github.com/fastly/terraform-provider-fastly/internal/validation"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/fastly/go-fastly/v17/fastly"
+	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
+	"github.com/fastly/terraform-provider-fastly/internal/service"
+	"github.com/fastly/terraform-provider-fastly/internal/validation"
 )
 
-var _ resource.Resource = &Resource{}
-var _ resource.ResourceWithImportState = &Resource{}
-var _ resource.ResourceWithModifyPlan = &Resource{}
+var (
+	_ resource.Resource                = &Resource{}
+	_ resource.ResourceWithImportState = &Resource{}
+	_ resource.ResourceWithModifyPlan  = &Resource{}
+)
 
 type Resource struct {
 	providerData *fastlyclient.Data
@@ -60,7 +63,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	serviceID := plan.ServiceID.ValueString()
 	aclID := plan.ACLID.ValueString()
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.ServiceTypeChecker, serviceID, "fastly_service_cdn_acl_entries", service.TypeVCL); err != nil {
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, serviceID, "fastly_service_cdn_acl_entries", service.TypeVCL); err != nil {
 		resp.Diagnostics.AddError("Unsupported Fastly service type", err.Error())
 		return
 	}
@@ -159,7 +162,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	serviceID := plan.ServiceID.ValueString()
 	aclID := plan.ACLID.ValueString()
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.ServiceTypeChecker, serviceID, "fastly_service_cdn_acl_entries", service.TypeVCL); err != nil {
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, serviceID, "fastly_service_cdn_acl_entries", service.TypeVCL); err != nil {
 		resp.Diagnostics.AddError("Unsupported Fastly service type", err.Error())
 		return
 	}
@@ -263,7 +266,7 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 	serviceID := state.ServiceID.ValueString()
 	aclID := state.ACLID.ValueString()
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.ServiceTypeChecker, serviceID, "fastly_service_cdn_acl_entries", service.TypeVCL); err != nil {
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, serviceID, "fastly_service_cdn_acl_entries", service.TypeVCL); err != nil {
 		resp.Diagnostics.AddError("Unsupported Fastly service type", err.Error())
 		return
 	}

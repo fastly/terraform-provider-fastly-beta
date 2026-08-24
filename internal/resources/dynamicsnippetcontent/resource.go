@@ -10,16 +10,19 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 	"github.com/fastly/terraform-provider-fastly/internal/validation"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
-var _ resource.Resource = &Resource{}
-var _ resource.ResourceWithConfigure = &Resource{}
-var _ resource.ResourceWithImportState = &Resource{}
+var (
+	_ resource.Resource                = &Resource{}
+	_ resource.ResourceWithConfigure   = &Resource{}
+	_ resource.ResourceWithImportState = &Resource{}
+)
 
 type Resource struct {
 	providerData *fastlyclient.Data
@@ -51,7 +54,7 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 }
 
 func (r *Resource) ensureServiceTypeSupported(ctx context.Context, serviceID string) error {
-	return validation.EnsureServiceTypeSupported(ctx, r.providerData.ServiceTypeChecker, serviceID, "fastly_service_dynamic_snippet_content", service.TypeVCL)
+	return validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, serviceID, "fastly_service_dynamic_snippet_content", service.TypeVCL)
 }
 
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

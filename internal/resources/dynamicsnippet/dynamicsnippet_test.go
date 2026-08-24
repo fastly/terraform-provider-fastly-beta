@@ -5,8 +5,9 @@ import (
 
 	regularsnippet "github.com/fastly/terraform-provider-fastly/internal/resources/snippet"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestBuildCreateInput(t *testing.T) {

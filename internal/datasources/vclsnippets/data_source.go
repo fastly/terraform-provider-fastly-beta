@@ -10,13 +10,14 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 	"github.com/fastly/terraform-provider-fastly/internal/validation"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 var _ datasource.DataSource = &DataSource{}
@@ -123,7 +124,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 	serviceID := state.ServiceID.ValueString()
 	version := int(state.ServiceVersion.ValueInt64())
 
-	if err := validation.EnsureServiceTypeSupported(ctx, d.providerData.ServiceTypeChecker, serviceID, "fastly_vcl_snippets", service.TypeVCL); err != nil {
+	if err := validation.EnsureServiceTypeSupported(ctx, d.providerData.TypeChecker, serviceID, "fastly_vcl_snippets", service.TypeVCL); err != nil {
 		resp.Diagnostics.AddError("Unsupported Fastly service type", err.Error())
 		return
 	}
