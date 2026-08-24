@@ -273,14 +273,14 @@ func CheckComputeAutoResourceLinkAbsent(serviceResourceName, linkName string) re
 }
 
 func findComputeAutoResourceLink(s *terraform.State, serviceResourceName, configStoreResourceName, expectedLinkName string) (*fastly.Resource, string, error) {
-	serviceState, storeState, err := serviceAndStore(s, serviceResourceName, configStoreResourceName)
+	serviceState, version, err := serviceAndVersion(s, serviceResourceName)
 	if err != nil {
 		return nil, "", err
 	}
 
-	version, err := strconv.Atoi(serviceState.Primary.Attributes["active_version"])
-	if err != nil {
-		return nil, "", fmt.Errorf("error parsing active_version: %w", err)
+	storeState, ok := s.RootModule().Resources[configStoreResourceName]
+	if !ok {
+		return nil, "", fmt.Errorf("not found: %s", configStoreResourceName)
 	}
 
 	client, err := NewFastlyClient()
@@ -303,18 +303,6 @@ func findComputeAutoResourceLink(s *terraform.State, serviceResourceName, config
 	}
 
 	return nil, "", fmt.Errorf("resource link %q was not found on service %q version %d", expectedLinkName, serviceState.Primary.ID, version)
-}
-
-func serviceAndStore(s *terraform.State, serviceResourceName, storeResourceName string) (*terraform.ResourceState, *terraform.ResourceState, error) {
-	serviceState, ok := s.RootModule().Resources[serviceResourceName]
-	if !ok {
-		return nil, nil, fmt.Errorf("not found: %s", serviceResourceName)
-	}
-	storeState, ok := s.RootModule().Resources[storeResourceName]
-	if !ok {
-		return nil, nil, fmt.Errorf("not found: %s", storeResourceName)
-	}
-	return serviceState, storeState, nil
 }
 
 func serviceAndVersion(s *terraform.State, serviceResourceName string) (*terraform.ResourceState, int, error) {
