@@ -10,15 +10,18 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 	"github.com/fastly/terraform-provider-fastly/internal/validation"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
-var _ resource.Resource = &Resource{}
-var _ resource.ResourceWithImportState = &Resource{}
+var (
+	_ resource.Resource                = &Resource{}
+	_ resource.ResourceWithImportState = &Resource{}
+)
 
 type Resource struct {
 	providerData *fastlyclient.Data
@@ -63,7 +66,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.ServiceTypeChecker, plan.Service.ValueString(), "fastly_service_resource_link", service.TypeCompute); err != nil {
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_resource_link", service.TypeCompute); err != nil {
 		resp.Diagnostics.AddError("Unsupported Fastly service type", err.Error())
 		return
 	}
@@ -197,7 +200,7 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 		"link_id":    state.LinkID.ValueString(),
 	})
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.ServiceTypeChecker, state.Service.ValueString(), "fastly_service_resource_link", service.TypeCompute); err != nil {
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, state.Service.ValueString(), "fastly_service_resource_link", service.TypeCompute); err != nil {
 		if errors.IsNotFound(err) {
 			return
 		}

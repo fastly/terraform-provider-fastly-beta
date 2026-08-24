@@ -5,27 +5,14 @@ import (
 	"context"
 	"testing"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflogtest"
 	"github.com/stretchr/testify/assert"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 // Test helpers
-
-func defaultNestedModel() NestedModel {
-	return NestedModel{
-		Name:    types.StringValue(""),
-		Comment: types.StringNull(),
-	}
-}
-
-func fullNestedModel() NestedModel {
-	return NestedModel{
-		Name:    types.StringValue("example.com"),
-		Comment: types.StringValue("Test domain comment"),
-	}
-}
 
 func minimalNestedModel() NestedModel {
 	return NestedModel{

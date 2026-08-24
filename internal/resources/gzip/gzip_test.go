@@ -3,10 +3,11 @@ package gzip
 import (
 	"testing"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 func stringList(values ...string) types.List {
@@ -420,4 +421,38 @@ func TestMatchOrder(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestValidateConditionReferences(t *testing.T) {
+	conditionNames := map[string]struct{}{"my-condition": {}}
+
+	t.Run("no cache_condition set", func(t *testing.T) {
+		item := minimalNestedModel()
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, nil))
+	})
+
+	t.Run("references a configured condition", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.CacheCondition = types.StringValue("my-condition")
+
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, conditionNames))
+	})
+
+	t.Run("references a condition that isn't configured", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.CacheCondition = types.StringValue("missing-condition")
+
+		err := ValidateConditionReferences([]NestedModel{item}, conditionNames)
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), `"gzip-config"`)
+			assert.Contains(t, err.Error(), `"missing-condition"`)
+		}
+	})
+
+	t.Run("skips unknown condition", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.CacheCondition = types.StringUnknown()
+
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, nil))
+	})
 }

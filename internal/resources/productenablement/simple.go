@@ -8,6 +8,14 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/errors"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+
 	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/fastly/go-fastly/v17/fastly/products"
 	"github.com/fastly/go-fastly/v17/fastly/products/apidiscovery"
@@ -18,13 +26,6 @@ import (
 	"github.com/fastly/go-fastly/v17/fastly/products/logexplorerinsights"
 	"github.com/fastly/go-fastly/v17/fastly/products/origininspector"
 	"github.com/fastly/go-fastly/v17/fastly/products/websockets"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // simpleProductSpec describes a Fastly product whose enablement is a plain
@@ -112,15 +113,19 @@ var (
 // NewFanoutResource, NewBrotliCompressionResource, ... are registered in
 // provider.go's Resources().
 func NewFanoutResource() resource.Resource { return &simpleProductResource{spec: fanoutSpec} }
+
 func NewBrotliCompressionResource() resource.Resource {
 	return &simpleProductResource{spec: brotliCompressionSpec}
 }
+
 func NewImageOptimizerResource() resource.Resource {
 	return &simpleProductResource{spec: imageOptimizerSpec}
 }
+
 func NewOriginInspectorResource() resource.Resource {
 	return &simpleProductResource{spec: originInspectorSpec}
 }
+
 func NewDomainInspectorResource() resource.Resource {
 	return &simpleProductResource{spec: domainInspectorSpec}
 }
@@ -128,13 +133,16 @@ func NewWebsocketsResource() resource.Resource { return &simpleProductResource{s
 func NewLogExplorerInsightsResource() resource.Resource {
 	return &simpleProductResource{spec: logExplorerInsightsSpec}
 }
+
 func NewAPIDiscoveryResource() resource.Resource {
 	return &simpleProductResource{spec: apiDiscoverySpec}
 }
 
-var _ resource.Resource = &simpleProductResource{}
-var _ resource.ResourceWithImportState = &simpleProductResource{}
-var _ resource.ResourceWithModifyPlan = &simpleProductResource{}
+var (
+	_ resource.Resource                = &simpleProductResource{}
+	_ resource.ResourceWithImportState = &simpleProductResource{}
+	_ resource.ResourceWithModifyPlan  = &simpleProductResource{}
+)
 
 type simpleProductModel struct {
 	ID        types.String `tfsdk:"id"`
@@ -145,7 +153,7 @@ type simpleProductModel struct {
 type simpleProductResource struct {
 	spec        simpleProductSpec
 	client      *fastly.Client
-	typeChecker *service.ServiceTypeChecker
+	typeChecker *service.TypeChecker
 }
 
 func (r *simpleProductResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -184,7 +192,7 @@ func (r *simpleProductResource) Configure(_ context.Context, req resource.Config
 	}
 
 	r.client = data.Client
-	r.typeChecker = data.ServiceTypeChecker
+	r.typeChecker = data.TypeChecker
 }
 
 func (r *simpleProductResource) validateServiceType(serviceType string) diag.Diagnostics {

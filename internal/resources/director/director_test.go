@@ -6,11 +6,12 @@ import (
 
 	"github.com/fastly/terraform-provider-fastly/internal/resources/backend"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 func minimalNestedModel() NestedModel {

@@ -8,12 +8,13 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 const (
@@ -118,7 +119,7 @@ func (o ops) Equal(desired NestedModel, remote *fastly.ACL) bool {
 	return desired.ModelsEqual(remoteModel)
 }
 
-func (o ops) Update(ctx context.Context, client *fastly.Client, serviceID string, version int, desired NestedModel) (*fastly.ACL, error) {
+func (o ops) Update(_ context.Context, _ *fastly.Client, _ string, _ int, _ NestedModel) (*fastly.ACL, error) {
 	return nil, nil
 }
 
@@ -185,7 +186,7 @@ func ReconcileWithPrevious(ctx context.Context, client *fastly.Client, serviceID
 	return reconciler.GuardedRun(
 		ctx, client, serviceID, version, previous, desired,
 		func(m NestedModel) bool { return service.BoolValue(m.ForceDestroy) },
-		func(prev, desired NestedModel, stillPresent bool) bool { return !stillPresent },
+		func(_, _ NestedModel, stillPresent bool) bool { return !stillPresent },
 		func(ctx context.Context, prev NestedModel) (bool, error) {
 			return isACLEmpty(ctx, serviceID, service.StringValue(prev.ACLID), client)
 		},

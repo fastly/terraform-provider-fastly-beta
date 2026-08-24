@@ -8,13 +8,14 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/errors"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 const (
-	http3ConsistencyAttempts = 5
-	http3ConsistencyDelay    = 200 * time.Millisecond
+	http3ConsistencyPollInterval = 500 * time.Millisecond
+	http3ConsistencyTimeout      = 30 * time.Second
 )
 
 func FlattenToNestedModel(s *fastly.Settings, http3Enabled bool) NestedModel {
@@ -59,30 +60,35 @@ func ReadForVersion(ctx context.Context, client *fastly.Client, serviceID string
 	return []NestedModel{m}, nil
 }
 
-// Reconcile ensures the general settings for a service version match desired.
-//
-// Settings always exist server-side for every service, so create and update are the same
-// operation: a full replace of all fields. Removing the block from configuration resets the
-// settings back to their API defaults, but only when previous shows the block was actually
-// configured before - otherwise there is nothing to reset, since the block was never under
-// this resource's management.
-func Reconcile(ctx context.Context, client *fastly.Client, serviceID string, version int, previous, desired []NestedModel) error {
+// Reconcile returns the resulting settings so the caller skips a second ReadForVersion
+// round-trip - reconciling already fetches or produces them. Settings always exist server-side,
+// so create and update are the same full-replace operation. Removing the block resets to API
+// defaults, but only if previous shows it was configured before; either way, empty desired means
+// no settings belong in state, so both paths return (nil, nil).
+func Reconcile(ctx context.Context, client *fastly.Client, serviceID string, version int, previous, desired []NestedModel) ([]NestedModel, error) {
 	if len(desired) == 0 {
 		if len(previous) == 0 {
-			return nil
+			return nil, nil
 		}
-		return resetToDefaults(ctx, client, serviceID, version)
+		if err := resetToDefaults(ctx, client, serviceID, version); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 
 	current, err := readCurrent(ctx, client, serviceID, version)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if desired[0].ModelsEqual(current) {
-		return nil
+		return []NestedModel{current}, nil
 	}
 
-	return apply(ctx, client, serviceID, version, desired[0], service.BoolValue(current.HTTP3))
+	result, err := apply(ctx, client, serviceID, version, desired[0], service.BoolValue(current.HTTP3))
+	if err != nil {
+		return nil, err
+	}
+	return []NestedModel{result}, nil
 }
 
 func resetToDefaults(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
@@ -96,7 +102,8 @@ func resetToDefaults(ctx context.Context, client *fastly.Client, serviceID strin
 		return nil
 	}
 
-	return apply(ctx, client, serviceID, version, def, service.BoolValue(current.HTTP3))
+	_, err = apply(ctx, client, serviceID, version, def, service.BoolValue(current.HTTP3))
+	return err
 }
 
 func readCurrent(ctx context.Context, client *fastly.Client, serviceID string, version int) (NestedModel, error) {
@@ -116,11 +123,18 @@ func readCurrent(ctx context.Context, client *fastly.Client, serviceID string, v
 	return FlattenToNestedModel(remote, http3Enabled), nil
 }
 
-func apply(ctx context.Context, client *fastly.Client, serviceID string, version int, desired NestedModel, currentHTTP3 bool) error {
-	if _, err := client.UpdateSettings(ctx, BuildUpdateInput(serviceID, version, desired)); err != nil {
-		return err
+// apply writes desired and returns the resulting settings, built from UpdateSettings' response
+// plus desired's own HTTP3 value - reconcileHTTP3 only returns successfully once the API
+// confirms HTTP/3 has reached that value, so there's no need to re-fetch it.
+func apply(ctx context.Context, client *fastly.Client, serviceID string, version int, desired NestedModel, currentHTTP3 bool) (NestedModel, error) {
+	updated, err := client.UpdateSettings(ctx, BuildUpdateInput(serviceID, version, desired))
+	if err != nil {
+		return NestedModel{}, err
 	}
-	return reconcileHTTP3(ctx, client, serviceID, version, service.BoolValue(desired.HTTP3), currentHTTP3)
+	if err := reconcileHTTP3(ctx, client, serviceID, version, service.BoolValue(desired.HTTP3), currentHTTP3); err != nil {
+		return NestedModel{}, err
+	}
+	return FlattenToNestedModel(updated, service.BoolValue(desired.HTTP3)), nil
 }
 
 // reconcileHTTP3 only calls Enable/Disable when the desired state differs from current: the
@@ -157,9 +171,14 @@ func reconcileHTTP3(ctx context.Context, client *fastly.Client, serviceID string
 	return waitForHTTP3Consistency(ctx, client, serviceID, version, desired)
 }
 
+// waitForHTTP3Consistency polls on a time budget, not a fixed attempt count: the status
+// endpoint's lag behind the Enable/Disable write path isn't bounded to a small fixed window.
 func waitForHTTP3Consistency(ctx context.Context, client *fastly.Client, serviceID string, version int, desired bool) error {
+	ctx, cancel := context.WithTimeout(ctx, http3ConsistencyTimeout)
+	defer cancel()
+
 	var enabled bool
-	for attempt := 0; attempt < http3ConsistencyAttempts; attempt++ {
+	for {
 		var err error
 		enabled, err = getHTTP3Enabled(ctx, client, serviceID, version)
 		if err != nil {
@@ -168,18 +187,13 @@ func waitForHTTP3Consistency(ctx context.Context, client *fastly.Client, service
 		if enabled == desired {
 			return nil
 		}
-		if attempt == http3ConsistencyAttempts-1 {
-			break
-		}
 
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(http3ConsistencyDelay):
+			return fmt.Errorf("HTTP/3 status did not reach desired state (%t) after %s; last observed state was %t", desired, http3ConsistencyTimeout, enabled)
+		case <-time.After(http3ConsistencyPollInterval):
 		}
 	}
-
-	return fmt.Errorf("HTTP/3 status did not reach desired state (%t) after %d attempts; last observed state was %t", desired, http3ConsistencyAttempts, enabled)
 }
 
 // getHTTP3Enabled reports whether HTTP/3 is enabled for a service version. The API returns a

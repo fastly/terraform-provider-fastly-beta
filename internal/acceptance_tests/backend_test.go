@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestAccFastlyServiceBackend_basic(t *testing.T) {
@@ -244,7 +245,7 @@ func TestAccFastlyServiceBackend_importBasic(t *testing.T) {
 			{
 				// Test legacy composite ID import: service_id/version/name
 				ResourceName: "fastly_service_backend.origin",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+				ImportStateIdFunc: func(_ *terraform.State) (string, error) {
 					return fmt.Sprintf("%s/%s/%s", serviceID, versionNumber, backendName), nil
 				},
 				ImportState:       true,
@@ -288,7 +289,7 @@ func TestAccFastlyServiceBackend_importWithNameSlashes(t *testing.T) {
 			{
 				// Test legacy composite ID import with slashes in name
 				ResourceName: "fastly_service_backend.origin",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+				ImportStateIdFunc: func(_ *terraform.State) (string, error) {
 					return fmt.Sprintf("%s/%s/%s", serviceID, versionNumber, backendName), nil
 				},
 				ImportState:       true,
@@ -298,7 +299,7 @@ func TestAccFastlyServiceBackend_importWithNameSlashes(t *testing.T) {
 	})
 }
 
-// CheckBackendExistsInFastly verifies a backend exists in Fastly API
+// CheckBackendExistsInFastly verifies a backend exists in Fastly API.
 func CheckBackendExistsInFastly(serviceName, backendName string, version int) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[serviceName]

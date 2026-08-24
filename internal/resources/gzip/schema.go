@@ -7,11 +7,13 @@ import (
 
 	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
+	"github.com/fastly/terraform-provider-fastly/internal/validation"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 type NestedModel struct {
@@ -142,10 +144,10 @@ func (o opsWithPrevious) Equal(desired NestedModel, remote *fastly.Gzip) bool {
 	remoteModel := o.ToModel(remote)
 	previous, hadPrevious := o.previousByName[service.StringValue(desired.Name)]
 
-	if listUnset(desired.ContentTypes) && !(hadPrevious && !listUnset(previous.ContentTypes)) {
+	if listUnset(desired.ContentTypes) && (!hadPrevious || listUnset(previous.ContentTypes)) {
 		remoteModel.ContentTypes = desired.ContentTypes
 	}
-	if listUnset(desired.Extensions) && !(hadPrevious && !listUnset(previous.Extensions)) {
+	if listUnset(desired.Extensions) && (!hadPrevious || listUnset(previous.Extensions)) {
 		remoteModel.Extensions = desired.Extensions
 	}
 	return desired.ModelsEqual(remoteModel)
@@ -299,4 +301,16 @@ func Equal(a, b []NestedModel) bool {
 
 func MatchOrder(items, order []NestedModel) []NestedModel {
 	return reconcile.MatchOrder(items, order, func(m NestedModel) string { return service.StringValue(m.Name) })
+}
+
+// ValidateConditionReferences rejects a cache_condition naming a condition block absent from config.
+func ValidateConditionReferences(gzips []NestedModel, conditionNames map[string]struct{}) error {
+	return validation.References(gzips, "gzip", func(m NestedModel) types.String { return m.Name }, "cache_condition",
+		func(m NestedModel) []string {
+			if m.CacheCondition.IsUnknown() || m.CacheCondition.IsNull() {
+				return nil
+			}
+			return []string{service.StringValue(m.CacheCondition)}
+		},
+		"condition", conditionNames)
 }

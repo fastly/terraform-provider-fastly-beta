@@ -25,7 +25,6 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/resources/resourcelink"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -35,15 +34,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 type Resource struct {
 	providerData *fastlyclient.Data
 }
 
-var _ resource.Resource = &Resource{}
-var _ resource.ResourceWithConfigure = &Resource{}
-var _ resource.ResourceWithImportState = &Resource{}
+var (
+	_ resource.Resource                = &Resource{}
+	_ resource.ResourceWithConfigure   = &Resource{}
+	_ resource.ResourceWithImportState = &Resource{}
+)
 
 func NewResource() resource.Resource {
 	return &Resource{}

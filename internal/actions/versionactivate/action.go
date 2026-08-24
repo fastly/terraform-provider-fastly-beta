@@ -5,11 +5,12 @@ import (
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/action/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 type Action struct {

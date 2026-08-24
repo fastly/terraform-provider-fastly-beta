@@ -186,7 +186,7 @@ func TestAccFastlyServiceCondition_importBasic(t *testing.T) {
 			},
 			{
 				ResourceName: "fastly_service_condition.test",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+				ImportStateIdFunc: func(_ *terraform.State) (string, error) {
 					return fmt.Sprintf("%s/%s/%s", serviceID, versionNumber, conditionName), nil
 				},
 				ImportState:       true,

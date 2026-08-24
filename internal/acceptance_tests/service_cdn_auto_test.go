@@ -1479,6 +1479,39 @@ func TestAccFastlyServiceCDNAuto_multipleRateLimiters(t *testing.T) {
 	})
 }
 
+// TestAccFastlyServiceCDNAuto_rateLimiterWithResponseObject exercises a rate limiter whose
+// response_object_name references a real nested response_object block, proving
+// ratelimiter.ValidateResponseObjectReferences accepts a valid reference at plan time.
+func TestAccFastlyServiceCDNAuto_rateLimiterWithResponseObject(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	rateLimiterName := fmt.Sprintf("rate-limiter-%s", acctest.RandString(10))
+	responseObjectName := fmt.Sprintf("response-object-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn_auto"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigCDNAutoWithRateLimiterResponseObject(serviceName, domainName, rateLimiterName, responseObjectName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "response_object.0.name", responseObjectName),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "rate_limiter.0.name", rateLimiterName),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "rate_limiter.0.action", "response_object"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "rate_limiter.0.response_object_name", responseObjectName),
+				),
+			},
+			{
+				Config:   ConfigCDNAutoWithRateLimiterResponseObject(serviceName, domainName, rateLimiterName, responseObjectName),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
 func TestAccFastlyServiceCDNAuto_withDirector(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))

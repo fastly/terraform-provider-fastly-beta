@@ -3,9 +3,10 @@ package responseobject
 import (
 	"testing"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 func minimalNestedModel() NestedModel {
@@ -137,4 +138,47 @@ func TestMatchOrder(t *testing.T) {
 	result := MatchOrder([]NestedModel{b, a}, []NestedModel{a, b})
 
 	assert.Equal(t, []NestedModel{a, b}, result)
+}
+
+func TestValidateConditionReferences(t *testing.T) {
+	conditionNames := map[string]struct{}{"my-condition": {}}
+
+	t.Run("no conditions set", func(t *testing.T) {
+		item := minimalNestedModel()
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, nil))
+	})
+
+	t.Run("references configured conditions", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.CacheCondition = types.StringValue("my-condition")
+		item.RequestCondition = types.StringValue("my-condition")
+
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, conditionNames))
+	})
+
+	t.Run("cache_condition references a condition that isn't configured", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.CacheCondition = types.StringValue("missing-condition")
+
+		err := ValidateConditionReferences([]NestedModel{item}, conditionNames)
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), `"response-object"`)
+			assert.Contains(t, err.Error(), `"missing-condition"`)
+		}
+	})
+
+	t.Run("request_condition references a condition that isn't configured", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.RequestCondition = types.StringValue("missing-condition")
+
+		assert.Error(t, ValidateConditionReferences([]NestedModel{item}, conditionNames))
+	})
+
+	t.Run("skips unknown conditions", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.CacheCondition = types.StringUnknown()
+		item.RequestCondition = types.StringUnknown()
+
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, nil))
+	})
 }

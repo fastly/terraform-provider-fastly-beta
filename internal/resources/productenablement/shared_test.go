@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestIsEntitlementError(t *testing.T) {

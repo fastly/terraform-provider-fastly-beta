@@ -9,15 +9,18 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/service"
 	"github.com/fastly/terraform-provider-fastly/internal/validation"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
-var _ resource.Resource = &Resource{}
-var _ resource.ResourceWithImportState = &Resource{}
+var (
+	_ resource.Resource                = &Resource{}
+	_ resource.ResourceWithImportState = &Resource{}
+)
 
 type Resource struct {
 	providerData *fastlyclient.Data
@@ -68,12 +71,12 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		"name":       service.StringValue(plan.Name),
 	})
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.ServiceTypeChecker, plan.Service.ValueString(), "fastly_service_logging_newrelic", service.TypeVCL, service.TypeCompute); err != nil {
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_logging_newrelic", service.TypeVCL, service.TypeCompute); err != nil {
 		resp.Diagnostics.AddError("Unsupported service type", err.Error())
 		return
 	}
 
-	serviceType, err := r.providerData.ServiceTypeChecker.GetType(ctx, plan.Service.ValueString())
+	serviceType, err := r.providerData.TypeChecker.GetType(ctx, plan.Service.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error determining service type", err.Error())
 		return
@@ -141,7 +144,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 
 	// The endpoint Get above succeeded, so the service exists and this is a cached
 	// lookup in all but the first call per service.
-	serviceType, err := r.providerData.ServiceTypeChecker.GetType(ctx, state.Service.ValueString())
+	serviceType, err := r.providerData.TypeChecker.GetType(ctx, state.Service.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error determining service type", err.Error())
 		return
@@ -164,12 +167,12 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.ServiceTypeChecker, plan.Service.ValueString(), "fastly_service_logging_newrelic", service.TypeVCL, service.TypeCompute); err != nil {
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_logging_newrelic", service.TypeVCL, service.TypeCompute); err != nil {
 		resp.Diagnostics.AddError("Unsupported service type", err.Error())
 		return
 	}
 
-	serviceType, err := r.providerData.ServiceTypeChecker.GetType(ctx, plan.Service.ValueString())
+	serviceType, err := r.providerData.TypeChecker.GetType(ctx, plan.Service.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error determining service type", err.Error())
 		return
@@ -223,7 +226,7 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 		"name":       state.Name.ValueString(),
 	})
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.ServiceTypeChecker, state.Service.ValueString(), "fastly_service_logging_newrelic", service.TypeVCL, service.TypeCompute); err != nil {
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, state.Service.ValueString(), "fastly_service_logging_newrelic", service.TypeVCL, service.TypeCompute); err != nil {
 		resp.Diagnostics.AddError("Unsupported service type", err.Error())
 		return
 	}
@@ -275,7 +278,7 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 		return
 	}
 
-	serviceType, err := r.providerData.ServiceTypeChecker.GetType(ctx, serviceID)
+	serviceType, err := r.providerData.TypeChecker.GetType(ctx, serviceID)
 	if err != nil {
 		resp.Diagnostics.AddError("Error determining service type", err.Error())
 		return

@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
-// TestAccProvider_ConfigureWithAPIToken tests provider configuration with explicit api_token
+// TestAccProvider_ConfigureWithAPIToken tests provider configuration with explicit api_token.
 func TestAccProvider_ConfigureWithAPIToken(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("TF_ACC") == "" {
@@ -37,7 +37,7 @@ func TestAccProvider_ConfigureWithAPIToken(t *testing.T) {
 	})
 }
 
-// TestAccProvider_ConfigureWithEnvVar tests provider configuration via FASTLY_API_TOKEN env var
+// TestAccProvider_ConfigureWithEnvVar tests provider configuration via FASTLY_API_TOKEN env var.
 func TestAccProvider_ConfigureWithEnvVar(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("TF_ACC") == "" {
@@ -69,7 +69,7 @@ func TestAccProvider_ConfigureWithEnvVar(t *testing.T) {
 }
 
 // TestAccProvider_MissingToken tests provider error handling when no token is provided
-// NOTE: This test modifies the FASTLY_API_TOKEN environment variable, so it cannot run in parallel
+// NOTE: This test modifies the FASTLY_API_TOKEN environment variable, so it cannot run in parallel.
 func TestAccProvider_MissingToken(t *testing.T) {
 	if os.Getenv("TF_ACC") == "" {
 		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
@@ -100,7 +100,7 @@ func TestAccProvider_MissingToken(t *testing.T) {
 	})
 }
 
-// TestAccProvider_InvalidToken tests provider error handling with an invalid token
+// TestAccProvider_InvalidToken tests provider error handling with an invalid token.
 func TestAccProvider_InvalidToken(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("TF_ACC") == "" {
@@ -122,7 +122,7 @@ func TestAccProvider_InvalidToken(t *testing.T) {
 }
 
 // TestAccProvider_ExplicitTokenOverridesEnvVar tests that explicit api_token takes precedence over env var
-// NOTE: This test modifies the FASTLY_API_TOKEN environment variable, so it cannot run in parallel
+// NOTE: This test modifies the FASTLY_API_TOKEN environment variable, so it cannot run in parallel.
 func TestAccProvider_ExplicitTokenOverridesEnvVar(t *testing.T) {
 	if os.Getenv("TF_ACC") == "" {
 		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
@@ -175,7 +175,7 @@ func TestAccProvider_ExplicitTokenOverridesEnvVar(t *testing.T) {
 	})
 }
 
-// testAccProviderConfigWithExplicitToken returns config with explicit api_token in provider block
+// testAccProviderConfigWithExplicitToken returns config with explicit api_token in provider block.
 func testAccProviderConfigWithExplicitToken(serviceName, domainName string) string {
 	apiToken := os.Getenv("FASTLY_API_TOKEN")
 	return fmt.Sprintf(`
@@ -187,7 +187,7 @@ provider "fastly" {
 `, apiToken, ConfigCDNAutoBasic(serviceName, domainName))
 }
 
-// testAccProviderConfigWithEnvVar returns config without explicit api_token (relies on env var)
+// testAccProviderConfigWithEnvVar returns config without explicit api_token (relies on env var).
 func testAccProviderConfigWithEnvVar(serviceName, domainName string) string {
 	return fmt.Sprintf(`
 provider "fastly" {
@@ -198,7 +198,7 @@ provider "fastly" {
 `, ConfigCDNAutoBasic(serviceName, domainName))
 }
 
-// testAccProviderConfigWithNoToken returns config with no token configured
+// testAccProviderConfigWithNoToken returns config with no token configured.
 func testAccProviderConfigWithNoToken(serviceName, domainName string) string {
 	return fmt.Sprintf(`
 provider "fastly" {
@@ -209,7 +209,7 @@ provider "fastly" {
 `, ConfigCDNAutoBasic(serviceName, domainName))
 }
 
-// testAccProviderConfigWithInvalidToken returns config with an invalid token
+// testAccProviderConfigWithInvalidToken returns config with an invalid token.
 func testAccProviderConfigWithInvalidToken(serviceName, domainName string) string {
 	return fmt.Sprintf(`
 provider "fastly" {
@@ -220,7 +220,7 @@ provider "fastly" {
 `, ConfigCDNAutoBasic(serviceName, domainName))
 }
 
-// testAccProviderConfigWithExplicitTokenOverride returns config with a specific token (used for override test)
+// testAccProviderConfigWithExplicitTokenOverride returns config with a specific token (used for override test).
 func testAccProviderConfigWithExplicitTokenOverride(serviceName, domainName, token string) string {
 	return fmt.Sprintf(`
 provider "fastly" {

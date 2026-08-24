@@ -4,9 +4,10 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 func flatten(ctx context.Context, d *fastly.Domain, m *Model) {

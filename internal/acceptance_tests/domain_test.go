@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestAccFastlyServiceDomain_basic(t *testing.T) {
@@ -165,7 +166,7 @@ func TestAccFastlyServiceDomain_importBasic(t *testing.T) {
 			{
 				// Test legacy composite ID import: service_id/version/name
 				ResourceName: "fastly_service_domain.additional",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+				ImportStateIdFunc: func(_ *terraform.State) (string, error) {
 					return fmt.Sprintf("%s/%s/%s", serviceID, versionNumber, additionalDomainName), nil
 				},
 				ImportState:       true,
@@ -209,7 +210,7 @@ func TestAccFastlyServiceDomain_importWithSubdomain(t *testing.T) {
 			{
 				// Test legacy composite ID import with complex subdomain
 				ResourceName: "fastly_service_domain.additional",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+				ImportStateIdFunc: func(_ *terraform.State) (string, error) {
 					return fmt.Sprintf("%s/%s/%s", serviceID, versionNumber, subdomainName), nil
 				},
 				ImportState:       true,
@@ -219,7 +220,7 @@ func TestAccFastlyServiceDomain_importWithSubdomain(t *testing.T) {
 	})
 }
 
-// CheckDomainExistsInFastly verifies a domain exists in Fastly API
+// CheckDomainExistsInFastly verifies a domain exists in Fastly API.
 func CheckDomainExistsInFastly(serviceName, domainName string, version int) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[serviceName]

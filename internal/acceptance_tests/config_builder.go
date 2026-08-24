@@ -26,7 +26,7 @@ import (
 	"text/template"
 )
 
-// getRepoRoot finds the repository root by looking for go.mod
+// getRepoRoot finds the repository root by looking for go.mod.
 func getRepoRoot() string {
 	wd, err := os.Getwd()
 	if err != nil {
@@ -46,7 +46,7 @@ func getRepoRoot() string {
 	}
 }
 
-// ServiceType represents a Fastly service resource type
+// ServiceType represents a Fastly service resource type.
 type ServiceType string
 
 const (

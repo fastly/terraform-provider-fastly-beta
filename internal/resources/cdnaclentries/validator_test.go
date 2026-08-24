@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func entryObj(id, ip string, subnet int64, negated bool, comment string) attr.Value {
+func entryObj(ip string, subnet int64, negated bool, comment string) attr.Value {
 	return types.ObjectValueMust(entryAttrTypes, map[string]attr.Value{
-		"id": types.StringValue(id), "ip": types.StringValue(ip),
+		"id": types.StringValue(""), "ip": types.StringValue(ip),
 		"subnet": types.Int64Value(subnet), "negated": types.BoolValue(negated), "comment": types.StringValue(comment),
 	})
 }
@@ -22,8 +22,8 @@ func TestUniqueEntryIdentity_RejectsDuplicateIPAndSubnet(t *testing.T) {
 	ctx := context.Background()
 
 	set := types.SetValueMust(types.ObjectType{AttrTypes: entryAttrTypes}, []attr.Value{
-		entryObj("", "10.0.0.1", 24, false, "first"),
-		entryObj("", "10.0.0.1", 24, true, "second, differs only by negated/comment"),
+		entryObj("10.0.0.1", 24, false, "first"),
+		entryObj("10.0.0.1", 24, true, "second, differs only by negated/comment"),
 	})
 
 	req := validator.SetRequest{Path: path.Root("entry"), ConfigValue: set}
@@ -38,8 +38,24 @@ func TestUniqueEntryIdentity_AllowsDifferentSubnetSameIP(t *testing.T) {
 	ctx := context.Background()
 
 	set := types.SetValueMust(types.ObjectType{AttrTypes: entryAttrTypes}, []attr.Value{
-		entryObj("", "10.0.0.1", 24, false, "a"),
-		entryObj("", "10.0.0.1", 32, false, "b"),
+		entryObj("10.0.0.1", 24, false, "a"),
+		entryObj("10.0.0.1", 32, false, "b"),
+	})
+
+	req := validator.SetRequest{Path: path.Root("entry"), ConfigValue: set}
+	resp := &validator.SetResponse{}
+
+	UniqueEntryIdentity().ValidateSet(ctx, req, resp)
+
+	assert.False(t, resp.Diagnostics.HasError())
+}
+
+func TestUniqueEntryIdentity_AllowsSameSubnetDifferentIP(t *testing.T) {
+	ctx := context.Background()
+
+	set := types.SetValueMust(types.ObjectType{AttrTypes: entryAttrTypes}, []attr.Value{
+		entryObj("10.0.0.1", 24, false, "a"),
+		entryObj("10.0.0.2", 24, false, "b"),
 	})
 
 	req := validator.SetRequest{Path: path.Root("entry"), ConfigValue: set}
