@@ -3,9 +3,10 @@ package kvstore
 import (
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestFlatten(t *testing.T) {

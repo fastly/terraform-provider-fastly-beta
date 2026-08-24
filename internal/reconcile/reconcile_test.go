@@ -5,8 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 type testModel struct {
@@ -28,9 +29,11 @@ type testOps struct {
 	deletedItems []string
 	createdItems []testModel
 	updatedItems []testModel
+	listCalls    int
 }
 
-func (o *testOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*testAPI, error) {
+func (o *testOps) List(_ context.Context, _ *fastly.Client, _ string, _ int) ([]*testAPI, error) {
+	o.listCalls++
 	if o.listError != nil {
 		return nil, o.listError
 	}
@@ -41,7 +44,7 @@ func (o *testOps) GetName(api *testAPI) string {
 	return api.Name
 }
 
-func (o *testOps) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
+func (o *testOps) Delete(_ context.Context, _ *fastly.Client, _ string, _ int, name string) error {
 	if o.deleteError != nil {
 		return o.deleteError
 	}
@@ -49,7 +52,7 @@ func (o *testOps) Delete(ctx context.Context, client *fastly.Client, serviceID s
 	return nil
 }
 
-func (o *testOps) Create(ctx context.Context, client *fastly.Client, serviceID string, version int, desired testModel) (*testAPI, error) {
+func (o *testOps) Create(_ context.Context, _ *fastly.Client, _ string, _ int, desired testModel) (*testAPI, error) {
 	if o.createError != nil {
 		return nil, o.createError
 	}
@@ -61,7 +64,7 @@ func (o *testOps) Equal(desired testModel, remote *testAPI) bool {
 	return desired.Name == remote.Name && desired.Value == remote.Value
 }
 
-func (o *testOps) Update(ctx context.Context, client *fastly.Client, serviceID string, version int, desired testModel) (*testAPI, error) {
+func (o *testOps) Update(_ context.Context, _ *fastly.Client, _ string, _ int, desired testModel) (*testAPI, error) {
 	if o.updateError != nil {
 		return nil, o.updateError
 	}
@@ -241,6 +244,53 @@ func TestResource_Run(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "update failed")
 	})
+
+	t.Run("lists remote items only once", func(t *testing.T) {
+		ops := &testOps{
+			listResult: []*testAPI{
+				{Name: "item1", Value: "oldvalue"},
+				{Name: "item2", Value: "value2"},
+			},
+		}
+		r := &Resource[testModel, testAPI]{
+			Ops:      ops,
+			GetName:  func(m testModel) string { return m.Name },
+			Sortable: true,
+		}
+
+		desired := []testModel{
+			{Name: "item1", Value: "newvalue"},
+			{Name: "item3", Value: "value3"},
+		}
+
+		err := r.Run(ctx, nil, "service123", 1, desired)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, ops.listCalls)
+		assert.Equal(t, []string{"item2"}, ops.deletedItems)
+		assert.Len(t, ops.updatedItems, 1)
+		assert.Len(t, ops.createdItems, 1)
+	})
+}
+
+func TestResource_DeleteRemovedAndCreateOrUpdate_independentLists(t *testing.T) {
+	ctx := context.Background()
+
+	ops := &testOps{
+		listResult: []*testAPI{
+			{Name: "item1", Value: "value1"},
+		},
+	}
+	r := &Resource[testModel, testAPI]{
+		Ops:      ops,
+		GetName:  func(m testModel) string { return m.Name },
+		Sortable: true,
+	}
+
+	desired := []testModel{{Name: "item1", Value: "value1"}}
+
+	assert.NoError(t, r.DeleteRemoved(ctx, nil, "service123", 1, desired))
+	assert.NoError(t, r.CreateOrUpdate(ctx, nil, "service123", 1, desired))
+	assert.Equal(t, 2, ops.listCalls)
 }
 
 func TestResource_ReadForVersion(t *testing.T) {

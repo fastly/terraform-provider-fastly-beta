@@ -19,6 +19,58 @@ defaults:
     shell: bash
 
 jobs:
+  lint:
+    runs-on: forge-amd64-small
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.26.x
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.12.2
+          only-new-issues: true
+
+  golangci-latest:
+    name: lint-latest (informational)
+    runs-on: forge-amd64-small
+    continue-on-error: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.26.x
+
+      - name: Run golangci-lint@latest
+        id: lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: latest
+          only-new-issues: true
+        continue-on-error: true
+
+      - name: Report lint summary
+        env:
+          LINT_OUTCOME: ${{ steps.lint.outcome }}
+        run: |
+          if [ "${LINT_OUTCOME}" == "success" ]; then
+            echo "✅ golangci-lint@latest passed." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ golangci-lint@latest failed (informational only)." >> $GITHUB_STEP_SUMMARY
+          fi
+
   test:
     name: Test (${{ matrix.platform }})
     strategy:

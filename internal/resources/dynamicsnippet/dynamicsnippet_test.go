@@ -5,8 +5,9 @@ import (
 
 	regularsnippet "github.com/fastly/terraform-provider-fastly/internal/resources/snippet"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestBuildCreateInput(t *testing.T) {
@@ -83,5 +84,40 @@ func TestValidateNoNameConflicts(t *testing.T) {
 
 	if err := ValidateNoNameConflicts(dynamic, regular); err == nil {
 		t.Fatal("expected shared regular and dynamic snippet name to return an error")
+	}
+}
+
+func TestValidateNoNameConflictsWhitespace(t *testing.T) {
+	dynamic := []NestedModel{
+		{Name: types.StringValue("shared")},
+	}
+	regular := []regularsnippet.NestedModel{
+		{Name: types.StringValue(" shared ")},
+	}
+
+	if err := ValidateNoNameConflicts(dynamic, regular); err == nil {
+		t.Fatal("expected regular and dynamic snippet names differing only in whitespace to return an error")
+	}
+}
+
+func TestValidateConfigDuplicateWhitespace(t *testing.T) {
+	items := []NestedModel{
+		{Name: types.StringValue("one"), Type: types.StringValue("recv"), Priority: types.Int64Value(100)},
+		{Name: types.StringValue(" one "), Type: types.StringValue("recv"), Priority: types.Int64Value(100)},
+	}
+
+	if err := ValidateConfig(items); err == nil {
+		t.Fatal("expected duplicate names differing only in whitespace to return an error")
+	}
+}
+
+func TestValidateDuplicateWhitespace(t *testing.T) {
+	items := []NestedModel{
+		{Name: types.StringValue("one"), Type: types.StringValue("recv"), Priority: types.Int64Value(100)},
+		{Name: types.StringValue(" one "), Type: types.StringValue("recv"), Priority: types.Int64Value(100)},
+	}
+
+	if err := Validate(items); err == nil {
+		t.Fatal("expected duplicate names differing only in whitespace to return an error")
 	}
 }

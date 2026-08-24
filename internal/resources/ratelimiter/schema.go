@@ -8,9 +8,10 @@ import (
 
 	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/dictionary"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/responseobject"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
+	"github.com/fastly/terraform-provider-fastly/internal/validation"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -20,6 +21,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 const DefaultFeatureRevision = 1
@@ -254,7 +257,7 @@ func (o ops) GetName(api *fastly.ERL) string {
 	return fastly.ToValue(api.Name)
 }
 
-func (o *ops) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
+func (o *ops) Delete(ctx context.Context, client *fastly.Client, _ string, _ int, name string) error {
 	remote := o.remoteByName[name]
 	if remote == nil {
 		return nil
@@ -521,17 +524,12 @@ func MatchOrder(items, order []NestedModel) []NestedModel {
 // reconcile.Run keys remote/desired rate limiters by name, so duplicate names would otherwise
 // silently collapse to a single rate limiter instead of failing at plan time.
 func ValidateConfig(rateLimiters []NestedModel) error {
-	seenNames := make(map[string]struct{}, len(rateLimiters))
+	if err := validation.UniqueNames(rateLimiters, "rate limiter", func(m NestedModel) types.String { return m.Name }); err != nil {
+		return err
+	}
 
 	for _, item := range rateLimiters {
 		name := service.StringValue(item.Name)
-
-		if !item.Name.IsUnknown() && !item.Name.IsNull() {
-			if _, ok := seenNames[name]; ok {
-				return fmt.Errorf("multiple rate limiters with the same name %q; names must be unique within a service version", name)
-			}
-			seenNames[name] = struct{}{}
-		}
 
 		if item.Action.IsUnknown() || item.Action.IsNull() {
 			continue
@@ -560,28 +558,29 @@ func ValidateConfig(rateLimiters []NestedModel) error {
 // and reconcile.Run only reconciles a rate limiter whose own desired fields changed, so removing
 // just the dictionary block never updates it.
 func ValidateDictionaryReferences(rateLimiters []NestedModel, dictionaries []dictionary.NestedModel) error {
-	dictionaryNames := make(map[string]struct{}, len(dictionaries))
-	for _, d := range dictionaries {
-		if d.Name.IsUnknown() || d.Name.IsNull() {
-			continue
-		}
-		dictionaryNames[service.StringValue(d.Name)] = struct{}{}
-	}
+	dictionaryNames := validation.NameSet(dictionaries, func(d dictionary.NestedModel) types.String { return d.Name })
 
-	for _, rl := range rateLimiters {
-		if rl.URIDictionaryName.IsUnknown() || rl.URIDictionaryName.IsNull() {
-			continue
-		}
+	return validation.References(rateLimiters, "rate limiter", func(m NestedModel) types.String { return m.Name }, "uri_dictionary_name",
+		func(m NestedModel) []string {
+			if m.URIDictionaryName.IsUnknown() || m.URIDictionaryName.IsNull() {
+				return nil
+			}
+			return []string{service.StringValue(m.URIDictionaryName)}
+		},
+		"dictionary", dictionaryNames)
+}
 
-		name := service.StringValue(rl.URIDictionaryName)
-		if name == "" {
-			continue
-		}
+// ValidateResponseObjectReferences rejects a response_object_name naming a response_object block
+// absent from config - mirrors the uri_dictionary_name check above.
+func ValidateResponseObjectReferences(rateLimiters []NestedModel, responseObjects []responseobject.NestedModel) error {
+	responseObjectNames := validation.NameSet(responseObjects, func(r responseobject.NestedModel) types.String { return r.Name })
 
-		if _, ok := dictionaryNames[name]; !ok {
-			return fmt.Errorf("rate limiter %q: uri_dictionary_name %q does not match any configured dictionary", service.StringValue(rl.Name), name)
-		}
-	}
-
-	return nil
+	return validation.References(rateLimiters, "rate limiter", func(m NestedModel) types.String { return m.Name }, "response_object_name",
+		func(m NestedModel) []string {
+			if m.ResponseObjectName.IsUnknown() || m.ResponseObjectName.IsNull() {
+				return nil
+			}
+			return []string{service.StringValue(m.ResponseObjectName)}
+		},
+		"response object", responseObjectNames)
 }

@@ -8,9 +8,11 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/defaults"
 	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
+	"github.com/fastly/terraform-provider-fastly/internal/validation"
+
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 
 	fastly "github.com/fastly/go-fastly/v17/fastly"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -201,7 +203,7 @@ func (n commonModel) equal(other commonModel) bool {
 }
 
 func (n NestedModel) ModelsEqual(other NestedModel) bool {
-	return n.commonModel.equal(other.commonModel) &&
+	return n.equal(other.commonModel) &&
 		service.StringValue(n.Format) == service.StringValue(other.Format) &&
 		service.Int64Value(n.FormatVersion) == service.Int64Value(other.FormatVersion) &&
 		service.StringValue(n.Placement) == service.StringValue(other.Placement) &&
@@ -209,7 +211,7 @@ func (n NestedModel) ModelsEqual(other NestedModel) bool {
 }
 
 func (c ComputeNestedModel) ModelsEqual(other ComputeNestedModel) bool {
-	return c.commonModel.equal(other.commonModel)
+	return c.equal(other.commonModel)
 }
 
 // CommonAttributes returns the full Syslog logging attribute set — the shared
@@ -491,6 +493,18 @@ func Reconcile(ctx context.Context, client *fastly.Client, serviceID string, ver
 
 func Equal(a, b []NestedModel) bool {
 	return reconcile.ModelsEqual(a, b, func(m NestedModel) string { return service.StringValue(m.Name) }, NestedModel.ModelsEqual, true)
+}
+
+// ValidateConditionReferences rejects a response_condition naming a condition block absent from config.
+func ValidateConditionReferences(endpoints []NestedModel, conditionNames map[string]struct{}) error {
+	return validation.References(endpoints, "Syslog logging endpoint", func(m NestedModel) types.String { return m.Name }, "response_condition",
+		func(m NestedModel) []string {
+			if m.ResponseCondition.IsUnknown() || m.ResponseCondition.IsNull() {
+				return nil
+			}
+			return []string{service.StringValue(m.ResponseCondition)}
+		},
+		"condition", conditionNames)
 }
 
 func MatchOrder(items, order []NestedModel) []NestedModel {

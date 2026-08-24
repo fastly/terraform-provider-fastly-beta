@@ -4,10 +4,11 @@ import (
 	"context"
 	"testing"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 func minimalNestedModel() NestedModel {
@@ -291,4 +292,38 @@ func TestCaseInsensitiveState_PlanModifyString(t *testing.T) {
 			assert.Equal(t, tt.expected, resp.PlanValue)
 		})
 	}
+}
+
+func TestValidateConditionReferences(t *testing.T) {
+	conditionNames := map[string]struct{}{"my-condition": {}}
+
+	t.Run("no request_condition set", func(t *testing.T) {
+		item := minimalNestedModel()
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, nil))
+	})
+
+	t.Run("references a configured condition", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.RequestCondition = types.StringValue("my-condition")
+
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, conditionNames))
+	})
+
+	t.Run("references a condition that isn't configured", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.RequestCondition = types.StringValue("missing-condition")
+
+		err := ValidateConditionReferences([]NestedModel{item}, conditionNames)
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), `"request-setting"`)
+			assert.Contains(t, err.Error(), `"missing-condition"`)
+		}
+	})
+
+	t.Run("skips unknown condition", func(t *testing.T) {
+		item := minimalNestedModel()
+		item.RequestCondition = types.StringUnknown()
+
+		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, nil))
+	})
 }

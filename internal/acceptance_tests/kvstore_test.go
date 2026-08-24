@@ -8,11 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly"
-	"github.com/fastly/terraform-provider-fastly/internal/errors"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	"github.com/fastly/go-fastly/v17/fastly"
+	"github.com/fastly/terraform-provider-fastly/internal/errors"
 )
 
 func TestAccFastlyKVStore_basic(t *testing.T) {

@@ -4,11 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly/computeacls"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/fastly/go-fastly/v17/fastly/computeacls"
 )
 
 func TestExpandEntries(t *testing.T) {

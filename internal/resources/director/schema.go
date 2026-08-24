@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/fastly/terraform-provider-fastly/internal/errors"
 	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/backend"
 	"github.com/fastly/terraform-provider-fastly/internal/service"
+	"github.com/fastly/terraform-provider-fastly/internal/validation"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -21,6 +20,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 const (
@@ -31,12 +32,10 @@ const (
 	DefaultType    = "random"
 )
 
-// directorTypeByString maps the string enum - both the friendly name and its numeric alias, to
-// match the integer type main and the API use (director.yaml: enum [1, 3, 4], x-enum-varnames
-// [random, hash, client]) - to the fastly.DirectorType the Fastly API expects. round_robin/"2" is
-// included so Create/Update can round-trip a director that already has that type (see
-// directorTypeByAPI) without panicking, even though the type validator below still rejects it in
-// new config - matching the legacy provider's validateDirectorType on main.
+// directorTypeByString maps both the friendly name and numeric alias to the fastly.DirectorType
+// the API expects (director.yaml: enum [1, 3, 4], x-enum-varnames [random, hash, client]).
+// round_robin/"2" is included so Create/Update can round-trip a director that already has it
+// without panicking, even though the validator below still rejects it in new config.
 var directorTypeByString = map[string]fastly.DirectorType{
 	"random":      fastly.DirectorTypeRandom,
 	"1":           fastly.DirectorTypeRandom,
@@ -48,13 +47,9 @@ var directorTypeByString = map[string]fastly.DirectorType{
 	"4":           fastly.DirectorTypeClient,
 }
 
-// directorTypeByAPI maps the integer DirectorType back to its canonical (friendly-name) string
-// enum for reading state. Unlike directorTypeByString, it includes round_robin: a director
-// created before this schema existed (or outside Terraform) can already have that type, and
-// ToModel must represent it accurately rather than fall through to DefaultType, which would
-// misreport the director's actual type and could drive an unintended type change on the next
-// apply. This is also the canonicalization target for typeStickyDefault's numeric-alias
-// normalization, so "1"/"3"/"4" in config always settle to "random"/"hash"/"client" in state.
+// directorTypeByAPI maps the integer DirectorType back to its friendly-name string for reading
+// state. Includes round_robin, unlike directorTypeByString: a pre-existing director can have
+// that type, and misreporting it as DefaultType could drive an unintended change on next apply.
 var directorTypeByAPI = map[fastly.DirectorType]string{
 	fastly.DirectorTypeRandom:     "random",
 	fastly.DirectorTypeRoundRobin: "round_robin",
@@ -149,26 +144,17 @@ func NestedBlockSchema() schema.ListNestedBlock {
 	}
 }
 
-// typeStickyDefault resets a director's type to DefaultType whenever type is omitted from config -
-// matching the legacy SDKv2 provider on main, where type had a schema-level `Default: 1`, so
-// dropping an explicit type from config reset the director back to random. The one exception is
-// round_robin: it isn't a value config can ever set (the validator rejects it), so a director that
-// already has it - created before this schema existed, or out-of-band via the API - must keep it
-// when type is left unset, or every plan would propose silently changing it to random. This must
-// operate on the whole director list, not as a per-attribute String plan modifier: the plugin
-// framework pairs a ListNestedBlock element's plan-modifier StateValue with the prior state
-// element at the *same list index*, not the element with a matching name (see
-// BlockPlanModifyList/listElemObject in terraform-plugin-framework). A per-attribute modifier
-// would therefore check the wrong director's prior type whenever a director block is inserted or
-// reordered - e.g. attributing directorA's round_robin to a newly inserted directorC. Matching by
-// name here avoids that.
+// typeStickyDefault resets a director's type to DefaultType when omitted from config, matching
+// the legacy provider's schema-level default. round_robin is the exception: config can never set
+// it, so a director that already has it (pre-existing this schema, or set out-of-band) must keep
+// it when type is unset. Matching is done by name across the whole list rather than per-attribute,
+// because the framework pairs a ListNestedBlock plan modifier's prior StateValue by list index,
+// not by name - a per-attribute modifier would attribute round_robin to the wrong director
+// whenever the list is reordered or an element is inserted.
 //
-// It also canonicalizes a configured numeric alias ("1", "3", "4") to its friendly-name
-// equivalent ("random", "hash", "client") in the plan. Without this, a director configured with
-// `type = "1"` would plan cleanly but come back from Create/Read as "random" - a value Terraform
-// never proposed - and the provider would fail its post-apply consistency check ("Provider
-// produced inconsistent result after apply"). Normalizing in the plan means the eventual state
-// always matches what was planned, regardless of which alias form the user typed.
+// It also canonicalizes a numeric type alias ("1"/"3"/"4") to its friendly name in the plan, so
+// state always matches what was planned regardless of which alias form was configured - avoiding
+// a "Provider produced inconsistent result after apply" error.
 type typeStickyDefault struct{}
 
 func (m typeStickyDefault) Description(_ context.Context) string {
@@ -269,9 +255,8 @@ func (m typeStickyDefault) PlanModifyList(ctx context.Context, req planmodifier.
 	resp.PlanValue = newList
 }
 
-// directorTypeCanonical returns the friendly-name form of a valid type value, whether s is
-// already a friendly name or one of its numeric aliases; ok is false if s isn't a recognized
-// type at all (e.g. a bogus value the OneOf validator will separately reject).
+// directorTypeCanonical returns the friendly-name form of a valid type value (friendly name or
+// numeric alias); ok is false if s isn't recognized.
 func directorTypeCanonical(s string) (string, bool) {
 	t, ok := directorTypeByString[s]
 	if !ok {
@@ -280,10 +265,8 @@ func directorTypeCanonical(s string) (string, bool) {
 	return directorTypeByAPI[t], true
 }
 
-// ops holds the remote directors by name produced by the most recent List call within a single
-// reconcile run, so Update can diff a director's current backend associations against desired
-// without an extra List round-trip. A fresh ops must be used per Reconcile/ReadForVersion call -
-// this cache must not be shared across calls for different services/versions.
+// ops caches the most recent List result by name so Update can diff backend associations without
+// an extra round-trip. A fresh ops must be used per Reconcile/ReadForVersion call.
 type ops struct {
 	remoteByName map[string]*fastly.Director
 }
@@ -352,9 +335,8 @@ func (o ops) Equal(desired NestedModel, remote *fastly.Director) bool {
 	return desired.ModelsEqual(o.ToModel(remote))
 }
 
-// metadataFieldsEqual compares everything ops.Equal does except Backends, which Update
-// reconciles separately via CreateDirectorBackend/DeleteDirectorBackend calls. This lets Update
-// skip the UpdateDirector call entirely when a backends-only change is what triggered it.
+// metadataFieldsEqual is ops.Equal minus Backends, letting Update skip UpdateDirector when only
+// backend membership changed.
 func (o ops) metadataFieldsEqual(desired NestedModel, remote *fastly.Director) bool {
 	m := o.ToModel(remote)
 	return service.StringValue(desired.Name) == service.StringValue(m.Name) &&
@@ -393,44 +375,27 @@ func (o *ops) Update(ctx context.Context, client *fastly.Client, serviceID strin
 		currentBackends = remote.Backends
 	}
 
-	current := make(map[string]struct{}, len(currentBackends))
-	for _, b := range currentBackends {
-		current[b] = struct{}{}
-	}
-
-	desiredBackends := setToStringSlice(desired.Backends)
-	wanted := make(map[string]struct{}, len(desiredBackends))
-	for _, b := range desiredBackends {
-		wanted[b] = struct{}{}
-	}
-
-	for _, b := range currentBackends {
-		if _, ok := wanted[b]; ok {
-			continue
-		}
-		err := client.DeleteDirectorBackend(ctx, &fastly.DeleteDirectorBackendInput{
-			ServiceID:      serviceID,
-			ServiceVersion: version,
-			Director:       name,
-			Backend:        b,
-		})
-		if err != nil && !errors.IsNotFound(err) {
-			return nil, err
-		}
-	}
-
-	for _, b := range desiredBackends {
-		if _, ok := current[b]; ok {
-			continue
-		}
-		if _, err := client.CreateDirectorBackend(ctx, &fastly.CreateDirectorBackendInput{
-			ServiceID:      serviceID,
-			ServiceVersion: version,
-			Director:       name,
-			Backend:        b,
-		}); err != nil {
-			return nil, err
-		}
+	err := reconcile.DiffSet(currentBackends, setToStringSlice(desired.Backends),
+		func(backendName string) error {
+			_, err := client.CreateDirectorBackend(ctx, &fastly.CreateDirectorBackendInput{
+				ServiceID:      serviceID,
+				ServiceVersion: version,
+				Director:       name,
+				Backend:        backendName,
+			})
+			return err
+		},
+		func(backendName string) error {
+			return client.DeleteDirectorBackend(ctx, &fastly.DeleteDirectorBackendInput{
+				ServiceID:      serviceID,
+				ServiceVersion: version,
+				Director:       name,
+				Backend:        backendName,
+			})
+		},
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return d, nil
@@ -448,10 +413,8 @@ func (o ops) ToModel(api *fastly.Director) NestedModel {
 	}
 }
 
-// directorTypeString looks up the friendly-name string enum for an API DirectorType, falling
-// back to DefaultType for nil or unrecognized values (e.g. a future DirectorType this provider
-// doesn't know about yet) rather than the empty string. An empty string would round-trip into
-// directorTypePointer on the next write and panic; DefaultType is a value the API always accepts.
+// directorTypeString falls back to DefaultType for nil or unrecognized values rather than an
+// empty string, which would panic in directorTypePointer on the next write.
 func directorTypeString(t *fastly.DirectorType) string {
 	if t == nil {
 		return DefaultType
@@ -463,12 +426,9 @@ func directorTypeString(t *fastly.DirectorType) string {
 	return s
 }
 
-// directorTypePointer looks up the API DirectorType for desired.Type. Every value the schema can
-// produce - the stringvalidator.OneOf values for new config (friendly names and numeric aliases
-// alike), plus round_robin read back from a director that predates this schema (see
-// directorTypeByAPI) - has an entry in directorTypeByString, so the map lookup should never miss;
-// panic rather than silently send the API an undefined DirectorType zero-value if that invariant
-// is ever violated.
+// directorTypePointer panics on an unrecognized type rather than silently sending the API an
+// undefined DirectorType zero-value; every value the schema can produce has an entry in
+// directorTypeByString, so this should never trigger.
 func directorTypePointer(v types.String) *fastly.DirectorType {
 	s := service.StringValue(v)
 	t, ok := directorTypeByString[s]
@@ -478,10 +438,8 @@ func directorTypePointer(v types.String) *fastly.DirectorType {
 	return &t
 }
 
-// setToStringSlice converts a Terraform set of strings into a []string. backends is a required
-// attribute, so the set itself is only ever known and non-null here, but an individual element
-// can still be unknown (e.g. `backends = [some_resource.x.name]` before x.name is known) - such
-// elements are skipped rather than turned into a bogus empty-string backend name.
+// setToStringSlice skips unknown elements (e.g. `backends = [some_resource.x.name]` before
+// x.name is known) rather than turning them into a bogus empty-string backend name.
 func setToStringSlice(s types.Set) []string {
 	elems := s.Elements()
 	parts := make([]string, 0, len(elems))
@@ -495,12 +453,8 @@ func setToStringSlice(s types.Set) []string {
 	return parts
 }
 
-// stringSliceToSet converts the Fastly API's []string into a Terraform set, sorting first so
-// state renders deterministically even though set membership - not order - is what matters for
-// plan diffing. Duplicates are dropped rather than passed to SetValueMust, which panics on a
-// duplicate element; a Set has no duplicates by definition, and a duplicate backend name in the
-// API response (e.g. a transient stale-cache read) should degrade gracefully, not crash the
-// provider.
+// stringSliceToSet sorts first for deterministic state, and drops duplicates rather than passing
+// them to SetValueMust, which panics on a duplicate element.
 func stringSliceToSet(s []string) types.Set {
 	sorted := make([]string, len(s))
 	copy(sorted, s)
@@ -516,9 +470,8 @@ func stringSliceToSet(s []string) types.Set {
 	return types.SetValueMust(types.StringType, elems)
 }
 
-// newReconciler builds a fresh Resource (and backing ops cache) per call, since ops.remoteByName
-// is populated per List call and must not be shared across concurrent reconciles of different
-// services/versions.
+// newReconciler builds a fresh Resource per call since ops.remoteByName must not be shared
+// across concurrent reconciles.
 func newReconciler() *reconcile.Resource[NestedModel, fastly.Director] {
 	return &reconcile.Resource[NestedModel, fastly.Director]{
 		Ops: &ops{},
@@ -545,51 +498,23 @@ func MatchOrder(items, order []NestedModel) []NestedModel {
 	return reconcile.MatchOrder(items, order, func(m NestedModel) string { return service.StringValue(m.Name) })
 }
 
-// ValidateConfig enforces name uniqueness among a service's directors, catching misconfigurations
-// at plan time rather than deferring to a failed apply. reconcile.Run keys remote/desired
-// directors by name, so duplicate names would otherwise silently collapse to a single director
-// instead of failing at plan time.
+// ValidateConfig enforces director name uniqueness at plan time; reconcile.Run keys directors by
+// name, so duplicates would otherwise silently collapse to one.
 func ValidateConfig(directors []NestedModel) error {
-	seenNames := make(map[string]struct{}, len(directors))
-
-	for _, item := range directors {
-		if item.Name.IsUnknown() || item.Name.IsNull() {
-			continue
-		}
-		name := service.StringValue(item.Name)
-		if _, ok := seenNames[name]; ok {
-			return fmt.Errorf("multiple directors with the same name %q; names must be unique within a service version", name)
-		}
-		seenNames[name] = struct{}{}
-	}
-
-	return nil
+	return validation.UniqueNames(directors, "director", func(m NestedModel) types.String { return m.Name })
 }
 
-// ValidateBackendReferences confirms every backend named in a director's backends matches a
-// backend present in the same service config, catching at plan time the case where a backend
-// block is renamed or removed but a director's reference to it is left stale. Left unvalidated,
-// that reaches the Fastly API as a 404 on the director-backend association instead.
+// ValidateBackendReferences catches a director referencing a renamed/removed backend at plan
+// time, instead of a 404 on the director-backend association at apply time.
 func ValidateBackendReferences(directors []NestedModel, backends []backend.NestedModel) error {
-	backendNames := make(map[string]struct{}, len(backends))
-	for _, b := range backends {
-		if b.Name.IsUnknown() || b.Name.IsNull() {
-			continue
-		}
-		backendNames[service.StringValue(b.Name)] = struct{}{}
-	}
+	backendNames := validation.NameSet(backends, func(b backend.NestedModel) types.String { return b.Name })
 
-	for _, d := range directors {
-		if d.Backends.IsUnknown() || d.Backends.IsNull() {
-			continue
-		}
-		name := service.StringValue(d.Name)
-		for _, backendName := range setToStringSlice(d.Backends) {
-			if _, ok := backendNames[backendName]; !ok {
-				return fmt.Errorf("director %q: backend %q does not match any configured backend", name, backendName)
+	return validation.References(directors, "director", func(m NestedModel) types.String { return m.Name }, "backend",
+		func(m NestedModel) []string {
+			if m.Backends.IsUnknown() || m.Backends.IsNull() {
+				return nil
 			}
-		}
-	}
-
-	return nil
+			return setToStringSlice(m.Backends)
+		},
+		"backend", backendNames)
 }
