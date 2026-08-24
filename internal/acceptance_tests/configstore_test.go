@@ -244,28 +244,12 @@ func CheckComputeAutoResourceLinkRemoteState(serviceResourceName, configStoreRes
 
 func CheckComputeAutoResourceLinkAbsent(serviceResourceName, linkName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		serviceState, version, err := serviceAndVersion(s, serviceResourceName)
+		link, serviceState, version, err := findComputeAutoResourceLinkByName(s, serviceResourceName, linkName)
 		if err != nil {
 			return err
 		}
-
-		client, err := NewFastlyClient()
-		if err != nil {
-			return fmt.Errorf("error creating Fastly client: %w", err)
-		}
-
-		links, err := client.ListResources(context.Background(), &fastly.ListResourcesInput{
-			ServiceID:      serviceState.Primary.ID,
-			ServiceVersion: version,
-		})
-		if err != nil {
-			return fmt.Errorf("error listing resource links for service %q version %d: %w", serviceState.Primary.ID, version, err)
-		}
-
-		for _, link := range links {
-			if fastly.ToValue(link.Name) == linkName {
-				return fmt.Errorf("resource link %q still exists on service %q version %d", linkName, serviceState.Primary.ID, version)
-			}
+		if link != nil {
+			return fmt.Errorf("resource link %q still exists on service %q version %d", linkName, serviceState.Primary.ID, version)
 		}
 
 		return nil
@@ -273,9 +257,12 @@ func CheckComputeAutoResourceLinkAbsent(serviceResourceName, linkName string) re
 }
 
 func findComputeAutoResourceLink(s *terraform.State, serviceResourceName, configStoreResourceName, expectedLinkName string) (*fastly.Resource, string, error) {
-	serviceState, version, err := serviceAndVersion(s, serviceResourceName)
+	link, serviceState, version, err := findComputeAutoResourceLinkByName(s, serviceResourceName, expectedLinkName)
 	if err != nil {
 		return nil, "", err
+	}
+	if link == nil {
+		return nil, "", fmt.Errorf("resource link %q was not found on service %q version %d", expectedLinkName, serviceState.Primary.ID, version)
 	}
 
 	storeState, ok := s.RootModule().Resources[configStoreResourceName]
@@ -283,9 +270,18 @@ func findComputeAutoResourceLink(s *terraform.State, serviceResourceName, config
 		return nil, "", fmt.Errorf("not found: %s", configStoreResourceName)
 	}
 
+	return link, storeState.Primary.ID, nil
+}
+
+func findComputeAutoResourceLinkByName(s *terraform.State, serviceResourceName, linkName string) (*fastly.Resource, *terraform.ResourceState, int, error) {
+	serviceState, version, err := serviceAndVersion(s, serviceResourceName)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+
 	client, err := NewFastlyClient()
 	if err != nil {
-		return nil, "", fmt.Errorf("error creating Fastly client: %w", err)
+		return nil, nil, 0, fmt.Errorf("error creating Fastly client: %w", err)
 	}
 
 	links, err := client.ListResources(context.Background(), &fastly.ListResourcesInput{
@@ -293,16 +289,16 @@ func findComputeAutoResourceLink(s *terraform.State, serviceResourceName, config
 		ServiceVersion: version,
 	})
 	if err != nil {
-		return nil, "", fmt.Errorf("error listing resource links for service %q version %d: %w", serviceState.Primary.ID, version, err)
+		return nil, nil, 0, fmt.Errorf("error listing resource links for service %q version %d: %w", serviceState.Primary.ID, version, err)
 	}
 
 	for _, link := range links {
-		if fastly.ToValue(link.Name) == expectedLinkName {
-			return link, storeState.Primary.ID, nil
+		if fastly.ToValue(link.Name) == linkName {
+			return link, serviceState, version, nil
 		}
 	}
 
-	return nil, "", fmt.Errorf("resource link %q was not found on service %q version %d", expectedLinkName, serviceState.Primary.ID, version)
+	return nil, serviceState, version, nil
 }
 
 func serviceAndVersion(s *terraform.State, serviceResourceName string) (*terraform.ResourceState, int, error) {
