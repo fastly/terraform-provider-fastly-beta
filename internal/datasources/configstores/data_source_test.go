@@ -4,11 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	datasourceschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/require"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestMetadata(t *testing.T) {

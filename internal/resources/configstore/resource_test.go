@@ -4,11 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/require"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestMetadata(t *testing.T) {
@@ -42,7 +43,6 @@ func TestSchema(t *testing.T) {
 	require.False(t, name.Computed)
 	require.NotEmpty(t, name.Validators)
 	require.Empty(t, name.PlanModifiers, "Config Store names are mutable and must not require replacement")
-
 }
 
 func TestFlattenNilStoreLeavesModelUntouched(t *testing.T) {
