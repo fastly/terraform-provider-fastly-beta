@@ -8,10 +8,11 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestAccFastlyServiceVCL_basicAndUpdate(t *testing.T) {

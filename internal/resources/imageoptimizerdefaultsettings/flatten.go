@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 func FlattenToNestedModel(s *fastly.ImageOptimizerDefaultSettings) NestedModel {

@@ -6,8 +6,6 @@ import (
 	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
 	"github.com/fastly/terraform-provider-fastly/internal/errors"
 
-	"github.com/fastly/go-fastly/v17/fastly"
-	"github.com/fastly/go-fastly/v17/fastly/products/botmanagement"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -16,10 +14,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/fastly/go-fastly/v17/fastly"
+	"github.com/fastly/go-fastly/v17/fastly/products/botmanagement"
 )
 
-var _ resource.Resource = &BotManagementResource{}
-var _ resource.ResourceWithImportState = &BotManagementResource{}
+var (
+	_ resource.Resource                = &BotManagementResource{}
+	_ resource.ResourceWithImportState = &BotManagementResource{}
+)
 
 type BotManagementModel struct {
 	ID           types.String `tfsdk:"id"`

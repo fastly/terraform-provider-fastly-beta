@@ -8,12 +8,16 @@ BIN_DIR := $(CURDIR)/bin
 BINARY := $(BIN_DIR)/terraform-provider-$(PKG_NAME)_$(VERSION)
 OVERRIDES_FILE := $(BIN_DIR)/developer_overrides.tfrc
 
-.PHONY: fmt build dev-overrides clean test-unit test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle help
+GOLANGCI_LINT_VERSION := v2.12.2
+GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
+
+.PHONY: fmt build dev-overrides clean test-unit test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle lint install-linter check-linter-version help
 
 help:
 	@echo "Available targets:"
 	@echo "  make build                  - Format code and build provider binary"
 	@echo "  make fmt                    - Format Go code"
+	@echo "  make lint                   - Run golangci-lint"
 	@echo "  make clean                  - Remove build artifacts"
 	@echo "  make test-unit              - Run unit tests"
 	@echo "  make test-acc               - Run acceptance tests without Go test caching (requires FASTLY_API_TOKEN)"
@@ -43,6 +47,25 @@ dev-overrides:
 clean:
 	@echo "==> Cleaning build artifacts..."
 	@rm -rf $(BIN_DIR)
+
+lint: install-linter check-linter-version
+	@echo "==> Running golangci-lint --fix..."
+	@$(GOLANGCI_LINT) run --fix --verbose
+
+install-linter:
+	@echo "==> Installing golangci-lint $(GOLANGCI_LINT_VERSION)..."
+	@mkdir -p $(BIN_DIR)
+	@GOBIN=$(BIN_DIR) $(GO_BIN) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+
+check-linter-version:
+	@echo "==> Checking golangci-lint version..."
+	@EXPECTED="$(GOLANGCI_LINT_VERSION)"; \
+	EXPECTED=$${EXPECTED#v}; \
+	INSTALLED=$$($(GOLANGCI_LINT) version --short); \
+	if [ "$$INSTALLED" != "$$EXPECTED" ]; then \
+		echo "Expected golangci-lint v$$EXPECTED but found $$INSTALLED"; \
+		exit 1; \
+	fi
 
 test-unit:
 	@echo "==> Running unit tests..."

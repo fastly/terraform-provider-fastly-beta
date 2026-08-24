@@ -7,10 +7,11 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly/computeacls"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	"github.com/fastly/go-fastly/v17/fastly/computeacls"
 )
 
 func TestAccFastlyACLEntries_create(t *testing.T) {

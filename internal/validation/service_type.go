@@ -15,7 +15,7 @@ import (
 // This check runs during CRUD when service_id is known. It cannot reliably catch
 // all invalid combinations during `terraform validate`, because service_id may
 // be computed or come from a different state/workspace.
-func EnsureServiceTypeSupported(ctx context.Context, checker *service.ServiceTypeChecker, serviceID string, resourceName string, supportedTypes ...string) error {
+func EnsureServiceTypeSupported(ctx context.Context, checker *service.TypeChecker, serviceID string, resourceName string, supportedTypes ...string) error {
 	serviceType, err := checker.GetType(ctx, serviceID)
 	if err != nil {
 		return err

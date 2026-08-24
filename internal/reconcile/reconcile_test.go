@@ -5,8 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 type testModel struct {
@@ -31,7 +32,7 @@ type testOps struct {
 	listCalls    int
 }
 
-func (o *testOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*testAPI, error) {
+func (o *testOps) List(_ context.Context, _ *fastly.Client, _ string, _ int) ([]*testAPI, error) {
 	o.listCalls++
 	if o.listError != nil {
 		return nil, o.listError
@@ -43,7 +44,7 @@ func (o *testOps) GetName(api *testAPI) string {
 	return api.Name
 }
 
-func (o *testOps) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
+func (o *testOps) Delete(_ context.Context, _ *fastly.Client, _ string, _ int, name string) error {
 	if o.deleteError != nil {
 		return o.deleteError
 	}
@@ -51,7 +52,7 @@ func (o *testOps) Delete(ctx context.Context, client *fastly.Client, serviceID s
 	return nil
 }
 
-func (o *testOps) Create(ctx context.Context, client *fastly.Client, serviceID string, version int, desired testModel) (*testAPI, error) {
+func (o *testOps) Create(_ context.Context, _ *fastly.Client, _ string, _ int, desired testModel) (*testAPI, error) {
 	if o.createError != nil {
 		return nil, o.createError
 	}
@@ -63,7 +64,7 @@ func (o *testOps) Equal(desired testModel, remote *testAPI) bool {
 	return desired.Name == remote.Name && desired.Value == remote.Value
 }
 
-func (o *testOps) Update(ctx context.Context, client *fastly.Client, serviceID string, version int, desired testModel) (*testAPI, error) {
+func (o *testOps) Update(_ context.Context, _ *fastly.Client, _ string, _ int, desired testModel) (*testAPI, error) {
 	if o.updateError != nil {
 		return nil, o.updateError
 	}

@@ -4,8 +4,9 @@ import (
 	"errors"
 	"testing"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/stretchr/testify/assert"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestDiffSet(t *testing.T) {
@@ -30,8 +31,8 @@ func TestDiffSet(t *testing.T) {
 		err := DiffSet(
 			[]string{"a", "b"},
 			[]string{"b", "a"},
-			func(k string) error { calls++; return nil },
-			func(k string) error { calls++; return nil },
+			func(_ string) error { calls++; return nil },
+			func(_ string) error { calls++; return nil },
 		)
 
 		assert.NoError(t, err)
@@ -42,8 +43,8 @@ func TestDiffSet(t *testing.T) {
 		err := DiffSet(
 			[]string{"a"},
 			nil,
-			func(k string) error { return nil },
-			func(k string) error { return &fastly.HTTPError{StatusCode: 404} },
+			func(_ string) error { return nil },
+			func(_ string) error { return &fastly.HTTPError{StatusCode: 404} },
 		)
 
 		assert.NoError(t, err)
@@ -53,8 +54,8 @@ func TestDiffSet(t *testing.T) {
 		err := DiffSet(
 			[]string{"a"},
 			nil,
-			func(k string) error { return nil },
-			func(k string) error { return errors.New("remove failed") },
+			func(_ string) error { return nil },
+			func(_ string) error { return errors.New("remove failed") },
 		)
 
 		assert.EqualError(t, err, "remove failed")
@@ -64,8 +65,8 @@ func TestDiffSet(t *testing.T) {
 		err := DiffSet(
 			nil,
 			[]string{"a"},
-			func(k string) error { return errors.New("add failed") },
-			func(k string) error { return nil },
+			func(_ string) error { return errors.New("add failed") },
+			func(_ string) error { return nil },
 		)
 
 		assert.EqualError(t, err, "add failed")

@@ -3,8 +3,9 @@ package snippet
 import (
 	"testing"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestFlattenToNestedModel(t *testing.T) {

@@ -6,8 +6,6 @@ import (
 	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
 	"github.com/fastly/terraform-provider-fastly/internal/errors"
 
-	"github.com/fastly/go-fastly/v17/fastly"
-	"github.com/fastly/go-fastly/v17/fastly/products/ddosprotection"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -16,10 +14,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/fastly/go-fastly/v17/fastly"
+	"github.com/fastly/go-fastly/v17/fastly/products/ddosprotection"
 )
 
-var _ resource.Resource = &DDoSProtectionResource{}
-var _ resource.ResourceWithImportState = &DDoSProtectionResource{}
+var (
+	_ resource.Resource                = &DDoSProtectionResource{}
+	_ resource.ResourceWithImportState = &DDoSProtectionResource{}
+)
 
 type DDoSProtectionModel struct {
 	ID        types.String `tfsdk:"id"`
