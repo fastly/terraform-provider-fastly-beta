@@ -45,6 +45,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/resources/loggingsplunk"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/loggingsyslog"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwafworkspace"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/productenablement"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/resourcelink"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/servicecdn"
@@ -143,6 +144,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		snippet.NewResource,
 		dynamicvclsnippet.NewResource,
 		dynamicsnippetcontent.NewResource,
+		ngwafworkspace.NewResource,
 		productenablement.NewFanoutResource,
 		productenablement.NewBrotliCompressionResource,
 		productenablement.NewImageOptimizerResource,

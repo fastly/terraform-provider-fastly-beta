@@ -1,0 +1,46 @@
+---
+page_title: "fastly_ngwaf_workspace Resource - fastly"
+subcategory: ""
+description: |-
+  Manages a Fastly Next-Gen WAF workspace.
+---
+
+# fastly_ngwaf_workspace (Resource)
+
+Manages a Fastly Next-Gen WAF workspace.
+
+Workspaces are versionless and are not attached to a Fastly CDN or Compute
+service version. Use `workspace_id` on `fastly_service_product_ngwaf` to link
+a workspace to a service.
+
+## Example Usage
+
+```terraform
+resource "fastly_ngwaf_workspace" "example" {
+  name        = "Example Workspace"
+  description = "Managed by Terraform"
+  mode        = "block"
+
+  ip_anonymization  = "hashed"
+  client_ip_headers = ["X-Forwarded-For"]
+
+  default_blocking_response_code = 406
+
+  attack_signal_thresholds {
+    one_minute  = 1
+    ten_minutes = 60
+    one_hour    = 100
+    immediate   = false
+  }
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Next-Gen WAF workspaces are imported by their workspace ID:
+
+```shell
+terraform import fastly_ngwaf_workspace.example WORKSPACE_ID
+```

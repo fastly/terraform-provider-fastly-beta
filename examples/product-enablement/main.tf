@@ -52,6 +52,23 @@ resource "fastly_service_product_ddos_protection" "example" {
   mode       = "log"
 }
 
+# Next-Gen WAF is enabled by linking a workspace_id to the service. The
+# workspace itself is a versionless resource managed independently of any
+# service or service version.
+
+resource "fastly_ngwaf_workspace" "example" {
+  name        = "example-workspace"
+  description = "Managed by Terraform"
+  mode        = "log"
+
+  attack_signal_thresholds {}
+}
+
+resource "fastly_service_product_ngwaf" "example" {
+  service_id   = fastly_service_cdn_auto.example.id
+  workspace_id = fastly_ngwaf_workspace.example.id
+}
+
 # Applying the same product to multiple services with for_each:
 
 variable "service_ids" {
