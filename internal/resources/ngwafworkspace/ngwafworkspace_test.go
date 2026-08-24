@@ -120,8 +120,16 @@ func TestBuildUpdateInput(t *testing.T) {
 	assert.Equal(t, "", *input.IPAnonymization)
 }
 
+// mustList builds a known, non-null types.List even when called with zero
+// values. A bare variadic call with no arguments (mustList(t)) binds values
+// to a nil slice, and ListValueFrom maps a nil Go slice to a null list, not
+// an empty-but-known one - the opposite of what a caller asking for an
+// explicit empty list means.
 func mustList(t *testing.T, values ...string) types.List {
 	t.Helper()
+	if values == nil {
+		values = []string{}
+	}
 	l, diags := types.ListValueFrom(context.Background(), types.StringType, values)
 	assert.False(t, diags.HasError())
 	return l

@@ -45,6 +45,12 @@ func BuildCreateInput(ctx context.Context, plan Model) (*ws.CreateInput, diag.Di
 	return input, diags
 }
 
+// BuildUpdateInput never sends client_ip_headers as an explicit clear: the
+// underlying API has no representation - explicit JSON null and an explicit
+// empty array were both tried and either ignored or unconfirmed against the
+// live API - that reliably clears a previously configured list, so the
+// field is only ever sent when the plan has a populated value. See
+// client_ip_headers's schema description for the resulting limitation.
 func BuildUpdateInput(ctx context.Context, workspaceID string, plan Model) (*ws.UpdateInput, diag.Diagnostics) {
 	var diags diag.Diagnostics
 

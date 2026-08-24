@@ -58,13 +58,22 @@ func TestAccFastlyNGWAFWorkspace_lifecycle(t *testing.T) {
 				),
 			},
 			{
-				// Omitting optional fields falls back to the workspace's schema
-				// defaults rather than preserving the previous step's values.
+				// Omitting most optional fields falls back to the workspace's
+				// schema defaults. client_ip_headers is the exception: once
+				// set, it cannot be cleared through this resource - the API
+				// has no way to distinguish "leave this alone" from an
+				// explicit empty list (both an explicit JSON null and an
+				// explicit empty array were tried against the live API and
+				// either ignored or left unconfirmed), so removing it from
+				// configuration leaves the prior step's value
+				// ("True-Client-IP") in place. client_ip_headers is Computed
+				// for exactly this reason.
 				Config: ConfigNGWAFWorkspace("ngwaf_workspace_minimal.tf", updatedName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "mode", "off"),
 					resource.TestCheckNoResourceAttr("fastly_ngwaf_workspace.test", "ip_anonymization"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "client_ip_headers.#", "0"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "client_ip_headers.#", "1"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "client_ip_headers.0", "True-Client-IP"),
 					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "default_blocking_response_code", "406"),
 					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "attack_signal_thresholds.0.one_minute", "1"),
 					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "attack_signal_thresholds.0.ten_minutes", "60"),

@@ -39,7 +39,7 @@ resource "fastly_ngwaf_workspace" "example" {
 
 ### Required
 
-- `description` (String) The description of the workspace. Must be at most 500 characters.
+- `description` (String) User-submitted description of a workspace.
 - `mode` (String) The operation mode of the workspace. Valid values are `off`, `log`, and `block`.
 - `name` (String) The display name of the workspace. Must be between 3 and 100 characters.
 

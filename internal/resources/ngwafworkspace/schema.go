@@ -68,7 +68,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 		},
 		"description": schema.StringAttribute{
 			Required:    true,
-			Description: "The description of the workspace. Must be at most 500 characters.",
+			Description: "User-submitted description of a workspace.",
 			Validators: []validator.String{
 				stringvalidator.LengthAtMost(500),
 			},
@@ -90,6 +90,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 		"client_ip_headers": schema.ListAttribute{
 			ElementType: types.StringType,
 			Optional:    true,
+			Computed:    true,
 			Description: "The request headers containing the client IP address. Maximum of 10 header names.",
 			Validators: []validator.List{
 				listvalidator.SizeAtMost(10),
