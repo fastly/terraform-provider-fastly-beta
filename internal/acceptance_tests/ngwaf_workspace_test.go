@@ -109,7 +109,7 @@ func TestAccFastlyNGWAFWorkspace_lifecycle(t *testing.T) {
 // is genuinely unset from the API's point of view is a workspace that was
 // never touched by this provider — created directly against the API, then
 // imported. That matches the legacy provider's own comment, which ties this
-// zero-value behavior specifically to "conflicts with imports."
+// zero-value behavior specifically to "conflicts with imports".
 func TestAccFastlyNGWAFWorkspace_importZeroThresholds(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("TF_ACC") == "" {
@@ -148,9 +148,7 @@ func TestAccFastlyNGWAFWorkspace_importZeroThresholds(t *testing.T) {
 				ImportState:       true,
 				ImportStateId:     workspaceID,
 				ImportStateVerify: false,
-				ImportStateCheck: func(states []*terraform.InstanceState) error {
-					return checkThresholdsResolvedToDefaults(states)
-				},
+				ImportStateCheck:  checkThresholdsResolvedToDefaults,
 			},
 		},
 	})
