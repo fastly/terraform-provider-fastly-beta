@@ -5952,3 +5952,45 @@ func renderFixtureBlock(path string, values map[string]string) string {
 
 	return strings.NewReplacer(replacements...).Replace(string(data))
 }
+
+// ConfigConfigStore returns a standalone fastly_configstore configuration.
+func ConfigConfigStore(name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/configstore_single.tf", map[string]string{
+		"CONFIGSTORE_NAME": name,
+	})
+}
+
+// ConfigConfigStoreWithComputeAutoResourceLink returns a Config Store plus a Compute auto
+// service with a resource_link pointing at that Config Store. The Compute package is included
+// so this is a complete runnable Compute service config, not an isolated resource test.
+func ConfigConfigStoreWithComputeAutoResourceLink(storeName, serviceName, domainName, linkName string) string {
+	return ConfigConfigStore(storeName) + "\n" + BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"DOMAIN_NAME":             domainName,
+			"PACKAGE_PATH":            GetPackagePath(),
+			"RESOURCE_LINK_NAME":      linkName,
+			"RESOURCE_LINK_TARGET_ID": "fastly_configstore.store.id",
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/resource_link_ref.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigConfigStoreWithComputeAutoUnlinked returns a Config Store plus the same Compute auto
+// service without the resource_link. This is the required intermediate state before deleting a
+// store that was linked to a service.
+func ConfigConfigStoreWithComputeAutoUnlinked(storeName, serviceName, domainName string) string {
+	return ConfigConfigStore(storeName) + "\n" + ConfigComputeAutoBasic(serviceName, domainName)
+}
+
+// ConfigConfigStoresDataSource returns one fastly_configstore resource and a
+// fastly_configstores data source that depends on it. One known store is sufficient
+// to verify enumeration without consuming the account's limited Config Store quota.
+func ConfigConfigStoresDataSource(h string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/configstore_with_datasource.tf", map[string]string{
+		"CONFIGSTORE_NAME": fmt.Sprintf("tf_%s", h),
+	})
+}
