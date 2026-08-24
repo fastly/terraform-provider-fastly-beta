@@ -6,12 +6,13 @@ import (
 	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
 	"github.com/fastly/terraform-provider-fastly/internal/errors"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
-	ws "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	fastly "github.com/fastly/go-fastly/v17/fastly"
+	ws "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces"
 )
 
 var (

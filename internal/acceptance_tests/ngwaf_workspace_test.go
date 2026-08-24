@@ -7,10 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	ws "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	ws "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces"
 )
 
 func TestAccFastlyNGWAFWorkspace_lifecycle(t *testing.T) {

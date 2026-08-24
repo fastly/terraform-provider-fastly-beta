@@ -4,10 +4,11 @@ import (
 	"context"
 	"testing"
 
-	ws "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
+
+	ws "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces"
 )
 
 func TestFlattenToModel_zeroThresholdsDefaulted(t *testing.T) {
