@@ -21,6 +21,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/actions/versionstage"
 	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/acls"
+	"github.com/fastly/terraform-provider-fastly/internal/datasources/configstores"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/kvstores"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/serviceversion"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/vclsnippets"
@@ -30,6 +31,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/resources/cdnacl"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/cdnaclentries"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/condition"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/configstore"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/customdashboard"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/domain"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/dynamicsnippetcontent"
@@ -127,6 +129,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		cdnacl.NewResource,
 		cdnaclentries.NewResource,
 		condition.NewResource,
+		configstore.NewResource,
 		customdashboard.NewResource,
 		domain.NewResource,
 		loggingbigquery.NewResource,
@@ -168,6 +171,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		acls.NewDataSource,
+		configstores.NewDataSource,
 		kvstores.NewDataSource,
 		serviceversion.NewDataSource,
 		vclsnippets.NewDataSource,
