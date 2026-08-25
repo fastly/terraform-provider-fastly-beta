@@ -26,7 +26,7 @@ func TestTotalConditionCount(t *testing.T) {
 	assert.Equal(t, 10, TotalConditionCount(conditions, groups, multivals), "6+2+2 = 10, at the limit")
 	assert.LessOrEqual(t, TotalConditionCount(conditions, groups, multivals), MaxConditions)
 
-	conditions = append(conditions, ngwafrule.ConditionModel{})
+	conditions = make([]ngwafrule.ConditionModel, 7)
 	assert.Equal(t, 11, TotalConditionCount(conditions, groups, multivals), "one over the limit")
 	assert.Greater(t, TotalConditionCount(conditions, groups, multivals), MaxConditions)
 
