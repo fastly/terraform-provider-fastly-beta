@@ -13,10 +13,8 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/errors"
 )
 
-// TestAccFastlyAPISecurityOperation_lifecycle covers create, in-place description update,
-// clearing an optional description back to unset, ForceNew replacement on a method change,
-// and import. tag_ids round-tripping against a real, Terraform-managed tag is covered by
-// CDTOOL-1544 (fastly_api_security_operation_tag), which does not exist yet.
+// Covers create, description update/clear, ForceNew on method change, and import.
+// tag_ids is covered separately in TestAccFastlyAPISecurityOperation_tagIDsSurviveDescriptionUpdate.
 func TestAccFastlyAPISecurityOperation_lifecycle(t *testing.T) {
 	t.Parallel()
 
@@ -199,4 +197,56 @@ func checkAPISecurityOperationDestroy(s *terraform.State) error {
 	}
 
 	return nil
+}
+
+// Regression test: an update touching only description must not clear tag_ids.
+func TestAccFastlyAPISecurityOperation_tagIDsSurviveDescriptionUpdate(t *testing.T) {
+	t.Parallel()
+
+	serviceName := fmt.Sprintf("tf_test_apisec_tags_%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("tf-test-%s.example.com", acctest.RandString(10))
+	tagName := fmt.Sprintf("tf-test-tag-%s", acctest.RandString(10))
+	path := "/v1/things"
+	desc1 := "example"
+	desc2 := "example-updated"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckAPISecurityOperationWithTagAndServiceDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigAPISecurityOperationWithTag(serviceName, "GET", domainName, path, tagName, desc1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("fastly_api_security_operation.example", "tag_ids.#", "1"),
+					resource.TestCheckResourceAttrPair(
+						"fastly_api_security_operation.example", "tag_ids.0",
+						"fastly_api_security_operation_tag.tag", "tag_id",
+					),
+				),
+			},
+			{
+				// Only description changes here; tag_ids stays the same in config.
+				Config: ConfigAPISecurityOperationWithTag(serviceName, "GET", domainName, path, tagName, desc2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("fastly_api_security_operation.example", "description", desc2),
+					resource.TestCheckResourceAttr("fastly_api_security_operation.example", "tag_ids.#", "1"),
+					resource.TestCheckResourceAttrPair(
+						"fastly_api_security_operation.example", "tag_ids.0",
+						"fastly_api_security_operation_tag.tag", "tag_id",
+					),
+				),
+			},
+		},
+	})
+}
+
+func CheckAPISecurityOperationWithTagAndServiceDestroy(s *terraform.State) error {
+	if err := checkAPISecurityOperationDestroy(s); err != nil {
+		return err
+	}
+	if err := checkAPISecurityOperationTagDestroy(s); err != nil {
+		return err
+	}
+	return CheckServiceDestroy("fastly_service_cdn")(s)
 }

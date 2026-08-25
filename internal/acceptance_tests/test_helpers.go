@@ -6051,3 +6051,39 @@ func ConfigAPISecurityOperation(serviceName, method, domain, path, description s
 		"internal/acceptance_tests/blocks/api_security_operation.tf",
 	)
 }
+
+// ConfigAPISecurityOperationWithTag returns a CDN service plus a
+// fastly_api_security_operation_tag and a fastly_api_security_operation that references
+// it via tag_ids. Used to prove tag_ids survives an update that only touches description.
+func ConfigAPISecurityOperationWithTag(serviceName, method, domain, path, tagName, description string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"METHOD":          method,
+			"DOMAIN":          domain,
+			"PATH":            path,
+			"TAG_NAME":        tagName,
+			"DESCRIPTION":     description,
+		},
+		"internal/acceptance_tests/blocks/api_security_operation_with_tag.tf",
+	)
+}
+
+// ConfigAPISecurityOperationTag returns a CDN service plus a
+// fastly_api_security_operation_tag resource. Passing an empty description omits the
+// attribute from config entirely, to exercise the transition back to an unset (rather
+// than empty-string) description.
+func ConfigAPISecurityOperationTag(serviceName, tagName, description string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"TAG_NAME":        tagName,
+			"DESCRIPTION":     description,
+		},
+		"internal/acceptance_tests/blocks/api_security_operation_tag.tf",
+	)
+}
