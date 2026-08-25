@@ -315,63 +315,6 @@ func serviceAndVersion(s *terraform.State, serviceResourceName string) (*terrafo
 	return serviceState, version, nil
 }
 
-func InsertConfigStoreItem(resourceName, key, value string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return fmt.Errorf("not found: %s", resourceName)
-		}
-
-		client, err := NewFastlyClient()
-		if err != nil {
-			return fmt.Errorf("error creating Fastly client: %w", err)
-		}
-
-		_, err = client.CreateConfigStoreItem(context.Background(), &fastly.CreateConfigStoreItemInput{
-			StoreID: rs.Primary.ID,
-			Key:     key,
-			Value:   value,
-		})
-		if err != nil {
-			return fmt.Errorf("error creating Config Store item: %w", err)
-		}
-
-		return nil
-	}
-}
-
-func CheckConfigStoreItemExists(resourceName, key, expectedValue string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return fmt.Errorf("not found: %s", resourceName)
-		}
-
-		client, err := NewFastlyClient()
-		if err != nil {
-			return fmt.Errorf("error creating Fastly client: %w", err)
-		}
-
-		items, err := client.ListConfigStoreItems(context.Background(), &fastly.ListConfigStoreItemsInput{
-			StoreID: rs.Primary.ID,
-		})
-		if err != nil {
-			return fmt.Errorf("error listing Config Store items: %w", err)
-		}
-
-		for _, item := range items {
-			if item != nil && item.Key == key {
-				if item.Value != expectedValue {
-					return fmt.Errorf("unexpected Config Store item value: got %q, want %q", item.Value, expectedValue)
-				}
-				return nil
-			}
-		}
-
-		return fmt.Errorf("Config Store item %q was not found", key)
-	}
-}
-
 func CheckConfigStoresDataSourceContains(resourceName string, want []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]

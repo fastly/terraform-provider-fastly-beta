@@ -6,6 +6,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -2439,7 +2440,7 @@ func ConfigACLEntriesManyEntries(serviceName, domainName, aclName string, count 
 func ConfigACLEntries(aclName string, entries map[string]string) string {
 	return RenderBlock("internal/acceptance_tests/blocks/acl_entries_resource.tf", map[string]string{
 		"ACL_NAME": aclName,
-		"ENTRIES":  entriesHCL(entries),
+		"ENTRIES":  stringMapHCL(entries),
 	})
 }
 
@@ -2448,15 +2449,21 @@ func ConfigACLEntries(aclName string, entries map[string]string) string {
 func ConfigACLEntriesUnmanaged(aclName string, entries map[string]string) string {
 	return RenderBlock("internal/acceptance_tests/blocks/acl_entries_resource_unmanaged.tf", map[string]string{
 		"ACL_NAME": aclName,
-		"ENTRIES":  entriesHCL(entries),
+		"ENTRIES":  stringMapHCL(entries),
 	})
 }
 
-func entriesHCL(entries map[string]string) string {
+func stringMapHCL(entries map[string]string) string {
+	keys := make([]string, 0, len(entries))
+	for key := range entries {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
 	var hcl strings.Builder
 	hcl.WriteString("{\n")
-	for prefix, action := range entries {
-		fmt.Fprintf(&hcl, "    %q = %q\n", prefix, action)
+	for _, key := range keys {
+		fmt.Fprintf(&hcl, "    %q = %q\n", key, entries[key])
 	}
 	hcl.WriteString("  }")
 	return hcl.String()
@@ -5968,6 +5975,17 @@ func ConfigConfigStore(name string) string {
 	return RenderBlock("internal/acceptance_tests/blocks/configstore_single.tf", map[string]string{
 		"CONFIGSTORE_NAME": name,
 	})
+}
+
+// ConfigConfigStoreItems returns a Config Store and a fastly_configstore_items
+// resource managing the supplied key-value pairs.
+func ConfigConfigStoreItems(name string, items map[string]string) string {
+	return ConfigConfigStore(name) + "\n" + RenderBlock(
+		"internal/acceptance_tests/blocks/configstore_items.tf",
+		map[string]string{
+			"ITEMS": stringMapHCL(items),
+		},
+	)
 }
 
 // ConfigConfigStoreWithComputeAutoResourceLink returns a Config Store plus a Compute auto
