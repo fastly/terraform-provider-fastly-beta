@@ -1,0 +1,227 @@
+---
+page_title: "fastly_ngwaf_workspace_rule Resource - fastly"
+subcategory: ""
+description: |-
+  Manages a Fastly Next-Gen WAF rule scoped to a single workspace.
+---
+
+# fastly_ngwaf_workspace_rule (Resource)
+
+Manages a Fastly Next-Gen WAF rule scoped to a single workspace.
+
+Workspace-scoped rules support all four rule types (`request`, `signal`,
+`rate_limit`, and `templated_signal`) and the full workspace action set.
+
+## Example Usage
+
+```terraform
+resource "fastly_ngwaf_workspace" "example" {
+  name        = "Example Workspace"
+  description = "Managed by Terraform"
+  mode        = "block"
+
+  attack_signal_thresholds {}
+}
+
+resource "fastly_ngwaf_workspace_rule" "example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+  type         = "request"
+  description  = "Block a specific IP"
+  enabled      = true
+
+  condition {
+    field    = "ip"
+    operator = "equals"
+    value    = "127.0.0.1"
+  }
+
+  action {
+    type = "block"
+  }
+}
+```
+
+### Grouped and multi-value conditions
+
+```terraform
+resource "fastly_ngwaf_workspace_rule" "grouped_example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+  type         = "request"
+  description  = "Block admin paths hit without the expected header"
+  enabled      = true
+
+  group_condition {
+    group_operator = "all"
+
+    condition {
+      field    = "path"
+      operator = "contains"
+      value    = "/admin"
+    }
+
+    multival_condition {
+      field          = "request_header"
+      operator       = "does_not_exist"
+      group_operator = "any"
+
+      condition {
+        field    = "name"
+        operator = "equals"
+        value    = "X-Internal-Token"
+      }
+    }
+  }
+
+  action {
+    type = "block"
+  }
+}
+```
+
+### Standalone multi-value condition
+
+`multival_condition` can also be declared at the rule's top level, independent
+of any `group_condition` - useful when the multival check is the rule's only
+condition.
+
+```terraform
+resource "fastly_ngwaf_workspace_rule" "debug_query_param" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+  type         = "request"
+  description  = "Block requests carrying a debug query parameter"
+  enabled      = true
+
+  multival_condition {
+    field          = "query_parameter"
+    operator       = "exists"
+    group_operator = "any"
+
+    condition {
+      field    = "name"
+      operator = "equals"
+      value    = "debug"
+    }
+  }
+
+  action {
+    type = "block"
+  }
+}
+```
+
+### Rate limit rule
+
+```terraform
+resource "fastly_ngwaf_workspace_rule" "rate_limit_example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+  type         = "rate_limit"
+  description  = "Rate limit login attempts by IP"
+  enabled      = true
+
+  condition {
+    field    = "path"
+    operator = "equals"
+    value    = "/login"
+  }
+
+  rate_limit {
+    duration  = 300
+    interval  = 60
+    signal    = "site.excessive-login-attempts"
+    threshold = 100
+
+    client_identifiers {
+      type = "ip"
+    }
+
+    client_identifiers {
+      type = "request_cookie"
+      name = "session_id"
+    }
+  }
+
+  action {
+    type   = "log_request"
+    signal = "site.excessive-login-attempts"
+  }
+}
+```
+
+### Signal exclusion rule
+
+```terraform
+resource "fastly_ngwaf_workspace_rule" "exclude_xss_signal" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+  type         = "signal"
+  description  = "Exclude XSS signal to address a false positive"
+  enabled      = true
+
+  condition {
+    field    = "path"
+    operator = "like"
+    value    = "/contact-form"
+  }
+
+  action {
+    type   = "exclude_signal"
+    signal = "XSS"
+  }
+}
+```
+
+### Templated signal rule
+
+`templated_signal` is the one action type whose name collides with a rule
+`type` value: it's the sole action a `templated_signal`-type rule may
+declare. `description` must be an empty string.
+
+```terraform
+resource "fastly_ngwaf_workspace_rule" "login_attempt_signal" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+  type         = "templated_signal"
+  description  = ""
+  enabled      = true
+
+  condition {
+    field    = "path"
+    operator = "equals"
+    value    = "/login"
+  }
+
+  action {
+    type   = "templated_signal"
+    signal = "LOGINATTEMPT"
+  }
+}
+```
+
+## Action types by rule type
+
+A rule's `type` determines which `action.type` values are valid, and how
+many actions the rule may declare:
+
+| Rule `type`        | Valid action types                                                                      | Actions |
+| ------------------- | ----------------------------------------------------------------------------------------- | ------- |
+| `request`           | `allow`, `block`, `add_signal`, `browser_challenge`, `verify_token`, `dynamic_challenge`, `deception` | 1-2     |
+| `signal`            | `exclude_signal`                                                                           | exactly 1 |
+| `rate_limit`        | `block_signal`, `log_request`, `browser_challenge`, `dynamic_challenge`, `deception`        | exactly 1 |
+| `templated_signal`  | `templated_signal`                                                                          | exactly 1 |
+
+An action's `type` also determines which of its other fields are required:
+`add_signal`, `exclude_signal`, `block_signal`, `log_request`, and
+`templated_signal` all require `signal`; `browser_challenge` requires
+`allow_interactive`; `deception` requires `deception_type` (one of
+`invalid_login_response`, `vulnerable_application_response`, or `ato`).
+`redirect_url`/`response_code` are optional companions to `block` and
+`block_signal`.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Next-Gen WAF workspace rules are imported using a combination of the
+workspace ID and the rule ID, separated by a `/`:
+
+```shell
+terraform import fastly_ngwaf_workspace_rule.example WORKSPACE_ID/RULE_ID
+```
