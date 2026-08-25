@@ -27,9 +27,9 @@ resource "fastly_ngwaf_workspace" "example" {
   default_blocking_response_code = 406
 
   attack_signal_thresholds {
-    one_minute  = 1
-    ten_minutes = 60
-    one_hour    = 100
+    one_minute  = 50
+    ten_minutes = 350
+    one_hour    = 1800
     immediate   = false
   }
 }

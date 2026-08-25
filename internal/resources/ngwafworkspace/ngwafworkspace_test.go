@@ -4,12 +4,49 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 
 	ws "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces"
 )
+
+// TestAttackSignalThresholdDefaults pins the schema-level defaults applied
+// when a caller omits a threshold from attack_signal_thresholds. These must
+// match what the API actually applies server-side for an unset threshold -
+// see the DefaultAttackSignal* comment in schema.go - not an arbitrary
+// choice, so a future edit to the constants should have to update this test
+// deliberately.
+func TestAttackSignalThresholdDefaults(t *testing.T) {
+	attrs := AttackSignalThresholdsBlock().NestedObject.Attributes
+
+	intCases := []struct {
+		name string
+		want int64
+	}{
+		{"one_minute", 50},
+		{"ten_minutes", 350},
+		{"one_hour", 1800},
+	}
+
+	for _, c := range intCases {
+		attr, ok := attrs[c.name].(schema.Int64Attribute)
+		assert.True(t, ok, c.name)
+
+		var resp defaults.Int64Response
+		attr.Default.DefaultInt64(context.Background(), defaults.Int64Request{}, &resp)
+		assert.Equal(t, types.Int64Value(c.want), resp.PlanValue, c.name)
+	}
+
+	immediateAttr, ok := attrs["immediate"].(schema.BoolAttribute)
+	assert.True(t, ok)
+
+	var boolResp defaults.BoolResponse
+	immediateAttr.Default.DefaultBool(context.Background(), defaults.BoolRequest{}, &boolResp)
+	assert.Equal(t, types.BoolValue(false), boolResp.PlanValue)
+}
 
 func TestFlattenToModel_zeroThresholdsDefaulted(t *testing.T) {
 	workspace := &ws.Workspace{

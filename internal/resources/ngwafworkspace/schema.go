@@ -26,9 +26,9 @@ const (
 	// re-applies these same values on read/import so state reflects what the
 	// workspace is really doing rather than the response's literal zero.
 	DefaultAttackSignalImmediate  = false
-	DefaultAttackSignalOneHour    = 100
-	DefaultAttackSignalOneMinute  = 1
-	DefaultAttackSignalTenMinutes = 60
+	DefaultAttackSignalOneHour    = 1800
+	DefaultAttackSignalOneMinute  = 50
+	DefaultAttackSignalTenMinutes = 350
 )
 
 type Model struct {
@@ -138,27 +138,27 @@ func AttackSignalThresholdsBlock() schema.ListNestedBlock {
 					Optional:    true,
 					Computed:    true,
 					Default:     int64default.StaticInt64(DefaultAttackSignalOneHour),
-					Description: "The one-hour interval threshold. Minimum `1`, maximum `10000`. Defaults to `100`.",
+					Description: "The one-hour interval threshold. Minimum `1`, maximum `100000`. Defaults to `1800`.",
 					Validators: []validator.Int64{
-						int64validator.Between(1, 10000),
+						int64validator.Between(1, 100000),
 					},
 				},
 				"one_minute": schema.Int64Attribute{
 					Optional:    true,
 					Computed:    true,
 					Default:     int64default.StaticInt64(DefaultAttackSignalOneMinute),
-					Description: "The one-minute interval threshold. Minimum `1`, maximum `10000`. Defaults to `1`.",
+					Description: "The one-minute interval threshold. Minimum `1`, maximum `100000`. Defaults to `50`.",
 					Validators: []validator.Int64{
-						int64validator.Between(1, 10000),
+						int64validator.Between(1, 100000),
 					},
 				},
 				"ten_minutes": schema.Int64Attribute{
 					Optional:    true,
 					Computed:    true,
 					Default:     int64default.StaticInt64(DefaultAttackSignalTenMinutes),
-					Description: "The ten-minute interval threshold. Minimum `1`, maximum `10000`. Defaults to `60`.",
+					Description: "The ten-minute interval threshold. Minimum `1`, maximum `100000`. Defaults to `350`.",
 					Validators: []validator.Int64{
-						int64validator.Between(1, 10000),
+						int64validator.Between(1, 100000),
 					},
 				},
 			},

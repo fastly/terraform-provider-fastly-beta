@@ -27,9 +27,9 @@ resource "fastly_ngwaf_workspace" "example" {
   default_blocking_response_code = 406
 
   attack_signal_thresholds {
-    one_minute  = 1
-    ten_minutes = 60
-    one_hour    = 100
+    one_minute  = 50
+    ten_minutes = 350
+    one_hour    = 1800
     immediate   = false
   }
 }
@@ -61,9 +61,9 @@ resource "fastly_ngwaf_workspace" "example" {
 Optional:
 
 - `immediate` (Boolean) Ignore thresholds and block immediately when at least one attack signal is detected. Defaults to `false`.
-- `one_hour` (Number) The one-hour interval threshold. Minimum `1`, maximum `10000`. Defaults to `100`.
-- `one_minute` (Number) The one-minute interval threshold. Minimum `1`, maximum `10000`. Defaults to `1`.
-- `ten_minutes` (Number) The ten-minute interval threshold. Minimum `1`, maximum `10000`. Defaults to `60`.
+- `one_hour` (Number) The one-hour interval threshold. Minimum `1`, maximum `100000`. Defaults to `1800`.
+- `one_minute` (Number) The one-minute interval threshold. Minimum `1`, maximum `100000`. Defaults to `50`.
+- `ten_minutes` (Number) The ten-minute interval threshold. Minimum `1`, maximum `100000`. Defaults to `350`.
 
 ## Import
 

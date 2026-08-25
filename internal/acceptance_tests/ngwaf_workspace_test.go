@@ -77,9 +77,9 @@ func TestAccFastlyNGWAFWorkspace_lifecycle(t *testing.T) {
 					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "client_ip_headers.#", "1"),
 					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "client_ip_headers.0", "True-Client-IP"),
 					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "default_blocking_response_code", "406"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "attack_signal_thresholds.0.one_minute", "1"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "attack_signal_thresholds.0.ten_minutes", "60"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "attack_signal_thresholds.0.one_hour", "100"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "attack_signal_thresholds.0.one_minute", "50"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "attack_signal_thresholds.0.ten_minutes", "350"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "attack_signal_thresholds.0.one_hour", "1800"),
 					resource.TestCheckResourceAttr("fastly_ngwaf_workspace.test", "attack_signal_thresholds.0.immediate", "false"),
 				),
 			},
@@ -105,7 +105,7 @@ func TestAccFastlyNGWAFWorkspace_lifecycle(t *testing.T) {
 //
 // The resource's own create/update path can't exercise this: because each
 // threshold field is Optional+Computed with a static schema Default,
-// Terraform Core fills in 1/60/100/false at plan time before the request
+// Terraform Core fills in 50/350/1800/false at plan time before the request
 // ever reaches BuildCreateInput/BuildUpdateInput, so the API never actually
 // receives or returns a zero from our own writes. The only way a threshold
 // is genuinely unset from the API's point of view is a workspace that was
@@ -164,9 +164,9 @@ func checkThresholdsResolvedToDefaults(states []*terraform.InstanceState) error 
 	attrs := states[0].Attributes
 	want := map[string]string{
 		"attack_signal_thresholds.#":             "1",
-		"attack_signal_thresholds.0.one_minute":  "1",
-		"attack_signal_thresholds.0.ten_minutes": "60",
-		"attack_signal_thresholds.0.one_hour":    "100",
+		"attack_signal_thresholds.0.one_minute":  "50",
+		"attack_signal_thresholds.0.ten_minutes": "350",
+		"attack_signal_thresholds.0.one_hour":    "1800",
 		"attack_signal_thresholds.0.immediate":   "false",
 	}
 	for attr, expected := range want {
