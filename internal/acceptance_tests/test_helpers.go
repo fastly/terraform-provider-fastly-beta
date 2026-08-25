@@ -1781,6 +1781,16 @@ func ConfigKVStoresDataSource(h string) string {
 	})
 }
 
+// ConfigNGWAFWorkspacesDataSource returns a config declaring three fastly_ngwaf_workspace
+// resources alongside a fastly_ngwaf_workspaces data source that depends on all three.
+func ConfigNGWAFWorkspacesDataSource(h string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/ngwaf_workspace_three_with_datasource.tf", map[string]string{
+		"WORKSPACE_NAME_1": fmt.Sprintf("tf_%s_1", h),
+		"WORKSPACE_NAME_2": fmt.Sprintf("tf_%s_2", h),
+		"WORKSPACE_NAME_3": fmt.Sprintf("tf_%s_3", h),
+	})
+}
+
 // ConfigComputeAutoWithACLResourceLink returns a Compute auto service config with a
 // domain, package, and a resource_link block pointing at a Terraform-managed fastly_acl
 // (declared as a sibling resource, referenced by ID rather than a literal string).
