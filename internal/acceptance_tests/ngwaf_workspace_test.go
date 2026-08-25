@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -182,6 +183,53 @@ func ConfigNGWAFWorkspace(blockFile, name string) string {
 		panic(err)
 	}
 	return strings.ReplaceAll(string(raw), "{{.WORKSPACE_NAME}}", name)
+}
+
+func TestAccFastlyDataSourceNGWAFWorkspaces(t *testing.T) {
+	t.Parallel()
+	h := acctest.RandString(10)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckNGWAFWorkspaceDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigNGWAFWorkspacesDataSource(h),
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						rs, ok := s.RootModule().Resources["data.fastly_ngwaf_workspaces.example"]
+						if !ok {
+							return fmt.Errorf("not found: data.fastly_ngwaf_workspaces.example")
+						}
+
+						want := []string{
+							fmt.Sprintf("tf_%s_1", h),
+							fmt.Sprintf("tf_%s_2", h),
+							fmt.Sprintf("tf_%s_3", h),
+						}
+
+						var found int
+						var got []string
+						for k, v := range rs.Primary.Attributes {
+							if strings.HasSuffix(k, ".name") {
+								got = append(got, v)
+								if slices.Contains(want, v) {
+									found++
+								}
+							}
+						}
+
+						if found != len(want) {
+							return fmt.Errorf("want: %v, got: %v", want, got)
+						}
+
+						return nil
+					},
+				),
+			},
+		},
+	})
 }
 
 func CheckNGWAFWorkspaceDestroy(s *terraform.State) error {

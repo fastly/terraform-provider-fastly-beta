@@ -23,6 +23,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/acls"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/configstores"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/kvstores"
+	"github.com/fastly/terraform-provider-fastly/internal/datasources/ngwafworkspaces"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/serviceversion"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/vclsnippets"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/acl"
@@ -173,6 +174,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		acls.NewDataSource,
 		configstores.NewDataSource,
 		kvstores.NewDataSource,
+		ngwafworkspaces.NewDataSource,
 		serviceversion.NewDataSource,
 		vclsnippets.NewDataSource,
 	}
