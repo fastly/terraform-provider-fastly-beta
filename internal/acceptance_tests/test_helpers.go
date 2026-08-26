@@ -6004,3 +6004,52 @@ func ConfigConfigStoresDataSource(h string) string {
 		"CONFIGSTORE_NAME": fmt.Sprintf("tf_%s", h),
 	})
 }
+
+// ConfigAlertStatsAccountWide returns a standalone account-wide fastly_alert (source "stats", no service_id).
+func ConfigAlertStatsAccountWide(alertName, description, metric, evalType, evalPeriod string, threshold float64) string {
+	return RenderBlock("internal/acceptance_tests/blocks/alert_stats_account_wide.tf", map[string]string{
+		"ALERT_NAME":        alertName,
+		"ALERT_DESCRIPTION": description,
+		"METRIC":            metric,
+		"EVAL_TYPE":         evalType,
+		"EVAL_PERIOD":       evalPeriod,
+		"EVAL_THRESHOLD":    strconv.FormatFloat(threshold, 'f', -1, 64),
+	})
+}
+
+// ConfigAlertDomainsScoped returns a CDN auto service with Domain Inspector enabled plus a
+// fastly_alert scoped to that service and restricted to domainName via a dimensions block.
+func ConfigAlertDomainsScoped(serviceName, domainName, alertName, description, metric, evalType, evalPeriod string, threshold float64) string {
+	service := ConfigCDNAutoBasic(serviceName, domainName)
+	domainInspector := productEnablementBlock("domain_inspector", "fastly_service_cdn_auto.test.id", nil)
+	alert := RenderBlock("internal/acceptance_tests/blocks/alert_domains_scoped.tf", map[string]string{
+		"ALERT_NAME":        alertName,
+		"ALERT_DESCRIPTION": description,
+		"SERVICE_ID_REF":    "fastly_service_cdn_auto.test.id",
+		"DOMAIN_NAME":       domainName,
+		"METRIC":            metric,
+		"EVAL_TYPE":         evalType,
+		"EVAL_PERIOD":       evalPeriod,
+		"EVAL_THRESHOLD":    strconv.FormatFloat(threshold, 'f', -1, 64),
+	})
+
+	return joinBlocks(service, domainInspector, alert)
+}
+
+// ConfigAlertDomainsMissingServiceID returns a "domains" source fastly_alert with no service_id.
+func ConfigAlertDomainsMissingServiceID(alertName, metric string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/alert_domains_missing_service_id.tf", map[string]string{
+		"ALERT_NAME": alertName,
+		"METRIC":     metric,
+	})
+}
+
+// ConfigAlertPercentIncreaseWithIgnoreBelow returns a "stats" fastly_alert using the
+// percent_increase evaluation strategy with ignore_below set.
+func ConfigAlertPercentIncreaseWithIgnoreBelow(alertName string, threshold, ignoreBelow float64) string {
+	return RenderBlock("internal/acceptance_tests/blocks/alert_percent_increase.tf", map[string]string{
+		"ALERT_NAME":   alertName,
+		"THRESHOLD":    strconv.FormatFloat(threshold, 'f', -1, 64),
+		"IGNORE_BELOW": strconv.FormatFloat(ignoreBelow, 'f', -1, 64),
+	})
+}
