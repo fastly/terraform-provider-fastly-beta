@@ -18,8 +18,8 @@ Config Stores are available to Compute services only; they cannot be linked to
 CDN (VCL-based) services. To make a Config Store available to Compute code, link
 it from the Compute service with `resource_link`.
 
-This resource manages the Config Store container itself. It does not manage
-individual Config Store key-value entries.
+This resource manages the Config Store container itself. Manage key-value
+items separately with the `fastly_configstore_items` resource.
 
 ## Example Usage
 
