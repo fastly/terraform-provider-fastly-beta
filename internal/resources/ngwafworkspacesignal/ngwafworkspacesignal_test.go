@@ -126,11 +126,17 @@ func TestParseImportID(t *testing.T) {
 	assert.Equal(t, "signal-id", signalID)
 
 	_, _, err = ParseImportID("workspace-id")
-	require.Error(t, err)
+	require.EqualError(t, err, `invalid composite import ID format: expected workspace_id/signal_id, got "workspace-id"`)
+
+	_, _, err = ParseImportID("workspace-id/signal-id/extra")
+	require.EqualError(t, err, `invalid composite import ID format: expected workspace_id/signal_id, got "workspace-id/signal-id/extra"`)
+
+	_, _, err = ParseImportID("")
+	require.EqualError(t, err, `invalid composite import ID format: expected workspace_id/signal_id, got ""`)
 
 	_, _, err = ParseImportID("/signal-id")
-	require.Error(t, err)
+	require.EqualError(t, err, `workspace_id cannot be empty in import ID "/signal-id"`)
 
 	_, _, err = ParseImportID("workspace-id/")
-	require.Error(t, err)
+	require.EqualError(t, err, `signal_id cannot be empty in import ID "workspace-id/"`)
 }
