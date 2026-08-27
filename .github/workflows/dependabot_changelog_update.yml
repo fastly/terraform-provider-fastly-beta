@@ -19,7 +19,7 @@ defaults:
 jobs:
   dependabot-changelog-update:
     if: contains(github.event.pull_request.labels.*.name, 'Auto-Changelog')
-    runs-on: forge-amd64-small
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Generate a GitHub token
         id: github-token
