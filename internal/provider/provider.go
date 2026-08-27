@@ -23,6 +23,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/acls"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/configstores"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/kvstores"
+	"github.com/fastly/terraform-provider-fastly/internal/datasources/ngwafworkspacelists"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/ngwafworkspaces"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/serviceversion"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/vclsnippets"
@@ -50,6 +51,11 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/loggingsyslog"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwafworkspace"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwafworkspacecountrylist"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwafworkspaceiplist"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwafworkspacesignallist"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwafworkspacestringlist"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwafworkspacewildcardlist"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/productenablement"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/resourcelink"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/servicecdn"
@@ -150,6 +156,11 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		dynamicvclsnippet.NewResource,
 		dynamicsnippetcontent.NewResource,
 		ngwafworkspace.NewResource,
+		ngwafworkspacecountrylist.NewResource,
+		ngwafworkspaceiplist.NewResource,
+		ngwafworkspacesignallist.NewResource,
+		ngwafworkspacestringlist.NewResource,
+		ngwafworkspacewildcardlist.NewResource,
 		productenablement.NewFanoutResource,
 		productenablement.NewBrotliCompressionResource,
 		productenablement.NewImageOptimizerResource,
@@ -174,6 +185,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		acls.NewDataSource,
 		configstores.NewDataSource,
 		kvstores.NewDataSource,
+		ngwafworkspacelists.NewDataSource,
 		ngwafworkspaces.NewDataSource,
 		serviceversion.NewDataSource,
 		vclsnippets.NewDataSource,
