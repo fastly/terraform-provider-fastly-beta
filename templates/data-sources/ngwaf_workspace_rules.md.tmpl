@@ -1,0 +1,27 @@
+---
+page_title: "fastly_ngwaf_workspace_rules Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to retrieve a list of Fastly Next-Gen WAF rules scoped to a single workspace.
+---
+
+# fastly_ngwaf_workspace_rules (Data Source)
+
+Use this data source to retrieve a list of Fastly Next-Gen WAF rules scoped to a single workspace.
+
+Rules of every type are returned; `type` on each entry says which of the
+`fastly_ngwaf_workspace_*_rule` resources manages it.
+
+## Example Usage
+
+```terraform
+data "fastly_ngwaf_workspace_rules" "example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+}
+
+output "fastly_ngwaf_workspace_rules_all" {
+  value = data.fastly_ngwaf_workspace_rules.example.rules
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
