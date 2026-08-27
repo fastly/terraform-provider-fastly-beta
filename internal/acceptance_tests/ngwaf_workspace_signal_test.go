@@ -104,8 +104,8 @@ func TestAccFastlyDataSourceNGWAFWorkspaceSignals(t *testing.T) {
 									found++
 								}
 							}
-							if strings.HasSuffix(k, ".tag_name") && v == "" {
-								return fmt.Errorf("expected data source signal %s to have tag_name/reference_id", k)
+							if strings.HasSuffix(k, ".reference_id") && v == "" {
+								return fmt.Errorf("expected data source signal %s to have reference_id", k)
 							}
 							if strings.HasSuffix(k, ".description") && v == "" {
 								return fmt.Errorf("expected data source signal %s to have description", k)

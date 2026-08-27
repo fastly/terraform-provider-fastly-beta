@@ -41,4 +41,4 @@ Read-Only:
 - `description` (String) The description of the signal.
 - `id` (String) The ID of the signal.
 - `name` (String) The name of the signal.
-- `tag_name` (String) The generated tag name / reference ID of the signal.
+- `reference_id` (String) The generated reference ID of the signal.

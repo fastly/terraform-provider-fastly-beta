@@ -43,6 +43,10 @@ func TestSchema(t *testing.T) {
 	require.True(t, ok)
 	require.True(t, signalsAttr.Computed)
 	require.Len(t, signalsAttr.NestedObject.Attributes, 4)
+
+	referenceID, ok := signalsAttr.NestedObject.Attributes["reference_id"].(datasourceschema.StringAttribute)
+	require.True(t, ok)
+	require.True(t, referenceID.Computed)
 }
 
 func TestFlattenSignals(t *testing.T) {
@@ -73,28 +77,28 @@ func TestFlattenSignals(t *testing.T) {
 		require.True(t, ok)
 		name, ok := attributes["name"].(types.String)
 		require.True(t, ok)
-		tagName, ok := attributes["tag_name"].(types.String)
+		referenceID, ok := attributes["reference_id"].(types.String)
 		require.True(t, ok)
 		description, ok := attributes["description"].(types.String)
 		require.True(t, ok)
 
 		got[id.ValueString()] = map[string]string{
-			"name":        name.ValueString(),
-			"tag_name":    tagName.ValueString(),
-			"description": description.ValueString(),
+			"name":         name.ValueString(),
+			"reference_id": referenceID.ValueString(),
+			"description":  description.ValueString(),
 		}
 	}
 
 	require.Equal(t, map[string]map[string]string{
 		"signal-a": {
-			"name":        "Signal A",
-			"tag_name":    "site.signal-a",
-			"description": "alpha",
+			"name":         "Signal A",
+			"reference_id": "site.signal-a",
+			"description":  "alpha",
 		},
 		"signal-b": {
-			"name":        "Signal B",
-			"tag_name":    "site.signal-b",
-			"description": "beta",
+			"name":         "Signal B",
+			"reference_id": "site.signal-b",
+			"description":  "beta",
 		},
 	}, got)
 }

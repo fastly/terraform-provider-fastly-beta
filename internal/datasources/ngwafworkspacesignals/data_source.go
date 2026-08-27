@@ -31,10 +31,10 @@ type DataSourceModel struct {
 }
 
 var signalAttrTypes = map[string]attr.Type{
-	"description": types.StringType,
-	"id":          types.StringType,
-	"name":        types.StringType,
-	"tag_name":    types.StringType,
+	"description":  types.StringType,
+	"id":           types.StringType,
+	"name":         types.StringType,
+	"reference_id": types.StringType,
 }
 
 func NewDataSource() datasource.DataSource {
@@ -74,9 +74,9 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 							Computed:    true,
 							Description: "The name of the signal.",
 						},
-						"tag_name": schema.StringAttribute{
+						"reference_id": schema.StringAttribute{
 							Computed:    true,
-							Description: "The generated tag name / reference ID of the signal.",
+							Description: "The generated reference ID of the signal.",
 						},
 					},
 				},
@@ -152,10 +152,10 @@ func flattenSignals(data []signals.Signal) (types.List, []string, diag.Diagnosti
 		ids = append(ids, signal.SignalID)
 
 		obj, objDiags := types.ObjectValue(signalAttrTypes, map[string]attr.Value{
-			"description": types.StringValue(signal.Description),
-			"id":          types.StringValue(signal.SignalID),
-			"name":        types.StringValue(signal.Name),
-			"tag_name":    types.StringValue(signal.ReferenceID),
+			"description":  types.StringValue(signal.Description),
+			"id":           types.StringValue(signal.SignalID),
+			"name":         types.StringValue(signal.Name),
+			"reference_id": types.StringValue(signal.ReferenceID),
 		})
 		diags.Append(objDiags...)
 		elements = append(elements, obj)
