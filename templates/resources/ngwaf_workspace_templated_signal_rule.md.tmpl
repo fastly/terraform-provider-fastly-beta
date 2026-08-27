@@ -10,6 +10,11 @@ description: |-
 Manages a Fastly Next-Gen WAF `templated_signal` rule scoped to a single
 workspace: it adds one of Fastly's templated signals to matching requests.
 
+A templated signal is usually derived from other signals rather than from
+request attributes alone, which is what the `multival_condition` on
+`field = "signal"` in the example below expresses: tag a request
+`INVITE-FAILURE` when it already carries `INVITE-ATTEMPT` and came back 404.
+
 Two things set this rule type apart from the others:
 
 - It takes no `description`; the API accepts only an empty one.
@@ -34,18 +39,30 @@ resource "fastly_ngwaf_workspace" "example" {
   attack_signal_thresholds {}
 }
 
-resource "fastly_ngwaf_workspace_templated_signal_rule" "login_attempt_signal" {
+resource "fastly_ngwaf_workspace_templated_signal_rule" "invite_failure" {
   workspace_id = fastly_ngwaf_workspace.example.id
   enabled      = true
 
   condition {
-    field    = "path"
+    field    = "response_code"
     operator = "equals"
-    value    = "/login"
+    value    = "404"
+  }
+
+  multival_condition {
+    field          = "signal"
+    operator       = "exists"
+    group_operator = "all"
+
+    condition {
+      field    = "signal_id"
+      operator = "equals"
+      value    = "INVITE-ATTEMPT"
+    }
   }
 
   action {
-    signal = "LOGINATTEMPT"
+    signal = "INVITE-FAILURE"
   }
 }
 ```

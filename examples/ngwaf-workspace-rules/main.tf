@@ -151,20 +151,34 @@ resource "fastly_ngwaf_workspace_rate_limit_rule" "ip_rate_limit" {
 }
 
 # A templated signal rule: attaches a Fastly-defined signal to matching
-# requests. Every attribute forces replacement, and the resource takes no
-# description.
-resource "fastly_ngwaf_workspace_templated_signal_rule" "login_attempt_signal" {
+# requests, here derived from another signal rather than from request
+# attributes alone - tag a request INVITE-FAILURE when it already carries
+# INVITE-ATTEMPT and came back 404. Every attribute forces replacement, and
+# the resource takes no description.
+resource "fastly_ngwaf_workspace_templated_signal_rule" "invite_failure" {
   workspace_id = fastly_ngwaf_workspace.example.id
   enabled      = true
 
   condition {
-    field    = "path"
+    field    = "response_code"
     operator = "equals"
-    value    = "/login"
+    value    = "404"
+  }
+
+  multival_condition {
+    field          = "signal"
+    operator       = "exists"
+    group_operator = "all"
+
+    condition {
+      field    = "signal_id"
+      operator = "equals"
+      value    = "INVITE-ATTEMPT"
+    }
   }
 
   action {
-    signal = "LOGINATTEMPT"
+    signal = "INVITE-FAILURE"
   }
 }
 
