@@ -1,0 +1,47 @@
+---
+page_title: "fastly_ngwaf_thresholds Resource - fastly"
+subcategory: ""
+description: |-
+  Manages a Fastly Next-Gen WAF threshold within a workspace.
+---
+
+# fastly_ngwaf_thresholds (Resource)
+
+Manages a Fastly Next-Gen WAF threshold within a workspace.
+
+A threshold triggers an action when a signal is detected more than `limit`
+times within `interval` seconds from the same IP address, or immediately
+when `action` is `block_immediately`.
+
+## Example Usage
+
+```terraform
+resource "fastly_ngwaf_workspace" "example" {
+  name        = "Example Workspace"
+  description = "Managed by Terraform"
+  mode        = "block"
+}
+
+resource "fastly_ngwaf_thresholds" "example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+
+  name        = "Example Threshold"
+  action      = "block"
+  signal      = "SQLI"
+  enabled     = true
+  dont_notify = false
+  interval    = 3600
+  limit       = 10
+  duration    = 86400
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Next-Gen WAF thresholds are imported using their workspace and threshold ID:
+
+```shell
+terraform import fastly_ngwaf_thresholds.example <workspace_id>/<threshold_id>
+```
