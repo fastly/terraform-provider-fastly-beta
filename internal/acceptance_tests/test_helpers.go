@@ -6034,6 +6034,19 @@ func ConfigConfigStoresDataSource(h string) string {
 	})
 }
 
+// ConfigNGWAFWorkspaceListsByType returns a config declaring one workspace-scoped
+// NGWAF list of every supported type alongside the workspace lists data source.
+func ConfigNGWAFWorkspaceListsByType(workspaceName string, names map[string]string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/ngwaf_workspace_lists_by_type.tf", map[string]string{
+		"WORKSPACE_NAME":     workspaceName,
+		"IP_LIST_NAME":       names["ip"],
+		"STRING_LIST_NAME":   names["string"],
+		"WILDCARD_LIST_NAME": names["wildcard"],
+		"COUNTRY_LIST_NAME":  names["country"],
+		"SIGNAL_LIST_NAME":   names["signal"],
+	})
+}
+
 // ConfigAPISecurityOperation returns a CDN service plus a fastly_api_security_operation
 // resource. Passing an empty description omits the attribute from config entirely, to
 // exercise the transition back to an unset (rather than empty-string) description.
