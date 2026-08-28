@@ -15,7 +15,7 @@ import (
 // ImportState populates workspace_id and id from a "workspace_id/rule_id"
 // import identifier.
 func ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	parts := strings.SplitN(req.ID, "/", 2)
+	parts := strings.Split(req.ID, "/")
 	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		resp.Diagnostics.AddError(
 			"Unexpected import identifier",
