@@ -25,8 +25,12 @@ func TotalConditionCount(conditions []ConditionModel, groups []GroupConditionMod
 // least one condition, no more than MaxConditions combined, and no
 // group_condition that matches nothing.
 //
-// The API requires a condition for every rule type, templated_signal
-// included.
+// Templated signal rules are each individually predefined, so whether a
+// condition is required isn't governed by one flat rule across rule types.
+// TestAccFastlyNGWAFWorkspaceTemplatedSignalRule_apiRequiresConditions pins
+// the live API's behavior for this rule type: it rejects a templated_signal
+// rule with no conditions, so this validator applies the same requirement
+// here as for every other rule type.
 func ValidateConditions(m CommonModel, diags *diag.Diagnostics) {
 	if !HasAnyCondition(m.Condition, m.GroupCondition, m.MultivalCondition) {
 		diags.AddError(
