@@ -6,7 +6,7 @@ resource "fastly_ngwaf_workspace" "test" {
   attack_signal_thresholds {}
 }
 
-resource "fastly_ngwaf_thresholds" "one" {
+resource "fastly_ngwaf_workspace_threshold" "one" {
   workspace_id = fastly_ngwaf_workspace.test.id
 
   action      = "block"
@@ -18,7 +18,7 @@ resource "fastly_ngwaf_thresholds" "one" {
   signal      = "SQLI"
 }
 
-resource "fastly_ngwaf_thresholds" "two" {
+resource "fastly_ngwaf_workspace_threshold" "two" {
   workspace_id = fastly_ngwaf_workspace.test.id
 
   action      = "log"
@@ -30,8 +30,8 @@ resource "fastly_ngwaf_thresholds" "two" {
   signal      = "BHH"
 }
 
-data "fastly_ngwaf_thresholds" "test" {
+data "fastly_ngwaf_workspace_thresholds" "test" {
   workspace_id = fastly_ngwaf_workspace.test.id
 
-  depends_on = [fastly_ngwaf_thresholds.one, fastly_ngwaf_thresholds.two]
+  depends_on = [fastly_ngwaf_workspace_threshold.one, fastly_ngwaf_workspace_threshold.two]
 }

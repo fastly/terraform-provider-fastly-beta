@@ -1,11 +1,11 @@
 ---
-page_title: "fastly_ngwaf_thresholds Resource - fastly"
+page_title: "fastly_ngwaf_workspace_threshold Resource - fastly"
 subcategory: ""
 description: |-
   Manages a Fastly Next-Gen WAF threshold within a workspace.
 ---
 
-# fastly_ngwaf_thresholds (Resource)
+# fastly_ngwaf_workspace_threshold (Resource)
 
 Manages a Fastly Next-Gen WAF threshold within a workspace.
 
@@ -22,7 +22,7 @@ resource "fastly_ngwaf_workspace" "example" {
   mode        = "block"
 }
 
-resource "fastly_ngwaf_thresholds" "example" {
+resource "fastly_ngwaf_workspace_threshold" "example" {
   workspace_id = fastly_ngwaf_workspace.example.id
 
   name        = "Example Threshold"
@@ -43,5 +43,5 @@ resource "fastly_ngwaf_thresholds" "example" {
 Next-Gen WAF thresholds are imported using their workspace and threshold ID:
 
 ```shell
-terraform import fastly_ngwaf_thresholds.example <workspace_id>/<threshold_id>
+terraform import fastly_ngwaf_workspace_threshold.example <workspace_id>/<threshold_id>
 ```

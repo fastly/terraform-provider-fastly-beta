@@ -6,15 +6,15 @@ resource "fastly_ngwaf_workspace" "test" {
   attack_signal_thresholds {}
 }
 
-resource "fastly_ngwaf_thresholds" "test" {
+resource "fastly_ngwaf_workspace_threshold" "test" {
   workspace_id = fastly_ngwaf_workspace.test.id
 
-  action       = "block"
-  dont_notify  = false
-  duration     = 86400
-  enabled      = true
-  interval     = 3600
-  limit        = 10
+  action       = "block_immediately"
+  dont_notify  = true
+  duration     = 43200
+  enabled      = false
+  interval     = 600
+  limit        = 50
   name         = "{{.THRESHOLD_NAME}}"
-  signal       = "SQLI"
+  signal       = "XXE"
 }

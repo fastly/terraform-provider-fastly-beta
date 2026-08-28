@@ -1,4 +1,4 @@
-package ngwafthresholds
+package ngwafworkspacethresholds
 
 import (
 	"context"
@@ -46,7 +46,7 @@ func NewDataSource() datasource.DataSource {
 }
 
 func (d *DataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_ngwaf_thresholds"
+	resp.TypeName = req.ProviderTypeName + "_ngwaf_workspace_thresholds"
 }
 
 func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {

@@ -6,7 +6,7 @@ resource "fastly_ngwaf_workspace" "test" {
   attack_signal_thresholds {}
 }
 
-resource "fastly_ngwaf_thresholds" "test" {
+resource "fastly_ngwaf_workspace_threshold" "test" {
   workspace_id = fastly_ngwaf_workspace.test.id
 
   action      = "block"

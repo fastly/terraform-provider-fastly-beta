@@ -1,4 +1,4 @@
-package ngwafthresholds
+package ngwafworkspacethresholds
 
 import (
 	"context"
@@ -20,7 +20,7 @@ func TestMetadata(t *testing.T) {
 		ProviderTypeName: "fastly",
 	}, &resp)
 
-	require.Equal(t, "fastly_ngwaf_thresholds", resp.TypeName)
+	require.Equal(t, "fastly_ngwaf_workspace_thresholds", resp.TypeName)
 }
 
 func TestSchema(t *testing.T) {

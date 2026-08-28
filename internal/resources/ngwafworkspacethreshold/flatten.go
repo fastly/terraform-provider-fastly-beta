@@ -1,4 +1,4 @@
-package ngwafthresholds
+package ngwafworkspacethreshold
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/types"

@@ -1,23 +1,23 @@
 ---
-page_title: "fastly_ngwaf_thresholds Data Source - fastly"
+page_title: "fastly_ngwaf_workspace_thresholds Data Source - fastly"
 subcategory: ""
 description: |-
   Use this data source to retrieve a list of Fastly Next-Gen WAF thresholds for a workspace.
 ---
 
-# fastly_ngwaf_thresholds (Data Source)
+# fastly_ngwaf_workspace_thresholds (Data Source)
 
 Use this data source to retrieve a list of Fastly Next-Gen WAF thresholds for a workspace.
 
 ## Example Usage
 
 ```terraform
-data "fastly_ngwaf_thresholds" "example" {
+data "fastly_ngwaf_workspace_thresholds" "example" {
   workspace_id = fastly_ngwaf_workspace.example.id
 }
 
 output "ngwaf_thresholds" {
-  value = data.fastly_ngwaf_thresholds.example.thresholds
+  value = data.fastly_ngwaf_workspace_thresholds.example.thresholds
 }
 ```
 

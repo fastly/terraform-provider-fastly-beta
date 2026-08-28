@@ -17,7 +17,7 @@ import (
 	th "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/thresholds"
 )
 
-func TestAccFastlyNGWAFThresholds_lifecycle(t *testing.T) {
+func TestAccFastlyNGWAFWorkspaceThreshold_lifecycle(t *testing.T) {
 	t.Parallel()
 
 	suffix := acctest.RandString(10)
@@ -27,83 +27,83 @@ func TestAccFastlyNGWAFThresholds_lifecycle(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { PreCheck(t) },
 		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
-		CheckDestroy:             CheckNGWAFThresholdsDestroy,
+		CheckDestroy:             CheckNGWAFWorkspaceThresholdDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigNGWAFThresholds("ngwaf_thresholds_block.tf", workspaceName, thresholdName),
+				Config: ConfigNGWAFWorkspaceThreshold("ngwaf_workspace_thresholds_block.tf", workspaceName, thresholdName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "action", "block"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "dont_notify", "false"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "duration", "86400"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "enabled", "true"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "interval", "3600"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "limit", "10"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "name", thresholdName),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "signal", "SQLI"),
-					resource.TestCheckResourceAttrPair("fastly_ngwaf_thresholds.test", "workspace_id", "fastly_ngwaf_workspace.test", "id"),
-					resource.TestCheckResourceAttrSet("fastly_ngwaf_thresholds.test", "id"),
-					CheckNGWAFThresholdsExists("fastly_ngwaf_thresholds.test"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "action", "block"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "dont_notify", "false"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "duration", "86400"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "enabled", "true"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "interval", "3600"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "limit", "10"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "name", thresholdName),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "signal", "SQLI"),
+					resource.TestCheckResourceAttrPair("fastly_ngwaf_workspace_threshold.test", "workspace_id", "fastly_ngwaf_workspace.test", "id"),
+					resource.TestCheckResourceAttrSet("fastly_ngwaf_workspace_threshold.test", "id"),
+					CheckNGWAFWorkspaceThresholdExists("fastly_ngwaf_workspace_threshold.test"),
 				),
 			},
 			{
 				// Omitting duration/interval/limit falls back to the
 				// resource's schema defaults, which must match the API's
 				// own documented defaults for these fields.
-				Config: ConfigNGWAFThresholds("ngwaf_thresholds_minimal.tf", workspaceName, thresholdName),
+				Config: ConfigNGWAFWorkspaceThreshold("ngwaf_workspace_thresholds_minimal.tf", workspaceName, thresholdName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "duration", "86400"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "interval", "3600"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "limit", "10"),
-					CheckNGWAFThresholdsExists("fastly_ngwaf_thresholds.test"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "duration", "86400"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "interval", "3600"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "limit", "10"),
+					CheckNGWAFWorkspaceThresholdExists("fastly_ngwaf_workspace_threshold.test"),
 				),
 			},
 			{
-				Config:   ConfigNGWAFThresholds("ngwaf_thresholds_minimal.tf", workspaceName, thresholdName),
+				Config:   ConfigNGWAFWorkspaceThreshold("ngwaf_workspace_thresholds_minimal.tf", workspaceName, thresholdName),
 				PlanOnly: true,
 			},
 			{
-				Config: ConfigNGWAFThresholds("ngwaf_thresholds_log.tf", workspaceName, thresholdName),
+				Config: ConfigNGWAFWorkspaceThreshold("ngwaf_workspace_thresholds_log.tf", workspaceName, thresholdName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "action", "log"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "dont_notify", "true"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "duration", "43200"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "enabled", "false"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "interval", "600"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "limit", "50"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "name", thresholdName),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "signal", "BHH"),
-					CheckNGWAFThresholdsExists("fastly_ngwaf_thresholds.test"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "action", "log"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "dont_notify", "true"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "duration", "43200"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "enabled", "false"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "interval", "600"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "limit", "50"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "name", thresholdName),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "signal", "BHH"),
+					CheckNGWAFWorkspaceThresholdExists("fastly_ngwaf_workspace_threshold.test"),
 				),
 			},
 			{
-				Config: ConfigNGWAFThresholds("ngwaf_thresholds_block_immediately.tf", workspaceName, thresholdName),
+				Config: ConfigNGWAFWorkspaceThreshold("ngwaf_workspace_thresholds_block_immediately.tf", workspaceName, thresholdName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "action", "block_immediately"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "dont_notify", "true"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "duration", "43200"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "enabled", "false"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "interval", "600"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "limit", "50"),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "name", thresholdName),
-					resource.TestCheckResourceAttr("fastly_ngwaf_thresholds.test", "signal", "XXE"),
-					CheckNGWAFThresholdsExists("fastly_ngwaf_thresholds.test"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "action", "block_immediately"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "dont_notify", "true"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "duration", "43200"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "enabled", "false"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "interval", "600"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "limit", "50"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "name", thresholdName),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_threshold.test", "signal", "XXE"),
+					CheckNGWAFWorkspaceThresholdExists("fastly_ngwaf_workspace_threshold.test"),
 				),
 			},
 			{
-				Config:   ConfigNGWAFThresholds("ngwaf_thresholds_block_immediately.tf", workspaceName, thresholdName),
+				Config:   ConfigNGWAFWorkspaceThreshold("ngwaf_workspace_thresholds_block_immediately.tf", workspaceName, thresholdName),
 				PlanOnly: true,
 			},
 			{
-				ResourceName:      "fastly_ngwaf_thresholds.test",
+				ResourceName:      "fastly_ngwaf_workspace_threshold.test",
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateIdFunc: ImportStateIDForNGWAFThresholds("fastly_ngwaf_thresholds.test"),
+				ImportStateIdFunc: ImportStateIDForNGWAFWorkspaceThreshold("fastly_ngwaf_workspace_threshold.test"),
 			},
 		},
 	})
 }
 
-// TestAccFastlyNGWAFThresholds_importZeroValues validates the specific
+// TestAccFastlyNGWAFWorkspaceThreshold_importZeroValues validates the specific
 // behavior schema.go's Default* comments attribute to omitted
 // duration/interval/limit: the API can return a bare zero for a
 // block_immediately threshold that never set them (the spec explicitly
@@ -120,7 +120,7 @@ func TestAccFastlyNGWAFThresholds_lifecycle(t *testing.T) {
 // Interval to be non-nil regardless of action - so the out-of-band
 // threshold is created with a raw POST that mimics the spec's
 // ThresholdCreateImmediate body (action/enabled/signal only).
-func TestAccFastlyNGWAFThresholds_importZeroValues(t *testing.T) {
+func TestAccFastlyNGWAFWorkspaceThreshold_importZeroValues(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("TF_ACC") == "" {
 		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
@@ -178,8 +178,8 @@ func TestAccFastlyNGWAFThresholds_importZeroValues(t *testing.T) {
 		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config:            ConfigNGWAFThresholds("ngwaf_thresholds_block.tf", workspaceName, thresholdName),
-				ResourceName:      "fastly_ngwaf_thresholds.test",
+				Config:            ConfigNGWAFWorkspaceThreshold("ngwaf_workspace_thresholds_block.tf", workspaceName, thresholdName),
+				ResourceName:      "fastly_ngwaf_workspace_threshold.test",
 				ImportState:       true,
 				ImportStateId:     fmt.Sprintf("%s/%s", workspaceID, thresholdID),
 				ImportStateVerify: false,
@@ -208,7 +208,7 @@ func checkThresholdZeroValuesResolvedToDefaults(states []*terraform.InstanceStat
 	return nil
 }
 
-func TestAccFastlyDataSourceNGWAFThresholds(t *testing.T) {
+func TestAccFastlyDataSourceNGWAFWorkspaceThresholds(t *testing.T) {
 	t.Parallel()
 
 	suffix := acctest.RandString(10)
@@ -218,15 +218,15 @@ func TestAccFastlyDataSourceNGWAFThresholds(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { PreCheck(t) },
 		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
-		CheckDestroy:             CheckNGWAFThresholdsDestroy,
+		CheckDestroy:             CheckNGWAFWorkspaceThresholdDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigNGWAFThresholds("ngwaf_thresholds_datasource.tf", workspaceName, thresholdName),
+				Config: ConfigNGWAFWorkspaceThreshold("ngwaf_workspace_thresholds_datasource.tf", workspaceName, thresholdName),
 				Check: resource.ComposeTestCheckFunc(
 					func(s *terraform.State) error {
-						rs, ok := s.RootModule().Resources["data.fastly_ngwaf_thresholds.test"]
+						rs, ok := s.RootModule().Resources["data.fastly_ngwaf_workspace_thresholds.test"]
 						if !ok {
-							return fmt.Errorf("not found: data.fastly_ngwaf_thresholds.test")
+							return fmt.Errorf("not found: data.fastly_ngwaf_workspace_thresholds.test")
 						}
 
 						want := []string{thresholdName + "_1", thresholdName + "_2"}
@@ -254,7 +254,7 @@ func TestAccFastlyDataSourceNGWAFThresholds(t *testing.T) {
 	})
 }
 
-func ImportStateIDForNGWAFThresholds(n string) resource.ImportStateIdFunc {
+func ImportStateIDForNGWAFWorkspaceThreshold(n string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -264,7 +264,7 @@ func ImportStateIDForNGWAFThresholds(n string) resource.ImportStateIdFunc {
 	}
 }
 
-func CheckNGWAFThresholdsExists(n string) resource.TestCheckFunc {
+func CheckNGWAFWorkspaceThresholdExists(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -292,14 +292,14 @@ func CheckNGWAFThresholdsExists(n string) resource.TestCheckFunc {
 	}
 }
 
-func CheckNGWAFThresholdsDestroy(s *terraform.State) error {
+func CheckNGWAFWorkspaceThresholdDestroy(s *terraform.State) error {
 	client, err := NewFastlyClient()
 	if err != nil {
 		return err
 	}
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "fastly_ngwaf_thresholds" {
+		if rs.Type != "fastly_ngwaf_workspace_threshold" {
 			continue
 		}
 
@@ -311,7 +311,7 @@ func CheckNGWAFThresholdsDestroy(s *terraform.State) error {
 	return nil
 }
 
-func ConfigNGWAFThresholds(blockFile, workspaceName, thresholdName string) string {
+func ConfigNGWAFWorkspaceThreshold(blockFile, workspaceName, thresholdName string) string {
 	raw, err := os.ReadFile("blocks/" + blockFile)
 	if err != nil {
 		panic(err)

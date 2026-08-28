@@ -1,4 +1,4 @@
-package ngwafthresholds
+package ngwafworkspacethreshold
 
 import (
 	"context"
@@ -50,7 +50,7 @@ func TestMetadata(t *testing.T) {
 	var resp resource.MetadataResponse
 	r.Metadata(context.Background(), resource.MetadataRequest{ProviderTypeName: "fastly"}, &resp)
 
-	assert.Equal(t, "fastly_ngwaf_thresholds", resp.TypeName)
+	assert.Equal(t, "fastly_ngwaf_workspace_threshold", resp.TypeName)
 }
 
 func TestBuildCreateInput(t *testing.T) {

@@ -1,4 +1,4 @@
-package ngwafthresholds
+package ngwafworkspacethreshold
 
 import (
 	"github.com/fastly/terraform-provider-fastly/internal/service"
