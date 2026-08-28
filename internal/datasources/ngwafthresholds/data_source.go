@@ -142,7 +142,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 	}
 
 	state.Thresholds = thresholdSet
-	state.ID = types.StringValue(idhash.HashIDs(ids))
+	state.ID = types.StringValue(idhash.HashIDs(append([]string{workspaceID}, ids...)))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
