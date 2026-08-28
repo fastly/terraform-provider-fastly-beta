@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwafrule"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafrule"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"

@@ -1,7 +1,7 @@
 package ngwafworkspacesignallist
 
 import (
-	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwaflist"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwaflist"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 )

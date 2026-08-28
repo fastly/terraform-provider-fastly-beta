@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
-	regularsnippet "github.com/fastly/terraform-provider-fastly/internal/resources/snippet"
-	"github.com/fastly/terraform-provider-fastly/internal/service"
-	"github.com/fastly/terraform-provider-fastly/internal/validation"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
+	regularsnippet "github.com/fastly/terraform-provider-fastly-beta/internal/resources/snippet"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"

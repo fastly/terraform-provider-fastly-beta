@@ -3,8 +3,8 @@ package alert
 import (
 	"context"
 
-	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
-	"github.com/fastly/terraform-provider-fastly/internal/errors"
+	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"

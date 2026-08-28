@@ -3,10 +3,10 @@ package ngwafworkspacesignalrule
 import (
 	"context"
 
-	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
-	"github.com/fastly/terraform-provider-fastly/internal/errors"
-	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwafrule"
-	"github.com/fastly/terraform-provider-fastly/internal/service"
+	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafrule"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"

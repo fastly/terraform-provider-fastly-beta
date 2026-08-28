@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/fastly/go-fastly/v17/fastly"
-	"github.com/fastly/terraform-provider-fastly/internal/errors"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 )
 
 func TestAccFastlyAlert_statsAccountWide(t *testing.T) {

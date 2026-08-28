@@ -1,4 +1,4 @@
-module github.com/fastly/terraform-provider-fastly
+module github.com/fastly/terraform-provider-fastly-beta
 
 go 1.26.5
 

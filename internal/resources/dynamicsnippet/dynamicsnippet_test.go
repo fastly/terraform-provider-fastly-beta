@@ -3,7 +3,7 @@ package dynamicsnippet
 import (
 	"testing"
 
-	regularsnippet "github.com/fastly/terraform-provider-fastly/internal/resources/snippet"
+	regularsnippet "github.com/fastly/terraform-provider-fastly-beta/internal/resources/snippet"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 

@@ -1,7 +1,7 @@
 package ngwafworkspacetemplatedsignalrule
 
 import (
-	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwafrule"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafrule"
 
 	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/rules"
 )

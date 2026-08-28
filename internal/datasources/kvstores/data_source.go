@@ -3,8 +3,8 @@ package kvstores
 import (
 	"context"
 
-	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
-	"github.com/fastly/terraform-provider-fastly/internal/datasources/idhash"
+	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/idhash"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"

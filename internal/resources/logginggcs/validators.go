@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/fastly/terraform-provider-fastly/internal/service"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"

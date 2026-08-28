@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/fastly/go-fastly/v17/fastly/apisecurity/operations"
-	"github.com/fastly/terraform-provider-fastly/internal/errors"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 )
 
 // Covers create, in-place rename (name is mutable, unlike the operation
