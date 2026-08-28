@@ -1791,6 +1791,35 @@ func ConfigNGWAFWorkspacesDataSource(h string) string {
 	})
 }
 
+// ConfigNGWAFWorkspaceSignal returns a config declaring a workspace-scoped NGWAF signal.
+func ConfigNGWAFWorkspaceSignal(workspaceName, signalName, signalDescription string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/ngwaf_workspace_signal_basic.tf", map[string]string{
+		"WORKSPACE_NAME":     workspaceName,
+		"SIGNAL_NAME":        signalName,
+		"SIGNAL_DESCRIPTION": signalDescription,
+	})
+}
+
+// ConfigNGWAFWorkspaceSignalUpdated returns a config updating the description of a
+// workspace-scoped NGWAF signal. Signal names are immutable and require replacement.
+func ConfigNGWAFWorkspaceSignalUpdated(workspaceName, signalName, updatedDescription string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/ngwaf_workspace_signal_updated.tf", map[string]string{
+		"WORKSPACE_NAME":             workspaceName,
+		"SIGNAL_NAME":                signalName,
+		"SIGNAL_DESCRIPTION_UPDATED": updatedDescription,
+	})
+}
+
+// ConfigNGWAFWorkspaceSignalsDataSource returns a config declaring two workspace-scoped
+// NGWAF signals alongside a fastly_ngwaf_workspace_signals data source.
+func ConfigNGWAFWorkspaceSignalsDataSource(workspaceName, signalName1, signalName2 string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/ngwaf_workspace_signals_with_datasource.tf", map[string]string{
+		"WORKSPACE_NAME": workspaceName,
+		"SIGNAL_NAME_1":  signalName1,
+		"SIGNAL_NAME_2":  signalName2,
+	})
+}
+
 // ConfigComputeAutoWithACLResourceLink returns a Compute auto service config with a
 // domain, package, and a resource_link block pointing at a Terraform-managed fastly_acl
 // (declared as a sibling resource, referenced by ID rather than a literal string).
