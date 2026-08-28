@@ -2,6 +2,7 @@ package ngwafworkspacerules
 
 import (
 	"context"
+	"sort"
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/idhash"
@@ -10,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -130,12 +132,33 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		return
 	}
 
-	ids := make([]string, 0, len(remoteState.Data))
-	elements := make([]attr.Value, 0, len(remoteState.Data))
-	for _, rule := range remoteState.Data {
+	listVal, ids, diags := flattenRules(remoteState.Data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	state.Rules = listVal
+	state.ID = types.StringValue(idhash.HashIDs(append([]string{workspaceID}, ids...)))
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func flattenRules(data []rules.Rule) (types.List, []string, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	sorted := append([]rules.Rule(nil), data...)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		return sorted[i].RuleID < sorted[j].RuleID
+	})
+
+	ids := make([]string, 0, len(sorted))
+	elements := make([]attr.Value, 0, len(sorted))
+
+	for _, rule := range sorted {
 		ids = append(ids, rule.RuleID)
 
-		obj, diags := types.ObjectValue(ruleAttrTypes, map[string]attr.Value{
+		obj, objDiags := types.ObjectValue(ruleAttrTypes, map[string]attr.Value{
 			"id":          types.StringValue(rule.RuleID),
 			"type":        types.StringValue(rule.Type),
 			"description": types.StringValue(rule.Description),
@@ -143,21 +166,12 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 			"created_at":  types.StringValue(rule.CreatedAt.Format("2006-01-02T15:04:05Z")),
 			"updated_at":  types.StringValue(rule.UpdatedAt.Format("2006-01-02T15:04:05Z")),
 		})
-		resp.Diagnostics.Append(diags...)
+		diags.Append(objDiags...)
 		elements = append(elements, obj)
 	}
-	if resp.Diagnostics.HasError() {
-		return
-	}
 
-	listVal, diags := types.ListValue(types.ObjectType{AttrTypes: ruleAttrTypes}, elements)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	listValue, listDiags := types.ListValue(types.ObjectType{AttrTypes: ruleAttrTypes}, elements)
+	diags.Append(listDiags...)
 
-	state.Rules = listVal
-	state.ID = types.StringValue(idhash.HashIDs(ids))
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	return listValue, ids, diags
 }
