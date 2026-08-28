@@ -91,9 +91,6 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	if state.WorkspaceID.ValueString() == "" {
-		state.WorkspaceID = plan.WorkspaceID
-	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -135,9 +132,6 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 
-	if newState.WorkspaceID.ValueString() == "" {
-		newState.WorkspaceID = state.WorkspaceID
-	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
 }
@@ -177,9 +171,6 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	if newState.WorkspaceID.ValueString() == "" {
-		newState.WorkspaceID = plan.WorkspaceID
-	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
 }
