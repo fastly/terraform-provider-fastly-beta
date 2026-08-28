@@ -1,0 +1,82 @@
+---
+page_title: "fastly_ngwaf_workspace_rate_limit_rule Resource - fastly"
+subcategory: ""
+description: |-
+  Manages a Fastly Next-Gen WAF rate limit rule scoped to a single workspace.
+---
+
+# fastly_ngwaf_workspace_rate_limit_rule (Resource)
+
+Manages a Fastly Next-Gen WAF `rate_limit` rule scoped to a single workspace:
+it counts matching requests per client and acts once they cross a threshold.
+
+The `rate_limit` block is required and sets the threshold, the window, and
+the custom signal used to count requests. `client_identifiers` decides how
+requests are grouped into clients.
+
+Rules of other types are managed by their own resources -
+`fastly_ngwaf_workspace_request_rule`,
+`fastly_ngwaf_workspace_signal_rule`, and
+`fastly_ngwaf_workspace_templated_signal_rule`. All four can be read back
+together via the `fastly_ngwaf_workspace_rules` data source.
+
+## Example Usage
+
+```terraform
+resource "fastly_ngwaf_workspace" "example" {
+  name        = "Example Workspace"
+  description = "Managed by Terraform"
+  mode        = "block"
+
+  attack_signal_thresholds {}
+}
+
+resource "fastly_ngwaf_workspace_rate_limit_rule" "rate_limit_example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+  description  = "Rate limit login attempts by IP"
+  enabled      = true
+
+  condition {
+    field    = "path"
+    operator = "equals"
+    value    = "/login"
+  }
+
+  rate_limit {
+    duration  = 300
+    interval  = 60
+    signal    = "site.excessive-login-attempts"
+    threshold = 100
+
+    client_identifiers {
+      type = "ip"
+    }
+
+    client_identifiers {
+      type = "request_cookie"
+      name = "session_id"
+    }
+  }
+
+  action {
+    type   = "log_request"
+    signal = "site.excessive-login-attempts"
+  }
+}
+```
+
+## Combining client identifiers
+
+Only `ip` may be paired with a second `client_identifiers` entry; every other
+type must be the sole entry.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Next-Gen WAF workspace rate limit rules are imported using a combination of
+the workspace ID and the rule ID, separated by a `/`:
+
+```shell
+terraform import fastly_ngwaf_workspace_rate_limit_rule.example WORKSPACE_ID/RULE_ID
+```

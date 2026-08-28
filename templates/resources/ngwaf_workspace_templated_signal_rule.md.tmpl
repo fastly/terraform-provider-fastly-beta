@@ -1,0 +1,79 @@
+---
+page_title: "fastly_ngwaf_workspace_templated_signal_rule Resource - fastly"
+subcategory: ""
+description: |-
+  Manages a Fastly Next-Gen WAF templated signal rule scoped to a single workspace.
+---
+
+# fastly_ngwaf_workspace_templated_signal_rule (Resource)
+
+Manages a Fastly Next-Gen WAF `templated_signal` rule scoped to a single
+workspace: it adds one of Fastly's templated signals to matching requests.
+
+A templated signal is usually derived from other signals rather than from
+request attributes alone, which is what the `multival_condition` on
+`field = "signal"` in the example below expresses: tag a request
+`INVITE-FAILURE` when it already carries `INVITE-ATTEMPT` and came back 404.
+
+Two things set this rule type apart from the others:
+
+- It takes no `description`; the API accepts only an empty one.
+- Every change replaces the rule. The API rejects an update to a
+  `templated_signal` rule that carries actions, and its action is mandatory,
+  so there is nothing to change in place.
+
+Rules of other types are managed by their own resources -
+`fastly_ngwaf_workspace_request_rule`,
+`fastly_ngwaf_workspace_signal_rule`, and
+`fastly_ngwaf_workspace_rate_limit_rule`. All four can be read back together
+via the `fastly_ngwaf_workspace_rules` data source.
+
+## Example Usage
+
+```terraform
+resource "fastly_ngwaf_workspace" "example" {
+  name        = "Example Workspace"
+  description = "Managed by Terraform"
+  mode        = "block"
+
+  attack_signal_thresholds {}
+}
+
+resource "fastly_ngwaf_workspace_templated_signal_rule" "invite_failure" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+  enabled      = true
+
+  condition {
+    field    = "response_code"
+    operator = "equals"
+    value    = "404"
+  }
+
+  multival_condition {
+    field          = "signal"
+    operator       = "exists"
+    group_operator = "all"
+
+    condition {
+      field    = "signal_id"
+      operator = "equals"
+      value    = "INVITE-ATTEMPT"
+    }
+  }
+
+  action {
+    signal = "INVITE-FAILURE"
+  }
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Next-Gen WAF workspace templated signal rules are imported using a
+combination of the workspace ID and the rule ID, separated by a `/`:
+
+```shell
+terraform import fastly_ngwaf_workspace_templated_signal_rule.example WORKSPACE_ID/RULE_ID
+```

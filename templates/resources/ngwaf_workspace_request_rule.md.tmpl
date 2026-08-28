@@ -1,0 +1,122 @@
+---
+page_title: "fastly_ngwaf_workspace_request_rule Resource - fastly"
+subcategory: ""
+description: |-
+  Manages a Fastly Next-Gen WAF request rule scoped to a single workspace.
+---
+
+# fastly_ngwaf_workspace_request_rule (Resource)
+
+Manages a Fastly Next-Gen WAF `request` rule scoped to a single workspace: it
+inspects incoming requests and allows, blocks, challenges, or tags them.
+
+Rules of other types are managed by their own resources -
+`fastly_ngwaf_workspace_signal_rule`,
+`fastly_ngwaf_workspace_rate_limit_rule`, and
+`fastly_ngwaf_workspace_templated_signal_rule`. All four can be read back
+together via the `fastly_ngwaf_workspace_rules` data source.
+
+## Example Usage
+
+```terraform
+resource "fastly_ngwaf_workspace" "example" {
+  name        = "Example Workspace"
+  description = "Managed by Terraform"
+  mode        = "block"
+
+  attack_signal_thresholds {}
+}
+
+resource "fastly_ngwaf_workspace_request_rule" "example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+  description  = "Block a specific IP"
+  enabled      = true
+
+  condition {
+    field    = "ip"
+    operator = "equals"
+    value    = "127.0.0.1"
+  }
+
+  action {
+    type = "block"
+  }
+}
+```
+
+### Grouped and multi-value conditions
+
+```terraform
+resource "fastly_ngwaf_workspace_request_rule" "grouped_example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+  description  = "Block admin paths hit without the expected header"
+  enabled      = true
+
+  group_condition {
+    group_operator = "all"
+
+    condition {
+      field    = "path"
+      operator = "contains"
+      value    = "/admin"
+    }
+
+    multival_condition {
+      field          = "request_header"
+      operator       = "does_not_exist"
+      group_operator = "any"
+
+      condition {
+        field    = "name"
+        operator = "equals"
+        value    = "X-Internal-Token"
+      }
+    }
+  }
+
+  action {
+    type = "block"
+  }
+}
+```
+
+### Standalone multi-value condition
+
+`multival_condition` can also be declared at the rule's top level, independent
+of any `group_condition` - useful when the multival check is the rule's only
+condition.
+
+```terraform
+resource "fastly_ngwaf_workspace_request_rule" "debug_query_param" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+  description  = "Block requests carrying a debug query parameter"
+  enabled      = true
+
+  multival_condition {
+    field          = "query_parameter"
+    operator       = "exists"
+    group_operator = "any"
+
+    condition {
+      field    = "name"
+      operator = "equals"
+      value    = "debug"
+    }
+  }
+
+  action {
+    type = "block"
+  }
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Next-Gen WAF workspace request rules are imported using a combination of the
+workspace ID and the rule ID, separated by a `/`:
+
+```shell
+terraform import fastly_ngwaf_workspace_request_rule.example WORKSPACE_ID/RULE_ID
+```
