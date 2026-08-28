@@ -14,7 +14,7 @@ resource "fastly_ngwaf_workspace_signal" "test" {
 
 resource "fastly_ngwaf_workspace_rate_limit_rule" "test" {
   workspace_id = fastly_ngwaf_workspace.test.id
-  description  = "Rate limit by IP"
+  description  = "Rate limit by signal payload"
   enabled      = true
 
   condition {
@@ -30,9 +30,8 @@ resource "fastly_ngwaf_workspace_rate_limit_rule" "test" {
     threshold = 100
 
     client_identifiers {
-      type = "request_header"
-      name = "X-Forwarded-For"
-      key  = "ip"
+      type   = "signal_payload"
+      signal = fastly_ngwaf_workspace_signal.test.reference_id
     }
   }
 

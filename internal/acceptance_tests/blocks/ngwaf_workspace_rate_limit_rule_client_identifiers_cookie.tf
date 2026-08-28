@@ -1,5 +1,19 @@
+resource "fastly_ngwaf_workspace" "test" {
+  name        = "{{.WORKSPACE_NAME}}"
+  description = "Test NGWAF Workspace for a rate_limit rule"
+  mode        = "log"
+
+  attack_signal_thresholds {}
+}
+
+resource "fastly_ngwaf_workspace_signal" "test" {
+  workspace_id = fastly_ngwaf_workspace.test.id
+  name         = "{{.SIGNAL_NAME}}"
+  description  = "Signal used by the rate_limit rule under test"
+}
+
 resource "fastly_ngwaf_workspace_rate_limit_rule" "test" {
-  workspace_id = "{{.WORKSPACE_ID}}"
+  workspace_id = fastly_ngwaf_workspace.test.id
   description  = "Rate limit by IP"
   enabled      = true
 
@@ -12,7 +26,7 @@ resource "fastly_ngwaf_workspace_rate_limit_rule" "test" {
   rate_limit {
     duration  = 300
     interval  = 60
-    signal    = "{{.SIGNAL_ID}}"
+    signal    = fastly_ngwaf_workspace_signal.test.reference_id
     threshold = 100
 
     client_identifiers {
@@ -27,6 +41,6 @@ resource "fastly_ngwaf_workspace_rate_limit_rule" "test" {
 
   action {
     type   = "log_request"
-    signal = "{{.SIGNAL_ID}}"
+    signal = fastly_ngwaf_workspace_signal.test.reference_id
   }
 }
