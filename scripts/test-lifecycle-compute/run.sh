@@ -146,9 +146,9 @@ build_provider() {
     cd "$REPO_ROOT"
 
     log_info "Running go build..."
-    go build -o terraform-provider-fastly
+    go build -o terraform-provider-fastly-beta
 
-    local provider_path="$REPO_ROOT/terraform-provider-fastly"
+    local provider_path="$REPO_ROOT/terraform-provider-fastly-beta"
     if [ ! -f "$provider_path" ]; then
         log_error "Provider binary not found at $provider_path"
         exit 1

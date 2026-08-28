@@ -4,10 +4,10 @@ import (
 	"context"
 	"maps"
 
-	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
-	"github.com/fastly/terraform-provider-fastly/internal/resources/healthcheck"
-	"github.com/fastly/terraform-provider-fastly/internal/service"
-	"github.com/fastly/terraform-provider-fastly/internal/validation"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/healthcheck"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"

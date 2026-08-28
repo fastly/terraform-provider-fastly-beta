@@ -1,7 +1,7 @@
 package reconcile
 
 import (
-	"github.com/fastly/terraform-provider-fastly/internal/errors"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 )
 
 // DiffSet reconciles a many-to-many association keyed by plain strings (e.g. a director's

@@ -6,11 +6,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
-	"github.com/fastly/terraform-provider-fastly/internal/resources/dictionary"
-	"github.com/fastly/terraform-provider-fastly/internal/resources/responseobject"
-	"github.com/fastly/terraform-provider-fastly/internal/service"
-	"github.com/fastly/terraform-provider-fastly/internal/validation"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dictionary"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/responseobject"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -328,7 +328,7 @@ func (o *ops) Update(ctx context.Context, client *fastly.Client, serviceID strin
 // uri_dictionary_name/response_object_name/response entirely when desired clears them, since
 // the API rejects an explicit empty value for any of the three - but omitting them on update
 // just leaves the previously configured value in place, silently diverging from a plan that
-// shows the field cleared (see https://github.com/fastly/terraform-provider-fastly/pull/1408).
+// shows the field cleared (see https://github.com/fastly/terraform-provider-fastly-beta/pull/1408).
 // Recreating is the only way to actually clear them, mirroring account_name's handling in
 // loggingbigquery.
 func needsRecreate(desired NestedModel, remote *fastly.ERL) bool {

@@ -1,6 +1,8 @@
 GO_BIN ?= go
 
 PKG_NAME := fastly
+FULL_PKG_NAME := github.com/fastly/terraform-provider-$(PKG_NAME)-beta
+VERSION_PLACEHOLDER := version.Version
 VERSION := $(shell git describe --tags --always)
 VERSION_SHORT := $(shell git describe --tags --always --abbrev=0 2>/dev/null || echo v0.0.0)
 DOCS_PROVIDER_VERSION := $(subst v,,$(VERSION_SHORT))
@@ -37,7 +39,7 @@ fmt:
 build: fmt
 	@echo "==> Building provider binary..."
 	@mkdir -p $(BIN_DIR)
-	@$(GO_BIN) build -ldflags="-X 'github.com/fastly/terraform-provider-fastly/internal/version.Version=$(VERSION)'" -o $(BINARY)
+	@$(GO_BIN) build -ldflags="-X $(FULL_PKG_NAME)/internal/$(VERSION_PLACEHOLDER)=$(VERSION)" -o $(BINARY)
 	@$(MAKE) --no-print-directory dev-overrides
 
 dev-overrides:

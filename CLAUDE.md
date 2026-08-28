@@ -1,4 +1,4 @@
-# terraform-provider-fastly
+# terraform-provider-fastly-beta
 
 A Terraform provider for the [Fastly](https://www.fastly.com/) API, built on the [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework).
 

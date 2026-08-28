@@ -9,10 +9,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/fastly/terraform-provider-fastly/internal/resources/responseobject"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/responseobject"
 
 	fastly "github.com/fastly/go-fastly/v17/fastly"
-	"github.com/fastly/terraform-provider-fastly/internal/resources/dictionary"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dictionary"
 )
 
 func minimalNestedModel() NestedModel {
