@@ -3,9 +3,9 @@ package responseobject
 import (
 	"context"
 
-	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
-	"github.com/fastly/terraform-provider-fastly/internal/service"
-	"github.com/fastly/terraform-provider-fastly/internal/validation"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"

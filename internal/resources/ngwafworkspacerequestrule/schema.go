@@ -3,7 +3,7 @@
 package ngwafworkspacerequestrule
 
 import (
-	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwafrule"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafrule"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"

@@ -18,15 +18,15 @@ func TestUserAgentTransport(t *testing.T) {
 	}{
 		{
 			name:           "prefix only",
-			prefix:         "terraform-provider-fastly/1.2.3",
+			prefix:         "terraform-provider-fastly-beta/1.2.3",
 			suffix:         "",
-			expectedSuffix: "terraform-provider-fastly/1.2.3 " + fastly.UserAgent,
+			expectedSuffix: "terraform-provider-fastly-beta/1.2.3 " + fastly.UserAgent,
 		},
 		{
 			name:           "prefix and suffix",
-			prefix:         "terraform-provider-fastly/1.2.3",
+			prefix:         "terraform-provider-fastly-beta/1.2.3",
 			suffix:         "mode=auto",
-			expectedSuffix: "terraform-provider-fastly/1.2.3 " + fastly.UserAgent + " mode=auto",
+			expectedSuffix: "terraform-provider-fastly-beta/1.2.3 " + fastly.UserAgent + " mode=auto",
 		},
 	}
 

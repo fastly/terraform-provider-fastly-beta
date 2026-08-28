@@ -14,8 +14,8 @@ import (
 	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/scope"
 	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/signals"
-	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
-	"github.com/fastly/terraform-provider-fastly/internal/datasources/idhash"
+	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/idhash"
 )
 
 var _ datasource.DataSource = &DataSource{}

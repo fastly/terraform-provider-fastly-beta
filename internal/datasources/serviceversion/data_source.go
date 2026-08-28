@@ -3,7 +3,7 @@ package serviceversion
 import (
 	"context"
 
-	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
+	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
