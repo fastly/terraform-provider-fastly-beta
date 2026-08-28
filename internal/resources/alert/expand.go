@@ -65,23 +65,48 @@ func evaluationStrategyMap(strategy []EvaluationStrategyModel) map[string]any {
 		"threshold": s.Threshold.ValueFloat64(),
 	}
 
-	if !s.IgnoreBelow.IsNull() && !s.IgnoreBelow.IsUnknown() && s.IgnoreBelow.ValueFloat64() > 0 {
+	if !s.IgnoreBelow.IsNull() && !s.IgnoreBelow.IsUnknown() {
 		m["ignore_below"] = s.IgnoreBelow.ValueFloat64()
 	}
 
 	return m
 }
 
-func BuildCreateInput(ctx context.Context, plan Model) (*fastly.CreateAlertDefinitionInput, diag.Diagnostics) {
+// commonFields holds the attributes shared by create and update requests.
+type commonFields struct {
+	Description        string
+	Dimensions         map[string][]string
+	EvaluationStrategy map[string]any
+	IntegrationIDs     []string
+	Metric             string
+	Name               string
+}
+
+func buildCommonFields(ctx context.Context, plan Model) (commonFields, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	input := &fastly.CreateAlertDefinitionInput{
-		Description:        new(descriptionWithManagedSuffix(service.StringValue(plan.Description))),
+	f := commonFields{
+		Description:        descriptionWithManagedSuffix(service.StringValue(plan.Description)),
 		Dimensions:         dimensionsMap(ctx, plan.Dimensions, &diags),
 		EvaluationStrategy: evaluationStrategyMap(plan.EvaluationStrategy),
 		IntegrationIDs:     setToStringSlice(ctx, plan.IntegrationIDs, &diags),
-		Metric:             new(service.StringValue(plan.Metric)),
-		Name:               new(service.StringValue(plan.Name)),
+		Metric:             service.StringValue(plan.Metric),
+		Name:               service.StringValue(plan.Name),
+	}
+
+	return f, diags
+}
+
+func BuildCreateInput(ctx context.Context, plan Model) (*fastly.CreateAlertDefinitionInput, diag.Diagnostics) {
+	f, diags := buildCommonFields(ctx, plan)
+
+	input := &fastly.CreateAlertDefinitionInput{
+		Description:        &f.Description,
+		Dimensions:         f.Dimensions,
+		EvaluationStrategy: f.EvaluationStrategy,
+		IntegrationIDs:     f.IntegrationIDs,
+		Metric:             &f.Metric,
+		Name:               &f.Name,
 		ServiceID:          new(service.StringValue(plan.ServiceID)),
 		Source:             new(service.StringValue(plan.Source)),
 	}
@@ -90,16 +115,16 @@ func BuildCreateInput(ctx context.Context, plan Model) (*fastly.CreateAlertDefin
 }
 
 func BuildUpdateInput(ctx context.Context, id string, plan Model) (*fastly.UpdateAlertDefinitionInput, diag.Diagnostics) {
-	var diags diag.Diagnostics
+	f, diags := buildCommonFields(ctx, plan)
 
 	input := &fastly.UpdateAlertDefinitionInput{
 		ID:                 &id,
-		Description:        new(descriptionWithManagedSuffix(service.StringValue(plan.Description))),
-		Dimensions:         dimensionsMap(ctx, plan.Dimensions, &diags),
-		EvaluationStrategy: evaluationStrategyMap(plan.EvaluationStrategy),
-		IntegrationIDs:     setToStringSlice(ctx, plan.IntegrationIDs, &diags),
-		Metric:             new(service.StringValue(plan.Metric)),
-		Name:               new(service.StringValue(plan.Name)),
+		Description:        &f.Description,
+		Dimensions:         f.Dimensions,
+		EvaluationStrategy: f.EvaluationStrategy,
+		IntegrationIDs:     f.IntegrationIDs,
+		Metric:             &f.Metric,
+		Name:               &f.Name,
 	}
 
 	return input, diags

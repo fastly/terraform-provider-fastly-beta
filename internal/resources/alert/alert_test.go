@@ -120,16 +120,27 @@ func TestEvaluationStrategyMap_ignoreBelow(t *testing.T) {
 	}, m)
 }
 
-func TestEvaluationStrategyMap_ignoreBelowZeroOmitted(t *testing.T) {
+func TestEvaluationStrategyMap_ignoreBelowNullOmitted(t *testing.T) {
 	m := evaluationStrategyMap([]EvaluationStrategyModel{{
 		Type:        types.StringValue("above_threshold"),
 		Period:      types.StringValue("5m"),
 		Threshold:   types.Float64Value(10),
-		IgnoreBelow: types.Float64Value(0),
+		IgnoreBelow: types.Float64Null(),
 	}})
 
 	_, ok := m["ignore_below"]
-	assert.False(t, ok, "a zero-value ignore_below should not be sent")
+	assert.False(t, ok, "an unset ignore_below should not be sent")
+}
+
+func TestEvaluationStrategyMap_ignoreBelowAtMinimumIncluded(t *testing.T) {
+	m := evaluationStrategyMap([]EvaluationStrategyModel{{
+		Type:        types.StringValue("above_threshold"),
+		Period:      types.StringValue("5m"),
+		Threshold:   types.Float64Value(10),
+		IgnoreBelow: types.Float64Value(0.00001),
+	}})
+
+	assert.Equal(t, 0.00001, m["ignore_below"], "a value at the schema minimum must still round-trip, not be dropped")
 }
 
 func TestFlattenToModel_descriptionSuffixStripped(t *testing.T) {
@@ -148,7 +159,7 @@ func TestFlattenToModel_descriptionSuffixStripped(t *testing.T) {
 	assert.Equal(t, types.StringValue("my description"), m.Description)
 }
 
-func TestFlattenToModel_descriptionOnlyManagedSuffixLeftUnset(t *testing.T) {
+func TestFlattenToModel_descriptionOnlyManagedSuffixBecomesEmptyString(t *testing.T) {
 	ad := &fastly.AlertDefinition{
 		ID:                 "def123",
 		Name:               "my alert",
@@ -160,7 +171,7 @@ func TestFlattenToModel_descriptionOnlyManagedSuffixLeftUnset(t *testing.T) {
 
 	m, diags := FlattenToModel(context.Background(), ad)
 	require.False(t, diags.HasError())
-	assert.Equal(t, types.StringNull(), m.Description)
+	assert.Equal(t, types.StringValue(""), m.Description, "an explicit empty description must round-trip as itself, not null")
 }
 
 func TestFlattenToModel_dimensionsOnlyConfiguredKeyPresent(t *testing.T) {
@@ -230,7 +241,7 @@ func TestFlattenToModel_integrationIDs(t *testing.T) {
 	assert.ElementsMatch(t, []string{"int1", "int2"}, ids)
 }
 
-func TestFlattenToModel_noIntegrationIDsIsNull(t *testing.T) {
+func TestFlattenToModel_noIntegrationIDsIsEmptySet(t *testing.T) {
 	ad := &fastly.AlertDefinition{
 		ID:     "def123",
 		Name:   "my alert",
@@ -240,7 +251,8 @@ func TestFlattenToModel_noIntegrationIDsIsNull(t *testing.T) {
 
 	m, diags := FlattenToModel(context.Background(), ad)
 	require.False(t, diags.HasError())
-	assert.Equal(t, types.SetNull(types.StringType), m.IntegrationIDs)
+	require.False(t, m.IntegrationIDs.IsNull(), "no integrations must flatten to an empty set, not null")
+	assert.Len(t, m.IntegrationIDs.Elements(), 0)
 }
 
 func TestFlattenEvaluationStrategy_ignoreBelowPresentAndAbsent(t *testing.T) {

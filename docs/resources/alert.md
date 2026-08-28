@@ -98,8 +98,8 @@ resource "fastly_alert" "domain_scoped" {
 ### Required
 
 - `metric` (String) The metric name to alert on for a specific source: [domains](https://developer.fastly.com/reference/api/metrics-stats/domain-inspector/historical), [origins](https://developer.fastly.com/reference/api/metrics-stats/origin-inspector/historical), or [stats](https://developer.fastly.com/reference/api/metrics-stats/historical-stats).
-- `name` (String) The name of the alert.
-- `source` (String) The source where the metric comes from. One of: `domains`, `origins`, `stats`.
+- `name` (String) The name of the alert definition.
+- `source` (String) The service on which the definition will alert on. One of: `domains`, `origins`, `stats`.
 
 ### Optional
 

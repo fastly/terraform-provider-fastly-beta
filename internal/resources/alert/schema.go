@@ -3,9 +3,11 @@ package alert
 import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/float64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -58,11 +60,19 @@ func ResourceAttributes() map[string]schema.Attribute {
 		},
 		"name": schema.StringAttribute{
 			Required:    true,
-			Description: "The name of the alert.",
+			Description: "The name of the alert definition.",
+			Validators: []validator.String{
+				stringvalidator.LengthAtMost(255),
+			},
 		},
 		"description": schema.StringAttribute{
 			Optional:    true,
+			Computed:    true,
+			Default:     stringdefault.StaticString(""),
 			Description: "Additional text that is included in the alert notification.",
+			Validators: []validator.String{
+				stringvalidator.LengthAtMost(4096),
+			},
 		},
 		"service_id": schema.StringAttribute{
 			Optional:    true,
@@ -73,7 +83,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 		},
 		"source": schema.StringAttribute{
 			Required:    true,
-			Description: "The source where the metric comes from. One of: `domains`, `origins`, `stats`.",
+			Description: "The service on which the definition will alert on. One of: `domains`, `origins`, `stats`.",
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
 			},
@@ -88,7 +98,11 @@ func ResourceAttributes() map[string]schema.Attribute {
 		"integration_ids": schema.SetAttribute{
 			ElementType: types.StringType,
 			Optional:    true,
+			Computed:    true,
 			Description: "List of integrations used to notify when alert fires.",
+			Validators: []validator.Set{
+				setvalidator.SizeAtMost(10),
+			},
 		},
 	}
 }
@@ -142,12 +156,15 @@ func EvaluationStrategyBlock() schema.ListNestedBlock {
 				"threshold": schema.Float64Attribute{
 					Required:    true,
 					Description: "Threshold used to alert.",
+					Validators: []validator.Float64{
+						float64validator.AtLeast(0),
+					},
 				},
 				"ignore_below": schema.Float64Attribute{
 					Optional:    true,
 					Description: "Threshold for the denominator value used in evaluations that calculate a rate or ratio. Usually used to filter out noise.",
 					Validators: []validator.Float64{
-						float64validator.AtLeast(0),
+						float64validator.AtLeast(0.00001),
 					},
 				},
 			},

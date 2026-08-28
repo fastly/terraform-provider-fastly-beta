@@ -27,9 +27,7 @@ func FlattenToModel(ctx context.Context, ad *fastly.AlertDefinition) (Model, dia
 	}
 
 	description := strings.TrimSpace(strings.TrimSuffix(ad.Description, managedByTerraform))
-	if description != "" {
-		m.Description = types.StringValue(description)
-	}
+	m.Description = types.StringValue(description)
 
 	domains, present := ad.Dimensions["domains"]
 	domainsSet, d := flattenDimensionSet(ctx, domains, present)
@@ -47,13 +45,13 @@ func FlattenToModel(ctx context.Context, ad *fastly.AlertDefinition) (Model, dia
 		m.EvaluationStrategy = []EvaluationStrategyModel{flattenEvaluationStrategy(ad.EvaluationStrategy)}
 	}
 
-	if len(ad.IntegrationIDs) > 0 {
-		ids, d := types.SetValueFrom(ctx, types.StringType, ad.IntegrationIDs)
-		diags.Append(d...)
-		m.IntegrationIDs = ids
-	} else {
-		m.IntegrationIDs = types.SetNull(types.StringType)
+	integrationIDs := ad.IntegrationIDs
+	if integrationIDs == nil {
+		integrationIDs = []string{}
 	}
+	ids, d := types.SetValueFrom(ctx, types.StringType, integrationIDs)
+	diags.Append(d...)
+	m.IntegrationIDs = ids
 
 	return m, diags
 }
