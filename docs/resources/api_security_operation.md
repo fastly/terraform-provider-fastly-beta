@@ -39,9 +39,9 @@ resource "fastly_api_security_operation" "example" {
 ### Required
 
 - `domain` (String) Domain for the operation (exact match). Can be created, but not updated.
-- `method` (String) HTTP method for the operation (e.g. GET, POST). Can be created, but not updated.
+- `method` (String) HTTP method for the operation. Can be created, but not updated.
 - `path` (String) Path for the operation (exact match). Can be created, but not updated.
-- `service_id` (String) Service ID the operation belongs to. To import, use: <service_id>/<operation_id>.
+- `service_id` (String) Service ID the operation belongs to.
 
 ### Optional
 
@@ -51,7 +51,7 @@ resource "fastly_api_security_operation" "example" {
 ### Read-Only
 
 - `created_at` (String) Created timestamp (when present).
-- `id` (String) Alphanumeric string identifying the resource. Format: `service_id/operation_id`.
+- `id` (String) Alphanumeric string identifying the resource.
 - `last_seen_at` (String) Last seen timestamp (when present).
 - `operation_id` (String) The operation ID.
 - `rps` (Number) Observed requests per second (when present).

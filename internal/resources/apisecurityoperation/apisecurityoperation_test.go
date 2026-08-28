@@ -41,11 +41,12 @@ func TestSchema(t *testing.T) {
 	description, ok := resp.Schema.Attributes["description"].(resourceschema.StringAttribute)
 	require.True(t, ok)
 	require.True(t, description.Optional)
-	require.False(t, description.Computed)
+	require.True(t, description.Computed)
 
 	tagIDs, ok := resp.Schema.Attributes["tag_ids"].(resourceschema.SetAttribute)
 	require.True(t, ok)
 	require.True(t, tagIDs.Optional)
+	require.True(t, tagIDs.Computed)
 	require.Equal(t, types.StringType, tagIDs.ElementType)
 
 	computedOnly := []string{"operation_id", "status", "rps", "created_at", "updated_at", "last_seen_at"}
@@ -70,7 +71,7 @@ func TestBuildCreateInput(t *testing.T) {
 	ctx := context.Background()
 
 	plan := Model{
-		Method:      types.StringValue("get"),
+		Method:      types.StringValue("GET"),
 		Domain:      types.StringValue("api.example.com"),
 		Path:        types.StringValue("/v1/things"),
 		Description: types.StringNull(),
@@ -79,7 +80,7 @@ func TestBuildCreateInput(t *testing.T) {
 
 	in := buildCreateInput(ctx, "service-1", plan)
 	require.Equal(t, "service-1", *in.ServiceID)
-	require.Equal(t, "GET", *in.Method, "method must be uppercased before being sent to the API")
+	require.Equal(t, "GET", *in.Method, "method enum validation on the schema guarantees the plan value is already uppercase")
 	require.Equal(t, "api.example.com", *in.Domain)
 	require.Equal(t, "/v1/things", *in.Path)
 	require.Nil(t, in.Description)
@@ -152,10 +153,11 @@ func TestFlatten(t *testing.T) {
 	require.Equal(t, types.StringValue("service-1"), model.ServiceID)
 	require.Equal(t, types.StringValue("op-1"), model.OperationID)
 	require.Equal(t, types.StringValue("GET"), model.Method)
-	require.True(t, model.Description.IsNull(), "empty description must flatten to null, not an empty string")
+	require.Equal(t, types.StringValue(""), model.Description, "an explicit empty description must round-trip as itself, not null")
 	require.True(t, model.Status.IsNull())
 	require.True(t, model.CreatedAt.IsNull())
-	require.True(t, model.TagIDs.IsNull())
+	require.False(t, model.TagIDs.IsNull(), "no tags must flatten to an empty set, not null")
+	require.Len(t, model.TagIDs.Elements(), 0)
 	require.Equal(t, types.Float64Value(0), model.RPS)
 
 	op.Description = "desc"
