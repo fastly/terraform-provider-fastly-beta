@@ -48,7 +48,7 @@ resource "fastly_ngwaf_workspace_country_list" "example" {
 ### Required
 
 - `entries` (List of String) The entries in the country list.
-- `name` (String) The name of the country list. Must be between 3 and 32 characters. The name is immutable after creation.
+- `name` (String) The name of the country list. Must be between 3 and 32 characters. Changing this attribute will delete and recreate the list.
 - `workspace_id` (String) The ID of the workspace that owns the list.
 
 ### Optional

@@ -30,7 +30,7 @@ func Attributes(listType string) map[string]schema.Attribute {
 		},
 		"name": schema.StringAttribute{
 			Required:    true,
-			Description: fmt.Sprintf("The name of the %s list. Must be between 3 and 32 characters. The name is immutable after creation.", listType),
+			Description: fmt.Sprintf("The name of the %s list. Must be between 3 and 32 characters. Changing this attribute will delete and recreate the list.", listType),
 			Validators: []validator.String{
 				stringvalidator.LengthBetween(3, 32),
 			},
