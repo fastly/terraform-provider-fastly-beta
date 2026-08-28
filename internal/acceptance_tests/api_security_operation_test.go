@@ -14,9 +14,9 @@ import (
 )
 
 // TestAccFastlyAPISecurityOperation_lifecycle covers create, in-place description update,
-// clearing an optional description back to unset, ForceNew replacement on a method change,
-// and import. tag_ids round-tripping against a real, Terraform-managed tag is covered by
-// CDTOOL-1544 (fastly_api_security_operation_tag), which does not exist yet.
+// clearing an optional description back to its empty-string default, ForceNew replacement
+// on a method change, and import. tag_ids round-tripping against a real, Terraform-managed
+// tag is covered by CDTOOL-1544 (fastly_api_security_operation_tag), which does not exist yet.
 func TestAccFastlyAPISecurityOperation_lifecycle(t *testing.T) {
 	t.Parallel()
 
@@ -59,11 +59,12 @@ func TestAccFastlyAPISecurityOperation_lifecycle(t *testing.T) {
 				),
 			},
 			{
-				// Omitting description entirely must clear it back to unset, not empty string.
+				// Omitting description entirely must clear it back to its empty-string default.
 				Config: ConfigAPISecurityOperation(serviceName, "GET", domainName, path, ""),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckNoResourceAttr("fastly_api_security_operation.example", "description"),
+					resource.TestCheckResourceAttr("fastly_api_security_operation.example", "description", ""),
 					CheckAPISecurityOperationIDUnchanged("fastly_api_security_operation.example", &operationID),
+					CheckAPISecurityOperationRemoteState("fastly_api_security_operation.example", ""),
 				),
 			},
 			{

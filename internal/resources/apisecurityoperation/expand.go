@@ -2,7 +2,6 @@ package apisecurityoperation
 
 import (
 	"context"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -20,11 +19,9 @@ func expandTagIDs(ctx context.Context, s types.Set) []string {
 }
 
 func buildCreateInput(ctx context.Context, serviceID string, plan Model) *operations.CreateInput {
-	method := strings.ToUpper(plan.Method.ValueString())
-
 	in := &operations.CreateInput{
 		ServiceID: &serviceID,
-		Method:    &method,
+		Method:    plan.Method.ValueStringPointer(),
 		Domain:    plan.Domain.ValueStringPointer(),
 		Path:      plan.Path.ValueStringPointer(),
 	}
@@ -39,11 +36,9 @@ func buildCreateInput(ctx context.Context, serviceID string, plan Model) *operat
 	return in
 }
 
-// buildUpdateInput always sends description and tag_ids, even when unchanged:
-// the API's PATCH doesn't merge partial input, so an omitted field gets
-// cleared rather than left alone. TagIDs still can't be cleared to empty on
-// the wire (its `omitempty` tag drops empty slices), but a non-empty value
-// now survives an update that only touches description.
+// Always resends description and tag_ids: PATCH doesn't merge partial input,
+// so an omitted field is cleared rather than left alone. Note tag_ids still
+// can't be cleared to empty, since its `omitempty` tag drops empty slices.
 func buildUpdateInput(ctx context.Context, serviceID, operationID string, plan Model) *operations.UpdateInput {
 	description := plan.Description.ValueString()
 

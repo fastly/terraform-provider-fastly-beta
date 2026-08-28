@@ -16,7 +16,7 @@ func flatten(m *Model, op *operations.Operation, serviceID string) {
 	m.Method = types.StringValue(op.Method)
 	m.Domain = types.StringValue(op.Domain)
 	m.Path = types.StringValue(op.Path)
-	m.Description = stringOrNull(op.Description)
+	m.Description = types.StringValue(op.Description)
 	m.TagIDs = tagIDsFromSlice(op.TagIDs)
 	m.Status = stringOrNull(op.Status)
 	m.RPS = types.Float64Value(op.RPS)
@@ -33,10 +33,6 @@ func stringOrNull(s string) types.String {
 }
 
 func tagIDsFromSlice(ids []string) types.Set {
-	if len(ids) == 0 {
-		return types.SetNull(types.StringType)
-	}
-
 	elems := make([]attr.Value, len(ids))
 	for i, id := range ids {
 		elems[i] = types.StringValue(id)
