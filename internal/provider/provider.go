@@ -26,6 +26,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/ngwafworkspacelists"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/ngwafworkspaces"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/ngwafworkspacesignals"
+	"github.com/fastly/terraform-provider-fastly/internal/datasources/ngwafworkspacethresholds"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/serviceversion"
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/vclsnippets"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/acl"
@@ -61,6 +62,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwafworkspacesignallist"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwafworkspacestringlist"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwafworkspacewildcardlist"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/ngwafworkspacethreshold"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/productenablement"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/resourcelink"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/servicecdn"
@@ -163,6 +165,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		snippet.NewResource,
 		dynamicvclsnippet.NewResource,
 		dynamicsnippetcontent.NewResource,
+		ngwafworkspacethreshold.NewResource,
 		ngwafworkspace.NewResource,
 		ngwafworkspacecountrylist.NewResource,
 		ngwafworkspaceiplist.NewResource,
@@ -195,6 +198,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		configstores.NewDataSource,
 		kvstores.NewDataSource,
 		ngwafworkspacelists.NewDataSource,
+		ngwafworkspacethresholds.NewDataSource,
 		ngwafworkspaces.NewDataSource,
 		ngwafworkspacesignals.NewDataSource,
 		serviceversion.NewDataSource,
