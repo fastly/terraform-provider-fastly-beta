@@ -63,11 +63,12 @@ func TestAccFastlyAPISecurityOperationTag_lifecycle(t *testing.T) {
 				),
 			},
 			{
-				// Omitting description entirely must clear it back to unset, not empty string.
+				// Omitting description entirely must clear it back to its empty-string default.
 				Config: ConfigAPISecurityOperationTag(serviceName, tagName2, ""),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckNoResourceAttr("fastly_api_security_operation_tag.example", "description"),
+					resource.TestCheckResourceAttr("fastly_api_security_operation_tag.example", "description", ""),
 					CheckAPISecurityOperationTagIDUnchanged("fastly_api_security_operation_tag.example", &tagID),
+					CheckAPISecurityOperationTagRemoteState("fastly_api_security_operation_tag.example", tagName2, ""),
 				),
 			},
 			{

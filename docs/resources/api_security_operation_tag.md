@@ -46,7 +46,7 @@ resource "fastly_api_security_operation" "example" {
 ### Required
 
 - `name` (String) The name of the operation tag.
-- `service_id` (String) Service ID the tag belongs to. To import, use: <service_id>/<tag_id>.
+- `service_id` (String) Service ID the tag belongs to.
 
 ### Optional
 
@@ -55,7 +55,7 @@ resource "fastly_api_security_operation" "example" {
 ### Read-Only
 
 - `created_at` (String) Created timestamp (when present).
-- `id` (String) Alphanumeric string identifying the resource. Format: `service_id/tag_id`.
+- `id` (String) Alphanumeric string identifying the resource.
 - `operation_count` (Number) Number of operations associated with this tag (when present).
 - `tag_id` (String) The tag ID.
 - `updated_at` (String) Updated timestamp (when present).

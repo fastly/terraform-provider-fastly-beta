@@ -13,7 +13,7 @@ func flatten(m *Model, tag *operations.OperationTag, serviceID string) {
 	m.ServiceID = types.StringValue(serviceID)
 	m.TagID = types.StringValue(tag.ID)
 	m.Name = types.StringValue(tag.Name)
-	m.Description = stringOrNull(tag.Description)
+	m.Description = types.StringValue(tag.Description)
 	m.OperationCount = types.Int64Value(int64(tag.Count))
 	m.CreatedAt = stringOrNull(tag.CreatedAt)
 	m.UpdatedAt = stringOrNull(tag.UpdatedAt)

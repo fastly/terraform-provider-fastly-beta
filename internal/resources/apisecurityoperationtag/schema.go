@@ -3,6 +3,7 @@ package apisecurityoperationtag
 import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -22,14 +23,14 @@ func ResourceAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"id": schema.StringAttribute{
 			Computed:    true,
-			Description: "Alphanumeric string identifying the resource. Format: `service_id/tag_id`.",
+			Description: "Alphanumeric string identifying the resource.",
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.UseStateForUnknown(),
 			},
 		},
 		"service_id": schema.StringAttribute{
 			Required:    true,
-			Description: "Service ID the tag belongs to. To import, use: <service_id>/<tag_id>.",
+			Description: "Service ID the tag belongs to.",
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
 			},
@@ -47,6 +48,8 @@ func ResourceAttributes() map[string]schema.Attribute {
 		},
 		"description": schema.StringAttribute{
 			Optional:    true,
+			Computed:    true,
+			Default:     stringdefault.StaticString(""),
 			Description: "The description of the operation tag.",
 		},
 		"operation_count": schema.Int64Attribute{

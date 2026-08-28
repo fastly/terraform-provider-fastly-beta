@@ -43,7 +43,7 @@ func TestSchema(t *testing.T) {
 	description, ok := resp.Schema.Attributes["description"].(resourceschema.StringAttribute)
 	require.True(t, ok)
 	require.True(t, description.Optional)
-	require.False(t, description.Computed)
+	require.True(t, description.Computed)
 
 	computedOnly := []string{"id", "tag_id", "operation_count", "created_at", "updated_at"}
 	for _, attrName := range computedOnly {
@@ -112,7 +112,7 @@ func TestFlatten(t *testing.T) {
 	require.Equal(t, types.StringValue("service-1"), model.ServiceID)
 	require.Equal(t, types.StringValue("tag-1"), model.TagID)
 	require.Equal(t, types.StringValue("production"), model.Name)
-	require.True(t, model.Description.IsNull(), "empty description must flatten to null, not an empty string")
+	require.Equal(t, types.StringValue(""), model.Description, "an explicit empty description must round-trip as itself, not null")
 	require.True(t, model.CreatedAt.IsNull())
 	require.Equal(t, types.Int64Value(0), model.OperationCount, "a real zero count must not be nulled out")
 
