@@ -6044,6 +6044,62 @@ func ConfigNGWAFWorkspaceListsByType(workspaceName string, names map[string]stri
 		"WILDCARD_LIST_NAME": names["wildcard"],
 		"COUNTRY_LIST_NAME":  names["country"],
 		"SIGNAL_LIST_NAME":   names["signal"],
+	})
+}
+
+// ConfigAPISecurityOperation returns a CDN service plus a fastly_api_security_operation
+// resource. Passing an empty description omits the attribute from config entirely, to
+// exercise the transition back to an unset (rather than empty-string) description.
+func ConfigAPISecurityOperation(serviceName, method, domain, path, description string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"METHOD":          method,
+			"DOMAIN":          domain,
+			"PATH":            path,
+			"DESCRIPTION":     description,
+		},
+		"internal/acceptance_tests/blocks/api_security_operation.tf",
+	)
+}
+
+// ConfigAPISecurityOperationWithTag returns a CDN service plus a
+// fastly_api_security_operation_tag and a fastly_api_security_operation that references
+// it via tag_ids. Used to prove tag_ids survives an update that only touches description.
+func ConfigAPISecurityOperationWithTag(serviceName, method, domain, path, tagName, description string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"METHOD":          method,
+			"DOMAIN":          domain,
+			"PATH":            path,
+			"TAG_NAME":        tagName,
+			"DESCRIPTION":     description,
+		},
+		"internal/acceptance_tests/blocks/api_security_operation_with_tag.tf",
+	)
+}
+
+// ConfigAPISecurityOperationTag returns a CDN service plus a
+// fastly_api_security_operation_tag resource. Passing an empty description omits the
+// attribute from config entirely, to exercise the transition back to an unset (rather
+// than empty-string) description.
+func ConfigAPISecurityOperationTag(serviceName, tagName, description string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"TAG_NAME":        tagName,
+			"DESCRIPTION":     description,
+		},
+		"internal/acceptance_tests/blocks/api_security_operation_tag.tf",
+	)
+}
 
 // ConfigAlertStatsAccountWide returns a standalone account-wide fastly_alert (source "stats", no service_id).
 func ConfigAlertStatsAccountWide(alertName, description, metric, evalType, evalPeriod string, threshold float64) string {
