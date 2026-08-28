@@ -150,6 +150,21 @@ func TestInvalidClientIdentifiers(t *testing.T) {
 			identifiers: []ClientIdentifierModel{{Type: types.StringValue("signal_payload"), Name: types.StringValue("nope")}},
 			wantIssues:  2,
 		},
+		{
+			name: "ip may pair with a second identifier",
+			identifiers: []ClientIdentifierModel{
+				{Type: types.StringValue("ip")},
+				{Type: types.StringValue("request_cookie"), Name: types.StringValue("session_id")},
+			},
+		},
+		{
+			name: "two non-ip identifiers is invalid",
+			identifiers: []ClientIdentifierModel{
+				{Type: types.StringValue("request_header"), Name: types.StringValue("X-Forwarded-For")},
+				{Type: types.StringValue("request_cookie"), Name: types.StringValue("session_id")},
+			},
+			wantIssues: 1,
+		},
 	}
 
 	for _, tt := range tests {

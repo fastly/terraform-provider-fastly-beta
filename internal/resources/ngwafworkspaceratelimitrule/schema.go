@@ -109,8 +109,9 @@ func rateLimitBlock() schema.ListNestedBlock {
 
 func clientIdentifiersBlock() schema.SetNestedBlock {
 	return schema.SetNestedBlock{
-		Description: "List of client identifiers used for rate limiting. Must contain 1 or 2 entries.",
+		Description: "List of client identifiers used for rate limiting. Required, and must contain 1 or 2 entries.",
 		Validators: []validator.Set{
+			setvalidator.IsRequired(),
 			setvalidator.SizeBetween(1, 2),
 		},
 		NestedObject: schema.NestedBlockObject{

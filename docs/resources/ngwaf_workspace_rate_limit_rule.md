@@ -200,7 +200,7 @@ Required:
 
 Optional:
 
-- `client_identifiers` (Block Set) List of client identifiers used for rate limiting. Must contain 1 or 2 entries. (see [below for nested schema](#nestedblock--rate_limit--client_identifiers))
+- `client_identifiers` (Block Set) List of client identifiers used for rate limiting. Required, and must contain 1 or 2 entries. (see [below for nested schema](#nestedblock--rate_limit--client_identifiers))
 
 <a id="nestedblock--rate_limit--client_identifiers"></a>
 ### Nested Schema for `rate_limit.client_identifiers`

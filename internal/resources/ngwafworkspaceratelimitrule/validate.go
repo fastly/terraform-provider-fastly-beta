@@ -67,7 +67,21 @@ func InvalidClientIdentifiers(identifiers []ClientIdentifierModel) []string {
 			}
 		}
 	}
+
+	if len(identifiers) == 2 && !hasIPIdentifier(identifiers) {
+		issues = append(issues, `client_identifiers may only contain 2 entries when one of them is type "ip"; every other type must be the sole entry.`)
+	}
+
 	return issues
+}
+
+func hasIPIdentifier(identifiers []ClientIdentifierModel) bool {
+	for _, ci := range identifiers {
+		if ci.Type.ValueString() == "ip" {
+			return true
+		}
+	}
+	return false
 }
 
 // isSet treats an unknown value as set, so a field whose value is still

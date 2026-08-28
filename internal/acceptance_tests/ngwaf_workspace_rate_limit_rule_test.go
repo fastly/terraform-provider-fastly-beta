@@ -133,6 +133,48 @@ func TestAccFastlyNGWAFWorkspaceRateLimitRule_missingRateLimitBlock(t *testing.T
 	})
 }
 
+// TestAccFastlyNGWAFWorkspaceRateLimitRule_missingClientIdentifiers checks
+// that a rate_limit block without its client_identifiers block is rejected
+// at plan time rather than reaching the API.
+func TestAccFastlyNGWAFWorkspaceRateLimitRule_missingClientIdentifiers(t *testing.T) {
+	t.Parallel()
+
+	name := fmt.Sprintf("tf-test-ws-ratelimit-rule-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigNGWAFWorkspaceRule("ngwaf_workspace_rate_limit_rule_missing_client_identifiers.tf", name),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`Invalid Block[\s\S]*client_identifiers must have a configuration value`),
+			},
+		},
+	})
+}
+
+// TestAccFastlyNGWAFWorkspaceRateLimitRule_twoNonIPClientIdentifiers checks
+// that pairing two non-ip client_identifiers entries is rejected at plan
+// time: only ip may be combined with a second entry.
+func TestAccFastlyNGWAFWorkspaceRateLimitRule_twoNonIPClientIdentifiers(t *testing.T) {
+	t.Parallel()
+
+	name := fmt.Sprintf("tf-test-ws-ratelimit-rule-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigNGWAFWorkspaceRule("ngwaf_workspace_rate_limit_rule_client_identifiers_two_non_ip.tf", name),
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`Invalid client identifier[\s\S]*only contain 2 entries when one of them is type "ip"`),
+			},
+		},
+	})
+}
+
 func ConfigNGWAFWorkspaceRateLimitRule(workspaceID, signalID string) string {
 	return configNGWAFWorkspaceRateLimitRule("blocks/ngwaf_workspace_rate_limit_rule.tf", workspaceID, signalID)
 }
