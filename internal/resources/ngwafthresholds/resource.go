@@ -146,14 +146,15 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 // ImportState populates workspace_id and id from a "workspace_id/threshold_id"
 // import identifier, matching the legacy provider's import format.
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	workspaceID, thresholdID, ok := strings.Cut(req.ID, "/")
-	if !ok || workspaceID == "" || thresholdID == "" {
+	parts := strings.Split(req.ID, "/")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		resp.Diagnostics.AddError(
 			"Unexpected import identifier",
 			fmt.Sprintf("Expected import identifier of the form \"workspace_id/threshold_id\", got: %q", req.ID),
 		)
 		return
 	}
+	workspaceID, thresholdID := parts[0], parts[1]
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("workspace_id"), workspaceID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), thresholdID)...)
