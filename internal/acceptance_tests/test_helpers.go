@@ -6034,6 +6034,24 @@ func ConfigConfigStoresDataSource(h string) string {
 	})
 }
 
+// ConfigAPISecurityOperation returns a CDN service plus a fastly_api_security_operation
+// resource. Passing an empty description omits the attribute from config entirely, to
+// exercise the transition back to an unset (rather than empty-string) description.
+func ConfigAPISecurityOperation(serviceName, method, domain, path, description string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"METHOD":          method,
+			"DOMAIN":          domain,
+			"PATH":            path,
+			"DESCRIPTION":     description,
+		},
+		"internal/acceptance_tests/blocks/api_security_operation.tf",
+	)
+}
+
 // ConfigAlertStatsAccountWide returns a standalone account-wide fastly_alert (source "stats", no service_id).
 func ConfigAlertStatsAccountWide(alertName, description, metric, evalType, evalPeriod string, threshold float64) string {
 	return RenderBlock("internal/acceptance_tests/blocks/alert_stats_account_wide.tf", map[string]string{
