@@ -1,7 +1,7 @@
 # Fastly Terraform Provider - Beta
 
-This repository contains the source code for the 'fastly-beta'
-Terraform provider, a new implementation of the existing 'fastly'
+This repository contains the source code for the `fastly-beta`
+Terraform provider, a new implementation of the existing `fastly`
 Terraform provider. The provider is built on the HashiCorp Terraform
 plugin framework unlike the previous provider which is built on the
 Terraform Plugin SDK v2.
@@ -12,7 +12,7 @@ before the end of 2026.
 
 ## Design overview
 
-This providers offers a **dual-model design** with two separate resource
+This provider offers a **dual-model design** with two separate resource
 families:
 
 - an **automatic compatibility resource family** for users who want
