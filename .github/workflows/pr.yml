@@ -20,7 +20,7 @@ defaults:
 
 jobs:
   lint:
-    runs-on: forge-amd64-small
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -40,7 +40,7 @@ jobs:
 
   golangci-latest:
     name: lint-latest (informational)
-    runs-on: forge-amd64-small
+    runs-on: ubuntu-24.04-arm
     continue-on-error: true
     steps:
       - name: Checkout code
@@ -76,7 +76,7 @@ jobs:
     strategy:
       matrix:
         go-version: [1.26.x]
-        platform: [forge-amd64-small]
+        platform: [ubuntu-24.04-arm]
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout code
@@ -93,7 +93,7 @@ jobs:
         run: make test-unit
 
   docs:
-    runs-on: forge-amd64-small
+    runs-on: ubuntu-24.04-arm
     if: "!contains(github.event.pull_request.labels.*.name, 'Skip-Docs')"
     steps:
       - name: Checkout code
