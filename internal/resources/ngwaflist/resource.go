@@ -91,7 +91,6 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -132,7 +131,6 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 
-
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
 }
 
@@ -170,7 +168,6 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		resp.Diagnostics.AddError(fmt.Sprintf("Error reading NGWAF workspace %s list", r.listType), err.Error())
 		return
 	}
-
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
 }
