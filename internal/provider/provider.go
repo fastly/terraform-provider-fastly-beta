@@ -29,6 +29,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly/internal/datasources/vclsnippets"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/acl"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/aclentries"
+	"github.com/fastly/terraform-provider-fastly/internal/resources/alert"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/apisecurityoperation"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/apisecurityoperationtag"
 	"github.com/fastly/terraform-provider-fastly/internal/resources/backend"
@@ -130,6 +131,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 	return []func() resource.Resource{
 		acl.NewResource,
 		aclentries.NewResource,
+		alert.NewResource,
 		apisecurityoperation.NewResource,
 		apisecurityoperationtag.NewResource,
 		backend.NewResource,
