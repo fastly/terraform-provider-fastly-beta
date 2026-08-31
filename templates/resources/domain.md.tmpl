@@ -1,0 +1,33 @@
+---
+page_title: "fastly_domain Resource - fastly"
+subcategory: ""
+description: |-
+  Provides a Fastly Domain.
+---
+
+# fastly_domain (Resource)
+
+Provides a Fastly Domain.
+
+This is the root, versionless domain resource: it is not tied to a service version and is
+managed independently of any `fastly_service_cdn` or `fastly_service_compute` resource. To
+attach a domain to a service, use `fastly_domain_service_link`.
+
+## Example Usage
+
+```terraform
+resource "fastly_domain" "example" {
+  fqdn        = "www.example.com"
+  description = "Managed by Terraform"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Fastly Domains can be imported using their Domain ID, e.g.
+
+```shell
+terraform import fastly_domain.example <domain_id>
+```
