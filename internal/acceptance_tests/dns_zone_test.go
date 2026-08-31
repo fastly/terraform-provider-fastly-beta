@@ -176,6 +176,9 @@ func TestAccFastlyDNSZone_withXfrConfig(t *testing.T) {
 // ClearFields test: creates a zone referencing a TSIG key made out-of-band
 // (no fastly_tsig_key resource exists yet), then clears just
 // inbound_tsig_key_id while keeping xfr_config_inbound configured.
+//
+// TODO: once fastly_tsig_key exists, rework this test to create the TSIG
+// key via that resource instead of the raw go-fastly client.
 func TestAccFastlyDNSZone_clearInboundTSIGKeyID(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("TF_ACC") == "" {

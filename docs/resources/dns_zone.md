@@ -24,6 +24,8 @@ resource "fastly_dns_zone" "example" {
 
 With inbound zone transfer configuration:
 
+<!-- TODO: once fastly_tsig_key is supported in this provider, update this
+     example to reference it instead of a hardcoded TSIG key ID. -->
 ```terraform
 resource "fastly_dns_zone" "example" {
   name        = "example.com."
