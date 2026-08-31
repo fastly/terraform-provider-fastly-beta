@@ -23,6 +23,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/configstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/kvstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacelists"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspaceredactions"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacerules"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspaces"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacesignals"
@@ -59,6 +60,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacecountrylist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspaceiplist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspaceratelimitrule"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspaceredaction"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacerequestrule"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacesignal"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacesignallist"
@@ -173,6 +175,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		ngwafworkspacecountrylist.NewResource,
 		ngwafworkspaceiplist.NewResource,
 		ngwafworkspaceratelimitrule.NewResource,
+		ngwafworkspaceredaction.NewResource,
 		ngwafworkspacerequestrule.NewResource,
 		ngwafworkspacesignal.NewResource,
 		ngwafworkspacesignallist.NewResource,
@@ -206,6 +209,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		configstores.NewDataSource,
 		kvstores.NewDataSource,
 		ngwafworkspacelists.NewDataSource,
+		ngwafworkspaceredactions.NewDataSource,
 		ngwafworkspacerules.NewDataSource,
 		ngwafworkspaces.NewDataSource,
 		ngwafworkspacesignals.NewDataSource,
