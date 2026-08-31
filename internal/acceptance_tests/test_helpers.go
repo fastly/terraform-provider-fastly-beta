@@ -6149,3 +6149,51 @@ func ConfigAlertPercentIncreaseWithIgnoreBelow(alertName string, threshold, igno
 		"IGNORE_BELOW": strconv.FormatFloat(ignoreBelow, 'f', -1, 64),
 	})
 }
+
+// ConfigDNSZone returns a standalone fastly_dns_zone with a name and description.
+func ConfigDNSZone(name, description string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_basic.tf", map[string]string{
+		"ZONE_NAME":        name,
+		"ZONE_DESCRIPTION": description,
+	})
+}
+
+// ConfigDNSZoneMinimal returns a standalone fastly_dns_zone with only name set.
+func ConfigDNSZoneMinimal(name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_minimal.tf", map[string]string{
+		"ZONE_NAME": name,
+	})
+}
+
+// ConfigDNSZoneWithXfrConfig returns a fastly_dns_zone with an xfr_config_inbound block
+// containing one primary and no inbound_tsig_key_id.
+func ConfigDNSZoneWithXfrConfig(name, description, primaryAddress, primaryDescription string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_with_xfr_config.tf", map[string]string{
+		"ZONE_NAME":           name,
+		"ZONE_DESCRIPTION":    description,
+		"PRIMARY_ADDRESS":     primaryAddress,
+		"PRIMARY_DESCRIPTION": primaryDescription,
+	})
+}
+
+// ConfigDNSZoneWithTSIGKey returns a fastly_dns_zone with an xfr_config_inbound block
+// that references an out-of-band-created TSIG key ID.
+func ConfigDNSZoneWithTSIGKey(name, description, tsigKeyID, primaryAddress, primaryDescription string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_with_tsig.tf", map[string]string{
+		"ZONE_NAME":           name,
+		"ZONE_DESCRIPTION":    description,
+		"TSIG_KEY_ID":         tsigKeyID,
+		"PRIMARY_ADDRESS":     primaryAddress,
+		"PRIMARY_DESCRIPTION": primaryDescription,
+	})
+}
+
+// ConfigDNSZonesDataSource returns a config declaring three fastly_dns_zone resources
+// alongside a fastly_dns_zones data source that depends on all three.
+func ConfigDNSZonesDataSource(name1, name2, name3 string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_three_with_datasource.tf", map[string]string{
+		"ZONE_NAME_1": name1,
+		"ZONE_NAME_2": name2,
+		"ZONE_NAME_3": name3,
+	})
+}

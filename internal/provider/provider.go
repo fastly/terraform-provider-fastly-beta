@@ -21,6 +21,7 @@ import (
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/acls"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/configstores"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/dnszones"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/kvstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacelists"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacerules"
@@ -40,6 +41,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/condition"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/configstore"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customdashboard"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dnszone"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domain"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dynamicsnippetcontent"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dynamicvclsnippet"
@@ -152,6 +154,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		condition.NewResource,
 		configstore.NewResource,
 		customdashboard.NewResource,
+		dnszone.NewResource,
 		domain.NewResource,
 		loggingbigquery.NewResource,
 		loggingblobstorage.NewResource,
@@ -204,6 +207,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 	return []func() datasource.DataSource{
 		acls.NewDataSource,
 		configstores.NewDataSource,
+		dnszones.NewDataSource,
 		kvstores.NewDataSource,
 		ngwafworkspacelists.NewDataSource,
 		ngwafworkspacerules.NewDataSource,
