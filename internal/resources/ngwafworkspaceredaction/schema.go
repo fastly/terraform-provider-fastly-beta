@@ -1,6 +1,8 @@
 package ngwafworkspaceredaction
 
 import (
+	"regexp"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -10,6 +12,10 @@ import (
 )
 
 var redactionTypes = []string{"request_parameter", "request_header", "response_header"}
+
+// fieldLowercasePattern rejects uppercase letters, since the API silently lowercases the
+// field value and a mixed-case config would otherwise never converge with state.
+var fieldLowercasePattern = regexp.MustCompile(`^[^A-Z]+$`)
 
 type Model struct {
 	ID          types.String `tfsdk:"id"`
@@ -36,9 +42,10 @@ func ResourceAttributes() map[string]schema.Attribute {
 		},
 		"field": schema.StringAttribute{
 			Required:    true,
-			Description: "The name of the field that should be redacted.",
+			Description: "The name of the field that should be redacted. Must be lowercase.",
 			Validators: []validator.String{
 				stringvalidator.LengthAtLeast(1),
+				stringvalidator.RegexMatches(fieldLowercasePattern, "must be lowercase"),
 			},
 		},
 		"type": schema.StringAttribute{

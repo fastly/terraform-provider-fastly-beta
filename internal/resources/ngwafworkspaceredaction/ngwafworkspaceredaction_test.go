@@ -24,7 +24,7 @@ func TestSchema(t *testing.T) {
 	field, ok := attrs["field"].(schema.StringAttribute)
 	require.True(t, ok)
 	assert.True(t, field.Required)
-	assert.Len(t, field.Validators, 1)
+	assert.Len(t, field.Validators, 2)
 
 	fieldType, ok := attrs["type"].(schema.StringAttribute)
 	require.True(t, ok)

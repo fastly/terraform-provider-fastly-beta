@@ -35,7 +35,7 @@ resource "fastly_ngwaf_workspace_redaction" "example" {
 
 ### Required
 
-- `field` (String) The name of the field that should be redacted.
+- `field` (String) The name of the field that should be redacted. Must be lowercase.
 - `type` (String) The type of field that is being redacted. Accepted values are `request_parameter`, `request_header`, and `response_header`.
 - `workspace_id` (String) The ID of the workspace that owns the redaction.
 
