@@ -94,6 +94,7 @@ BASELINE_TEST_NAMES := \
 	TestAccFastlyServiceDomain_basic \
 	TestAccFastlyACL_basic \
 	TestAccFastlyKVStore_basic \
+	TestAccFastlyDNSZone_basic \
 	TestAccFastlyServiceLoggingS3_basic \
 	TestAccFastlyServiceCDNAuto_withLoggingS3 \
 	TestAccFastlyProductEnablement_cdnBasic \
