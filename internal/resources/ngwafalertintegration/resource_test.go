@@ -65,6 +65,37 @@ func TestAttributes(t *testing.T) {
 	require.True(t, ok)
 	require.True(t, webhook.Required)
 	require.True(t, webhook.Sensitive)
+	require.NotEmpty(t, webhook.Validators)
+}
+
+func TestAttributesOptionalDefault(t *testing.T) {
+	attrs := Attributes(Definition{
+		Type: "jira",
+		ConfigAttrs: []ConfigAttribute{
+			{Name: "issue_type", Description: "The Jira issue type associated with the ticket.", Optional: true, Default: "Task"},
+		},
+	})
+
+	issueType, ok := attrs["issue_type"].(schema.StringAttribute)
+	require.True(t, ok)
+	require.True(t, issueType.Optional)
+	require.True(t, issueType.Computed)
+	require.False(t, issueType.Required)
+	require.NotNil(t, issueType.Default)
+}
+
+func TestAttributesAddressValidator(t *testing.T) {
+	attrs := Attributes(Definition{
+		Type: "mailinglist",
+		ConfigAttrs: []ConfigAttribute{
+			{Name: "address", Description: "An email address."},
+		},
+	})
+
+	address, ok := attrs["address"].(schema.StringAttribute)
+	require.True(t, ok)
+	require.True(t, address.Required)
+	require.NotEmpty(t, address.Validators)
 }
 
 func importStateForTest(t *testing.T) tfsdk.State {

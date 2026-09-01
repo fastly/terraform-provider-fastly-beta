@@ -44,17 +44,27 @@ func Attributes(def Definition) map[string]schema.Attribute {
 		case "site":
 			validators = append(validators, stringvalidator.OneOf("us1", "us3", "us5", "eu1"))
 		case "address":
-			validators = append(validators, stringvalidator.LengthAtMost(320))
-		case "host", "username", "project", "key":
+			validators = append(validators, stringvalidator.LengthBetween(1, 320))
+		case "host", "username", "project", "key", "webhook":
 			validators = append(validators, stringvalidator.LengthAtLeast(1))
 		}
 
-		attrs[attr.Name] = schema.StringAttribute{
-			Required:    true,
+		attribute := schema.StringAttribute{
 			Sensitive:   attr.Sensitive,
 			Description: attr.Description,
 			Validators:  validators,
 		}
+		if attr.Optional {
+			attribute.Optional = true
+			attribute.Computed = true
+			if attr.Default != "" {
+				attribute.Default = stringdefault.StaticString(attr.Default)
+			}
+		} else {
+			attribute.Required = true
+		}
+
+		attrs[attr.Name] = attribute
 	}
 
 	return attrs

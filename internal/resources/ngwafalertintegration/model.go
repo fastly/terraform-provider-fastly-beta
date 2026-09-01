@@ -40,6 +40,8 @@ type ConfigAttribute struct {
 	Name        string
 	Description string
 	Sensitive   bool
+	Optional    bool
+	Default     string
 }
 
 type Definition struct {

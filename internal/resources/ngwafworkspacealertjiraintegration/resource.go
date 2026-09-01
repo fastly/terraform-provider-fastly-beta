@@ -32,7 +32,7 @@ func definition() ngwafalertintegration.Definition {
 			{Name: "username", Description: "Jira username of the user who created the ticket.", Sensitive: false},
 			{Name: "project", Description: "Specifies the Jira project where the issue will be created.", Sensitive: false},
 			{Name: "key", Description: "Jira API key.", Sensitive: true},
-			{Name: "issue_type", Description: "The Jira issue type associated with the ticket. Defaults to `Task` when omitted by the API.", Sensitive: false},
+			{Name: "issue_type", Description: "The Jira issue type associated with the ticket.", Sensitive: false, Optional: true, Default: "Task"},
 		},
 		Operations: operations{},
 	}

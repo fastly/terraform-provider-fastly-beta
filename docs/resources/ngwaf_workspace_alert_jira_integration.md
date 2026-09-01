@@ -39,7 +39,6 @@ resource "fastly_ngwaf_workspace_alert_jira_integration" "example" {
 ### Required
 
 - `host` (String) Host name of the Jira instance.
-- `issue_type` (String) The Jira issue type associated with the ticket. Defaults to `Task` when omitted by the API.
 - `key` (String, Sensitive) Jira API key.
 - `project` (String) Specifies the Jira project where the issue will be created.
 - `username` (String) Jira username of the user who created the ticket.
@@ -48,6 +47,7 @@ resource "fastly_ngwaf_workspace_alert_jira_integration" "example" {
 ### Optional
 
 - `description` (String) The description of the jira alert integration. Changing this attribute will delete and recreate the alert integration.
+- `issue_type` (String) The Jira issue type associated with the ticket.
 
 ### Read-Only
 
