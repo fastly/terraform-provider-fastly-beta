@@ -92,6 +92,7 @@ BASELINE_TEST_NAMES := \
 	TestAccFastlyServiceComputeAuto_basic \
 	TestAccFastlyServiceBackend_basic \
 	TestAccFastlyServiceDomain_basic \
+	TestAccFastlyDomain_basic \
 	TestAccFastlyACL_basic \
 	TestAccFastlyKVStore_basic \
 	TestAccFastlyDNSZone_basic \

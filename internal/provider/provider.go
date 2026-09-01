@@ -22,8 +22,17 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/acls"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/configstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/dnszones"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/domains"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/kvstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafaccountrules"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertdatadogintegrations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertjiraintegrations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertmailinglistintegrations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertmicrosoftteamsintegrations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertopsgenieintegrations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertpagerdutyintegrations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertslackintegrations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertwebhookintegrations"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacelists"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacerules"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspaces"
@@ -44,6 +53,8 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customdashboard"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dnszone"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domain"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domainmanagement"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domainservicelink"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dynamicsnippetcontent"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dynamicvclsnippet"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/kvstore"
@@ -61,6 +72,14 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafrequestrule"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafsignalrule"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspace"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertdatadogintegration"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertjiraintegration"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertmailinglistintegration"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertmicrosoftteamsintegration"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertopsgenieintegration"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertpagerdutyintegration"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertslackintegration"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertwebhookintegration"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacecountrylist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspaceiplist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspaceratelimitrule"
@@ -159,6 +178,8 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		customdashboard.NewResource,
 		dnszone.NewResource,
 		domain.NewResource,
+		domainmanagement.NewResource,
+		domainservicelink.NewResource,
 		loggingbigquery.NewResource,
 		loggingblobstorage.NewResource,
 		loggingdatadog.NewResource,
@@ -177,6 +198,14 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		dynamicsnippetcontent.NewResource,
 		ngwafrequestrule.NewResource,
 		ngwafsignalrule.NewResource,
+		ngwafworkspacealertdatadogintegration.NewResource,
+		ngwafworkspacealertjiraintegration.NewResource,
+		ngwafworkspacealertmailinglistintegration.NewResource,
+		ngwafworkspacealertmicrosoftteamsintegration.NewResource,
+		ngwafworkspacealertopsgenieintegration.NewResource,
+		ngwafworkspacealertpagerdutyintegration.NewResource,
+		ngwafworkspacealertslackintegration.NewResource,
+		ngwafworkspacealertwebhookintegration.NewResource,
 		ngwafworkspace.NewResource,
 		ngwafworkspacecountrylist.NewResource,
 		ngwafworkspaceiplist.NewResource,
@@ -213,8 +242,17 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		acls.NewDataSource,
 		configstores.NewDataSource,
 		dnszones.NewDataSource,
+		domains.NewDataSource,
 		kvstores.NewDataSource,
 		ngwafaccountrules.NewDataSource,
+		ngwafworkspacealertdatadogintegrations.NewDataSource,
+		ngwafworkspacealertjiraintegrations.NewDataSource,
+		ngwafworkspacealertmailinglistintegrations.NewDataSource,
+		ngwafworkspacealertmicrosoftteamsintegrations.NewDataSource,
+		ngwafworkspacealertopsgenieintegrations.NewDataSource,
+		ngwafworkspacealertpagerdutyintegrations.NewDataSource,
+		ngwafworkspacealertslackintegrations.NewDataSource,
+		ngwafworkspacealertwebhookintegrations.NewDataSource,
 		ngwafworkspacelists.NewDataSource,
 		ngwafworkspacerules.NewDataSource,
 		ngwafworkspaces.NewDataSource,
