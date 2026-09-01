@@ -38,7 +38,7 @@ resource "fastly_ngwaf_workspace_virtual_patch" "example" {
 
 ### Required
 
-- `enabled` (Boolean) Whether this virtual patch is enabled.
+- `enabled` (Boolean) Control for enabling and disabling a virtual patch.
 - `mode` (String) Action to take when a signal for virtual patch is detected. One of `block` or `log`.
 - `virtual_patch_id` (String) The ID of the existing virtual patch to configure. Virtual patches are created by Fastly and cannot be created by this resource. Changing this attribute will delete and recreate the Terraform resource.
 - `workspace_id` (String) The ID of the workspace this virtual patch belongs to.

@@ -56,7 +56,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 		},
 		"enabled": schema.BoolAttribute{
 			Required:    true,
-			Description: "Whether this virtual patch is enabled.",
+			Description: "Control for enabling and disabling a virtual patch.",
 		},
 		"description": schema.StringAttribute{
 			Computed:    true,
