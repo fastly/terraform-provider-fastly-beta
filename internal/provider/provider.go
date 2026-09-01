@@ -28,6 +28,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspaces"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacesignals"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacethresholds"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacevirtualpatches"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/serviceversion"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/vclsnippets"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/acl"
@@ -68,6 +69,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacestringlist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacetemplatedsignalrule"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacethreshold"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacevirtualpatch"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacewildcardlist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/productenablement"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/resourcelink"
@@ -183,6 +185,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		ngwafworkspacestringlist.NewResource,
 		ngwafworkspacetemplatedsignalrule.NewResource,
 		ngwafworkspacethreshold.NewResource,
+		ngwafworkspacevirtualpatch.NewResource,
 		ngwafworkspacewildcardlist.NewResource,
 		productenablement.NewFanoutResource,
 		productenablement.NewBrotliCompressionResource,
@@ -214,6 +217,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		ngwafworkspaces.NewDataSource,
 		ngwafworkspacesignals.NewDataSource,
 		ngwafworkspacethresholds.NewDataSource,
+		ngwafworkspacevirtualpatches.NewDataSource,
 		serviceversion.NewDataSource,
 		vclsnippets.NewDataSource,
 	}
