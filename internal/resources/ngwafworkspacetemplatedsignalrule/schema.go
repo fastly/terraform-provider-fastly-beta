@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 const (
@@ -24,7 +25,8 @@ const (
 // type.
 type Model struct {
 	ngwafrule.CommonModel
-	Action []ngwafrule.SignalActionModel `tfsdk:"action"`
+	WorkspaceID types.String                  `tfsdk:"workspace_id"`
+	Action      []ngwafrule.SignalActionModel `tfsdk:"action"`
 }
 
 // Every attribute and block below forces replacement, because the API

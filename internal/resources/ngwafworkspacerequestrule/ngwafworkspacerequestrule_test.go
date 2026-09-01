@@ -38,8 +38,8 @@ func TestSchemaMatchesModel(t *testing.T) {
 
 func testModel() Model {
 	return Model{
+		WorkspaceID: types.StringValue("ws123"),
 		CommonModel: ngwafrule.CommonModel{
-			WorkspaceID:   types.StringValue("ws123"),
 			Enabled:       types.BoolValue(true),
 			GroupOperator: types.StringValue("all"),
 			Condition: []ngwafrule.ConditionModel{{

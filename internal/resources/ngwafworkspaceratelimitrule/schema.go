@@ -20,12 +20,17 @@ const RuleType = "rate_limit"
 var (
 	actionTypes           = []string{"block_signal", "log_request", "browser_challenge", "dynamic_challenge", "deception"}
 	rateLimitIntervals    = []int64{60, 600, 3600}
+	rateLimitDurationMin  = int64(300)
+	rateLimitDurationMax  = int64(86400)
+	rateLimitThresholdMin = int64(1)
+	rateLimitThresholdMax = int64(100000)
 	clientIdentifierTypes = []string{"ip", "post_parameter", "request_cookie", "request_header", "signal_payload"}
 )
 
 // Model is the fastly_ngwaf_workspace_rate_limit_rule resource state.
 type Model struct {
 	ngwafrule.CommonModel
+	WorkspaceID types.String            `tfsdk:"workspace_id"`
 	Description types.String            `tfsdk:"description"`
 	Action      []ngwafrule.ActionModel `tfsdk:"action"`
 	RateLimit   []RateLimitModel        `tfsdk:"rate_limit"`
@@ -51,6 +56,7 @@ type ClientIdentifierModel struct {
 
 func resourceAttributes() map[string]schema.Attribute {
 	attributes := ngwafrule.CommonAttributes()
+	attributes["workspace_id"] = ngwafrule.WorkspaceIDAttribute()
 	attributes["description"] = ngwafrule.DescriptionAttribute()
 	return attributes
 }
@@ -73,14 +79,14 @@ func rateLimitBlock() schema.ListNestedBlock {
 			Attributes: map[string]schema.Attribute{
 				"duration": schema.Int64Attribute{
 					Required:    true,
-					Description: "Duration in seconds for the rate limit. Minimum `300`, maximum `86400`.",
+					Description: "Duration in seconds for the rate limit. " + ngwafrule.RangeDescriptor(rateLimitDurationMin, rateLimitDurationMax),
 					Validators: []validator.Int64{
-						int64validator.Between(300, 86400),
+						int64validator.Between(rateLimitDurationMin, rateLimitDurationMax),
 					},
 				},
 				"interval": schema.Int64Attribute{
 					Required:    true,
-					Description: "Time interval for the rate limit in seconds. One of `60`, `600`, or `3600`.",
+					Description: "Time interval for the rate limit in seconds. " + ngwafrule.OneOfDescriptor(rateLimitIntervals),
 					Validators: []validator.Int64{
 						int64validator.OneOf(rateLimitIntervals...),
 					},
@@ -94,9 +100,9 @@ func rateLimitBlock() schema.ListNestedBlock {
 				},
 				"threshold": schema.Int64Attribute{
 					Required:    true,
-					Description: "Rate limit threshold. Minimum `1`, maximum `100000`.",
+					Description: "Rate limit threshold. " + ngwafrule.RangeDescriptor(rateLimitThresholdMin, rateLimitThresholdMax),
 					Validators: []validator.Int64{
-						int64validator.Between(1, 100000),
+						int64validator.Between(rateLimitThresholdMin, rateLimitThresholdMax),
 					},
 				},
 			},

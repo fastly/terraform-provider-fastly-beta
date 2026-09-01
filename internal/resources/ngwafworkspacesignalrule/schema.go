@@ -20,12 +20,14 @@ const (
 // Model is the fastly_ngwaf_workspace_signal_rule resource state.
 type Model struct {
 	ngwafrule.CommonModel
+	WorkspaceID types.String                  `tfsdk:"workspace_id"`
 	Description types.String                  `tfsdk:"description"`
 	Action      []ngwafrule.SignalActionModel `tfsdk:"action"`
 }
 
 func resourceAttributes() map[string]schema.Attribute {
 	attributes := ngwafrule.CommonAttributes()
+	attributes["workspace_id"] = ngwafrule.WorkspaceIDAttribute()
 	attributes["description"] = ngwafrule.DescriptionAttribute()
 	return attributes
 }

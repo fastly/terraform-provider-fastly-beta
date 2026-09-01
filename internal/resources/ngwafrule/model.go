@@ -6,12 +6,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// CommonModel is the slice of state every workspace-scoped rule resource
-// holds, whatever its rule type. Each resource embeds it and adds the
-// attributes its own type accepts.
+// CommonModel is the slice of state every rule resource holds, whatever its
+// scope or rule type. Each resource embeds it and adds the attributes its own
+// scope and type accept - including the one that names its scope, which is
+// workspace_id at workspace scope and applies_to at account scope.
 type CommonModel struct {
 	ID                types.String             `tfsdk:"id"`
-	WorkspaceID       types.String             `tfsdk:"workspace_id"`
 	Enabled           types.Bool               `tfsdk:"enabled"`
 	GroupOperator     types.String             `tfsdk:"group_operator"`
 	Condition         []ConditionModel         `tfsdk:"condition"`
@@ -57,6 +57,26 @@ type ActionModel struct {
 	DeceptionType    types.String `tfsdk:"deception_type"`
 	RedirectURL      types.String `tfsdk:"redirect_url"`
 	ResponseCode     types.Int64  `tfsdk:"response_code"`
+}
+
+// AccountActionModel is the action shape for account-scoped rule types whose
+// action set spans more than one shape. The account endpoint accepts only
+// allow, block, and add_signal, so `signal` is the one field any of them
+// carries; it pairs with AccountActionBlock, which renders exactly the fields
+// those action types accept.
+type AccountActionModel struct {
+	Type   types.String `tfsdk:"type"`
+	Signal types.String `tfsdk:"signal"`
+}
+
+// toActionModel widens an account action so the shared validators, which only
+// ever read fields, can run against both shapes. The fields no account action
+// type accepts stay null, which reads as unset.
+func (m AccountActionModel) toActionModel() ActionModel {
+	return ActionModel{
+		Type:   m.Type,
+		Signal: m.Signal,
+	}
 }
 
 // SignalActionModel is the action shape for rule types that accept exactly

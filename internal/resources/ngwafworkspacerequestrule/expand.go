@@ -8,7 +8,7 @@ import (
 )
 
 func BuildCreateInput(plan Model) *rules.CreateInput {
-	input := ngwafrule.NewCreateInput(RuleType, plan.CommonModel)
+	input := ngwafrule.NewCreateInput(RuleType, ngwafrule.WorkspaceScope(service.StringValue(plan.WorkspaceID)), plan.CommonModel)
 	input.Description = new(service.StringValue(plan.Description))
 	input.RequestLogging = plan.RequestLogging.ValueStringPointer()
 	input.Actions = ngwafrule.ExpandCreateActions(plan.Action)
@@ -16,7 +16,7 @@ func BuildCreateInput(plan Model) *rules.CreateInput {
 }
 
 func BuildUpdateInput(ruleID string, plan Model) *rules.UpdateInput {
-	input := ngwafrule.NewUpdateInput(RuleType, ruleID, plan.CommonModel)
+	input := ngwafrule.NewUpdateInput(RuleType, ruleID, ngwafrule.WorkspaceScope(service.StringValue(plan.WorkspaceID)), plan.CommonModel)
 	input.Description = new(service.StringValue(plan.Description))
 	input.RequestLogging = plan.RequestLogging.ValueStringPointer()
 	input.Actions = ngwafrule.ExpandUpdateActions(plan.Action)
