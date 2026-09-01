@@ -28,8 +28,8 @@ func definition() ngwafalertintegration.Definition {
 		DisplayName: "Datadog",
 		Description: "Manages a Fastly Next-Gen WAF Datadog alert integration scoped to a single workspace.",
 		ConfigAttrs: []ngwafalertintegration.ConfigAttribute{
-			{Name: "key", Description: "Datadog API key.", Sensitive: true},
-			{Name: "site", Description: "Datadog site to use. One of `us1`, `us3`, `us5`, or `eu1`.", Sensitive: false},
+			{Name: "key", Description: "Datadog integration key.", Sensitive: true},
+			{Name: "site", Description: "Datadog site. One of `us1`, `us3`, `us5`, or `eu1`.", Sensitive: false},
 		},
 		Operations: operations{},
 	}

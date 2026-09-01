@@ -35,8 +35,8 @@ resource "fastly_ngwaf_workspace_alert_datadog_integration" "example" {
 
 ### Required
 
-- `key` (String, Sensitive) Datadog API key.
-- `site` (String) Datadog site to use. One of `us1`, `us3`, `us5`, or `eu1`.
+- `key` (String, Sensitive) Datadog integration key.
+- `site` (String) Datadog site. One of `us1`, `us3`, `us5`, or `eu1`.
 - `workspace_id` (String) The ID of the workspace that owns the alert integration.
 
 ### Optional
