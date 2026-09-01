@@ -6304,3 +6304,27 @@ func ConfigIntegrationInvalidType(name string) string {
 		"NAME": name,
 	})
 }
+
+// ConfigTLSActivation returns a CDN auto service (with a domain and backend) plus a
+// fastly_tls_activation enabling TLS on that domain, using a certificate created
+// out-of-band (no fastly_tls_certificate resource exists yet).
+func ConfigTLSActivation(serviceName, domainName, backendName, certificateID string) string {
+	service := ConfigCDNAutoWithBackend(serviceName, domainName, backendName)
+	activation := RenderBlock("internal/acceptance_tests/blocks/tls_activation_single.tf", map[string]string{
+		"CERTIFICATE_ID": certificateID,
+		"DOMAIN_NAME":    domainName,
+	})
+	return joinBlocks(service, activation)
+}
+
+// ConfigTLSActivationWithMTLS is ConfigTLSActivation plus a mutual_authentication_id
+// referencing an out-of-band-created mutual authentication.
+func ConfigTLSActivationWithMTLS(serviceName, domainName, backendName, certificateID, mtlsID string) string {
+	service := ConfigCDNAutoWithBackend(serviceName, domainName, backendName)
+	activation := RenderBlock("internal/acceptance_tests/blocks/tls_activation_single.tf", map[string]string{
+		"CERTIFICATE_ID": certificateID,
+		"DOMAIN_NAME":    domainName,
+		"MTLS_ID":        mtlsID,
+	})
+	return joinBlocks(service, activation)
+}
