@@ -35,7 +35,7 @@ func TestAccFastlyIntegration_webhook(t *testing.T) {
 					resource.TestCheckResourceAttr("fastly_integration.test", "name", name),
 					resource.TestCheckResourceAttr("fastly_integration.test", "description", "created by acceptance test"),
 					resource.TestCheckResourceAttr("fastly_integration.test", "type", "webhook"),
-					resource.TestCheckResourceAttr("fastly_integration.test", "config.webhook", "https://example.com/hooks/one"),
+					resource.TestCheckResourceAttr("fastly_integration.test", "authentication.webhook", "https://example.com/hooks/one"),
 					resource.TestCheckResourceAttrSet("fastly_integration.test", "id"),
 					CheckIntegrationRemoteState("fastly_integration.test", name, "created by acceptance test", "webhook"),
 					captureResourceID("fastly_integration.test", &integrationID),
@@ -48,7 +48,7 @@ func TestAccFastlyIntegration_webhook(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("fastly_integration.test", "name", updatedName),
 					resource.TestCheckResourceAttr("fastly_integration.test", "description", "updated by acceptance test"),
-					resource.TestCheckResourceAttr("fastly_integration.test", "config.webhook", "https://example.com/hooks/two"),
+					resource.TestCheckResourceAttr("fastly_integration.test", "authentication.webhook", "https://example.com/hooks/two"),
 					CheckIntegrationRemoteState("fastly_integration.test", updatedName, "updated by acceptance test", "webhook"),
 					// Same ID across the update confirms this was an in-place update, not a delete+recreate.
 					func(s *terraform.State) error {
@@ -67,7 +67,7 @@ func TestAccFastlyIntegration_webhook(t *testing.T) {
 				ResourceName:            "fastly_integration.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"config"},
+				ImportStateVerifyIgnore: []string{"authentication"},
 			},
 		},
 	})
@@ -99,7 +99,7 @@ func TestAccFastlyIntegration_datadog(t *testing.T) {
 				ResourceName:            "fastly_integration.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"config"},
+				ImportStateVerifyIgnore: []string{"authentication"},
 			},
 		},
 	})

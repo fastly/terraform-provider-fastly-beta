@@ -27,10 +27,11 @@ func mustMap(t *testing.T, kv ...string) types.Map {
 
 func TestBuildCreateInput(t *testing.T) {
 	plan := Model{
-		Name:        types.StringValue("my integration"),
-		Description: types.StringValue("my description"),
-		Type:        types.StringValue(fastly.IntegrationTypeDatadog),
-		Config:      mustMap(t, "apikey", "abc123", "site", "datadoghq.eu"),
+		Name:           types.StringValue("my integration"),
+		Description:    types.StringValue("my description"),
+		Type:           types.StringValue(fastly.IntegrationTypeDatadog),
+		Config:         mustMap(t, "site", "datadoghq.eu"),
+		Authentication: mustMap(t, "apikey", "abc123"),
 	}
 
 	input, diags := BuildCreateInput(context.Background(), plan)
@@ -42,25 +43,52 @@ func TestBuildCreateInput(t *testing.T) {
 	assert.Equal(t, map[string]string{"apikey": "abc123", "site": "datadoghq.eu"}, input.Config)
 }
 
-func TestBuildCreateInput_omitsUnsetDescription(t *testing.T) {
+func TestBuildCreateInput_duplicateKeyAcrossConfigAndAuthenticationErrors(t *testing.T) {
 	plan := Model{
-		Name:   types.StringValue("my integration"),
-		Type:   types.StringValue(typeWebhook),
-		Config: mustMap(t, "url", "https://example.com/webhook"),
+		Name:           types.StringValue("my integration"),
+		Type:           types.StringValue(fastly.IntegrationTypeDatadog),
+		Config:         mustMap(t, "apikey", "from-config"),
+		Authentication: mustMap(t, "apikey", "from-auth"),
+	}
+
+	_, diags := BuildCreateInput(context.Background(), plan)
+	assert.True(t, diags.HasError())
+}
+
+func TestBuildCreateInput_defaultsUnsetDescriptionToEmpty(t *testing.T) {
+	plan := Model{
+		Name:           types.StringValue("my integration"),
+		Type:           types.StringValue(typeWebhook),
+		Authentication: mustMap(t, "webhook", "https://example.com/webhook"),
 	}
 
 	input, diags := BuildCreateInput(context.Background(), plan)
 	require.False(t, diags.HasError())
 
-	assert.Nil(t, input.Description)
+	require.NotNil(t, input.Description)
+	assert.Equal(t, "", fastly.ToValue(input.Description))
+}
+
+func TestBuildUpdateInput_clearsUnsetDescription(t *testing.T) {
+	plan := Model{
+		Name:           types.StringValue("my integration"),
+		Type:           types.StringValue(typeWebhook),
+		Authentication: mustMap(t, "webhook", "https://example.com/webhook"),
+	}
+
+	input, diags := BuildUpdateInput(context.Background(), "int-id", plan)
+	require.False(t, diags.HasError())
+
+	require.NotNil(t, input.Description)
+	assert.Equal(t, "", fastly.ToValue(input.Description))
 }
 
 func TestBuildUpdateInput(t *testing.T) {
 	plan := Model{
-		Name:        types.StringValue("renamed"),
-		Description: types.StringValue("new description"),
-		Type:        types.StringValue(typeSlack),
-		Config:      mustMap(t, "url", "https://hooks.slack.com/x"),
+		Name:           types.StringValue("renamed"),
+		Description:    types.StringValue("new description"),
+		Type:           types.StringValue(typeSlack),
+		Authentication: mustMap(t, "webhook", "https://hooks.slack.com/x"),
 	}
 
 	input, diags := BuildUpdateInput(context.Background(), "int-id", plan)
@@ -70,13 +98,14 @@ func TestBuildUpdateInput(t *testing.T) {
 	assert.Equal(t, "renamed", fastly.ToValue(input.Name))
 	assert.Equal(t, "new description", fastly.ToValue(input.Description))
 	assert.Equal(t, typeSlack, fastly.ToValue(input.Type))
-	assert.Equal(t, map[string]string{"url": "https://hooks.slack.com/x"}, input.Config)
+	assert.Equal(t, map[string]string{"webhook": "https://hooks.slack.com/x"}, input.Config)
 }
 
 func TestFlattenToModel(t *testing.T) {
 	prior := Model{
-		Description: types.StringValue("kept if API omits it"),
-		Config:      mustMap(t, "token", "secret-not-echoed", "baseurl", "https://old.example.com"),
+		Description:    types.StringValue("kept if API omits it"),
+		Config:         mustMap(t, "baseurl", "https://old.example.com"),
+		Authentication: mustMap(t, "token", "secret-not-echoed"),
 	}
 
 	i := &fastly.Integration{
@@ -100,10 +129,10 @@ func TestFlattenToModel(t *testing.T) {
 	var config map[string]string
 	diags = m.Config.ElementsAs(context.Background(), &config, false)
 	require.False(t, diags.HasError())
-	assert.Equal(t, map[string]string{
-		"token":   "secret-not-echoed",
-		"baseurl": "https://new.example.com",
-	}, config)
+	assert.Equal(t, map[string]string{"baseurl": "https://new.example.com"}, config)
+
+	// authentication is never returned by the API, so it's carried over unchanged.
+	assert.True(t, m.Authentication.Equal(prior.Authentication))
 }
 
 func TestFlattenToModel_descriptionReturnedByAPIOverridesPrior(t *testing.T) {

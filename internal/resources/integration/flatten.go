@@ -10,16 +10,19 @@ import (
 	"github.com/fastly/go-fastly/v17/fastly"
 )
 
-// config and description aren't always echoed back by the API (write-only secret
-// fields are stripped or omitted entirely), so merge over prior instead of replacing.
+// description isn't always echoed back by the API, so merge over prior instead of
+// replacing. The API only ever returns non-sensitive config fields, so the returned
+// config always merges into `config`; `authentication` is never round-tripped and is
+// carried over from prior state/plan unchanged.
 func FlattenToModel(ctx context.Context, i *fastly.Integration, prior Model) (Model, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	m := Model{
-		ID:          types.StringValue(fastly.ToValue(i.ID)),
-		Name:        types.StringValue(fastly.ToValue(i.Name)),
-		Type:        types.StringValue(fastly.ToValue(i.Type)),
-		Description: prior.Description,
+		ID:             types.StringValue(fastly.ToValue(i.ID)),
+		Name:           types.StringValue(fastly.ToValue(i.Name)),
+		Type:           types.StringValue(fastly.ToValue(i.Type)),
+		Description:    prior.Description,
+		Authentication: prior.Authentication,
 	}
 	if i.Description != nil {
 		m.Description = types.StringValue(*i.Description)

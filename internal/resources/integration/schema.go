@@ -48,11 +48,12 @@ func typeDescription() string {
 }
 
 type Model struct {
-	ID          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	Description types.String `tfsdk:"description"`
-	Type        types.String `tfsdk:"type"`
-	Config      types.Map    `tfsdk:"config"`
+	ID             types.String `tfsdk:"id"`
+	Name           types.String `tfsdk:"name"`
+	Description    types.String `tfsdk:"description"`
+	Type           types.String `tfsdk:"type"`
+	Config         types.Map    `tfsdk:"config"`
+	Authentication types.Map    `tfsdk:"authentication"`
 }
 
 func ResourceAttributes() map[string]schema.Attribute {
@@ -67,10 +68,16 @@ func ResourceAttributes() map[string]schema.Attribute {
 		"name": schema.StringAttribute{
 			Required:    true,
 			Description: "User submitted name of the integration.",
+			Validators: []validator.String{
+				stringvalidator.LengthBetween(1, 50),
+			},
 		},
 		"description": schema.StringAttribute{
 			Optional:    true,
 			Description: "User submitted description of the integration.",
+			Validators: []validator.String{
+				stringvalidator.LengthBetween(0, 300),
+			},
 		},
 		"type": schema.StringAttribute{
 			Required:    true,
@@ -80,10 +87,15 @@ func ResourceAttributes() map[string]schema.Attribute {
 			},
 		},
 		"config": schema.MapAttribute{
-			Required:    true,
+			Optional:    true,
+			ElementType: types.StringType,
+			Description: "Non-sensitive configuration specific to the integration `type` (see documentation examples). Credentials and other secret values belong in `authentication` instead.",
+		},
+		"authentication": schema.MapAttribute{
+			Optional:    true,
 			ElementType: types.StringType,
 			Sensitive:   true,
-			Description: "Configuration specific to the integration `type` (see documentation examples).",
+			Description: "Sensitive configuration specific to the integration `type`, such as API keys, tokens, and webhook URLs (see documentation examples). The Fastly API never returns these values, so they are not refreshed on read or import.",
 		},
 	}
 }
