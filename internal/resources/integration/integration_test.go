@@ -14,8 +14,10 @@ import (
 
 func mustMap(t *testing.T, kv ...string) types.Map {
 	t.Helper()
+	require.Zero(t, len(kv)%2, "mustMap requires an even number of arguments")
+
 	elements := map[string]string{}
-	for i := 0; i < len(kv); i += 2 {
+	for i := 0; i+1 < len(kv); i += 2 {
 		elements[kv[i]] = kv[i+1]
 	}
 	m, diags := types.MapValueFrom(context.Background(), types.StringType, elements)

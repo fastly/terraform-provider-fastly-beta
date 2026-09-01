@@ -150,7 +150,7 @@ func TestAccFastlyIntegration_pagerduty(t *testing.T) {
 }
 
 func TestAccFastlyIntegration_slack(t *testing.T) {
-	testAccFastlyIntegrationBasic(t, "slack", map[string]string{
+	testAccFastlyIntegrationBasic(t, "slack", map[string]string{ //nolint:gosec // placeholder URL, not a real webhook
 		"webhook": "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
 	})
 }
@@ -220,7 +220,7 @@ func TestAccFastlyIntegration_recreateAfterManualDelete(t *testing.T) {
 	t.Parallel()
 
 	name := fmt.Sprintf("tf-test-integration-%s", acctest.RandString(10))
-	config := ConfigIntegration(name, "created by acceptance test", "slack", map[string]string{
+	config := ConfigIntegration(name, "created by acceptance test", "slack", map[string]string{ //nolint:gosec // placeholder URL, not a real webhook
 		"webhook": "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
 	})
 
