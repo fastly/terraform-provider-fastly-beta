@@ -28,11 +28,11 @@ func definition() ngwafalertintegration.Definition {
 		DisplayName: "Jira",
 		Description: "Manages a Fastly Next-Gen WAF Jira alert integration scoped to a single workspace.",
 		ConfigAttrs: []ngwafalertintegration.ConfigAttribute{
-			{Name: "host", Description: "Jira instance host.", Sensitive: false},
-			{Name: "username", Description: "Jira username.", Sensitive: false},
-			{Name: "project", Description: "Jira project key.", Sensitive: false},
+			{Name: "host", Description: "Host name of the Jira instance.", Sensitive: false},
+			{Name: "username", Description: "Jira username of the user who created the ticket.", Sensitive: false},
+			{Name: "project", Description: "Specifies the Jira project where the issue will be created.", Sensitive: false},
 			{Name: "key", Description: "Jira API key.", Sensitive: true},
-			{Name: "issue_type", Description: "Jira issue type. Defaults to `Task` when omitted by the API.", Sensitive: false},
+			{Name: "issue_type", Description: "The Jira issue type associated with the ticket. Defaults to `Task` when omitted by the API.", Sensitive: false},
 		},
 		Operations: operations{},
 	}
