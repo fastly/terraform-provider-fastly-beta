@@ -13,7 +13,9 @@ resource "fastly_ngwaf_workspace_alert_jira_integration" "test" {
   host         = "https://example.atlassian.net"
   username     = "terraform"
   project      = "TF"
-  key          = "1234567890abcdef1234567890abcdef"
+  authentication = {
+    key = "1234567890abcdef1234567890abcdef"
+  }
   issue_type   = "Task"
 }
 

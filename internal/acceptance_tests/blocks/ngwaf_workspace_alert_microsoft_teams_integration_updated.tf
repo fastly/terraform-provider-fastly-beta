@@ -10,5 +10,7 @@ resource "fastly_ngwaf_workspace_alert_microsoft_teams_integration" "test" {
   workspace_id = fastly_ngwaf_workspace.test.id
   description  = "{{.ALERT_DESCRIPTION}}"
 
-  webhook      = "https://example.com/webhooks/my-service-2"
+  authentication = {
+    webhook = "https://example.com/webhooks/my-service-2"
+  }
 }

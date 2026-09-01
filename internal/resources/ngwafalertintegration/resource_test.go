@@ -61,11 +61,18 @@ func TestAttributes(t *testing.T) {
 	require.True(t, ok)
 	require.True(t, workspaceID.Required)
 
-	webhook, ok := attrs["webhook"].(schema.StringAttribute)
+	authentication, ok := attrs["authentication"].(schema.SingleNestedAttribute)
+	require.True(t, ok)
+	require.True(t, authentication.Required)
+
+	webhook, ok := authentication.Attributes["webhook"].(schema.StringAttribute)
 	require.True(t, ok)
 	require.True(t, webhook.Required)
 	require.True(t, webhook.Sensitive)
 	require.NotEmpty(t, webhook.Validators)
+
+	_, ok = attrs["webhook"]
+	require.False(t, ok)
 }
 
 func TestAttributesOptionalDefault(t *testing.T) {
@@ -88,13 +95,17 @@ func TestAttributesAddressValidator(t *testing.T) {
 	attrs := Attributes(Definition{
 		Type: "mailinglist",
 		ConfigAttrs: []ConfigAttribute{
-			{Name: "address", Description: "An email address."},
+			{Name: "address", Description: "An email address.", Sensitive: true},
 		},
 	})
 
-	address, ok := attrs["address"].(schema.StringAttribute)
+	authentication, ok := attrs["authentication"].(schema.SingleNestedAttribute)
+	require.True(t, ok)
+
+	address, ok := authentication.Attributes["address"].(schema.StringAttribute)
 	require.True(t, ok)
 	require.True(t, address.Required)
+	require.True(t, address.Sensitive)
 	require.NotEmpty(t, address.Validators)
 }
 

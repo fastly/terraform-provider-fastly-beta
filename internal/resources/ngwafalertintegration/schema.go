@@ -38,34 +38,61 @@ func Attributes(def Definition) map[string]schema.Attribute {
 		},
 	}
 
-	for _, attr := range def.ConfigAttrs {
-		validators := []validator.String{}
-		switch attr.Name {
-		case "site":
-			validators = append(validators, stringvalidator.OneOf("us1", "us3", "us5", "eu1"))
-		case "address":
-			validators = append(validators, stringvalidator.LengthBetween(1, 320))
-		case "host", "username", "project", "key", "webhook":
-			validators = append(validators, stringvalidator.LengthAtLeast(1))
-		}
+	authenticationAttrs := map[string]schema.Attribute{}
 
-		attribute := schema.StringAttribute{
-			Sensitive:   attr.Sensitive,
-			Description: attr.Description,
-			Validators:  validators,
-		}
-		if attr.Optional {
-			attribute.Optional = true
-			attribute.Computed = true
-			if attr.Default != "" {
-				attribute.Default = stringdefault.StaticString(attr.Default)
-			}
-		} else {
-			attribute.Required = true
+	for _, attr := range def.ConfigAttrs {
+		attribute := configStringAttribute(attr)
+
+		if attr.Sensitive {
+			authenticationAttrs[attr.Name] = attribute
+			continue
 		}
 
 		attrs[attr.Name] = attribute
 	}
 
+	if len(authenticationAttrs) > 0 {
+		attrs["authentication"] = schema.SingleNestedAttribute{
+			Required:    true,
+			Description: fmt.Sprintf("Sensitive configuration for the %s alert integration.", def.Type),
+			Attributes:  authenticationAttrs,
+		}
+	}
+
 	return attrs
+}
+
+func configStringAttribute(attr ConfigAttribute) schema.StringAttribute {
+	attribute := schema.StringAttribute{
+		Sensitive:   attr.Sensitive,
+		Description: attr.Description,
+		Validators:  validatorsForConfigAttribute(attr.Name),
+	}
+
+	if attr.Optional {
+		attribute.Optional = true
+		attribute.Computed = true
+		if attr.Default != "" {
+			attribute.Default = stringdefault.StaticString(attr.Default)
+		}
+	} else {
+		attribute.Required = true
+	}
+
+	return attribute
+}
+
+func validatorsForConfigAttribute(name string) []validator.String {
+	validators := []validator.String{}
+
+	switch name {
+	case "site":
+		validators = append(validators, stringvalidator.OneOf("us1", "us3", "us5", "eu1"))
+	case "address":
+		validators = append(validators, stringvalidator.LengthBetween(1, 320))
+	case "host", "username", "project", "key", "webhook":
+		validators = append(validators, stringvalidator.LengthAtLeast(1))
+	}
+
+	return validators
 }

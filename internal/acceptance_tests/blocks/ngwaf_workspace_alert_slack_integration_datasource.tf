@@ -10,7 +10,9 @@ resource "fastly_ngwaf_workspace_alert_slack_integration" "test" {
   workspace_id = fastly_ngwaf_workspace.test.id
   description  = "{{.ALERT_DESCRIPTION}}"
 
-  webhook      = "https://example.com/webhooks/my-service"
+  authentication = {
+    webhook = "https://example.com/webhooks/my-service"
+  }
 }
 
 data "fastly_ngwaf_workspace_alert_slack_integrations" "test" {

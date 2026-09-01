@@ -3,6 +3,7 @@ package ngwafalertintegration
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -15,9 +16,10 @@ import (
 // alert integration resources. Type-specific resources expose only the config
 // attributes that apply to their integration type.
 type Model struct {
-	ID          types.String `tfsdk:"id"`
-	WorkspaceID types.String `tfsdk:"workspace_id"`
-	Description types.String `tfsdk:"description"`
+	ID             types.String `tfsdk:"id"`
+	WorkspaceID    types.String `tfsdk:"workspace_id"`
+	Description    types.String `tfsdk:"description"`
+	Authentication types.Object `tfsdk:"authentication"`
 
 	Address   types.String `tfsdk:"address"`
 	Host      types.String `tfsdk:"host"`
@@ -67,9 +69,7 @@ func ModelFromPlan(ctx context.Context, plan tfsdk.Plan, def Definition) (Model,
 
 	diags.Append(plan.GetAttribute(ctx, path.Root("workspace_id"), &m.WorkspaceID)...)
 	diags.Append(plan.GetAttribute(ctx, path.Root("description"), &m.Description)...)
-	for _, attr := range def.ConfigAttrs {
-		diags.Append(readPlanAttribute(ctx, plan, attr.Name, &m)...)
-	}
+	diags.Append(readConfigAttributesFromPlan(ctx, plan, def, &m)...)
 
 	return m, diags
 }
@@ -81,30 +81,40 @@ func ModelFromState(ctx context.Context, state tfsdk.State, def Definition) (Mod
 	diags.Append(state.GetAttribute(ctx, path.Root("id"), &m.ID)...)
 	diags.Append(state.GetAttribute(ctx, path.Root("workspace_id"), &m.WorkspaceID)...)
 	diags.Append(state.GetAttribute(ctx, path.Root("description"), &m.Description)...)
-	for _, attr := range def.ConfigAttrs {
-		diags.Append(readStateAttribute(ctx, state, attr.Name, &m)...)
-	}
+	diags.Append(readConfigAttributesFromState(ctx, state, def, &m)...)
 
 	return m, diags
 }
 
-func readPlanAttribute(ctx context.Context, plan tfsdk.Plan, name string, m *Model) diag.Diagnostics {
-	var value types.String
-	diags := plan.GetAttribute(ctx, path.Root(name), &value)
-	if diags.HasError() {
-		return diags
+func readConfigAttributesFromPlan(ctx context.Context, plan tfsdk.Plan, def Definition, m *Model) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	for _, attr := range def.ConfigAttrs {
+		attrPath := configAttributePath(attr)
+		var value types.String
+		diags.Append(plan.GetAttribute(ctx, attrPath, &value)...)
+		if diags.HasError() {
+			return diags
+		}
+		setModelAttribute(m, attr.Name, value)
 	}
-	setModelAttribute(m, name, value)
+
 	return diags
 }
 
-func readStateAttribute(ctx context.Context, state tfsdk.State, name string, m *Model) diag.Diagnostics {
-	var value types.String
-	diags := state.GetAttribute(ctx, path.Root(name), &value)
-	if diags.HasError() {
-		return diags
+func readConfigAttributesFromState(ctx context.Context, state tfsdk.State, def Definition, m *Model) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	for _, attr := range def.ConfigAttrs {
+		attrPath := configAttributePath(attr)
+		var value types.String
+		diags.Append(state.GetAttribute(ctx, attrPath, &value)...)
+		if diags.HasError() {
+			return diags
+		}
+		setModelAttribute(m, attr.Name, value)
 	}
-	setModelAttribute(m, name, value)
+
 	return diags
 }
 
@@ -115,11 +125,45 @@ func SetModelState(ctx context.Context, state *tfsdk.State, def Definition, m Mo
 	diags.Append(state.SetAttribute(ctx, path.Root("workspace_id"), m.WorkspaceID)...)
 	diags.Append(state.SetAttribute(ctx, path.Root("description"), m.Description)...)
 
-	for _, attr := range def.ConfigAttrs {
-		diags.Append(state.SetAttribute(ctx, path.Root(attr.Name), modelAttribute(m, attr.Name))...)
+	authenticationTypes := authenticationAttributeTypes(def)
+	authenticationValues := map[string]attr.Value{}
+
+	for _, configAttr := range def.ConfigAttrs {
+		value := modelAttribute(m, configAttr.Name)
+		if configAttr.Sensitive {
+			authenticationValues[configAttr.Name] = value
+			continue
+		}
+
+		diags.Append(state.SetAttribute(ctx, path.Root(configAttr.Name), value)...)
+	}
+
+	if len(authenticationTypes) > 0 {
+		authValue, authDiags := types.ObjectValue(authenticationTypes, authenticationValues)
+		diags.Append(authDiags...)
+		if !authDiags.HasError() {
+			diags.Append(state.SetAttribute(ctx, path.Root("authentication"), authValue)...)
+		}
 	}
 
 	return diags
+}
+
+func configAttributePath(attr ConfigAttribute) path.Path {
+	if attr.Sensitive {
+		return path.Root("authentication").AtName(attr.Name)
+	}
+	return path.Root(attr.Name)
+}
+
+func authenticationAttributeTypes(def Definition) map[string]attr.Type {
+	attrTypes := map[string]attr.Type{}
+	for _, configAttr := range def.ConfigAttrs {
+		if configAttr.Sensitive {
+			attrTypes[configAttr.Name] = types.StringType
+		}
+	}
+	return attrTypes
 }
 
 func setModelAttribute(m *Model, name string, value types.String) {

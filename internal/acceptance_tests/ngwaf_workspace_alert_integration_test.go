@@ -67,7 +67,7 @@ func ngwafWorkspaceAlertIntegrationAcceptanceCases() []ngwafWorkspaceAlertIntegr
 			basicBlock:      "ngwaf_workspace_alert_datadog_integration_basic.tf",
 			updatedBlock:    "ngwaf_workspace_alert_datadog_integration_updated.tf",
 			dataSourceBlock: "ngwaf_workspace_alert_datadog_integration_datasource.tf",
-			updateAttr:      "key",
+			updateAttr:      "authentication.key",
 			updatedValue:    "1234567890abcdef1234567890abcdef2",
 		},
 		{
@@ -89,7 +89,7 @@ func ngwafWorkspaceAlertIntegrationAcceptanceCases() []ngwafWorkspaceAlertIntegr
 			basicBlock:      "ngwaf_workspace_alert_mailing_list_integration_basic.tf",
 			updatedBlock:    "ngwaf_workspace_alert_mailing_list_integration_updated.tf",
 			dataSourceBlock: "ngwaf_workspace_alert_mailing_list_integration_datasource.tf",
-			updateAttr:      "address",
+			updateAttr:      "authentication.address",
 			updatedValue:    "alerts-updated@example.com",
 		},
 		{
@@ -100,7 +100,7 @@ func ngwafWorkspaceAlertIntegrationAcceptanceCases() []ngwafWorkspaceAlertIntegr
 			basicBlock:      "ngwaf_workspace_alert_microsoft_teams_integration_basic.tf",
 			updatedBlock:    "ngwaf_workspace_alert_microsoft_teams_integration_updated.tf",
 			dataSourceBlock: "ngwaf_workspace_alert_microsoft_teams_integration_datasource.tf",
-			updateAttr:      "webhook",
+			updateAttr:      "authentication.webhook",
 			updatedValue:    "https://example.com/webhooks/my-service-2",
 		},
 		{
@@ -111,7 +111,7 @@ func ngwafWorkspaceAlertIntegrationAcceptanceCases() []ngwafWorkspaceAlertIntegr
 			basicBlock:      "ngwaf_workspace_alert_opsgenie_integration_basic.tf",
 			updatedBlock:    "ngwaf_workspace_alert_opsgenie_integration_updated.tf",
 			dataSourceBlock: "ngwaf_workspace_alert_opsgenie_integration_datasource.tf",
-			updateAttr:      "key",
+			updateAttr:      "authentication.key",
 			updatedValue:    "1234567890abcdef1234567890abcdef2",
 		},
 		{
@@ -122,7 +122,7 @@ func ngwafWorkspaceAlertIntegrationAcceptanceCases() []ngwafWorkspaceAlertIntegr
 			basicBlock:      "ngwaf_workspace_alert_pagerduty_integration_basic.tf",
 			updatedBlock:    "ngwaf_workspace_alert_pagerduty_integration_updated.tf",
 			dataSourceBlock: "ngwaf_workspace_alert_pagerduty_integration_datasource.tf",
-			updateAttr:      "key",
+			updateAttr:      "authentication.key",
 			updatedValue:    "1234567890abcdef1234567890abcdef2",
 		},
 		{
@@ -133,7 +133,7 @@ func ngwafWorkspaceAlertIntegrationAcceptanceCases() []ngwafWorkspaceAlertIntegr
 			basicBlock:      "ngwaf_workspace_alert_slack_integration_basic.tf",
 			updatedBlock:    "ngwaf_workspace_alert_slack_integration_updated.tf",
 			dataSourceBlock: "ngwaf_workspace_alert_slack_integration_datasource.tf",
-			updateAttr:      "webhook",
+			updateAttr:      "authentication.webhook",
 			updatedValue:    "https://example.com/webhooks/my-service-2",
 		},
 		{
@@ -144,7 +144,7 @@ func ngwafWorkspaceAlertIntegrationAcceptanceCases() []ngwafWorkspaceAlertIntegr
 			basicBlock:      "ngwaf_workspace_alert_webhook_integration_basic.tf",
 			updatedBlock:    "ngwaf_workspace_alert_webhook_integration_updated.tf",
 			dataSourceBlock: "ngwaf_workspace_alert_webhook_integration_datasource.tf",
-			updateAttr:      "webhook",
+			updateAttr:      "authentication.webhook",
 			updatedValue:    "https://example.com/webhooks/my-service-2",
 		},
 	}

@@ -10,5 +10,7 @@ resource "fastly_ngwaf_workspace_alert_mailing_list_integration" "test" {
   workspace_id = fastly_ngwaf_workspace.test.id
   description  = "{{.ALERT_DESCRIPTION}}"
 
-  address      = "alerts-updated@example.com"
+  authentication = {
+    address = "alerts-updated@example.com"
+  }
 }

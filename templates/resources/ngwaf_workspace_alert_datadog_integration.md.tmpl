@@ -26,8 +26,11 @@ resource "fastly_ngwaf_workspace_alert_datadog_integration" "example" {
   workspace_id = fastly_ngwaf_workspace.example.id
   description  = "Managed by Terraform"
 
-  key          = "1234567890abcdef1234567890abcdef"
   site         = "us1"
+
+  authentication = {
+    key = "1234567890abcdef1234567890abcdef"
+  }
 }
 ```
 
