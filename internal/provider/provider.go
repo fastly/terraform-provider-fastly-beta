@@ -24,11 +24,21 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/dnszones"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/domains"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/kvstores"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertdatadogintegrations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertjiraintegrations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertmailinglistintegrations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertmicrosoftteamsintegrations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertopsgenieintegrations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertpagerdutyintegrations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertslackintegrations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertwebhookintegrations"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacelists"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspaceredactions"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacerules"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspaces"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacesignals"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacethresholds"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacevirtualpatches"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/serviceversion"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/vclsnippets"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/acl"
@@ -62,9 +72,18 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsyslog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspace"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertdatadogintegration"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertjiraintegration"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertmailinglistintegration"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertmicrosoftteamsintegration"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertopsgenieintegration"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertpagerdutyintegration"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertslackintegration"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertwebhookintegration"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacecountrylist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspaceiplist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspaceratelimitrule"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspaceredaction"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacerequestrule"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacesignal"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacesignallist"
@@ -72,6 +91,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacestringlist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacetemplatedsignalrule"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacethreshold"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacevirtualpatch"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacewildcardlist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/productenablement"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/resourcelink"
@@ -179,10 +199,19 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		snippet.NewResource,
 		dynamicvclsnippet.NewResource,
 		dynamicsnippetcontent.NewResource,
+		ngwafworkspacealertdatadogintegration.NewResource,
+		ngwafworkspacealertjiraintegration.NewResource,
+		ngwafworkspacealertmailinglistintegration.NewResource,
+		ngwafworkspacealertmicrosoftteamsintegration.NewResource,
+		ngwafworkspacealertopsgenieintegration.NewResource,
+		ngwafworkspacealertpagerdutyintegration.NewResource,
+		ngwafworkspacealertslackintegration.NewResource,
+		ngwafworkspacealertwebhookintegration.NewResource,
 		ngwafworkspace.NewResource,
 		ngwafworkspacecountrylist.NewResource,
 		ngwafworkspaceiplist.NewResource,
 		ngwafworkspaceratelimitrule.NewResource,
+		ngwafworkspaceredaction.NewResource,
 		ngwafworkspacerequestrule.NewResource,
 		ngwafworkspacesignal.NewResource,
 		ngwafworkspacesignallist.NewResource,
@@ -190,6 +219,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		ngwafworkspacestringlist.NewResource,
 		ngwafworkspacetemplatedsignalrule.NewResource,
 		ngwafworkspacethreshold.NewResource,
+		ngwafworkspacevirtualpatch.NewResource,
 		ngwafworkspacewildcardlist.NewResource,
 		productenablement.NewFanoutResource,
 		productenablement.NewBrotliCompressionResource,
@@ -217,11 +247,21 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		dnszones.NewDataSource,
 		domains.NewDataSource,
 		kvstores.NewDataSource,
+		ngwafworkspacealertdatadogintegrations.NewDataSource,
+		ngwafworkspacealertjiraintegrations.NewDataSource,
+		ngwafworkspacealertmailinglistintegrations.NewDataSource,
+		ngwafworkspacealertmicrosoftteamsintegrations.NewDataSource,
+		ngwafworkspacealertopsgenieintegrations.NewDataSource,
+		ngwafworkspacealertpagerdutyintegrations.NewDataSource,
+		ngwafworkspacealertslackintegrations.NewDataSource,
+		ngwafworkspacealertwebhookintegrations.NewDataSource,
 		ngwafworkspacelists.NewDataSource,
+		ngwafworkspaceredactions.NewDataSource,
 		ngwafworkspacerules.NewDataSource,
 		ngwafworkspaces.NewDataSource,
 		ngwafworkspacesignals.NewDataSource,
 		ngwafworkspacethresholds.NewDataSource,
+		ngwafworkspacevirtualpatches.NewDataSource,
 		serviceversion.NewDataSource,
 		vclsnippets.NewDataSource,
 	}
