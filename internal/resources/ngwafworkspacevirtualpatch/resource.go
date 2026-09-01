@@ -63,26 +63,6 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 	tflog.Debug(ctx, "Configuring Fastly NGWAF workspace virtual patch", map[string]any{"workspace_id": workspaceID, "virtual_patch_id": virtualPatchID})
 
-	existing, err := vp.Get(ctx, r.client, BuildGetInput(workspaceID, virtualPatchID))
-	if err != nil {
-		if errors.IsNotFound(err) {
-			resp.Diagnostics.AddError(
-				"NGWAF virtual patch not found",
-				fmt.Sprintf("Virtual patches cannot be created by Terraform. Use this resource to configure an existing virtual patch. Virtual patch %q does not exist in workspace %q.", virtualPatchID, workspaceID),
-			)
-			return
-		}
-		resp.Diagnostics.AddError("Error reading NGWAF virtual patch before configure", err.Error())
-		return
-	}
-	if existing == nil {
-		resp.Diagnostics.AddError(
-			"NGWAF virtual patch not found",
-			fmt.Sprintf("Virtual patches cannot be created by Terraform. Use this resource to configure an existing virtual patch. Virtual patch %q does not exist in workspace %q.", virtualPatchID, workspaceID),
-		)
-		return
-	}
-
 	virtualPatch, err := vp.Update(ctx, r.client, BuildUpdateInput(workspaceID, virtualPatchID, plan))
 	if err != nil {
 		resp.Diagnostics.AddError("Error configuring NGWAF virtual patch", err.Error())
