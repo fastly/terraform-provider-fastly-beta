@@ -69,7 +69,7 @@ func TestFlattenVirtualPatches(t *testing.T) {
 		attributes := object.Attributes()
 		id, ok := attributes["id"].(types.String)
 		require.True(t, ok)
-		action, ok := attributes["action"].(types.String)
+		mode, ok := attributes["mode"].(types.String)
 		require.True(t, ok)
 		description, ok := attributes["description"].(types.String)
 		require.True(t, ok)
@@ -77,7 +77,7 @@ func TestFlattenVirtualPatches(t *testing.T) {
 		require.True(t, ok)
 
 		got[id.ValueString()] = map[string]string{
-			"action":      action.ValueString(),
+			"mode":        mode.ValueString(),
 			"description": description.ValueString(),
 			"enabled":     strconv.FormatBool(enabled.ValueBool()),
 		}
@@ -85,12 +85,12 @@ func TestFlattenVirtualPatches(t *testing.T) {
 
 	require.Equal(t, map[string]map[string]string{
 		"CVE-2017-5638": {
-			"action":      "block",
+			"mode":        "block",
 			"description": "Apache Struts",
 			"enabled":     "true",
 		},
 		"CVE-2021-44228": {
-			"action":      "log",
+			"mode":        "log",
 			"description": "Log4Shell",
 			"enabled":     "false",
 		},

@@ -30,7 +30,7 @@ func TestAccFastlyNGWAFWorkspaceVirtualPatch_lifecycle(t *testing.T) {
 			{
 				Config: ConfigNGWAFWorkspaceVirtualPatch("ngwaf_workspace_virtual_patch_basic.tf", workspaceName, testVirtualPatchID),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_virtual_patch.test", "action", "block"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_virtual_patch.test", "mode", "block"),
 					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_virtual_patch.test", "enabled", "true"),
 					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_virtual_patch.test", "virtual_patch_id", testVirtualPatchID),
 					resource.TestCheckResourceAttrPair("fastly_ngwaf_workspace_virtual_patch.test", "workspace_id", "fastly_ngwaf_workspace.test", "id"),
@@ -42,7 +42,7 @@ func TestAccFastlyNGWAFWorkspaceVirtualPatch_lifecycle(t *testing.T) {
 			{
 				Config: ConfigNGWAFWorkspaceVirtualPatch("ngwaf_workspace_virtual_patch_updated.tf", workspaceName, testVirtualPatchID),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_virtual_patch.test", "action", "log"),
+					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_virtual_patch.test", "mode", "log"),
 					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_virtual_patch.test", "enabled", "false"),
 					resource.TestCheckResourceAttr("fastly_ngwaf_workspace_virtual_patch.test", "virtual_patch_id", testVirtualPatchID),
 					CheckNGWAFWorkspaceVirtualPatchExists("fastly_ngwaf_workspace_virtual_patch.test", "log", false),
@@ -117,7 +117,7 @@ func ImportStateIDForNGWAFWorkspaceVirtualPatch(n string) resource.ImportStateId
 	}
 }
 
-func CheckNGWAFWorkspaceVirtualPatchExists(resourceName, expectedAction string, expectedEnabled bool) resource.TestCheckFunc {
+func CheckNGWAFWorkspaceVirtualPatchExists(resourceName, expectedMode string, expectedEnabled bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
@@ -142,8 +142,8 @@ func CheckNGWAFWorkspaceVirtualPatchExists(resourceName, expectedAction string, 
 		if virtualPatch == nil {
 			return fmt.Errorf("NGWAF virtual patch %s not found in API", virtualPatchID)
 		}
-		if virtualPatch.Mode != expectedAction {
-			return fmt.Errorf("NGWAF virtual patch action = %q, want %q", virtualPatch.Mode, expectedAction)
+		if virtualPatch.Mode != expectedMode {
+			return fmt.Errorf("NGWAF virtual patch mode = %q, want %q", virtualPatch.Mode, expectedMode)
 		}
 		if virtualPatch.Enabled != expectedEnabled {
 			return fmt.Errorf("NGWAF virtual patch enabled = %t, want %t", virtualPatch.Enabled, expectedEnabled)

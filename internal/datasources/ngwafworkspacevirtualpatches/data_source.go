@@ -35,7 +35,7 @@ type DataSourceModel struct {
 
 var virtualPatchAttrTypes = map[string]attr.Type{
 	"id":          types.StringType,
-	"action":      types.StringType,
+	"mode":        types.StringType,
 	"description": types.StringType,
 	"enabled":     types.BoolType,
 }
@@ -69,9 +69,9 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 							Computed:    true,
 							Description: "The ID of the virtual patch.",
 						},
-						"action": schema.StringAttribute{
+						"mode": schema.StringAttribute{
 							Computed:    true,
-							Description: "Action to take when a signal for the virtual patch is detected.",
+							Description: "Action to take when a signal for virtual patch is detected.",
 						},
 						"description": schema.StringAttribute{
 							Computed:    true,
@@ -148,7 +148,7 @@ func flattenVirtualPatches(virtualPatches *vp.VirtualPatches) (types.List, []str
 
 		obj, objDiags := types.ObjectValue(virtualPatchAttrTypes, map[string]attr.Value{
 			"id":          types.StringValue(virtualPatch.ID),
-			"action":      types.StringValue(virtualPatch.Mode),
+			"mode":        types.StringValue(virtualPatch.Mode),
 			"description": types.StringValue(virtualPatch.Description),
 			"enabled":     types.BoolValue(virtualPatch.Enabled),
 		})

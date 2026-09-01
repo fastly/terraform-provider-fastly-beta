@@ -168,11 +168,11 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 
 	workspaceID := state.WorkspaceID.ValueString()
 	virtualPatchID := state.VirtualPatchID.ValueString()
-	action := state.Action.ValueString()
+	mode := state.Mode.ValueString()
 
 	tflog.Debug(ctx, "Disabling Fastly NGWAF workspace virtual patch during delete", map[string]any{"workspace_id": workspaceID, "virtual_patch_id": virtualPatchID})
 
-	if _, err := vp.Update(ctx, r.client, BuildDisableInput(workspaceID, virtualPatchID, action)); err != nil && !errors.IsNotFound(err) {
+	if _, err := vp.Update(ctx, r.client, BuildDisableInput(workspaceID, virtualPatchID, mode)); err != nil && !errors.IsNotFound(err) {
 		resp.Diagnostics.AddError("Error disabling NGWAF virtual patch", err.Error())
 	}
 }

@@ -38,7 +38,7 @@ output "ngwaf_workspace_virtual_patches" {
 
 Read-Only:
 
-- `action` (String) Action to take when a signal for the virtual patch is detected.
 - `description` (String) Description of the virtual patch.
 - `enabled` (Boolean) Whether the virtual patch is enabled.
 - `id` (String) The ID of the virtual patch.
+- `mode` (String) Action to take when a signal for virtual patch is detected.

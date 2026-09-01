@@ -14,7 +14,7 @@ func BuildGetInput(workspaceID, virtualPatchID string) *vp.GetInput {
 }
 
 func BuildUpdateInput(workspaceID, virtualPatchID string, plan Model) *vp.UpdateInput {
-	mode := service.StringValue(plan.Action)
+	mode := service.StringValue(plan.Mode)
 	enabled := service.BoolValue(plan.Enabled)
 
 	return &vp.UpdateInput{

@@ -20,7 +20,7 @@ func FlattenToModel(workspaceID string, virtualPatch *vp.VirtualPatch) (Model, e
 		ID:             types.StringValue(virtualPatch.ID),
 		WorkspaceID:    types.StringValue(workspaceID),
 		VirtualPatchID: types.StringValue(virtualPatch.ID),
-		Action:         types.StringValue(virtualPatch.Mode),
+		Mode:           types.StringValue(virtualPatch.Mode),
 		Enabled:        types.BoolValue(virtualPatch.Enabled),
 		Description:    types.StringValue(virtualPatch.Description),
 	}, nil

@@ -9,6 +9,6 @@ resource "fastly_ngwaf_workspace" "test" {
 resource "fastly_ngwaf_workspace_virtual_patch" "test" {
   workspace_id      = fastly_ngwaf_workspace.test.id
   virtual_patch_id  = "{{.VIRTUAL_PATCH_ID}}"
-  action            = "block"
+  mode              = "block"
   enabled           = true
 }

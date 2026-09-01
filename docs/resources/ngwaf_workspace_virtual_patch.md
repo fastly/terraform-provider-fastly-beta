@@ -11,7 +11,7 @@ Manages an existing Fastly Next-Gen WAF virtual patch within a workspace.
 
 Virtual patches are workspace-scoped and are created by Fastly. This resource
 does not create or delete virtual patches in the API; it configures the
-`action` and `enabled` state for an existing virtual patch. Destroying the
+`mode` and `enabled` state for an existing virtual patch. Destroying the
 Terraform resource disables the virtual patch.
 
 ## Example Usage
@@ -29,7 +29,7 @@ resource "fastly_ngwaf_workspace_virtual_patch" "example" {
   workspace_id     = fastly_ngwaf_workspace.example.id
   virtual_patch_id = "CVE-2017-5638"
 
-  action  = "block"
+  mode    = "block"
   enabled = true
 }
 ```
@@ -38,8 +38,8 @@ resource "fastly_ngwaf_workspace_virtual_patch" "example" {
 
 ### Required
 
-- `action` (String) Action to take when a signal for the virtual patch is detected. One of `block` or `log`.
 - `enabled` (Boolean) Whether this virtual patch is enabled.
+- `mode` (String) Action to take when a signal for virtual patch is detected. One of `block` or `log`.
 - `virtual_patch_id` (String) The ID of the existing virtual patch to configure. Virtual patches are created by Fastly and cannot be created by this resource. Changing this attribute will delete and recreate the Terraform resource.
 - `workspace_id` (String) The ID of the workspace this virtual patch belongs to.
 

@@ -13,7 +13,7 @@ type Model struct {
 	ID             types.String `tfsdk:"id"`
 	WorkspaceID    types.String `tfsdk:"workspace_id"`
 	VirtualPatchID types.String `tfsdk:"virtual_patch_id"`
-	Action         types.String `tfsdk:"action"`
+	Mode           types.String `tfsdk:"mode"`
 	Enabled        types.Bool   `tfsdk:"enabled"`
 	Description    types.String `tfsdk:"description"`
 }
@@ -47,9 +47,9 @@ func ResourceAttributes() map[string]schema.Attribute {
 				stringvalidator.LengthAtLeast(1),
 			},
 		},
-		"action": schema.StringAttribute{
+		"mode": schema.StringAttribute{
 			Required:    true,
-			Description: "Action to take when a signal for the virtual patch is detected. One of `block` or `log`.",
+			Description: "Action to take when a signal for virtual patch is detected. One of `block` or `log`.",
 			Validators: []validator.String{
 				stringvalidator.OneOf("block", "log"),
 			},

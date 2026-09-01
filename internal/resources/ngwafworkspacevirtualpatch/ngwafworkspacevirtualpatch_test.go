@@ -37,9 +37,9 @@ func TestSchema(t *testing.T) {
 	require.True(t, ok)
 	require.True(t, virtualPatchID.Required)
 
-	action, ok := attrs["action"].(resourceschema.StringAttribute)
+	mode, ok := attrs["mode"].(resourceschema.StringAttribute)
 	require.True(t, ok)
-	require.True(t, action.Required)
+	require.True(t, mode.Required)
 
 	description, ok := attrs["description"].(resourceschema.StringAttribute)
 	require.True(t, ok)
@@ -55,7 +55,7 @@ func TestBuildGetInput(t *testing.T) {
 
 func TestBuildUpdateInput(t *testing.T) {
 	plan := Model{
-		Action:  types.StringValue("block"),
+		Mode:    types.StringValue("block"),
 		Enabled: types.BoolValue(true),
 	}
 
@@ -90,7 +90,7 @@ func TestFlattenToModel(t *testing.T) {
 	assert.Equal(t, types.StringValue("CVE-2017-5638"), m.ID)
 	assert.Equal(t, types.StringValue("workspace-id"), m.WorkspaceID)
 	assert.Equal(t, types.StringValue("CVE-2017-5638"), m.VirtualPatchID)
-	assert.Equal(t, types.StringValue("block"), m.Action)
+	assert.Equal(t, types.StringValue("block"), m.Mode)
 	assert.Equal(t, types.BoolValue(true), m.Enabled)
 	assert.Equal(t, types.StringValue("Apache Struts virtual patch"), m.Description)
 }
