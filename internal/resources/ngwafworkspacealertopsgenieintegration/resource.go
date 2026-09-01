@@ -28,7 +28,7 @@ func definition() ngwafalertintegration.Definition {
 		DisplayName: "Opsgenie",
 		Description: "Manages a Fastly Next-Gen WAF Opsgenie alert integration scoped to a single workspace.",
 		ConfigAttrs: []ngwafalertintegration.ConfigAttribute{
-			{Name: "key", Description: "Opsgenie API key.", Sensitive: true},
+			{Name: "key", Description: "Opsgenie integration key.", Sensitive: true},
 		},
 		Operations: operations{},
 	}

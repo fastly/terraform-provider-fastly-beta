@@ -34,7 +34,7 @@ resource "fastly_ngwaf_workspace_alert_opsgenie_integration" "example" {
 
 ### Required
 
-- `key` (String, Sensitive) Opsgenie API key.
+- `key` (String, Sensitive) Opsgenie integration key.
 - `workspace_id` (String) The ID of the workspace that owns the alert integration.
 
 ### Optional
