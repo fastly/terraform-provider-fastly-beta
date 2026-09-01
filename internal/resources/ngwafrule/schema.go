@@ -441,7 +441,10 @@ func WorkspaceIDAttribute() schema.StringAttribute {
 // to. Unlike workspace_id it is a request body field rather than a path
 // segment, so it updates in place. It is a set because the API imposes no
 // order on the IDs, and a list would report a permanent diff if the API
-// returned them in an order other than the one declared.
+// returned them in an order other than the one declared. The model field it
+// pairs with has to be a types.Set rather than a []string: import sets only
+// `id`, so applies_to is null when Read reads state back, which reflects into
+// types.Set but errors into a Go slice.
 func AppliesToAttribute() schema.SetAttribute {
 	return schema.SetAttribute{
 		ElementType: types.StringType,
