@@ -69,6 +69,7 @@ func (operations) Update(ctx context.Context, client *fastly.Client, alertID str
 		Config: &MicrosoftTeamsAlerts.UpdateConfig{
 			Webhook: ngwafalertintegration.StringPointer(ngwafalertintegration.ValueForAttribute(plan, "webhook")),
 		},
+		Events:      ngwafalertintegration.FlagEvents(),
 		WorkspaceID: ngwafalertintegration.StringPointer(plan.WorkspaceID.ValueString()),
 	}
 	alert, err := MicrosoftTeamsAlerts.Update(ctx, client, input)
@@ -113,7 +114,7 @@ func remoteAlert(alert *MicrosoftTeamsAlerts.Alert) (*ngwafalertintegration.Remo
 	}
 	return &ngwafalertintegration.RemoteAlert{
 		ID:          alert.ID,
-		Type:        alertType,
+		Type:        alert.Type,
 		Description: alert.Description,
 		Config: map[string]string{
 			"webhook": ngwafalertintegration.StringFromAny(alert.Config.Webhook),

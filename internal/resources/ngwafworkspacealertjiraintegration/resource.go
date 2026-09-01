@@ -81,6 +81,7 @@ func (operations) Update(ctx context.Context, client *fastly.Client, alertID str
 			Key:       ngwafalertintegration.StringPointer(ngwafalertintegration.ValueForAttribute(plan, "key")),
 			IssueType: ngwafalertintegration.StringPointer(ngwafalertintegration.ValueForAttribute(plan, "issue_type")),
 		},
+		Events:      ngwafalertintegration.FlagEvents(),
 		WorkspaceID: ngwafalertintegration.StringPointer(plan.WorkspaceID.ValueString()),
 	}
 	alert, err := JiraAlerts.Update(ctx, client, input)
@@ -125,7 +126,7 @@ func remoteAlert(alert *JiraAlerts.Alert) (*ngwafalertintegration.RemoteAlert, e
 	}
 	return &ngwafalertintegration.RemoteAlert{
 		ID:          alert.ID,
-		Type:        alertType,
+		Type:        alert.Type,
 		Description: alert.Description,
 		Config: map[string]string{
 			"host":       ngwafalertintegration.StringFromAny(alert.Config.Host),

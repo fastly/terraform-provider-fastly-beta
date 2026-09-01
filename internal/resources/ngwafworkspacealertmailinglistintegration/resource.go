@@ -69,6 +69,7 @@ func (operations) Update(ctx context.Context, client *fastly.Client, alertID str
 		Config: &MailingListAlerts.UpdateConfig{
 			Address: ngwafalertintegration.StringPointer(ngwafalertintegration.ValueForAttribute(plan, "address")),
 		},
+		Events:      ngwafalertintegration.FlagEvents(),
 		WorkspaceID: ngwafalertintegration.StringPointer(plan.WorkspaceID.ValueString()),
 	}
 	alert, err := MailingListAlerts.Update(ctx, client, input)
@@ -113,7 +114,7 @@ func remoteAlert(alert *MailingListAlerts.Alert) (*ngwafalertintegration.RemoteA
 	}
 	return &ngwafalertintegration.RemoteAlert{
 		ID:          alert.ID,
-		Type:        alertType,
+		Type:        alert.Type,
 		Description: alert.Description,
 		Config: map[string]string{
 			"address": ngwafalertintegration.StringFromAny(alert.Config.Address),

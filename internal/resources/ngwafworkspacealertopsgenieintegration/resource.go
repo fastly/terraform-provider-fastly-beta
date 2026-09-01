@@ -69,6 +69,7 @@ func (operations) Update(ctx context.Context, client *fastly.Client, alertID str
 		Config: &OpsgenieAlerts.UpdateConfig{
 			Key: ngwafalertintegration.StringPointer(ngwafalertintegration.ValueForAttribute(plan, "key")),
 		},
+		Events:      ngwafalertintegration.FlagEvents(),
 		WorkspaceID: ngwafalertintegration.StringPointer(plan.WorkspaceID.ValueString()),
 	}
 	alert, err := OpsgenieAlerts.Update(ctx, client, input)
@@ -113,7 +114,7 @@ func remoteAlert(alert *OpsgenieAlerts.Alert) (*ngwafalertintegration.RemoteAler
 	}
 	return &ngwafalertintegration.RemoteAlert{
 		ID:          alert.ID,
-		Type:        alertType,
+		Type:        alert.Type,
 		Description: alert.Description,
 		Config: map[string]string{
 			"key": ngwafalertintegration.StringFromAny(alert.Config.Key),
