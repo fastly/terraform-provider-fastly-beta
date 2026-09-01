@@ -2287,10 +2287,10 @@ func ConfigConditionForImport(serviceName, domainName, conditionName string) str
 	)
 }
 
-// Configuration helpers for domain resources (explicit version management)
+// Configuration helpers for fastly_service_domain resources (explicit version management)
 
-// ConfigDomainBasic returns a basic domain resource config.
-func ConfigDomainBasic(serviceName, domainName string) string {
+// ConfigServiceDomainBasic returns a basic domain resource config.
+func ConfigServiceDomainBasic(serviceName, domainName string) string {
 	return BuildConfig(
 		ServiceCDN,
 		map[string]string{
@@ -2299,12 +2299,12 @@ func ConfigDomainBasic(serviceName, domainName string) string {
 			"SERVICE_VERSION": "1",
 			"DOMAIN_NAME":     domainName,
 		},
-		"internal/acceptance_tests/blocks/domain_basic.tf",
+		"internal/acceptance_tests/blocks/service_domain_basic.tf",
 	)
 }
 
-// ConfigDomainWithComment returns a domain resource config with a comment.
-func ConfigDomainWithComment(serviceName, domainName, comment string) string {
+// ConfigServiceDomainWithComment returns a domain resource config with a comment.
+func ConfigServiceDomainWithComment(serviceName, domainName, comment string) string {
 	return BuildConfig(
 		ServiceCDN,
 		map[string]string{
@@ -2314,12 +2314,12 @@ func ConfigDomainWithComment(serviceName, domainName, comment string) string {
 			"DOMAIN_NAME":     domainName,
 			"DOMAIN_COMMENT":  comment,
 		},
-		"internal/acceptance_tests/blocks/domain_with_comment.tf",
+		"internal/acceptance_tests/blocks/service_domain_with_comment.tf",
 	)
 }
 
-// ConfigDomainMultiple returns a config with multiple domain resources.
-func ConfigDomainMultiple(serviceName, domain1Name, domain2Name string) string {
+// ConfigServiceDomainMultiple returns a config with multiple domain resources.
+func ConfigServiceDomainMultiple(serviceName, domain1Name, domain2Name string) string {
 	return BuildConfig(
 		ServiceCDN,
 		map[string]string{
@@ -2329,12 +2329,12 @@ func ConfigDomainMultiple(serviceName, domain1Name, domain2Name string) string {
 			"DOMAIN_1_NAME":   domain1Name,
 			"DOMAIN_2_NAME":   domain2Name,
 		},
-		"internal/acceptance_tests/blocks/domain_multi.tf",
+		"internal/acceptance_tests/blocks/service_domain_multi.tf",
 	)
 }
 
-// ConfigDomainForImport returns a test configuration for importing a domain.
-func ConfigDomainForImport(serviceName, domainName, additionalDomainName string) string {
+// ConfigServiceDomainForImport returns a test configuration for importing a domain.
+func ConfigServiceDomainForImport(serviceName, domainName, additionalDomainName string) string {
 	return BuildConfig(
 		ServiceCDN,
 		map[string]string{
@@ -2344,7 +2344,7 @@ func ConfigDomainForImport(serviceName, domainName, additionalDomainName string)
 			"DOMAIN_1_NAME":   domainName,
 			"DOMAIN_2_NAME":   additionalDomainName,
 		},
-		"internal/acceptance_tests/blocks/domain_multi.tf",
+		"internal/acceptance_tests/blocks/service_domain_multi.tf",
 	)
 }
 
@@ -6147,5 +6147,87 @@ func ConfigAlertPercentIncreaseWithIgnoreBelow(alertName string, threshold, igno
 		"ALERT_NAME":   alertName,
 		"THRESHOLD":    strconv.FormatFloat(threshold, 'f', -1, 64),
 		"IGNORE_BELOW": strconv.FormatFloat(ignoreBelow, 'f', -1, 64),
+	})
+}
+
+// ConfigDNSZone returns a standalone fastly_dns_zone with a name and description.
+func ConfigDNSZone(name, description string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_basic.tf", map[string]string{
+		"ZONE_NAME":        name,
+		"ZONE_DESCRIPTION": description,
+	})
+}
+
+// ConfigDNSZoneMinimal returns a standalone fastly_dns_zone with only name set.
+func ConfigDNSZoneMinimal(name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_minimal.tf", map[string]string{
+		"ZONE_NAME": name,
+	})
+}
+
+// ConfigDNSZoneWithXfrConfig returns a fastly_dns_zone with an xfr_config_inbound block
+// containing one primary and no inbound_tsig_key_id.
+func ConfigDNSZoneWithXfrConfig(name, description, primaryAddress, primaryDescription string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_with_xfr_config.tf", map[string]string{
+		"ZONE_NAME":           name,
+		"ZONE_DESCRIPTION":    description,
+		"PRIMARY_ADDRESS":     primaryAddress,
+		"PRIMARY_DESCRIPTION": primaryDescription,
+	})
+}
+
+// ConfigDNSZoneWithTSIGKey returns a fastly_dns_zone with an xfr_config_inbound block
+// that references an out-of-band-created TSIG key ID.
+func ConfigDNSZoneWithTSIGKey(name, description, tsigKeyID, primaryAddress, primaryDescription string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_with_tsig.tf", map[string]string{
+		"ZONE_NAME":           name,
+		"ZONE_DESCRIPTION":    description,
+		"TSIG_KEY_ID":         tsigKeyID,
+		"PRIMARY_ADDRESS":     primaryAddress,
+		"PRIMARY_DESCRIPTION": primaryDescription,
+	})
+}
+
+// ConfigDNSZonesDataSource returns a config declaring three fastly_dns_zone resources
+// alongside a fastly_dns_zones data source that depends on all three.
+func ConfigDNSZonesDataSource(name1, name2, name3 string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_three_with_datasource.tf", map[string]string{
+		"ZONE_NAME_1": name1,
+		"ZONE_NAME_2": name2,
+		"ZONE_NAME_3": name3,
+	})
+}
+
+// ConfigFastlyDomain returns a standalone fastly_domain with an fqdn and description.
+func ConfigFastlyDomain(fqdn, description string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/fastly_domain_basic.tf", map[string]string{
+		"DOMAIN_FQDN":        fqdn,
+		"DOMAIN_DESCRIPTION": description,
+	})
+}
+
+// ConfigFastlyDomainMinimal returns a standalone fastly_domain with only fqdn set.
+func ConfigFastlyDomainMinimal(fqdn string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/fastly_domain_minimal.tf", map[string]string{
+		"DOMAIN_FQDN": fqdn,
+	})
+}
+
+// ConfigFastlyDomainWithServiceLink returns a CDN service, a fastly_domain, and a link between them.
+func ConfigFastlyDomainWithServiceLink(serviceName, fqdn string) string {
+	service := ConfigServiceCDNBasic(serviceName)
+	link := RenderBlock("internal/acceptance_tests/blocks/fastly_domain_service_link.tf", map[string]string{
+		"DOMAIN_FQDN":    fqdn,
+		"SERVICE_ID_REF": "fastly_service_cdn.test.id",
+	})
+	return joinBlocks(service, link)
+}
+
+// ConfigFastlyDomainsDataSource returns three fastly_domain resources plus a fastly_domains data source.
+func ConfigFastlyDomainsDataSource(fqdn1, fqdn2, fqdn3 string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/fastly_domain_three_with_datasource.tf", map[string]string{
+		"DOMAIN_FQDN_1": fqdn1,
+		"DOMAIN_FQDN_2": fqdn2,
+		"DOMAIN_FQDN_3": fqdn3,
 	})
 }
