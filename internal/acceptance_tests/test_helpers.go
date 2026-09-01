@@ -6231,3 +6231,20 @@ func ConfigFastlyDomainsDataSource(fqdn1, fqdn2, fqdn3 string) string {
 		"DOMAIN_FQDN_3": fqdn3,
 	})
 }
+
+// ConfigIntegration returns a standalone fastly_integration with the given name, description, type, and config.
+func ConfigIntegration(name, description, integrationType string, config map[string]string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/integration_basic.tf", map[string]string{
+		"NAME":        name,
+		"DESCRIPTION": description,
+		"TYPE":        integrationType,
+		"CONFIG":      entriesHCL(config),
+	})
+}
+
+// ConfigIntegrationInvalidType returns a fastly_integration using an unsupported type, for validator-failure testing.
+func ConfigIntegrationInvalidType(name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/integration_invalid_type.tf", map[string]string{
+		"NAME": name,
+	})
+}
