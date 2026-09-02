@@ -11,6 +11,7 @@ import (
 func FlattenToModel(rule *rules.Rule) Model {
 	return Model{
 		CommonModel:    ngwafrule.FlattenCommon(rule),
+		WorkspaceID:    ngwafrule.FlattenWorkspaceID(rule),
 		Description:    types.StringValue(rule.Description),
 		RequestLogging: types.StringValue(rule.RequestLogging),
 		Action:         ngwafrule.FlattenActions(rule.Actions),

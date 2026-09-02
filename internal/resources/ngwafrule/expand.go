@@ -1,8 +1,11 @@
 package ngwafrule
 
 import (
+	"context"
+
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/rules"
@@ -17,13 +20,39 @@ func WorkspaceScope(workspaceID string) *scope.Scope {
 	}
 }
 
-// NewCreateInput builds the create input fields shared by every
-// workspace-scoped rule type. ruleType is the calling resource's fixed
-// `type` value; the caller fills in the rest.
-func NewCreateInput(ruleType string, m CommonModel) *rules.CreateInput {
+// AccountScope scopes a rule request to the account, applying it to the given
+// workspace IDs - or to every workspace in the account when appliesTo is the
+// single entry "*". Create and update send this in the request body, which is
+// the only way a rule's workspace list is set.
+func AccountScope(appliesTo []string) *scope.Scope {
+	return &scope.Scope{
+		Type:      scope.ScopeTypeAccount,
+		AppliesTo: appliesTo,
+	}
+}
+
+// AccountScopeByID scopes a request to the account for the operations
+// addressed by rule ID alone - get and delete. Those derive their path from
+// the scope type only (/ngwaf/v1/rules/{rule_id}), so the workspace list plays
+// no part in them.
+func AccountScopeByID() *scope.Scope {
+	return &scope.Scope{Type: scope.ScopeTypeAccount}
+}
+
+// ExpandAppliesTo reads the account-scope workspace list out of its set form.
+func ExpandAppliesTo(ctx context.Context, appliesTo types.Set) ([]string, diag.Diagnostics) {
+	var result []string
+	diags := appliesTo.ElementsAs(ctx, &result, false)
+	return result, diags
+}
+
+// NewCreateInput builds the create input fields shared by every rule type at
+// either scope. ruleType is the calling resource's fixed `type` value and sc
+// its scope; the caller fills in the rest.
+func NewCreateInput(ruleType string, sc *scope.Scope, m CommonModel) *rules.CreateInput {
 	return &rules.CreateInput{
 		Type:               &ruleType,
-		Scope:              WorkspaceScope(service.StringValue(m.WorkspaceID)),
+		Scope:              sc,
 		Enabled:            new(service.BoolValue(m.Enabled)),
 		GroupOperator:      m.GroupOperator.ValueStringPointer(),
 		Conditions:         ExpandConditions(m.Condition, newCreateCondition),
@@ -32,13 +61,13 @@ func NewCreateInput(ruleType string, m CommonModel) *rules.CreateInput {
 	}
 }
 
-// NewUpdateInput builds the update input fields shared by every
-// workspace-scoped rule type.
-func NewUpdateInput(ruleType, ruleID string, m CommonModel) *rules.UpdateInput {
+// NewUpdateInput builds the update input fields shared by every rule type at
+// either scope.
+func NewUpdateInput(ruleType, ruleID string, sc *scope.Scope, m CommonModel) *rules.UpdateInput {
 	return &rules.UpdateInput{
 		RuleID:             &ruleID,
 		Type:               &ruleType,
-		Scope:              WorkspaceScope(service.StringValue(m.WorkspaceID)),
+		Scope:              sc,
 		Enabled:            new(service.BoolValue(m.Enabled)),
 		GroupOperator:      m.GroupOperator.ValueStringPointer(),
 		Conditions:         ExpandConditions(m.Condition, newUpdateCondition),
@@ -84,6 +113,40 @@ func ExpandUpdateActions(models []ActionModel) []*rules.UpdateAction {
 			DeceptionType:    m.DeceptionType.ValueStringPointer(),
 			RedirectURL:      m.RedirectURL.ValueStringPointer(),
 			ResponseCode:     IntPointer(m.ResponseCode),
+		})
+	}
+	return actions
+}
+
+// ExpandCreateAccountActions builds the API's action list from
+// AccountActionModel, which carries no custom-response fields.
+func ExpandCreateAccountActions(models []AccountActionModel) []*rules.CreateAction {
+	if len(models) == 0 {
+		return nil
+	}
+
+	actions := make([]*rules.CreateAction, 0, len(models))
+	for _, m := range models {
+		actions = append(actions, &rules.CreateAction{
+			Type:   m.Type.ValueStringPointer(),
+			Signal: m.Signal.ValueStringPointer(),
+		})
+	}
+	return actions
+}
+
+// ExpandUpdateAccountActions builds the API's action list from
+// AccountActionModel, which carries no custom-response fields.
+func ExpandUpdateAccountActions(models []AccountActionModel) []*rules.UpdateAction {
+	if len(models) == 0 {
+		return nil
+	}
+
+	actions := make([]*rules.UpdateAction, 0, len(models))
+	for _, m := range models {
+		actions = append(actions, &rules.UpdateAction{
+			Type:   m.Type.ValueStringPointer(),
+			Signal: m.Signal.ValueStringPointer(),
 		})
 	}
 	return actions
