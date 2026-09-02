@@ -69,9 +69,8 @@ func generateTLSKeyAndCert(t *testing.T, domain string) (keyPEM, certPEM string)
 	return keyPEM, certPEM
 }
 
-// createOutOfBandCertificate creates a private key + certificate for domain via the raw
-// go-fastly client, since no fastly_tls_private_key/fastly_tls_certificate resource exists
-// yet (CDTOOL-1586, CDTOOL-1583). Registers cleanup, returns the certificate ID.
+// createOutOfBandCertificate creates a private key + certificate via the raw go-fastly client
+// (fastly_tls_private_key/fastly_tls_certificate don't exist yet: CDTOOL-1586/1583).
 //
 // TODO: rework via Terraform config once those resources exist.
 func createOutOfBandCertificate(t *testing.T, client *fastly.Client, domain string) string {
@@ -107,33 +106,6 @@ func createOutOfBandCertificate(t *testing.T, client *fastly.Client, domain stri
 	})
 
 	return cert.ID
-}
-
-// createOutOfBandMutualAuthentication creates a mutual authentication via the raw go-fastly
-// client, since no fastly_tls_mutual_authentication resource exists yet (CDTOOL-1584).
-// Registers cleanup, returns its ID.
-//
-// TODO: rework via Terraform config once that resource exists.
-func createOutOfBandMutualAuthentication(t *testing.T, client *fastly.Client, domain string) string {
-	t.Helper()
-
-	_, certPEM := generateTLSKeyAndCert(t, domain)
-	name := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
-
-	mtls, err := client.CreateTLSMutualAuthentication(context.Background(), &fastly.CreateTLSMutualAuthenticationInput{
-		CertBundle: certPEM,
-		Name:       name,
-	})
-	if err != nil {
-		t.Fatalf("creating out-of-band mutual authentication: %s", err)
-	}
-	t.Cleanup(func() {
-		if err := client.DeleteTLSMutualAuthentication(context.Background(), &fastly.DeleteTLSMutualAuthenticationInput{ID: mtls.ID}); err != nil {
-			t.Logf("cleanup: deleting out-of-band mutual authentication %s: %s", mtls.ID, err)
-		}
-	})
-
-	return mtls.ID
 }
 
 func TestAccFastlyTLSActivation_basic(t *testing.T) {
@@ -205,7 +177,7 @@ func TestAccFastlyTLSActivation_mtls(t *testing.T) {
 	backendName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 
 	certificateID := createOutOfBandCertificate(t, client, domain)
-	mtlsID := createOutOfBandMutualAuthentication(t, client, domain)
+	_, mtlsCertBundle := generateTLSKeyAndCert(t, domain)
 
 	resourceName := "fastly_tls_activation.test"
 
@@ -223,9 +195,9 @@ func TestAccFastlyTLSActivation_mtls(t *testing.T) {
 			},
 			{
 				// mutual_authentication_id only settable via a follow-up update: fastly/terraform-provider-fastly#873
-				Config: ConfigTLSActivationWithMTLS(serviceName, domain, backendName, certificateID, mtlsID),
+				Config: ConfigTLSActivationWithMutualAuthentication(serviceName, domain, backendName, certificateID, mtlsCertBundle),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "mutual_authentication_id", mtlsID),
+					resource.TestCheckResourceAttrPair(resourceName, "mutual_authentication_id", "fastly_tls_mutual_authentication.test", "id"),
 					testAccCheckTLSActivationExists(),
 				),
 			},
