@@ -1,0 +1,51 @@
+---
+page_title: "fastly_tls_subscription Resource - fastly"
+subcategory: ""
+description: |-
+  Enables the TLS Subscription https://www.fastly.com/documentation/reference/api/tls/subscriptions/ flow, allowing users to add and manage TLS certificates through a Fastly-managed CA. TLS subscriptions are versionless and independent of any service-version lifecycle.
+---
+
+# fastly_tls_subscription (Resource)
+
+Enables the [TLS Subscription](https://www.fastly.com/documentation/reference/api/tls/subscriptions/) flow, allowing users to add and manage TLS certificates through a Fastly-managed CA. TLS subscriptions are versionless and independent of any service-version lifecycle.
+
+DNS records need to be added on the domains being secured, in order to respond to the ACME domain ownership challenge. Use `managed_dns_challenges` (or `managed_http_challenges`) with your DNS provider's own resources to add the required records, then use [`fastly_tls_subscription_validation`](tls_subscription_validation.md) to wait for the certificate to be issued.
+
+~> **Warning:** Do not create a [`fastly_tls_activation`](tls_activation.md) for this subscription's domains. Fastly activates TLS on them automatically once the certificate is issued (a manual activation fails with `400 domain_id has already been taken`). Set `configuration_id` on this resource to control the TLS configuration used.
+
+## Example Usage
+
+```terraform
+resource "fastly_service_cdn_auto" "example" {
+  name = "example-service"
+
+  domain {
+    name = "example.com"
+  }
+
+  backend {
+    address = "127.0.0.1"
+    name    = "localhost"
+  }
+}
+
+resource "fastly_tls_subscription" "example" {
+  domains               = [for domain in fastly_service_cdn_auto.example.domain : domain.name]
+  certificate_authority = "lets-encrypt"
+  force_destroy         = true
+
+  depends_on = [fastly_service_cdn_auto.example]
+}
+```
+
+See the [`fastly_tls_subscription_validation`](tls_subscription_validation.md) documentation for a complete example of configuring DNS validation records and waiting for the certificate to be issued.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A subscription can be imported using its Fastly subscription ID, e.g.
+
+```shell
+terraform import fastly_tls_subscription.example xxxxxxxx
+```

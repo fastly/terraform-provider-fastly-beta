@@ -53,6 +53,8 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsplatformcertificateids"
 	tlsprivatekeydatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsprivatekey"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsprivatekeyids"
+	tlssubscriptiondatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlssubscription"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlssubscriptionids"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/vclsnippets"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/acl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/aclentries"
@@ -126,6 +128,8 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsmutualauthentication"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsplatformcertificate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsprivatekey"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlssubscription"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlssubscriptionvalidation"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/vcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/version"
 )
@@ -276,6 +280,8 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		tlsmutualauthentication.NewResource,
 		tlsplatformcertificate.NewResource,
 		tlsprivatekey.NewResource,
+		tlssubscription.NewResource,
+		tlssubscriptionvalidation.NewResource,
 	}
 }
 
@@ -315,6 +321,8 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		tlsplatformcertificateids.NewDataSource,
 		tlsprivatekeydatasource.NewDataSource,
 		tlsprivatekeyids.NewDataSource,
+		tlssubscriptiondatasource.NewDataSource,
+		tlssubscriptionids.NewDataSource,
 		vclsnippets.NewDataSource,
 	}
 }
