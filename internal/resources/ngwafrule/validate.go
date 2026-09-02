@@ -1,13 +1,59 @@
 package ngwafrule
 
 import (
+	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
+
+// AppliesToWildcard is the applies_to entry that scopes an account rule to
+// every workspace in the account rather than to named ones.
+const AppliesToWildcard = "*"
+
+// appliesToWildcardExclusive rejects an applies_to set pairing the wildcard
+// with named workspace IDs. The API accepts such a set with a 201 but
+// normalizes it to just ["*"], so the value read back never matches the one
+// configured - Terraform would fail the apply it just made with "Provider
+// produced inconsistent result after apply". Rejecting at plan time turns that
+// into a clear message, and costs nothing: the wildcard already covers every
+// workspace the named IDs would have.
+type appliesToWildcardExclusive struct{}
+
+func (v appliesToWildcardExclusive) Description(_ context.Context) string {
+	return fmt.Sprintf("`%s` must be the only entry when present", AppliesToWildcard)
+}
+
+func (v appliesToWildcardExclusive) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v appliesToWildcardExclusive) ValidateSet(_ context.Context, req validator.SetRequest, resp *validator.SetResponse) {
+	elements := req.ConfigValue.Elements()
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() || len(elements) < 2 {
+		return
+	}
+
+	for _, e := range elements {
+		s, ok := e.(types.String)
+		if !ok || s.IsNull() || s.IsUnknown() {
+			continue
+		}
+		if s.ValueString() == AppliesToWildcard {
+			resp.Diagnostics.AddAttributeError(
+				req.Path,
+				"Conflicting applies_to entries",
+				fmt.Sprintf("`%s` already applies the rule to every workspace in the account, so it cannot be combined with named workspace IDs.", AppliesToWildcard),
+			)
+			return
+		}
+	}
+}
 
 // MaxConditions caps the combined count of top-level
 // condition/group_condition/multival_condition entries. A group_condition or
@@ -59,19 +105,33 @@ func ValidateConditions(m CommonModel, diags *diag.Diagnostics) {
 // ActionBlock. The action `type` enum and the action count are already
 // enforced by the schema's own validators.
 func ValidateActions(actions []ActionModel, diags *diag.Diagnostics) {
-	for i, fields := range MissingRequiredActionFields(actions) {
+	validateActions(actions, actionFields, diags)
+}
+
+// ValidateAccountActions is ValidateActions for account-scoped rules, whose
+// action set excludes the custom-response fields.
+func ValidateAccountActions(actions []AccountActionModel, diags *diag.Diagnostics) {
+	converted := make([]ActionModel, 0, len(actions))
+	for _, a := range actions {
+		converted = append(converted, a.toActionModel())
+	}
+	validateActions(converted, accountActionFields, diags)
+}
+
+func validateActions(actions []ActionModel, allowedFields map[string][]string, diags *diag.Diagnostics) {
+	for i, missing := range MissingRequiredActionFields(actions) {
 		diags.AddAttributeError(
 			path.Root("action").AtListIndex(i),
 			"Missing required action field",
-			fmt.Sprintf("action[%d] (type = %q) must set: %s.", i, actions[i].Type.ValueString(), strings.Join(fields, ", ")),
+			fmt.Sprintf("action[%d] (type = %q) must set: %s.", i, actions[i].Type.ValueString(), strings.Join(missing, ", ")),
 		)
 	}
 
-	for i, fields := range InvalidActionFieldIndexes(actions) {
+	for i, invalid := range InvalidActionFieldIndexes(actions, allowedFields) {
 		diags.AddAttributeError(
 			path.Root("action").AtListIndex(i),
 			"Invalid action field for type",
-			fmt.Sprintf("action[%d] (type = %q) must not set: %s.", i, actions[i].Type.ValueString(), strings.Join(fields, ", ")),
+			fmt.Sprintf("action[%d] (type = %q) must not set: %s.", i, actions[i].Type.ValueString(), strings.Join(invalid, ", ")),
 		)
 	}
 }
@@ -92,6 +152,33 @@ var actionFields = map[string][]string{
 	"dynamic_challenge": {"signal"},
 	"browser_challenge": {"allow_interactive", "signal"},
 	"deception":         {"deception_type", "signal"},
+}
+
+// customResponseFields configure a custom response - a redirect target or an
+// explicit status code. The account rules endpoint rejects them outright
+// ("Validation failed - corp rules cannot use custom responses", confirmed
+// against the live API), so account-scoped rules neither expose nor accept
+// them, even though AccountRequestRuleBody references the same Rule.Action.*
+// components the workspace bodies do.
+var customResponseFields = []string{"redirect_url", "response_code"}
+
+// accountActionFields is actionFields as it applies at account scope. Because
+// it drives both the rendered attributes and the validators, dropping a field
+// here removes it from the schema and the documentation together.
+var accountActionFields = actionFieldsWithout(customResponseFields)
+
+func actionFieldsWithout(exclude []string) map[string][]string {
+	result := make(map[string][]string, len(actionFields))
+	for actionType, fields := range actionFields {
+		kept := make([]string, 0, len(fields))
+		for _, field := range fields {
+			if !slices.Contains(exclude, field) {
+				kept = append(kept, field)
+			}
+		}
+		result[actionType] = kept
+	}
+	return result
 }
 
 // actionRequiredFields lists the ActionModel field names that must be set
@@ -140,12 +227,13 @@ func MissingRequiredActionFields(actions []ActionModel) map[int][]string {
 // InvalidActionFieldIndexes returns, for each action index, the names of
 // ActionModel fields that are set but not defined on that action's type -
 // e.g. `redirect_url` on `type = allow`, or `signal` on `type = block` -
-// per actionFields above.
-func InvalidActionFieldIndexes(actions []ActionModel) map[int][]string {
+// per allowedFields, which is actionFields at workspace scope and
+// accountActionFields at account scope.
+func InvalidActionFieldIndexes(actions []ActionModel, allowedFields map[string][]string) map[int][]string {
 	invalid := map[int][]string{}
 	for i, a := range actions {
-		allowed := make(map[string]bool, len(actionFields[a.Type.ValueString()]))
-		for _, f := range actionFields[a.Type.ValueString()] {
+		allowed := make(map[string]bool, len(allowedFields[a.Type.ValueString()]))
+		for _, f := range allowedFields[a.Type.ValueString()] {
 			allowed[f] = true
 		}
 

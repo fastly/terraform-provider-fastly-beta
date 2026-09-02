@@ -27,6 +27,7 @@ var (
 // Model is the fastly_ngwaf_workspace_request_rule resource state.
 type Model struct {
 	ngwafrule.CommonModel
+	WorkspaceID    types.String            `tfsdk:"workspace_id"`
 	Description    types.String            `tfsdk:"description"`
 	RequestLogging types.String            `tfsdk:"request_logging"`
 	Action         []ngwafrule.ActionModel `tfsdk:"action"`
@@ -35,6 +36,7 @@ type Model struct {
 func resourceAttributes() map[string]schema.Attribute {
 	attributes := ngwafrule.CommonAttributes()
 
+	attributes["workspace_id"] = ngwafrule.WorkspaceIDAttribute()
 	attributes["description"] = ngwafrule.DescriptionAttribute()
 	attributes["request_logging"] = schema.StringAttribute{
 		Optional:    true,

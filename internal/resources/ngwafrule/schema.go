@@ -6,12 +6,14 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // DefaultGroupOperator is the value the API assigns to group_operator when
@@ -53,22 +55,31 @@ var (
 // used in attribute descriptions. Descriptions are the only thing
 // tfplugindocs renders, so building them from the same slice that feeds the
 // attribute's OneOf validator keeps the two from drifting.
-func OneOfDescriptor(values []string) string {
+// It is generic over the element type so integer enums derive their prose the
+// same way string ones do, rather than restating the values by hand.
+func OneOfDescriptor[T any](values []T) string {
 	return fmt.Sprintf("One of %s.", orList(values))
 }
 
-func orList(values []string) string {
+// RangeDescriptor renders an inclusive bound as the "Minimum `1`, maximum
+// `10`." sentence, from the same values that feed the attribute's Between
+// validator.
+func RangeDescriptor[T any](minimum, maximum T) string {
+	return fmt.Sprintf("Minimum `%v`, maximum `%v`.", minimum, maximum)
+}
+
+func orList[T any](values []T) string {
 	return joinList(values, "or")
 }
 
-func andList(values []string) string {
+func andList[T any](values []T) string {
 	return joinList(values, "and")
 }
 
-func joinList(values []string, conjunction string) string {
+func joinList[T any](values []T, conjunction string) string {
 	quoted := make([]string, 0, len(values))
 	for _, v := range values {
-		quoted = append(quoted, fmt.Sprintf("`%s`", v))
+		quoted = append(quoted, fmt.Sprintf("`%v`", v))
 	}
 
 	switch len(quoted) {
@@ -243,11 +254,30 @@ func ConditionBlocks(planModifiers ...planmodifier.List) map[string]schema.Block
 	}
 }
 
-// ActionBlock is the action block for rule types whose valid actions span
-// more than one action shape. allowed is that rule type's action `type`
-// enum; minItems/maxItems are how many actions it must declare. It pairs
-// with ActionModel.
+// actionFieldNames are the optional action attributes. `type` is always
+// present and built separately.
+var actionFieldNames = []string{"signal", "allow_interactive", "deception_type", "redirect_url", "response_code"}
+
+// ActionBlock is the action block for workspace-scoped rule types whose valid
+// actions span more than one action shape. allowed is that rule type's action
+// `type` enum; minItems/maxItems are how many actions it must declare. It
+// pairs with ActionModel.
 func ActionBlock(allowed []string, minItems, maxItems int) schema.ListNestedBlock {
+	return actionBlock(allowed, minItems, maxItems, actionFields)
+}
+
+// AccountActionBlock is ActionBlock for account-scoped rule types, whose
+// action set excludes the custom-response fields the account endpoint rejects.
+// It pairs with AccountActionModel.
+func AccountActionBlock(allowed []string, minItems, maxItems int) schema.ListNestedBlock {
+	return actionBlock(allowed, minItems, maxItems, accountActionFields)
+}
+
+// actionBlock renders only the fields at least one of the rule's allowed
+// action types actually accepts, per allowedFields. Deriving the attribute set
+// from the same map that drives the validators and the descriptions is what
+// keeps a scope from documenting a field it would reject.
+func actionBlock(allowed []string, minItems, maxItems int, allowedFields map[string][]string) schema.ListNestedBlock {
 	count := fmt.Sprintf("Must contain between %d and %d entries.", minItems, maxItems)
 	if minItems == maxItems {
 		count = fmt.Sprintf("Must contain exactly %d entry.", minItems)
@@ -260,43 +290,71 @@ func ActionBlock(allowed []string, minItems, maxItems int) schema.ListNestedBloc
 		validators = append([]validator.List{listvalidator.IsRequired()}, validators...)
 	}
 
-	return schema.ListNestedBlock{
-		Description: "Actions to perform when the rule matches. " + count,
-		Validators:  validators,
-		NestedObject: schema.NestedBlockObject{
-			Attributes: map[string]schema.Attribute{
-				"type": schema.StringAttribute{
-					Required:    true,
-					Description: "The action type. " + OneOfDescriptor(allowed),
-					Validators: []validator.String{
-						stringvalidator.OneOf(allowed...),
-					},
-				},
-				"signal": schema.StringAttribute{
-					Optional:    true,
-					Description: "Reference ID of the signal. " + actionFieldDescriptor("signal", allowed),
-				},
-				"allow_interactive": schema.BoolAttribute{
-					Optional:    true,
-					Description: "Specifies if interaction is allowed. " + actionFieldDescriptor("allow_interactive", allowed),
-				},
-				"deception_type": schema.StringAttribute{
-					Optional:    true,
-					Description: "Specifies the type of deception. " + actionFieldDescriptor("deception_type", allowed) + " " + OneOfDescriptor(deceptionTypes),
-					Validators: []validator.String{
-						stringvalidator.OneOf(deceptionTypes...),
-					},
-				},
-				"redirect_url": schema.StringAttribute{
-					Optional:    true,
-					Description: "Redirect target. " + actionFieldDescriptor("redirect_url", allowed),
-				},
-				"response_code": schema.Int64Attribute{
-					Optional:    true,
-					Description: "Response code returned to the client. " + actionFieldDescriptor("response_code", allowed),
-				},
+	attributes := map[string]schema.Attribute{
+		"type": schema.StringAttribute{
+			Required:    true,
+			Description: "The action type. " + OneOfDescriptor(allowed),
+			Validators: []validator.String{
+				stringvalidator.OneOf(allowed...),
 			},
 		},
+	}
+
+	for _, field := range actionFieldNames {
+		if !anyActionTypeAccepts(field, allowed, allowedFields) {
+			continue
+		}
+		attributes[field] = actionFieldAttribute(field, allowed, allowedFields)
+	}
+
+	return schema.ListNestedBlock{
+		Description:  "Actions to perform when the rule matches. " + count,
+		Validators:   validators,
+		NestedObject: schema.NestedBlockObject{Attributes: attributes},
+	}
+}
+
+func anyActionTypeAccepts(field string, allowed []string, allowedFields map[string][]string) bool {
+	for _, t := range allowed {
+		if slices.Contains(allowedFields[t], field) {
+			return true
+		}
+	}
+	return false
+}
+
+func actionFieldAttribute(field string, allowed []string, allowedFields map[string][]string) schema.Attribute {
+	descriptor := actionFieldDescriptor(field, allowed, allowedFields)
+
+	switch field {
+	case "allow_interactive":
+		return schema.BoolAttribute{
+			Optional:    true,
+			Description: "Specifies if interaction is allowed. " + descriptor,
+		}
+	case "deception_type":
+		return schema.StringAttribute{
+			Optional:    true,
+			Description: "Specifies the type of deception. " + descriptor + " " + OneOfDescriptor(deceptionTypes),
+			Validators: []validator.String{
+				stringvalidator.OneOf(deceptionTypes...),
+			},
+		}
+	case "redirect_url":
+		return schema.StringAttribute{
+			Optional:    true,
+			Description: "Redirect target. " + descriptor,
+		}
+	case "response_code":
+		return schema.Int64Attribute{
+			Optional:    true,
+			Description: "Response code returned to the client. " + descriptor,
+		}
+	default:
+		return schema.StringAttribute{
+			Optional:    true,
+			Description: "Reference ID of the signal. " + descriptor,
+		}
 	}
 }
 
@@ -328,11 +386,12 @@ func SignalActionBlock(description, signalDescription string, planModifiers ...p
 
 // actionFieldDescriptor names which of a rule type's allowed action types
 // require the given action field and which merely accept it, derived from
-// the same tables the validators use.
-func actionFieldDescriptor(field string, allowed []string) string {
+// the same tables the validators use. It is only reached for fields at least
+// one allowed action type accepts, so it always produces a sentence.
+func actionFieldDescriptor(field string, allowed []string, allowedFields map[string][]string) string {
 	var required, optional []string
 	for _, t := range allowed {
-		if !slices.Contains(actionFields[t], field) {
+		if !slices.Contains(allowedFields[t], field) {
 			continue
 		}
 		if slices.Contains(actionRequiredFields[t], field) {
@@ -348,9 +407,6 @@ func actionFieldDescriptor(field string, allowed []string) string {
 	}
 	if len(optional) > 0 {
 		sentences = append(sentences, fmt.Sprintf("Optional on %s.", andList(optional)))
-	}
-	if len(sentences) == 0 {
-		return "Not accepted by any action type this rule allows."
 	}
 	return strings.Join(sentences, " ")
 }
@@ -377,6 +433,27 @@ func WorkspaceIDAttribute() schema.StringAttribute {
 		Description: "The ID of the workspace this rule belongs to.",
 		PlanModifiers: []planmodifier.String{
 			stringplanmodifier.RequiresReplace(),
+		},
+	}
+}
+
+// AppliesToAttribute is the set of workspaces an account-scoped rule applies
+// to. Unlike workspace_id it is a request body field rather than a path
+// segment, so it updates in place. It is a set because the API imposes no
+// order on the IDs, and a list would report a permanent diff if the API
+// returned them in an order other than the one declared. The model field it
+// pairs with has to be a types.Set rather than a []string: import sets only
+// `id`, so applies_to is null when Read reads state back, which reflects into
+// types.Set but errors into a Go slice.
+func AppliesToAttribute() schema.SetAttribute {
+	return schema.SetAttribute{
+		ElementType: types.StringType,
+		Required:    true,
+		Description: "The workspaces this rule applies to: a set of workspace IDs, or the single entry `" + AppliesToWildcard + "` to apply the rule to every workspace in the account. The two forms are alternatives - the wildcard cannot be combined with named workspace IDs.",
+		Validators: []validator.Set{
+			setvalidator.SizeAtLeast(1),
+			setvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
+			appliesToWildcardExclusive{},
 		},
 	}
 }
@@ -415,12 +492,12 @@ func GroupOperatorAttribute() schema.StringAttribute {
 	}
 }
 
-// CommonAttributes are the top-level attributes shared by every
-// workspace-scoped rule resource.
+// CommonAttributes are the top-level attributes shared by every rule
+// resource, at either scope. The attribute naming the scope is not among
+// them: each resource adds WorkspaceIDAttribute or AppliesToAttribute itself.
 func CommonAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"id":             IDAttribute(),
-		"workspace_id":   WorkspaceIDAttribute(),
 		"enabled":        EnabledAttribute(),
 		"group_operator": GroupOperatorAttribute(),
 	}

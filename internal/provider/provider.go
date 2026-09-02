@@ -24,6 +24,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/dnszones"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/domains"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/kvstores"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafaccountrules"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertdatadogintegrations"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertjiraintegrations"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertmailinglistintegrations"
@@ -73,6 +74,8 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsplunk"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsyslog"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafrequestrule"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafsignalrule"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspace"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertdatadogintegration"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertjiraintegration"
@@ -201,6 +204,8 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		snippet.NewResource,
 		dynamicvclsnippet.NewResource,
 		dynamicsnippetcontent.NewResource,
+		ngwafrequestrule.NewResource,
+		ngwafsignalrule.NewResource,
 		ngwafworkspacealertdatadogintegration.NewResource,
 		ngwafworkspacealertjiraintegration.NewResource,
 		ngwafworkspacealertmailinglistintegration.NewResource,
@@ -249,6 +254,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		dnszones.NewDataSource,
 		domains.NewDataSource,
 		kvstores.NewDataSource,
+		ngwafaccountrules.NewDataSource,
 		ngwafworkspacealertdatadogintegrations.NewDataSource,
 		ngwafworkspacealertjiraintegrations.NewDataSource,
 		ngwafworkspacealertmailinglistintegrations.NewDataSource,

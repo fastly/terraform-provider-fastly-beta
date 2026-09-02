@@ -9,6 +9,7 @@ import (
 func FlattenToModel(rule *rules.Rule) Model {
 	return Model{
 		CommonModel: ngwafrule.FlattenCommon(rule),
+		WorkspaceID: ngwafrule.FlattenWorkspaceID(rule),
 		Action:      ngwafrule.FlattenSignalActions(rule.Actions),
 	}
 }
