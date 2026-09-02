@@ -41,6 +41,8 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacethresholds"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacevirtualpatches"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/serviceversion"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsconfiguration"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsconfigurationids"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/vclsnippets"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/acl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/aclentries"
@@ -269,6 +271,8 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		ngwafworkspacethresholds.NewDataSource,
 		ngwafworkspacevirtualpatches.NewDataSource,
 		serviceversion.NewDataSource,
+		tlsconfiguration.NewDataSource,
+		tlsconfigurationids.NewDataSource,
 		vclsnippets.NewDataSource,
 	}
 }
