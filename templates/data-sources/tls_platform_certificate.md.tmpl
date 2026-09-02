@@ -1,0 +1,28 @@
+---
+page_title: "fastly_tls_platform_certificate Data Source - fastly"
+subcategory: ""
+description: |-
+  Get information on a Fastly Platform TLS certificate.
+---
+
+# fastly_tls_platform_certificate (Data Source)
+
+Use this data source to get information about a Platform TLS certificate for use with other
+resources.
+
+-> The filters are applied using an **AND** boolean operator, so depending on the combination of
+filters, they may become mutually exclusive. The exception to this is `id`, which must not be
+specified in combination with any of the others.
+
+-> If more or less than a single match is returned by the search, Terraform will fail. Ensure that
+your search is specific enough to return a single certificate.
+
+## Example Usage
+
+```terraform
+data "fastly_tls_platform_certificate" "example" {
+  domains = ["example.com"]
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
