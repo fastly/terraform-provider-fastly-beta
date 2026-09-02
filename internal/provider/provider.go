@@ -60,6 +60,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domainservicelink"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dynamicsnippetcontent"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dynamicvclsnippet"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/integration"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/kvstore"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingbigquery"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingblobstorage"
@@ -194,6 +195,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		loggingsplunk.NewResource,
 		loggingsumologic.NewResource,
 		loggingsyslog.NewResource,
+		integration.NewResource,
 		kvstore.NewResource,
 		vcl.NewResource,
 		snippet.NewResource,
