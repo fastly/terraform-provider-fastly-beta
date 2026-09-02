@@ -6305,9 +6305,8 @@ func ConfigIntegrationInvalidType(name string) string {
 	})
 }
 
-// ConfigTLSActivation returns a CDN auto service (with a domain and backend) plus a
-// fastly_tls_activation enabling TLS on that domain, using a certificate created
-// out-of-band (no fastly_tls_certificate resource exists yet).
+// ConfigTLSActivation returns a CDN auto service plus a fastly_tls_activation, using an
+// out-of-band certificate (no fastly_tls_certificate resource exists yet).
 func ConfigTLSActivation(serviceName, domainName, backendName, certificateID string) string {
 	service := ConfigCDNAutoWithBackend(serviceName, domainName, backendName)
 	activation := RenderBlock("internal/acceptance_tests/blocks/tls_activation_single.tf", map[string]string{
@@ -6317,16 +6316,32 @@ func ConfigTLSActivation(serviceName, domainName, backendName, certificateID str
 	return joinBlocks(service, activation)
 }
 
-// ConfigTLSActivationWithMTLS is ConfigTLSActivation plus a mutual_authentication_id
-// referencing an out-of-band-created mutual authentication.
-func ConfigTLSActivationWithMTLS(serviceName, domainName, backendName, certificateID, mtlsID string) string {
+// ConfigTLSActivationWithMutualAuthentication is ConfigTLSActivation plus a
+// fastly_tls_mutual_authentication resource wired to the activation directly.
+func ConfigTLSActivationWithMutualAuthentication(serviceName, domainName, backendName, certificateID, mtlsCertBundle string) string {
 	service := ConfigCDNAutoWithBackend(serviceName, domainName, backendName)
-	activation := RenderBlock("internal/acceptance_tests/blocks/tls_activation_single.tf", map[string]string{
-		"CERTIFICATE_ID": certificateID,
-		"DOMAIN_NAME":    domainName,
-		"MTLS_ID":        mtlsID,
+	mtls := RenderBlock("internal/acceptance_tests/blocks/tls_mutual_authentication_single.tf", map[string]string{
+		"CERT_BUNDLE": mtlsCertBundle,
 	})
-	return joinBlocks(service, activation)
+	activation := fmt.Sprintf(`
+resource "fastly_tls_activation" "test" {
+  certificate_id            = %q
+  domain                    = %q
+  mutual_authentication_id  = fastly_tls_mutual_authentication.test.id
+  depends_on                = [fastly_service_cdn_auto.test]
+}
+`, certificateID, domainName)
+	return joinBlocks(service, mtls, activation)
+}
+
+// ConfigTLSMutualAuthentication returns a standalone fastly_tls_mutual_authentication.
+// enforced/name are omitted from the config when passed as "".
+func ConfigTLSMutualAuthentication(certBundle, enforced, name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/tls_mutual_authentication_single.tf", map[string]string{
+		"CERT_BUNDLE": certBundle,
+		"ENFORCED":    enforced,
+		"NAME":        name,
+	})
 }
 
 // ConfigTLSPrivateKey returns a standalone fastly_tls_private_key with the given name and PEM-encoded key material.

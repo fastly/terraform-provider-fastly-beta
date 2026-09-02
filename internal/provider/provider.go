@@ -110,6 +110,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecomputeauto"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/snippet"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsactivation"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsmutualauthentication"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsprivatekey"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/vcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/version"
@@ -251,6 +252,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		servicecompute.NewResource,
 		servicecomputeauto.NewResource,
 		tlsactivation.NewResource,
+		tlsmutualauthentication.NewResource,
 		tlsprivatekey.NewResource,
 	}
 }
