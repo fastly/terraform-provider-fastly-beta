@@ -1,0 +1,35 @@
+---
+page_title: "fastly_tls_activation Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to get the ID of a TLS activation, or to look up the certificate, configuration, or domain of an existing activation.
+---
+
+# fastly_tls_activation (Data Source)
+
+Use this data source to get the ID of a TLS activation, or to look up the certificate, configuration, or domain of an existing activation.
+
+The filters are applied using an **AND** boolean operator, so depending on the combination of filters, they may become mutually exclusive. `id` must not be specified in combination with any of the others.
+
+If more or less than a single match is returned by the search, the read fails. Ensure that your search is specific enough to return a single result.
+
+## Example Usage
+
+```terraform
+data "fastly_tls_activation" "example" {
+  domain = "example.com"
+}
+```
+
+## Schema
+
+### Optional
+
+- `certificate_id` (String) ID of the TLS Certificate used.
+- `configuration_id` (String) ID of the TLS Configuration used.
+- `domain` (String) Domain that TLS was enabled on.
+- `id` (String) Fastly Activation ID. Conflicts with all other filters.
+
+### Read-Only
+
+- `created_at` (String) Timestamp (GMT) when TLS was enabled.
