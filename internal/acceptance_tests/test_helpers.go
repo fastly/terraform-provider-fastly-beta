@@ -6259,3 +6259,48 @@ func ConfigFastlyDomainsDataSource(fqdn1, fqdn2, fqdn3 string) string {
 		"DOMAIN_FQDN_3": fqdn3,
 	})
 }
+
+// integrationAuthKeys are the config keys that hold secret values (API keys, tokens,
+// webhook URLs) and so belong under `authentication` rather than `config`.
+var integrationAuthKeys = map[string]struct{}{
+	"apikey":  {},
+	"token":   {},
+	"key":     {},
+	"webhook": {},
+	"url":     {},
+}
+
+// splitIntegrationConfig splits a flat integration config map into the non-sensitive
+// fields (config) and sensitive fields (authentication), mirroring the resource schema.
+func splitIntegrationConfig(config map[string]string) (nonSensitive, sensitive map[string]string) {
+	nonSensitive = map[string]string{}
+	sensitive = map[string]string{}
+	for k, v := range config {
+		if _, ok := integrationAuthKeys[k]; ok {
+			sensitive[k] = v
+			continue
+		}
+		nonSensitive[k] = v
+	}
+	return nonSensitive, sensitive
+}
+
+// ConfigIntegration returns a standalone fastly_integration with the given name, description,
+// type, and config. Sensitive keys (see integrationAuthKeys) are rendered under `authentication`.
+func ConfigIntegration(name, description, integrationType string, config map[string]string) string {
+	nonSensitive, sensitive := splitIntegrationConfig(config)
+	return RenderBlock("internal/acceptance_tests/blocks/integration_basic.tf", map[string]string{
+		"NAME":           name,
+		"DESCRIPTION":    description,
+		"TYPE":           integrationType,
+		"CONFIG":         entriesHCL(nonSensitive),
+		"AUTHENTICATION": entriesHCL(sensitive),
+	})
+}
+
+// ConfigIntegrationInvalidType returns a fastly_integration using an unsupported type, for validator-failure testing.
+func ConfigIntegrationInvalidType(name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/integration_invalid_type.tf", map[string]string{
+		"NAME": name,
+	})
+}
