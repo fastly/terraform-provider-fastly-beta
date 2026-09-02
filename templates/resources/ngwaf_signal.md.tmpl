@@ -1,0 +1,40 @@
+---
+page_title: "fastly_ngwaf_signal Resource - fastly"
+subcategory: ""
+description: |-
+  Manages a Fastly Next-Gen WAF custom signal defined at account scope.
+---
+
+# fastly_ngwaf_signal (Resource)
+
+Manages a Fastly Next-Gen WAF custom signal defined at account scope.
+
+Account-scoped NGWAF resources omit `account` from their Terraform names. The
+workspace-scoped custom-signal resource is `fastly_ngwaf_workspace_signal`;
+this resource is the account-scoped counterpart.
+
+`applies_to` accepts either one or more workspace IDs or the single value `*`
+to apply the signal to every workspace in the account. The generated
+`reference_id` can be referenced by other NGWAF configuration.
+
+The signal `name` is immutable. Updating `description` is performed in place.
+
+## Example Usage
+
+```terraform
+resource "fastly_ngwaf_signal" "login_attempt" {
+  applies_to  = ["*"]
+  name        = "Login Attempt"
+  description = "Tracks login attempts across the account"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Account-scoped custom signals are imported using the signal ID alone.
+
+```shell
+terraform import fastly_ngwaf_signal.login_attempt SIGNAL_ID
+```
