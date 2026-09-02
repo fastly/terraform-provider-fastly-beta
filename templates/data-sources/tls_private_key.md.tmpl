@@ -1,0 +1,24 @@
+---
+page_title: "fastly_tls_private_key Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to get the ID of a TLS private key, or to look up its metadata by name, key type, key length, or public key SHA1. The private key material itself is never returned once set.
+---
+
+# fastly_tls_private_key (Data Source)
+
+Use this data source to get the ID of a TLS private key, or to look up its metadata by name, key type, key length, or public key SHA1. The private key material itself is never returned once set.
+
+The filters are applied using an **AND** boolean operator, so depending on the combination of filters, they may become mutually exclusive. `id` must not be specified in combination with any of the others.
+
+If more or less than a single match is returned by the search, the read fails. Ensure that your search is specific enough to return a single result.
+
+## Example Usage
+
+```terraform
+data "fastly_tls_private_key" "example" {
+  name = "example-key"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

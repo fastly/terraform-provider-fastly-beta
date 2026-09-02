@@ -6328,3 +6328,11 @@ func ConfigTLSActivationWithMTLS(serviceName, domainName, backendName, certifica
 	})
 	return joinBlocks(service, activation)
 }
+
+// ConfigTLSPrivateKey returns a standalone fastly_tls_private_key with the given name and PEM-encoded key material.
+func ConfigTLSPrivateKey(name, keyPEM string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/tls_private_key_single.tf", map[string]string{
+		"NAME":    name,
+		"KEY_PEM": keyPEM,
+	})
+}
