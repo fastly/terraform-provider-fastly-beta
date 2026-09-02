@@ -1,0 +1,31 @@
+---
+page_title: "fastly_tls_configuration Data Source - fastly"
+subcategory: ""
+description: |-
+  Get information on a Fastly TLS configuration.
+---
+
+# fastly_tls_configuration (Data Source)
+
+Use this data source to get the ID of a TLS configuration for use with other resources.
+
+The data source's filters are applied using an **AND** boolean operator, so depending on the combination
+of filters, they may become mutually exclusive. The exception to this is `id`, which must not be specified
+in combination with any of the others.
+
+If more or less than a single match is returned by the search, an error is raised. Ensure that your search
+is specific enough to return a single result.
+
+## Example Usage
+
+```terraform
+data "fastly_tls_configuration" "example" {
+  default = true
+}
+
+output "tls_configuration_id" {
+  value = data.fastly_tls_configuration.example.id
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
