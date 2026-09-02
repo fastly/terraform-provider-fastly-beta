@@ -116,3 +116,19 @@ func TestSetToStringSlice_nullOrUnknown(t *testing.T) {
 	assert.Equal(t, []string{}, setToStringSlice(ctx, types.SetUnknown(types.StringType), &diags))
 	assert.False(t, diags.HasError())
 }
+
+func TestStringsToSet(t *testing.T) {
+	ctx := context.Background()
+	var diags diag.Diagnostics
+
+	set := stringsToSet([]string{"a", "b"})
+	var got []string
+	diags.Append(set.ElementsAs(ctx, &got, false)...)
+	assert.False(t, diags.HasError())
+	assert.ElementsMatch(t, []string{"a", "b"}, got)
+}
+
+func TestStringsToSet_empty(t *testing.T) {
+	assert.True(t, stringsToSet(nil).IsNull())
+	assert.True(t, stringsToSet([]string{}).IsNull())
+}

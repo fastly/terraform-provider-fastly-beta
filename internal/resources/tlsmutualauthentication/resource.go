@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/fastly/go-fastly/v17/fastly"
@@ -64,15 +65,25 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
+	// Persist the created object immediately: if linking activations below fails, a retry
+	// must update this object rather than create a duplicate.
+	baseState := flattenToModel(mtls)
+	baseState.CertBundle = plan.CertBundle
+	baseState.Include = plan.Include
+	baseState.ActivationIDs = types.SetNull(types.StringType)
+
 	activationIDs := setToStringSlice(ctx, plan.ActivationIDs, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
+		resp.Diagnostics.Append(resp.State.Set(ctx, &baseState)...)
 		return
 	}
-	for _, activationID := range activationIDs {
-		if err := setActivationMTLS(ctx, r.client, activationID, mtls.ID); err != nil {
-			resp.Diagnostics.AddError("Error linking TLS activation to mutual authentication", err.Error())
-			return
-		}
+
+	linked, err := linkActivations(ctx, r.client, activationIDs, mtls.ID)
+	if err != nil {
+		baseState.ActivationIDs = stringsToSet(linked)
+		resp.Diagnostics.Append(resp.State.Set(ctx, &baseState)...)
+		resp.Diagnostics.AddError("Error linking TLS activation to mutual authentication", err.Error())
+		return
 	}
 
 	newState, err := fetchAndFlatten(ctx, r.client, mtls.ID, service.StringValue(plan.Include))
@@ -138,16 +149,17 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 			return
 		}
 
-		// Unsetting old activations is best-effort so one failure doesn't block the rest.
+		// Unsetting old activations is best-effort so one failure doesn't block the rest,
+		// but each failure is still surfaced so it isn't silently lost.
 		for _, activationID := range oldIDs {
-			_ = unsetActivationMTLS(ctx, r.client, activationID)
+			if err := unsetActivationMTLS(ctx, r.client, activationID); err != nil {
+				resp.Diagnostics.AddError("Error unlinking TLS activation from mutual authentication", err.Error())
+			}
 		}
 
-		for _, activationID := range newIDs {
-			if err := setActivationMTLS(ctx, r.client, activationID, id); err != nil {
-				resp.Diagnostics.AddError("Error linking TLS activation to mutual authentication", err.Error())
-				return
-			}
+		if _, err := linkActivations(ctx, r.client, newIDs, id); err != nil {
+			resp.Diagnostics.AddError("Error linking TLS activation to mutual authentication", err.Error())
+			return
 		}
 	}
 
@@ -173,19 +185,28 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 	id := state.ID.ValueString()
 	tflog.Debug(ctx, "Deleting Fastly TLS mutual authentication", map[string]any{"id": id})
 
-	// Can't delete mTLS with active domains: unset it from each activation first.
-	activationIDs := setToStringSlice(ctx, state.ActivationIDs, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	// Can't delete mTLS with active domains: unset it from every activation currently linked
+	// per the API, not just those tracked in activation_ids - a link may have been set from
+	// the other side via fastly_tls_activation.mutual_authentication_id instead.
+	mtls, err := r.client.GetTLSMutualAuthentication(ctx, &fastly.GetTLSMutualAuthenticationInput{ID: id, Include: "tls_activations"})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return
+		}
+		resp.Diagnostics.AddError("Error reading TLS mutual authentication", err.Error())
 		return
 	}
-	for _, activationID := range activationIDs {
-		if err := unsetActivationMTLS(ctx, r.client, activationID); err != nil {
+	for _, activation := range mtls.Activations {
+		if activation == nil {
+			continue
+		}
+		if err := unsetActivationMTLS(ctx, r.client, activation.ID); err != nil {
 			resp.Diagnostics.AddError("Error unlinking TLS activation from mutual authentication", err.Error())
 			return
 		}
 	}
 
-	err := r.client.DeleteTLSMutualAuthentication(ctx, &fastly.DeleteTLSMutualAuthenticationInput{ID: id})
+	err = r.client.DeleteTLSMutualAuthentication(ctx, &fastly.DeleteTLSMutualAuthenticationInput{ID: id})
 	if err != nil && !errors.IsNotFound(err) {
 		resp.Diagnostics.AddError("Error deleting TLS mutual authentication", err.Error())
 	}
