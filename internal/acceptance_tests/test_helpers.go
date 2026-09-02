@@ -6305,8 +6305,11 @@ func ConfigIntegrationInvalidType(name string) string {
 	})
 }
 
-// ConfigTLSActivation returns a CDN auto service plus a fastly_tls_activation, using an
-// out-of-band certificate (no fastly_tls_certificate resource exists yet).
+// ConfigTLSActivation returns a CDN auto service (with a domain and backend) plus a
+// fastly_tls_activation enabling TLS on that domain, using a certificate created
+// out-of-band (its private key has no Terraform resource yet).
+//
+// TODO(CDTOOL-1586): reference a fastly_tls_certificate resource once fastly_tls_private_key exists.
 func ConfigTLSActivation(serviceName, domainName, backendName, certificateID string) string {
 	service := ConfigCDNAutoWithBackend(serviceName, domainName, backendName)
 	activation := RenderBlock("internal/acceptance_tests/blocks/tls_activation_single.tf", map[string]string{
@@ -6349,5 +6352,22 @@ func ConfigTLSPrivateKey(name, keyPEM string) string {
 	return RenderBlock("internal/acceptance_tests/blocks/tls_private_key_single.tf", map[string]string{
 		"NAME":    name,
 		"KEY_PEM": keyPEM,
+	})
+}
+
+// ConfigTLSCertificate returns a fastly_tls_certificate uploading certificateBody, with an
+// explicit name.
+func ConfigTLSCertificate(certificateBody, name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/tls_certificate_single.tf", map[string]string{
+		"CERTIFICATE_BODY": certificateBody,
+		"NAME":             name,
+	})
+}
+
+// ConfigTLSCertificateWithoutName is ConfigTLSCertificate but leaves name unset, so it is
+// computed by the API from the certificate's Common Name/SAN.
+func ConfigTLSCertificateWithoutName(certificateBody string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/tls_certificate_single.tf", map[string]string{
+		"CERTIFICATE_BODY": certificateBody,
 	})
 }

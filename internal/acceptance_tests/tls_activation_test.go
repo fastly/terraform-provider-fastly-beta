@@ -69,10 +69,11 @@ func generateTLSKeyAndCert(t *testing.T, domain string) (keyPEM, certPEM string)
 	return keyPEM, certPEM
 }
 
-// createOutOfBandCertificate creates a private key + certificate via the raw go-fastly client
-// (fastly_tls_private_key/fastly_tls_certificate don't exist yet: CDTOOL-1586/1583).
+// createOutOfBandCertificate creates a private key + certificate for domain via the raw
+// go-fastly client, since no fastly_tls_private_key resource exists yet. Registers cleanup,
+// returns the certificate ID.
 //
-// TODO: rework via Terraform config once those resources exist.
+// TODO(CDTOOL-1586): rework via Terraform config once fastly_tls_private_key exists.
 func createOutOfBandCertificate(t *testing.T, client *fastly.Client, domain string) string {
 	t.Helper()
 
