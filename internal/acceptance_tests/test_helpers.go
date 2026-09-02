@@ -1820,6 +1820,34 @@ func ConfigNGWAFWorkspaceSignalsDataSource(workspaceName, signalName1, signalNam
 	})
 }
 
+// ConfigNGWAFWorkspaceRedaction returns a config declaring a workspace-scoped NGWAF
+// field redaction.
+func ConfigNGWAFWorkspaceRedaction(workspaceName, redactionField string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/ngwaf_workspace_redaction_basic.tf", map[string]string{
+		"WORKSPACE_NAME":  workspaceName,
+		"REDACTION_FIELD": redactionField,
+	})
+}
+
+// ConfigNGWAFWorkspaceRedactionUpdated returns a config updating the field of a
+// workspace-scoped NGWAF field redaction.
+func ConfigNGWAFWorkspaceRedactionUpdated(workspaceName, updatedRedactionField string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/ngwaf_workspace_redaction_updated.tf", map[string]string{
+		"WORKSPACE_NAME":          workspaceName,
+		"REDACTION_FIELD_UPDATED": updatedRedactionField,
+	})
+}
+
+// ConfigNGWAFWorkspaceRedactionsDataSource returns a config declaring two workspace-scoped
+// NGWAF field redactions alongside a fastly_ngwaf_workspace_redactions data source.
+func ConfigNGWAFWorkspaceRedactionsDataSource(workspaceName, redactionField1, redactionField2 string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/ngwaf_workspace_redactions_with_datasource.tf", map[string]string{
+		"WORKSPACE_NAME":    workspaceName,
+		"REDACTION_FIELD_1": redactionField1,
+		"REDACTION_FIELD_2": redactionField2,
+	})
+}
+
 // ConfigComputeAutoWithACLResourceLink returns a Compute auto service config with a
 // domain, package, and a resource_link block pointing at a Terraform-managed fastly_acl
 // (declared as a sibling resource, referenced by ID rather than a literal string).
@@ -6229,5 +6257,50 @@ func ConfigFastlyDomainsDataSource(fqdn1, fqdn2, fqdn3 string) string {
 		"DOMAIN_FQDN_1": fqdn1,
 		"DOMAIN_FQDN_2": fqdn2,
 		"DOMAIN_FQDN_3": fqdn3,
+	})
+}
+
+// integrationAuthKeys are the config keys that hold secret values (API keys, tokens,
+// webhook URLs) and so belong under `authentication` rather than `config`.
+var integrationAuthKeys = map[string]struct{}{
+	"apikey":  {},
+	"token":   {},
+	"key":     {},
+	"webhook": {},
+	"url":     {},
+}
+
+// splitIntegrationConfig splits a flat integration config map into the non-sensitive
+// fields (config) and sensitive fields (authentication), mirroring the resource schema.
+func splitIntegrationConfig(config map[string]string) (nonSensitive, sensitive map[string]string) {
+	nonSensitive = map[string]string{}
+	sensitive = map[string]string{}
+	for k, v := range config {
+		if _, ok := integrationAuthKeys[k]; ok {
+			sensitive[k] = v
+			continue
+		}
+		nonSensitive[k] = v
+	}
+	return nonSensitive, sensitive
+}
+
+// ConfigIntegration returns a standalone fastly_integration with the given name, description,
+// type, and config. Sensitive keys (see integrationAuthKeys) are rendered under `authentication`.
+func ConfigIntegration(name, description, integrationType string, config map[string]string) string {
+	nonSensitive, sensitive := splitIntegrationConfig(config)
+	return RenderBlock("internal/acceptance_tests/blocks/integration_basic.tf", map[string]string{
+		"NAME":           name,
+		"DESCRIPTION":    description,
+		"TYPE":           integrationType,
+		"CONFIG":         entriesHCL(nonSensitive),
+		"AUTHENTICATION": entriesHCL(sensitive),
+	})
+}
+
+// ConfigIntegrationInvalidType returns a fastly_integration using an unsupported type, for validator-failure testing.
+func ConfigIntegrationInvalidType(name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/integration_invalid_type.tf", map[string]string{
+		"NAME": name,
 	})
 }

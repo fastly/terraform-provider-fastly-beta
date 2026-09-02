@@ -1,0 +1,46 @@
+---
+page_title: "fastly_ngwaf_workspace_virtual_patch Resource - fastly"
+subcategory: ""
+description: |-
+  Manages an existing Fastly Next-Gen WAF virtual patch within a workspace.
+---
+
+# fastly_ngwaf_workspace_virtual_patch (Resource)
+
+Manages an existing Fastly Next-Gen WAF virtual patch within a workspace.
+
+Virtual patches are workspace-scoped and are created by Fastly. This resource
+does not create or delete virtual patches in the API; it configures the
+`mode` and `enabled` state for an existing virtual patch. Destroying the
+Terraform resource disables the virtual patch.
+
+## Example Usage
+
+```terraform
+resource "fastly_ngwaf_workspace" "example" {
+  name        = "Example Workspace"
+  description = "Managed by Terraform"
+  mode        = "block"
+
+  attack_signal_thresholds {}
+}
+
+resource "fastly_ngwaf_workspace_virtual_patch" "example" {
+  workspace_id     = fastly_ngwaf_workspace.example.id
+  virtual_patch_id = "CVE-2017-5638"
+
+  mode    = "block"
+  enabled = true
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Next-Gen WAF workspace virtual patches are imported using a combination of the
+workspace ID and the virtual patch ID, separated by a `/`:
+
+```shell
+terraform import fastly_ngwaf_workspace_virtual_patch.example WORKSPACE_ID/VIRTUAL_PATCH_ID
+```
