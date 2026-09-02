@@ -2,6 +2,7 @@ package tlsconfigurationids
 
 import (
 	"context"
+	"sort"
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/idhash"
@@ -85,6 +86,8 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 			ids = append(ids, c.ID)
 		}
 	}
+
+	sort.Strings(ids)
 
 	idSet, diags := types.SetValueFrom(ctx, types.StringType, ids)
 	resp.Diagnostics.Append(diags...)
