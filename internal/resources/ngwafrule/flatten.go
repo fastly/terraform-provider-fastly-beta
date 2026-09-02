@@ -1,22 +1,23 @@
 package ngwafrule
 
 import (
+	"context"
+
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/rules"
 )
 
-// FlattenCommon reads the state every workspace-scoped rule type holds out
-// of an API rule.
+// FlattenCommon reads the state every rule type holds, at either scope, out
+// of an API rule. The scope itself is the caller's to flatten, since the two
+// scopes expose it as different attributes.
 func FlattenCommon(rule *rules.Rule) CommonModel {
 	m := CommonModel{
 		ID:      types.StringValue(rule.RuleID),
 		Enabled: types.BoolValue(rule.Enabled),
 	}
 
-	if len(rule.Scope.AppliesTo) > 0 {
-		m.WorkspaceID = types.StringValue(rule.Scope.AppliesTo[0])
-	}
 	if rule.GroupOperator != "" {
 		m.GroupOperator = types.StringValue(rule.GroupOperator)
 	}
@@ -24,6 +25,20 @@ func FlattenCommon(rule *rules.Rule) CommonModel {
 	m.Condition, m.GroupCondition, m.MultivalCondition = FlattenConditions(rule.Conditions)
 
 	return m
+}
+
+// FlattenWorkspaceID reads a workspace-scoped rule's workspace ID, which the
+// API reports as the sole applies_to entry.
+func FlattenWorkspaceID(rule *rules.Rule) types.String {
+	if len(rule.Scope.AppliesTo) == 0 {
+		return types.StringNull()
+	}
+	return types.StringValue(rule.Scope.AppliesTo[0])
+}
+
+// FlattenAppliesTo reads an account-scoped rule's workspace list.
+func FlattenAppliesTo(ctx context.Context, rule *rules.Rule) (types.Set, diag.Diagnostics) {
+	return types.SetValueFrom(ctx, types.StringType, rule.Scope.AppliesTo)
 }
 
 // FlattenActions reads the API's actions into the multi-shape ActionModel.
@@ -51,6 +66,26 @@ func FlattenActions(actions []rules.Action) []ActionModel {
 		}
 		if a.ResponseCode != 0 {
 			action.ResponseCode = types.Int64Value(int64(a.ResponseCode))
+		}
+		result = append(result, action)
+	}
+	return result
+}
+
+// FlattenAccountActions reads the API's actions into AccountActionModel,
+// dropping the custom-response fields account rules cannot carry.
+func FlattenAccountActions(actions []rules.Action) []AccountActionModel {
+	if len(actions) == 0 {
+		return nil
+	}
+
+	result := make([]AccountActionModel, 0, len(actions))
+	for _, a := range actions {
+		action := AccountActionModel{
+			Type: types.StringValue(a.Type),
+		}
+		if a.Signal != "" {
+			action.Signal = types.StringValue(a.Signal)
 		}
 		result = append(result, action)
 	}

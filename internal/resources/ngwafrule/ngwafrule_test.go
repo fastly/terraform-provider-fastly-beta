@@ -2,8 +2,12 @@ package ngwafrule
 
 import (
 	"context"
+	"os"
+	"regexp"
+	"strconv"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -218,4 +222,85 @@ func rejectsNullList(block schema.ListNestedBlock) bool {
 	}
 
 	return false
+}
+
+func TestAppliesToWildcardExclusive(t *testing.T) {
+	for name, tc := range map[string]struct {
+		entries   []string
+		wantError bool
+	}{
+		"wildcard alone":           {entries: []string{AppliesToWildcard}, wantError: false},
+		"named workspaces":         {entries: []string{"ws1", "ws2"}, wantError: false},
+		"wildcard with named":      {entries: []string{AppliesToWildcard, "ws1"}, wantError: true},
+		"named with wildcard last": {entries: []string{"ws1", AppliesToWildcard}, wantError: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			elements := make([]attr.Value, 0, len(tc.entries))
+			for _, e := range tc.entries {
+				elements = append(elements, types.StringValue(e))
+			}
+
+			var resp validator.SetResponse
+			appliesToWildcardExclusive{}.ValidateSet(context.Background(), validator.SetRequest{
+				Path:        path.Root("applies_to"),
+				ConfigValue: types.SetValueMust(types.StringType, elements),
+			}, &resp)
+
+			assert.Equal(t, tc.wantError, resp.Diagnostics.HasError(), resp.Diagnostics)
+		})
+	}
+}
+
+// TestAppliesToWildcardExclusiveIgnoresUnknown keeps the validator quiet when
+// the set is not yet resolved, so a workspace ID coming from another resource
+// cannot produce a spurious plan-time error.
+func TestAppliesToWildcardExclusiveIgnoresUnknown(t *testing.T) {
+	var resp validator.SetResponse
+	appliesToWildcardExclusive{}.ValidateSet(context.Background(), validator.SetRequest{
+		Path:        path.Root("applies_to"),
+		ConfigValue: types.SetUnknown(types.StringType),
+	}, &resp)
+
+	require.False(t, resp.Diagnostics.HasError(), resp.Diagnostics)
+}
+
+// TestConditionLimitDocumented guards the one constraint whose number is
+// repeated in prose rather than derived from the constant. Every other
+// constraint reaches the docs through the same value that feeds its validator -
+// OneOfDescriptor for enums, actionFieldDescriptor for per-action fields,
+// ActionBlock's own bounds for action counts - so it cannot drift. The
+// condition cap cannot: ValidateConditions enforces it in ValidateConfig, which
+// tfplugindocs cannot see, so it is spelled out by hand. If MaxConditions
+// moves, these sentences have to move with it, and this test is what says so.
+func TestConditionLimitDocumented(t *testing.T) {
+	// Relative to this package, internal/resources/ngwafrule. Every rule
+	// resource's template is listed: the cap applies at both scopes.
+	paths := []string{
+		"../../../templates/resources/ngwaf_request_rule.md.tmpl",
+		"../../../templates/resources/ngwaf_signal_rule.md.tmpl",
+		"../../../templates/resources/ngwaf_workspace_request_rule.md.tmpl",
+		"../../../templates/resources/ngwaf_workspace_signal_rule.md.tmpl",
+		"../../../templates/resources/ngwaf_workspace_rate_limit_rule.md.tmpl",
+		"../../../templates/resources/ngwaf_workspace_templated_signal_rule.md.tmpl",
+		"../../../examples/ngwaf-rules/README.md",
+		"../ngwafrequestrule/resource.go",
+		"../ngwafsignalrule/resource.go",
+	}
+
+	want := strconv.Itoa(MaxConditions)
+	stated := regexp.MustCompile(`(?i)(?:no more than|between 1 and) (\d+)[^.]*combined`)
+
+	for _, path := range paths {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			require.NoError(t, err)
+
+			found := stated.FindAllStringSubmatch(string(raw), -1)
+			require.NotEmpty(t, found, "combined condition limit not documented here; it must state MaxConditions (%s)", want)
+
+			for _, m := range found {
+				assert.Equal(t, want, m[1], "documented condition limit is stale: MaxConditions is now %s", want)
+			}
+		})
+	}
 }

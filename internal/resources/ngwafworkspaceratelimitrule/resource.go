@@ -170,5 +170,5 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 
 // ImportState accepts "workspace_id/rule_id".
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	ngwafrule.ImportState(ctx, req, resp)
+	ngwafrule.ImportWorkspaceState(ctx, req, resp)
 }

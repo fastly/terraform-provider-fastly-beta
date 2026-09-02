@@ -20,6 +20,11 @@ Rules of other types are managed by their own resources -
 `fastly_ngwaf_workspace_templated_signal_rule`. All four can be read back
 together via the `fastly_ngwaf_workspace_rules` data source.
 
+Every rule must define at least one `condition`, `group_condition`, or
+`multival_condition`, and no more than 10 of them combined - a
+`group_condition` or `multival_condition` counts as one entry however many
+conditions it nests.
+
 ## Example Usage
 
 ```terraform
