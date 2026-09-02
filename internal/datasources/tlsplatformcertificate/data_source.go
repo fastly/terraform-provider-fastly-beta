@@ -126,8 +126,8 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		}
 		certificate = cert
 	} else {
-		var wantDomains []string
-		resp.Diagnostics.Append(config.Domains.ElementsAs(ctx, &wantDomains, false)...)
+		wantDomains, diags := domainsFilter(ctx, config.Domains)
+		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -177,6 +177,21 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+// domainsFilter extracts the requested domains filter from a Domains
+// config value. A null or unknown Domains (the filter left unset) yields no
+// filter rather than an error - ElementsAs cannot convert an unknown Set,
+// so unknown must be checked explicitly rather than relying on it to behave
+// like null.
+func domainsFilter(ctx context.Context, domains types.Set) ([]string, diag.Diagnostics) {
+	if domains.IsNull() || domains.IsUnknown() {
+		return nil, nil
+	}
+
+	var wantDomains []string
+	diags := domains.ElementsAs(ctx, &wantDomains, false)
+	return wantDomains, diags
 }
 
 // matchesDomains reports whether any of wantDomains is present, verbatim, in

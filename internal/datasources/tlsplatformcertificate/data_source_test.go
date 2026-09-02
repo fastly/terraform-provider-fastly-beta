@@ -35,6 +35,27 @@ func TestMatchesDomains(t *testing.T) {
 	assert.False(t, matchesDomains(certificate, []string{"nope.com"}))
 }
 
+func TestDomainsFilter(t *testing.T) {
+	// The omitted-filter case (null) already converts cleanly via ElementsAs
+	// on its own, since []string is nilable - this pins that, and pins the
+	// unknown case, which ElementsAs cannot convert and must be checked for
+	// explicitly instead.
+	nullDiags, diags := domainsFilter(context.Background(), types.SetNull(types.StringType))
+	assert.False(t, diags.HasError())
+	assert.Nil(t, nullDiags)
+
+	unknownDomains, diags := domainsFilter(context.Background(), types.SetUnknown(types.StringType))
+	assert.False(t, diags.HasError())
+	assert.Nil(t, unknownDomains)
+
+	known, diags := types.SetValueFrom(context.Background(), types.StringType, []string{"example.com"})
+	assert.False(t, diags.HasError())
+
+	knownDomains, diags := domainsFilter(context.Background(), known)
+	assert.False(t, diags.HasError())
+	assert.Equal(t, []string{"example.com"}, knownDomains)
+}
+
 func TestFlattenToDataSourceModel(t *testing.T) {
 	notBefore := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	notAfter := time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)
