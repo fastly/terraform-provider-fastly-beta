@@ -44,6 +44,8 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/serviceversion"
 	tlsactivationdatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsactivation"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsactivationids"
+	tlscertificatedatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlscertificate"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlscertificateids"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsconfiguration"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsconfigurationids"
 	tlsprivatekeydatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsprivatekey"
@@ -112,6 +114,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecomputeauto"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/snippet"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsactivation"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlscertificate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsmutualauthentication"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsprivatekey"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/vcl"
@@ -256,6 +259,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		servicecomputeauto.NewResource,
 		tlsactivation.NewResource,
 		tlsmutualauthentication.NewResource,
+		tlscertificate.NewResource,
 		tlsprivatekey.NewResource,
 	}
 }
@@ -289,6 +293,8 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		tlsconfigurationids.NewDataSource,
 		tlsactivationdatasource.NewDataSource,
 		tlsactivationids.NewDataSource,
+		tlscertificatedatasource.NewDataSource,
+		tlscertificateids.NewDataSource,
 		tlsprivatekeydatasource.NewDataSource,
 		tlsprivatekeyids.NewDataSource,
 		vclsnippets.NewDataSource,
