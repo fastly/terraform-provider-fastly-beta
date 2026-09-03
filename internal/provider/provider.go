@@ -49,6 +49,8 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlscertificateids"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsconfiguration"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsconfigurationids"
+	tlsplatformcertificatedatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsplatformcertificate"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsplatformcertificateids"
 	tlsprivatekeydatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsprivatekey"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsprivatekeyids"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/vclsnippets"
@@ -122,6 +124,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsactivation"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlscertificate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsmutualauthentication"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsplatformcertificate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsprivatekey"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/vcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/version"
@@ -269,8 +272,9 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		servicecompute.NewResource,
 		servicecomputeauto.NewResource,
 		tlsactivation.NewResource,
-		tlsmutualauthentication.NewResource,
 		tlscertificate.NewResource,
+		tlsmutualauthentication.NewResource,
+		tlsplatformcertificate.NewResource,
 		tlsprivatekey.NewResource,
 	}
 }
@@ -301,12 +305,14 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		ngwafworkspacethresholds.NewDataSource,
 		ngwafworkspacevirtualpatches.NewDataSource,
 		serviceversion.NewDataSource,
-		tlsconfiguration.NewDataSource,
-		tlsconfigurationids.NewDataSource,
 		tlsactivationdatasource.NewDataSource,
 		tlsactivationids.NewDataSource,
 		tlscertificatedatasource.NewDataSource,
 		tlscertificateids.NewDataSource,
+		tlsconfiguration.NewDataSource,
+		tlsconfigurationids.NewDataSource,
+		tlsplatformcertificatedatasource.NewDataSource,
+		tlsplatformcertificateids.NewDataSource,
 		tlsprivatekeydatasource.NewDataSource,
 		tlsprivatekeyids.NewDataSource,
 		vclsnippets.NewDataSource,

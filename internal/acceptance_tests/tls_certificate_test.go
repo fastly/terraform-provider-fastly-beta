@@ -21,47 +21,20 @@ func testTLSCertificateDomain(t *testing.T) string {
 	return fmt.Sprintf("%s.fastly-example.com", acctest.RandString(10))
 }
 
-// uploadOutOfBandPrivateKey uploads keyPEM via the raw go-fastly client and registers cleanup.
-// The Fastly API rejects creating a certificate until its matching private key is uploaded, and
-// no fastly_tls_private_key resource exists yet.
-//
-// TODO(CDTOOL-1586): rework via Terraform config once fastly_tls_private_key exists.
-func uploadOutOfBandPrivateKey(t *testing.T, client *fastly.Client, keyPEM string) {
-	t.Helper()
-
-	name := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
-	key, err := client.CreatePrivateKey(context.Background(), &fastly.CreatePrivateKeyInput{
-		Key:  keyPEM,
-		Name: name,
-	})
-	if err != nil {
-		t.Fatalf("creating out-of-band private key: %s", err)
-	}
-	t.Cleanup(func() {
-		if err := client.DeletePrivateKey(context.Background(), &fastly.DeletePrivateKeyInput{ID: key.ID}); err != nil {
-			t.Logf("cleanup: deleting out-of-band private key %s: %s", key.ID, err)
-		}
-	})
-}
-
 func TestAccFastlyTLSCertificate_withName(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("TF_ACC") == "" {
 		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
 	}
 
-	client, err := NewFastlyClient()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	domain := testTLSCertificateDomain(t)
 	name := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	updatedName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
-	keyPEM, certPEM := generateTLSKeyAndCert(t, domain)
-	keyPEM2, certPEM2 := generateTLSKeyAndCert(t, domain)
-	uploadOutOfBandPrivateKey(t, client, keyPEM)
-	uploadOutOfBandPrivateKey(t, client, keyPEM2)
+	keyName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	key, keyPEM := generateTLSKey(t)
+	certPEM := generateTLSCertForKey(t, key, domain)
+	certPEM2 := generateTLSCertForKey(t, key, domain)
+	privateKey := ConfigTLSPrivateKey(keyName, keyPEM)
 
 	resourceName := "fastly_tls_certificate.test"
 
@@ -71,7 +44,7 @@ func TestAccFastlyTLSCertificate_withName(t *testing.T) {
 		CheckDestroy:             CheckTLSCertificateDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigTLSCertificate(certPEM, name),
+				Config: joinBlocks(privateKey, ConfigTLSCertificateWithPrivateKey(certPEM, name)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
@@ -88,7 +61,9 @@ func TestAccFastlyTLSCertificate_withName(t *testing.T) {
 			},
 			{
 				// name and certificate_body have no RequiresReplace, so this updates in place.
-				Config: ConfigTLSCertificate(certPEM2, updatedName),
+				// certPEM2 is signed by the same key as certPEM (privateKey is unchanged across
+				// steps), so there's no private-key replacement to order around.
+				Config: joinBlocks(privateKey, ConfigTLSCertificateWithPrivateKey(certPEM2, updatedName)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
 					testAccCheckTLSCertificateExists(),
@@ -110,14 +85,10 @@ func TestAccFastlyTLSCertificate_withoutName(t *testing.T) {
 		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
 	}
 
-	client, err := NewFastlyClient()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	domain := testTLSCertificateDomain(t)
+	keyName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	keyPEM, certPEM := generateTLSKeyAndCert(t, domain)
-	uploadOutOfBandPrivateKey(t, client, keyPEM)
+	privateKey := ConfigTLSPrivateKey(keyName, keyPEM)
 
 	resourceName := "fastly_tls_certificate.test"
 
@@ -127,7 +98,7 @@ func TestAccFastlyTLSCertificate_withoutName(t *testing.T) {
 		CheckDestroy:             CheckTLSCertificateDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigTLSCertificateWithoutName(certPEM),
+				Config: joinBlocks(privateKey, ConfigTLSCertificateWithPrivateKey(certPEM, "")),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", domain),
 					resource.TestCheckResourceAttr(resourceName, "issued_to", domain),
@@ -162,17 +133,13 @@ func TestAccFastlyDataSourceTLSCertificate(t *testing.T) {
 		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
 	}
 
-	client, err := NewFastlyClient()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	domain := testTLSCertificateDomain(t)
 	name := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	keyName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	keyPEM, certPEM := generateTLSKeyAndCert(t, domain)
-	uploadOutOfBandPrivateKey(t, client, keyPEM)
+	privateKey := ConfigTLSPrivateKey(keyName, keyPEM)
 
-	config := ConfigTLSCertificate(certPEM, name) + `
+	config := joinBlocks(privateKey, ConfigTLSCertificateWithPrivateKey(certPEM, name)) + `
 data "fastly_tls_certificate" "by_name" {
   name       = fastly_tls_certificate.test.name
   depends_on = [fastly_tls_certificate.test]
@@ -201,17 +168,13 @@ func TestAccFastlyDataSourceTLSCertificateIDs(t *testing.T) {
 		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
 	}
 
-	client, err := NewFastlyClient()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	domain := testTLSCertificateDomain(t)
 	name := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	keyName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	keyPEM, certPEM := generateTLSKeyAndCert(t, domain)
-	uploadOutOfBandPrivateKey(t, client, keyPEM)
+	privateKey := ConfigTLSPrivateKey(keyName, keyPEM)
 
-	config := ConfigTLSCertificate(certPEM, name) + `
+	config := joinBlocks(privateKey, ConfigTLSCertificateWithPrivateKey(certPEM, name)) + `
 data "fastly_tls_certificate_ids" "all" {
   depends_on = [fastly_tls_certificate.test]
 }

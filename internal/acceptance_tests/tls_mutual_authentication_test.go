@@ -68,20 +68,17 @@ func TestAccFastlyTLSMutualAuthentication_withActivation(t *testing.T) {
 		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
 	}
 
-	client, err := NewFastlyClient()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	domain := testTLSActivationDomain(t)
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	backendName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
-	certificateID := createOutOfBandCertificate(t, client, domain)
+	keyPEM, certPEM := generateTLSKeyAndCert(t, domain)
+	certName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	cert := ConfigTLSCertificatePair("test", certName, keyPEM, certPEM)
 	_, certBundle := generateTLSKeyAndCert(t, domain)
 
 	activationResourceName := "fastly_tls_activation.test"
 	mtlsResourceName := "fastly_tls_mutual_authentication.test"
-	base := ConfigTLSActivation(serviceName, domain, backendName, certificateID)
+	base := joinBlocks(cert, ConfigTLSActivation(serviceName, domain, backendName, "fastly_tls_certificate.test.id", "fastly_tls_certificate.test"))
 
 	withActivation := base + fmt.Sprintf(`
 resource "fastly_tls_mutual_authentication" "test" {
