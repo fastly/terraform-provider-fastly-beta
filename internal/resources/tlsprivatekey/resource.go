@@ -65,6 +65,13 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
+	// Record the ID immediately so the key isn't orphaned in Fastly with no
+	// Terraform state if the follow-up read below fails.
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), created.ID)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// The create response omits fields such as created_at that only the get
 	// endpoint populates, so re-fetch before storing state.
 	key, err := r.client.GetPrivateKey(ctx, &fastly.GetPrivateKeyInput{ID: created.ID})
