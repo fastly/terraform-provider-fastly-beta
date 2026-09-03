@@ -6310,17 +6310,25 @@ func ConfigIntegrationInvalidType(name string) string {
 // fastly_tls_activation enabling TLS on that domain. certificateIDExpr is the raw HCL expression
 // assigned to certificate_id — either a quoted literal (e.g. `""` for validator-failure tests) or
 // a reference to a fastly_tls_certificate resource declared via ConfigTLSCertificate.
-// extraDependsOn, when non-empty, is appended verbatim (with its own leading comma) to the
-// activation's depends_on, e.g. ", fastly_tls_certificate.test", so the activation waits on that
-// certificate resource.
-func ConfigTLSActivation(serviceName, domainName, backendName, certificateIDExpr, extraDependsOn string) string {
+// extraDependsOn, when given, names additional resources (e.g. "fastly_tls_certificate.test") the
+// activation's depends_on should wait on, alongside the service.
+func ConfigTLSActivation(serviceName, domainName, backendName, certificateIDExpr string, extraDependsOn ...string) string {
 	service := ConfigCDNAutoWithBackend(serviceName, domainName, backendName)
 	activation := RenderBlock("internal/acceptance_tests/blocks/tls_activation_single.tf", map[string]string{
 		"CERTIFICATE_ID_EXPR": certificateIDExpr,
 		"DOMAIN_NAME":         domainName,
-		"EXTRA_DEPENDS_ON":    extraDependsOn,
+		"EXTRA_DEPENDS_ON":    extraDependsOnHCL(extraDependsOn),
 	})
 	return joinBlocks(service, activation)
+}
+
+// extraDependsOnHCL renders extraDependsOn as a leading-comma-prefixed, comma-joined HCL fragment
+// suitable for splicing after an existing depends_on entry, e.g. ", a, b" for ["a", "b"], or "" if empty.
+func extraDependsOnHCL(extraDependsOn []string) string {
+	if len(extraDependsOn) == 0 {
+		return ""
+	}
+	return ", " + strings.Join(extraDependsOn, ", ")
 }
 
 // ConfigTLSCertificatePair returns a fastly_tls_private_key + fastly_tls_certificate pair (both
@@ -6339,7 +6347,7 @@ func ConfigTLSCertificatePair(resourceName, name, keyPEM, certPEM string) string
 
 // ConfigTLSActivationWithMutualAuthentication is ConfigTLSActivation plus a
 // fastly_tls_mutual_authentication resource wired to the activation directly.
-func ConfigTLSActivationWithMutualAuthentication(serviceName, domainName, backendName, certificateIDExpr, extraDependsOn, mtlsCertBundle string) string {
+func ConfigTLSActivationWithMutualAuthentication(serviceName, domainName, backendName, certificateIDExpr, mtlsCertBundle string, extraDependsOn ...string) string {
 	service := ConfigCDNAutoWithBackend(serviceName, domainName, backendName)
 	mtls := RenderBlock("internal/acceptance_tests/blocks/tls_mutual_authentication_single.tf", map[string]string{
 		"CERT_BUNDLE": mtlsCertBundle,
@@ -6351,7 +6359,7 @@ resource "fastly_tls_activation" "test" {
   mutual_authentication_id  = fastly_tls_mutual_authentication.test.id
   depends_on                = [fastly_service_cdn_auto.test%s]
 }
-`, certificateIDExpr, domainName, extraDependsOn)
+`, certificateIDExpr, domainName, extraDependsOnHCL(extraDependsOn))
 	return joinBlocks(service, mtls, activation)
 }
 

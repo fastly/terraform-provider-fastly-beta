@@ -110,7 +110,7 @@ func TestAccFastlyTLSActivation_basic(t *testing.T) {
 		CheckDestroy:             CheckTLSActivationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: joinBlocks(cert1, ConfigTLSActivation(serviceName, domain, backendName, "fastly_tls_certificate.cert1.id", ", fastly_tls_certificate.cert1")),
+				Config: joinBlocks(cert1, ConfigTLSActivation(serviceName, domain, backendName, "fastly_tls_certificate.cert1.id", "fastly_tls_certificate.cert1")),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrPair(resourceName, "certificate_id", "fastly_tls_certificate.cert1", "id"),
@@ -124,7 +124,7 @@ func TestAccFastlyTLSActivation_basic(t *testing.T) {
 				// certificate_id has no RequiresReplace, so this updates in place. cert1 stays
 				// declared alongside cert2 to mirror the create-alongside/repoint/delete-old
 				// rotation workflow described in the fastly_tls_certificate documentation.
-				Config: joinBlocks(cert1, cert2, ConfigTLSActivation(serviceName, domain, backendName, "fastly_tls_certificate.cert2.id", ", fastly_tls_certificate.cert1, fastly_tls_certificate.cert2")),
+				Config: joinBlocks(cert1, cert2, ConfigTLSActivation(serviceName, domain, backendName, "fastly_tls_certificate.cert2.id", "fastly_tls_certificate.cert1", "fastly_tls_certificate.cert2")),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrPair(resourceName, "certificate_id", "fastly_tls_certificate.cert2", "id"),
 					testAccCheckTLSActivationExists(),
@@ -162,7 +162,7 @@ func TestAccFastlyTLSActivation_mtls(t *testing.T) {
 		CheckDestroy:             CheckTLSActivationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: joinBlocks(cert, ConfigTLSActivation(serviceName, domain, backendName, "fastly_tls_certificate.test.id", ", fastly_tls_certificate.test")),
+				Config: joinBlocks(cert, ConfigTLSActivation(serviceName, domain, backendName, "fastly_tls_certificate.test.id", "fastly_tls_certificate.test")),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					testAccCheckTLSActivationExists(),
@@ -170,7 +170,7 @@ func TestAccFastlyTLSActivation_mtls(t *testing.T) {
 			},
 			{
 				// mutual_authentication_id only settable via a follow-up update: fastly/terraform-provider-fastly#873
-				Config: joinBlocks(cert, ConfigTLSActivationWithMutualAuthentication(serviceName, domain, backendName, "fastly_tls_certificate.test.id", ", fastly_tls_certificate.test", mtlsCertBundle)),
+				Config: joinBlocks(cert, ConfigTLSActivationWithMutualAuthentication(serviceName, domain, backendName, "fastly_tls_certificate.test.id", mtlsCertBundle, "fastly_tls_certificate.test")),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrPair(resourceName, "mutual_authentication_id", "fastly_tls_mutual_authentication.test", "id"),
 					testAccCheckTLSActivationExists(),
@@ -200,7 +200,7 @@ func TestAccFastlyTLSActivation_missingCertificateID(t *testing.T) {
 		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config:      ConfigTLSActivation(serviceName, domain, backendName, `""`, ""),
+				Config:      ConfigTLSActivation(serviceName, domain, backendName, `""`),
 				ExpectError: regexp.MustCompile("certificate_id is empty"),
 			},
 		},
@@ -220,7 +220,7 @@ func TestAccFastlyDataSourceTLSActivation(t *testing.T) {
 	certName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	cert := ConfigTLSCertificatePair("test", certName, keyPEM, certPEM)
 
-	config := joinBlocks(cert, ConfigTLSActivation(serviceName, domain, backendName, "fastly_tls_certificate.test.id", ", fastly_tls_certificate.test")) + `
+	config := joinBlocks(cert, ConfigTLSActivation(serviceName, domain, backendName, "fastly_tls_certificate.test.id", "fastly_tls_certificate.test")) + `
 data "fastly_tls_activation" "by_domain" {
   domain     = fastly_tls_activation.test.domain
   depends_on = [fastly_tls_activation.test]
@@ -257,7 +257,7 @@ func TestAccFastlyDataSourceTLSActivationIDs(t *testing.T) {
 	certName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	cert := ConfigTLSCertificatePair("test", certName, keyPEM, certPEM)
 
-	config := joinBlocks(cert, ConfigTLSActivation(serviceName, domain, backendName, "fastly_tls_certificate.test.id", ", fastly_tls_certificate.test")) + `
+	config := joinBlocks(cert, ConfigTLSActivation(serviceName, domain, backendName, "fastly_tls_certificate.test.id", "fastly_tls_certificate.test")) + `
 data "fastly_tls_activation_ids" "by_cert" {
   certificate_id = fastly_tls_activation.test.certificate_id
   depends_on     = [fastly_tls_activation.test]

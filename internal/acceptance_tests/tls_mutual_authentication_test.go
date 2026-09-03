@@ -78,7 +78,7 @@ func TestAccFastlyTLSMutualAuthentication_withActivation(t *testing.T) {
 
 	activationResourceName := "fastly_tls_activation.test"
 	mtlsResourceName := "fastly_tls_mutual_authentication.test"
-	base := joinBlocks(cert, ConfigTLSActivation(serviceName, domain, backendName, "fastly_tls_certificate.test.id", ", fastly_tls_certificate.test"))
+	base := joinBlocks(cert, ConfigTLSActivation(serviceName, domain, backendName, "fastly_tls_certificate.test.id", "fastly_tls_certificate.test"))
 
 	withActivation := base + fmt.Sprintf(`
 resource "fastly_tls_mutual_authentication" "test" {
