@@ -12,3 +12,13 @@ type Model struct {
 	Entries     types.List   `tfsdk:"entries"`
 	ReferenceID types.String `tfsdk:"reference_id"`
 }
+
+// AccountModel is the shared state model for all account-scoped NGWAF list resources.
+// The list type is implicit in the concrete Terraform resource name.
+type AccountModel struct {
+	ID          types.String `tfsdk:"id"`
+	Name        types.String `tfsdk:"name"`
+	Description types.String `tfsdk:"description"`
+	Entries     types.List   `tfsdk:"entries"`
+	ReferenceID types.String `tfsdk:"reference_id"`
+}

@@ -62,6 +62,59 @@ func BuildDeleteInput(workspaceID, listID string) *lists.DeleteInput {
 	}
 }
 
+func BuildAccountCreateInput(ctx context.Context, listType string, plan AccountModel) (*lists.CreateInput, diag.Diagnostics) {
+	entries, diags := expandEntries(ctx, plan.Entries)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	input := &lists.CreateInput{
+		Name:    plan.Name.ValueStringPointer(),
+		Type:    &listType,
+		Entries: &entries,
+		Scope:   AccountScope(),
+	}
+
+	if !plan.Description.IsNull() && !plan.Description.IsUnknown() {
+		input.Description = plan.Description.ValueStringPointer()
+	}
+
+	return input, nil
+}
+
+func BuildAccountUpdateInput(ctx context.Context, listID string, plan AccountModel) (*lists.UpdateInput, diag.Diagnostics) {
+	entries, diags := expandEntries(ctx, plan.Entries)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	input := &lists.UpdateInput{
+		ListID:  &listID,
+		Entries: &entries,
+		Scope:   AccountScope(),
+	}
+
+	if !plan.Description.IsNull() && !plan.Description.IsUnknown() {
+		input.Description = plan.Description.ValueStringPointer()
+	}
+
+	return input, nil
+}
+
+func BuildAccountGetInput(listID string) *lists.GetInput {
+	return &lists.GetInput{
+		ListID: &listID,
+		Scope:  AccountScope(),
+	}
+}
+
+func BuildAccountDeleteInput(listID string) *lists.DeleteInput {
+	return &lists.DeleteInput{
+		ListID: &listID,
+		Scope:  AccountScope(),
+	}
+}
+
 func expandEntries(ctx context.Context, entries types.List) ([]string, diag.Diagnostics) {
 	var values []string
 	diags := entries.ElementsAs(ctx, &values, false)

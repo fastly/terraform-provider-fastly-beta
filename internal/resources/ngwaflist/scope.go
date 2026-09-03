@@ -9,3 +9,8 @@ func WorkspaceScope(workspaceID string) *scope.Scope {
 		AppliesTo: []string{workspaceID},
 	}
 }
+
+// AccountScope returns the NGWAF account scope for list API operations.
+func AccountScope() *scope.Scope {
+	return &scope.Scope{Type: scope.ScopeTypeAccount}
+}

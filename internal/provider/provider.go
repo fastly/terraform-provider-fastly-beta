@@ -25,6 +25,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/domains"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/kvstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafaccountrules"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwaflists"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafsignals"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertdatadogintegrations"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertjiraintegrations"
@@ -81,9 +82,14 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsplunk"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsyslog"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafcountrylist"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafiplist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafrequestrule"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafsignal"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafsignallist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafsignalrule"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafstringlist"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafwildcardlist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspace"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertdatadogintegration"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertjiraintegration"
@@ -216,9 +222,14 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		snippet.NewResource,
 		dynamicvclsnippet.NewResource,
 		dynamicsnippetcontent.NewResource,
+		ngwafcountrylist.NewResource,
+		ngwafiplist.NewResource,
 		ngwafrequestrule.NewResource,
 		ngwafsignal.NewResource,
+		ngwafsignallist.NewResource,
 		ngwafsignalrule.NewResource,
+		ngwafstringlist.NewResource,
+		ngwafwildcardlist.NewResource,
 		ngwafworkspacealertdatadogintegration.NewResource,
 		ngwafworkspacealertjiraintegration.NewResource,
 		ngwafworkspacealertmailinglistintegration.NewResource,
@@ -272,6 +283,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		domains.NewDataSource,
 		kvstores.NewDataSource,
 		ngwafaccountrules.NewDataSource,
+		ngwaflists.NewDataSource,
 		ngwafsignals.NewDataSource,
 		ngwafworkspacealertdatadogintegrations.NewDataSource,
 		ngwafworkspacealertjiraintegrations.NewDataSource,
