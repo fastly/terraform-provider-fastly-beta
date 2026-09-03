@@ -6063,6 +6063,48 @@ func ConfigConfigStoresDataSource(h string) string {
 	})
 }
 
+// ConfigSecretStore returns a standalone fastly_secretstore configuration.
+func ConfigSecretStore(name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/secretstore_single.tf", map[string]string{
+		"SECRETSTORE_NAME": name,
+	})
+}
+
+// ConfigSecretStoreWithComputeAutoResourceLink returns a Secret Store plus a Compute auto
+// service with a resource_link pointing at that Secret Store. The Compute package is included
+// so this is a complete runnable Compute service config, not an isolated resource test.
+func ConfigSecretStoreWithComputeAutoResourceLink(storeName, serviceName, domainName, linkName string) string {
+	return ConfigSecretStore(storeName) + "\n" + BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"DOMAIN_NAME":             domainName,
+			"PACKAGE_PATH":            GetPackagePath(),
+			"RESOURCE_LINK_NAME":      linkName,
+			"RESOURCE_LINK_TARGET_ID": "fastly_secretstore.store.id",
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/resource_link_ref.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigSecretStoreWithComputeAutoUnlinked returns a Secret Store plus the same Compute auto
+// service without the resource_link. This is the required intermediate state before deleting a
+// store that was linked to a service.
+func ConfigSecretStoreWithComputeAutoUnlinked(storeName, serviceName, domainName string) string {
+	return ConfigSecretStore(storeName) + "\n" + ConfigComputeAutoBasic(serviceName, domainName)
+}
+
+// ConfigSecretStoresDataSource returns one fastly_secretstore resource and a
+// fastly_secretstores data source that depends on it. One known store is sufficient
+// to verify enumeration without consuming the account's limited Secret Store quota.
+func ConfigSecretStoresDataSource(h string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/secretstore_with_datasource.tf", map[string]string{
+		"SECRETSTORE_NAME": fmt.Sprintf("tf_%s", h),
+	})
+}
+
 // ConfigNGWAFWorkspaceListsByType returns a config declaring one workspace-scoped
 // NGWAF list of every supported type alongside the workspace lists data source.
 func ConfigNGWAFWorkspaceListsByType(workspaceName string, names map[string]string) string {

@@ -42,6 +42,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacesignals"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacethresholds"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacevirtualpatches"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/secretstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/serviceversion"
 	tlsactivationdatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsactivation"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsactivationids"
@@ -118,6 +119,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacewildcardlist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/productenablement"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/resourcelink"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/secretstore"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecdn"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecdnauto"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecompute"
@@ -271,6 +273,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		productenablement.NewDDoSProtectionResource,
 		productenablement.NewNGWAFResource,
 		resourcelink.NewResource,
+		secretstore.NewResource,
 		servicecdn.NewResource,
 		servicecdnauto.NewResource,
 		servicecompute.NewResource,
@@ -310,6 +313,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		ngwafworkspacesignals.NewDataSource,
 		ngwafworkspacethresholds.NewDataSource,
 		ngwafworkspacevirtualpatches.NewDataSource,
+		secretstores.NewDataSource,
 		serviceversion.NewDataSource,
 		tlsactivationdatasource.NewDataSource,
 		tlsactivationids.NewDataSource,
