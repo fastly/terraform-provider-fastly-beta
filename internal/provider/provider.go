@@ -25,6 +25,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/domains"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/kvstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafaccountrules"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafsignals"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertdatadogintegrations"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertjiraintegrations"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertmailinglistintegrations"
@@ -41,10 +42,14 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacethresholds"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacevirtualpatches"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/serviceversion"
+	tlsactivationdatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsactivation"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsactivationids"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsconfiguration"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsconfigurationids"
 	tlsplatformcertificatedatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsplatformcertificate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsplatformcertificateids"
+	tlsprivatekeydatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsprivatekey"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsprivatekeyids"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/vclsnippets"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/acl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/aclentries"
@@ -77,6 +82,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsyslog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafrequestrule"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafsignal"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafsignalrule"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspace"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertdatadogintegration"
@@ -107,7 +113,10 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecompute"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecomputeauto"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/snippet"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsactivation"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsmutualauthentication"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsplatformcertificate"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsprivatekey"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/vcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/version"
 )
@@ -208,6 +217,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		dynamicvclsnippet.NewResource,
 		dynamicsnippetcontent.NewResource,
 		ngwafrequestrule.NewResource,
+		ngwafsignal.NewResource,
 		ngwafsignalrule.NewResource,
 		ngwafworkspacealertdatadogintegration.NewResource,
 		ngwafworkspacealertjiraintegration.NewResource,
@@ -247,7 +257,10 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		servicecdnauto.NewResource,
 		servicecompute.NewResource,
 		servicecomputeauto.NewResource,
+		tlsactivation.NewResource,
+		tlsmutualauthentication.NewResource,
 		tlsplatformcertificate.NewResource,
+		tlsprivatekey.NewResource,
 	}
 }
 
@@ -259,6 +272,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		domains.NewDataSource,
 		kvstores.NewDataSource,
 		ngwafaccountrules.NewDataSource,
+		ngwafsignals.NewDataSource,
 		ngwafworkspacealertdatadogintegrations.NewDataSource,
 		ngwafworkspacealertjiraintegrations.NewDataSource,
 		ngwafworkspacealertmailinglistintegrations.NewDataSource,
@@ -275,10 +289,14 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		ngwafworkspacethresholds.NewDataSource,
 		ngwafworkspacevirtualpatches.NewDataSource,
 		serviceversion.NewDataSource,
+		tlsactivationdatasource.NewDataSource,
+		tlsactivationids.NewDataSource,
 		tlsconfiguration.NewDataSource,
 		tlsconfigurationids.NewDataSource,
 		tlsplatformcertificatedatasource.NewDataSource,
 		tlsplatformcertificateids.NewDataSource,
+		tlsprivatekeydatasource.NewDataSource,
+		tlsprivatekeyids.NewDataSource,
 		vclsnippets.NewDataSource,
 	}
 }

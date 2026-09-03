@@ -1,0 +1,56 @@
+---
+page_title: "fastly_tls_mutual_authentication Resource - fastly"
+subcategory: ""
+description: |-
+  Enables client-to-server mutual TLS. Mutual authentications are versionless and independent of any service-version lifecycle.
+---
+
+# fastly_tls_mutual_authentication (Resource)
+
+Enables client-to-server mutual TLS. Mutual authentications are versionless and independent of any service-version lifecycle.
+
+Mutual TLS can be added to an existing [`fastly_tls_activation`](tls_activation.md). You must already have active server-side TLS using either a custom certificate or an enabled Fastly-managed subscription before mutual TLS can be enabled.
+
+## Example Usage
+
+```terraform
+resource "fastly_service_cdn_auto" "example" {
+  name = "example-service"
+
+  domain {
+    name = "example.com"
+  }
+
+  backend {
+    address = "127.0.0.1"
+    name    = "localhost"
+  }
+}
+
+resource "fastly_tls_certificate" "example" {
+  certificate_body = file("example.com.crt")
+  name             = "example-cert"
+}
+
+resource "fastly_tls_activation" "example" {
+  certificate_id = fastly_tls_certificate.example.id
+  domain         = "example.com"
+  depends_on     = [fastly_service_cdn_auto.example]
+}
+
+resource "fastly_tls_mutual_authentication" "example" {
+  activation_ids = [fastly_tls_activation.example.id]
+  cert_bundle    = file("client-ca-bundle.crt")
+  enforced       = true
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A TLS mutual authentication can be imported using its ID, e.g.
+
+```shell
+terraform import fastly_tls_mutual_authentication.example xxxxxxxx
+```
