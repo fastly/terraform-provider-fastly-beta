@@ -3,9 +3,9 @@ package tlscertificate
 import (
 	"context"
 	"slices"
-	"time"
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
+	tlscertificateresource "github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlscertificate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -239,31 +239,23 @@ func certificateHasAnyDomain(c *fastly.CustomTLSCertificate, domains []string) b
 	return false
 }
 
+// flattenToModel reuses the resource package's mapping of the API type onto its Model, then
+// copies the fields DataSourceModel also has - this data source has no certificate_body
+// attribute, so it can't share the resource's Model type directly.
 func flattenToModel(ctx context.Context, c *fastly.CustomTLSCertificate) (DataSourceModel, diag.Diagnostics) {
-	domains := make([]string, len(c.Domains))
-	for i, d := range c.Domains {
-		domains[i] = d.ID
-	}
-	domainsSet, diags := types.SetValueFrom(ctx, types.StringType, domains)
+	rm, diags := tlscertificateresource.FlattenToModel(ctx, c)
 
 	m := DataSourceModel{
-		ID:                 types.StringValue(c.ID),
-		Domains:            domainsSet,
-		IssuedTo:           types.StringValue(c.IssuedTo),
-		Issuer:             types.StringValue(c.Issuer),
-		Name:               types.StringValue(c.Name),
-		Replace:            types.BoolValue(c.Replace),
-		SerialNumber:       types.StringValue(c.SerialNumber),
-		SignatureAlgorithm: types.StringValue(c.SignatureAlgorithm),
-		CreatedAt:          types.StringNull(),
-		UpdatedAt:          types.StringNull(),
-	}
-
-	if c.CreatedAt != nil {
-		m.CreatedAt = types.StringValue(c.CreatedAt.Format(time.RFC3339))
-	}
-	if c.UpdatedAt != nil {
-		m.UpdatedAt = types.StringValue(c.UpdatedAt.Format(time.RFC3339))
+		ID:                 rm.ID,
+		Domains:            rm.Domains,
+		IssuedTo:           rm.IssuedTo,
+		Issuer:             rm.Issuer,
+		Name:               rm.Name,
+		Replace:            rm.Replace,
+		SerialNumber:       rm.SerialNumber,
+		SignatureAlgorithm: rm.SignatureAlgorithm,
+		CreatedAt:          rm.CreatedAt,
+		UpdatedAt:          rm.UpdatedAt,
 	}
 
 	return m, diags

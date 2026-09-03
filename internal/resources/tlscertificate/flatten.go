@@ -10,7 +10,9 @@ import (
 	"github.com/fastly/go-fastly/v17/fastly"
 )
 
-func flattenToModel(ctx context.Context, c *fastly.CustomTLSCertificate) (Model, diag.Diagnostics) {
+// FlattenToModel maps c onto a Model. It is exported so the tlscertificate data source can
+// reuse this mapping instead of duplicating it.
+func FlattenToModel(ctx context.Context, c *fastly.CustomTLSCertificate) (Model, diag.Diagnostics) {
 	domains := make([]string, len(c.Domains))
 	for i, d := range c.Domains {
 		domains[i] = d.ID

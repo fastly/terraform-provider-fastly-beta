@@ -69,7 +69,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	newState, diags := flattenToModel(ctx, cert)
+	newState, diags := FlattenToModel(ctx, cert)
 	resp.Diagnostics.Append(diags...)
 	newState.CertificateBody = plan.CertificateBody
 	warnIfReplaceRecommended(cert, &resp.Diagnostics)
@@ -98,7 +98,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 
-	newState, diags := flattenToModel(ctx, cert)
+	newState, diags := FlattenToModel(ctx, cert)
 	resp.Diagnostics.Append(diags...)
 	newState.CertificateBody = state.CertificateBody
 	warnIfReplaceRecommended(cert, &resp.Diagnostics)
@@ -127,7 +127,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	newState, diags := flattenToModel(ctx, cert)
+	newState, diags := FlattenToModel(ctx, cert)
 	resp.Diagnostics.Append(diags...)
 	newState.CertificateBody = plan.CertificateBody
 	warnIfReplaceRecommended(cert, &resp.Diagnostics)

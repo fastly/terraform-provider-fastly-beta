@@ -2,14 +2,14 @@
 page_title: "fastly_tls_certificate Resource - fastly"
 subcategory: ""
 description: |-
-  Uploads a custom TLS certificate. TLS certificates are versionless and independent of any service-version lifecycle.
+  Manages a custom TLS certificate. TLS certificates are versionless and independent of any service-version lifecycle.
 ---
 
 # fastly_tls_certificate (Resource)
 
-Uploads a custom TLS certificate. TLS certificates are versionless and independent of any service-version lifecycle.
+Manages a custom TLS certificate. TLS certificates are versionless and independent of any service-version lifecycle.
 
-The certificate's corresponding private key must already be uploaded to Fastly before the certificate can be created.
+The certificate's corresponding private key must be present in the Fastly system before the certificate can be uploaded.
 
 ## Example Usage
 

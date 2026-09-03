@@ -46,7 +46,7 @@ func TestFlattenToModel_full(t *testing.T) {
 		UpdatedAt: &updatedAt,
 	}
 
-	m, diags := flattenToModel(context.Background(), cert)
+	m, diags := FlattenToModel(context.Background(), cert)
 	require.False(t, diags.HasError())
 
 	assert.Equal(t, "cert-123", m.ID.ValueString())
@@ -68,7 +68,7 @@ func TestFlattenToModel_full(t *testing.T) {
 func TestFlattenToModel_noTimestamps(t *testing.T) {
 	cert := &fastly.CustomTLSCertificate{ID: "cert-123"}
 
-	m, diags := flattenToModel(context.Background(), cert)
+	m, diags := FlattenToModel(context.Background(), cert)
 	require.False(t, diags.HasError())
 	assert.True(t, m.CreatedAt.IsNull())
 	assert.True(t, m.UpdatedAt.IsNull())
