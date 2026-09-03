@@ -70,7 +70,7 @@ func TestBuildCreateInput(t *testing.T) {
 		Entries:     entries,
 	}
 
-	input, diags := BuildCreateInput(context.Background(), "ip", plan)
+	input, diags := BuildCreateInput(context.Background(), "ip", commonModelFromWorkspace(plan), WorkspaceScope(plan.WorkspaceID.ValueString()))
 	require.False(t, diags.HasError(), diags)
 
 	require.NotNil(t, input.Name)
@@ -97,7 +97,7 @@ func TestBuildCreateInputOmitsNullDescription(t *testing.T) {
 		Entries:     entries,
 	}
 
-	input, diags := BuildCreateInput(context.Background(), "ip", plan)
+	input, diags := BuildCreateInput(context.Background(), "ip", commonModelFromWorkspace(plan), WorkspaceScope(plan.WorkspaceID.ValueString()))
 	require.False(t, diags.HasError(), diags)
 
 	require.Nil(t, input.Description)
@@ -113,7 +113,7 @@ func TestBuildUpdateInput(t *testing.T) {
 		Entries:     entries,
 	}
 
-	input, diags := BuildUpdateInput(context.Background(), "list-id", plan)
+	input, diags := BuildUpdateInput(context.Background(), "list-id", commonModelFromWorkspace(plan), WorkspaceScope(plan.WorkspaceID.ValueString()))
 	require.False(t, diags.HasError(), diags)
 
 	require.NotNil(t, input.ListID)
@@ -191,6 +191,20 @@ func TestImportStateParserRejectsMalformedIDs(t *testing.T) {
 	}
 }
 
+func commonModelFromWorkspace(model Model) CommonModel {
+	return CommonModel{
+		ID:          model.ID,
+		Name:        model.Name,
+		Description: model.Description,
+		Entries:     model.Entries,
+		ReferenceID: model.ReferenceID,
+	}
+}
+
+func commonModelFromAccount(model AccountModel) CommonModel {
+	return CommonModel(model)
+}
+
 func listValueStrings(t *testing.T, value types.List) []string {
 	t.Helper()
 
@@ -257,7 +271,7 @@ func TestAccountSchema(t *testing.T) {
 	assert.True(t, referenceID.Computed)
 }
 
-func TestBuildAccountCreateInput(t *testing.T) {
+func TestBuildCreateInputAccountScope(t *testing.T) {
 	entries := types.ListValueMust(types.StringType, []attr.Value{
 		types.StringValue("10.0.0.1"),
 	})
@@ -268,7 +282,7 @@ func TestBuildAccountCreateInput(t *testing.T) {
 		Entries:     entries,
 	}
 
-	input, diags := BuildAccountCreateInput(context.Background(), "ip", plan)
+	input, diags := BuildCreateInput(context.Background(), "ip", commonModelFromAccount(plan), AccountScope())
 	require.False(t, diags.HasError(), diags)
 
 	require.NotNil(t, input.Name)
@@ -284,7 +298,7 @@ func TestBuildAccountCreateInput(t *testing.T) {
 	assert.Empty(t, input.Scope.AppliesTo)
 }
 
-func TestBuildAccountCreateInputOmitsNullDescription(t *testing.T) {
+func TestBuildCreateInputAccountScopeOmitsNullDescription(t *testing.T) {
 	entries := types.ListValueMust(types.StringType, []attr.Value{
 		types.StringValue("10.0.0.1"),
 	})
@@ -295,12 +309,12 @@ func TestBuildAccountCreateInputOmitsNullDescription(t *testing.T) {
 		Entries:     entries,
 	}
 
-	input, diags := BuildAccountCreateInput(context.Background(), "ip", plan)
+	input, diags := BuildCreateInput(context.Background(), "ip", commonModelFromAccount(plan), AccountScope())
 	require.False(t, diags.HasError(), diags)
 	require.Nil(t, input.Description)
 }
 
-func TestBuildAccountUpdateInput(t *testing.T) {
+func TestBuildUpdateInputAccountScope(t *testing.T) {
 	entries := types.ListValueMust(types.StringType, []attr.Value{
 		types.StringValue("10.0.0.1"),
 		types.StringValue("192.168.1.1"),
@@ -311,7 +325,7 @@ func TestBuildAccountUpdateInput(t *testing.T) {
 		Entries:     entries,
 	}
 
-	input, diags := BuildAccountUpdateInput(context.Background(), "list-id", plan)
+	input, diags := BuildUpdateInput(context.Background(), "list-id", commonModelFromAccount(plan), AccountScope())
 	require.False(t, diags.HasError(), diags)
 
 	require.NotNil(t, input.ListID)
@@ -325,15 +339,15 @@ func TestBuildAccountUpdateInput(t *testing.T) {
 	assert.Empty(t, input.Scope.AppliesTo)
 }
 
-func TestBuildAccountGetAndDeleteInputs(t *testing.T) {
-	getInput := BuildAccountGetInput("list-id")
+func TestBuildGetAndDeleteInputsAccountScope(t *testing.T) {
+	getInput := BuildGetInput("list-id", AccountScope())
 	require.NotNil(t, getInput.ListID)
 	require.NotNil(t, getInput.Scope)
 	assert.Equal(t, "list-id", *getInput.ListID)
 	assert.Equal(t, scope.ScopeTypeAccount, getInput.Scope.Type)
 	assert.Empty(t, getInput.Scope.AppliesTo)
 
-	deleteInput := BuildAccountDeleteInput("list-id")
+	deleteInput := BuildDeleteInput("list-id", AccountScope())
 	require.NotNil(t, deleteInput.ListID)
 	require.NotNil(t, deleteInput.Scope)
 	assert.Equal(t, "list-id", *deleteInput.ListID)

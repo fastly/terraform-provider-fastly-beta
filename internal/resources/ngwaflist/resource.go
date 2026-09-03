@@ -111,13 +111,12 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	var input *lists.CreateInput
-	var diags diag.Diagnostics
-	if r.definition.Scope == scope.ScopeTypeAccount {
-		input, diags = BuildAccountCreateInput(ctx, r.definition.ListType, plan.accountModel())
-	} else {
-		input, diags = BuildCreateInput(ctx, r.definition.ListType, plan.workspaceModel())
-	}
+	input, diags := BuildCreateInput(
+		ctx,
+		r.definition.ListType,
+		plan.commonModel(),
+		r.apiScope(plan.WorkspaceID.ValueString()),
+	)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -146,12 +145,10 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 
-	var input *lists.GetInput
-	if r.definition.Scope == scope.ScopeTypeAccount {
-		input = BuildAccountGetInput(state.ID.ValueString())
-	} else {
-		input = BuildGetInput(state.WorkspaceID.ValueString(), state.ID.ValueString())
-	}
+	input := BuildGetInput(
+		state.ID.ValueString(),
+		r.apiScope(state.WorkspaceID.ValueString()),
+	)
 
 	tflog.Debug(ctx, "Reading Fastly NGWAF list", r.logFields(state))
 
@@ -182,13 +179,12 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	var input *lists.UpdateInput
-	var diags diag.Diagnostics
-	if r.definition.Scope == scope.ScopeTypeAccount {
-		input, diags = BuildAccountUpdateInput(ctx, state.ID.ValueString(), plan.accountModel())
-	} else {
-		input, diags = BuildUpdateInput(ctx, state.ID.ValueString(), plan.workspaceModel())
-	}
+	input, diags := BuildUpdateInput(
+		ctx,
+		state.ID.ValueString(),
+		plan.commonModel(),
+		r.apiScope(plan.WorkspaceID.ValueString()),
+	)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -221,12 +217,10 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 		return
 	}
 
-	var input *lists.DeleteInput
-	if r.definition.Scope == scope.ScopeTypeAccount {
-		input = BuildAccountDeleteInput(state.ID.ValueString())
-	} else {
-		input = BuildDeleteInput(state.WorkspaceID.ValueString(), state.ID.ValueString())
-	}
+	input := BuildDeleteInput(
+		state.ID.ValueString(),
+		r.apiScope(state.WorkspaceID.ValueString()),
+	)
 
 	tflog.Debug(ctx, "Deleting Fastly NGWAF list", r.logFields(state))
 
@@ -308,16 +302,19 @@ func resourceModelFromAccount(model AccountModel) resourceModel {
 	}
 }
 
-func (m resourceModel) workspaceModel() Model {
-	return Model(m)
-}
-
-func (m resourceModel) accountModel() AccountModel {
-	return AccountModel{
+func (m resourceModel) commonModel() CommonModel {
+	return CommonModel{
 		ID:          m.ID,
 		Name:        m.Name,
 		Description: m.Description,
 		Entries:     m.Entries,
 		ReferenceID: m.ReferenceID,
 	}
+}
+
+func (r *Resource) apiScope(workspaceID string) *scope.Scope {
+	if r.definition.Scope == scope.ScopeTypeAccount {
+		return AccountScope()
+	}
+	return WorkspaceScope(workspaceID)
 }
