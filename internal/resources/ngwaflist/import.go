@@ -24,3 +24,8 @@ func ImportState(ctx context.Context, req resource.ImportStateRequest, resp *res
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("workspace_id"), parts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), parts[1])...)
 }
+
+// ImportAccountState imports an account-scoped list from its bare list ID.
+func ImportAccountState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}

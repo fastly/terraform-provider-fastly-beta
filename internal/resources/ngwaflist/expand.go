@@ -7,9 +7,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/lists"
+	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/scope"
 )
 
-func BuildCreateInput(ctx context.Context, listType string, plan Model) (*lists.CreateInput, diag.Diagnostics) {
+func BuildCreateInput(ctx context.Context, listType string, plan CommonModel, listScope *scope.Scope) (*lists.CreateInput, diag.Diagnostics) {
 	entries, diags := expandEntries(ctx, plan.Entries)
 	if diags.HasError() {
 		return nil, diags
@@ -19,7 +20,7 @@ func BuildCreateInput(ctx context.Context, listType string, plan Model) (*lists.
 		Name:    plan.Name.ValueStringPointer(),
 		Type:    &listType,
 		Entries: &entries,
-		Scope:   WorkspaceScope(plan.WorkspaceID.ValueString()),
+		Scope:   listScope,
 	}
 
 	if !plan.Description.IsNull() && !plan.Description.IsUnknown() {
@@ -29,7 +30,7 @@ func BuildCreateInput(ctx context.Context, listType string, plan Model) (*lists.
 	return input, nil
 }
 
-func BuildUpdateInput(ctx context.Context, listID string, plan Model) (*lists.UpdateInput, diag.Diagnostics) {
+func BuildUpdateInput(ctx context.Context, listID string, plan CommonModel, listScope *scope.Scope) (*lists.UpdateInput, diag.Diagnostics) {
 	entries, diags := expandEntries(ctx, plan.Entries)
 	if diags.HasError() {
 		return nil, diags
@@ -38,7 +39,7 @@ func BuildUpdateInput(ctx context.Context, listID string, plan Model) (*lists.Up
 	input := &lists.UpdateInput{
 		ListID:  &listID,
 		Entries: &entries,
-		Scope:   WorkspaceScope(plan.WorkspaceID.ValueString()),
+		Scope:   listScope,
 	}
 
 	if !plan.Description.IsNull() && !plan.Description.IsUnknown() {
@@ -48,17 +49,17 @@ func BuildUpdateInput(ctx context.Context, listID string, plan Model) (*lists.Up
 	return input, nil
 }
 
-func BuildGetInput(workspaceID, listID string) *lists.GetInput {
+func BuildGetInput(listID string, listScope *scope.Scope) *lists.GetInput {
 	return &lists.GetInput{
 		ListID: &listID,
-		Scope:  WorkspaceScope(workspaceID),
+		Scope:  listScope,
 	}
 }
 
-func BuildDeleteInput(workspaceID, listID string) *lists.DeleteInput {
+func BuildDeleteInput(listID string, listScope *scope.Scope) *lists.DeleteInput {
 	return &lists.DeleteInput{
 		ListID: &listID,
-		Scope:  WorkspaceScope(workspaceID),
+		Scope:  listScope,
 	}
 }
 

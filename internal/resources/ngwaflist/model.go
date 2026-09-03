@@ -2,11 +2,30 @@ package ngwaflist
 
 import "github.com/hashicorp/terraform-plugin-framework/types"
 
+// CommonModel contains the list fields shared by workspace- and account-scoped resources.
+type CommonModel struct {
+	ID          types.String
+	Name        types.String
+	Description types.String
+	Entries     types.List
+	ReferenceID types.String
+}
+
 // Model is the shared state model for all workspace-scoped NGWAF list resources.
 // The list type is implicit in the concrete Terraform resource name.
 type Model struct {
 	ID          types.String `tfsdk:"id"`
 	WorkspaceID types.String `tfsdk:"workspace_id"`
+	Name        types.String `tfsdk:"name"`
+	Description types.String `tfsdk:"description"`
+	Entries     types.List   `tfsdk:"entries"`
+	ReferenceID types.String `tfsdk:"reference_id"`
+}
+
+// AccountModel is the shared state model for all account-scoped NGWAF list resources.
+// The list type is implicit in the concrete Terraform resource name.
+type AccountModel struct {
+	ID          types.String `tfsdk:"id"`
 	Name        types.String `tfsdk:"name"`
 	Description types.String `tfsdk:"description"`
 	Entries     types.List   `tfsdk:"entries"`

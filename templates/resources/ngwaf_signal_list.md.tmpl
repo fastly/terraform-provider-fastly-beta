@@ -1,0 +1,46 @@
+---
+page_title: "fastly_ngwaf_signal_list Resource - fastly"
+subcategory: ""
+description: |-
+  Manages a Fastly Next-Gen WAF signal list defined at account scope.
+---
+
+# fastly_ngwaf_signal_list (Resource)
+
+Manages a Fastly Next-Gen WAF `signal` list defined at account scope.
+
+Account-scoped NGWAF resources omit `account` from their Terraform names. This
+resource manages lists whose entries are signal reference IDs.
+
+Lists of every account list type have their own resource:
+
+- `fastly_ngwaf_ip_list`
+- `fastly_ngwaf_string_list`
+- `fastly_ngwaf_wildcard_list`
+- `fastly_ngwaf_country_list`
+- `fastly_ngwaf_signal_list`
+
+All five can be read back together via the `fastly_ngwaf_lists` data source.
+For lists owned by one workspace, use the corresponding
+`fastly_ngwaf_workspace_*_list` resources instead.
+
+## Example Usage
+
+```terraform
+resource "fastly_ngwaf_signal_list" "example" {
+  name        = "Example Signal List"
+  description = "Managed by Terraform"
+
+  entries = ["XSS", "SQLI"]
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Next-Gen WAF account signal lists are imported using the list ID alone:
+
+```shell
+terraform import fastly_ngwaf_signal_list.example LIST_ID
+```
