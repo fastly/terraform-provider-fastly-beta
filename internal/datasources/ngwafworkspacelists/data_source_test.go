@@ -8,7 +8,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	datasourceschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
 	"github.com/stretchr/testify/require"
+
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwaflists"
 
 	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/lists"
 )
@@ -71,7 +74,7 @@ func TestFlattenLists(t *testing.T) {
 		},
 	}
 
-	listValue, ids, diags := flattenLists(remote)
+	listValue, ids, diags := ngwaflists.FlattenLists(remote)
 	require.False(t, diags.HasError(), diags)
 	require.Equal(t, []string{"list-a", "list-b"}, ids)
 	require.Len(t, listValue.Elements(), 2)
@@ -135,7 +138,7 @@ func TestFlattenLists(t *testing.T) {
 }
 
 func TestFlattenListsEmpty(t *testing.T) {
-	listValue, ids, diags := flattenLists(nil)
+	listValue, ids, diags := ngwaflists.FlattenLists(nil)
 	require.False(t, diags.HasError(), diags)
 	require.Empty(t, ids)
 	require.Empty(t, listValue.Elements())

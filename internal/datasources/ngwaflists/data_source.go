@@ -40,6 +40,47 @@ var listAttrTypes = map[string]attr.Type{
 	"updated_at":   types.StringType,
 }
 
+// ListsAttribute returns the shared nested schema used by account and workspace
+// NGWAF list data sources.
+func ListsAttribute(description string) schema.ListNestedAttribute {
+	return schema.ListNestedAttribute{
+		Computed:    true,
+		Description: description,
+		NestedObject: schema.NestedAttributeObject{
+			Attributes: map[string]schema.Attribute{
+				"created_at": schema.StringAttribute{
+					Computed:    true,
+					Description: "The date and time in ISO 8601 format when the list was created.",
+				},
+				"description": schema.StringAttribute{
+					Computed:    true,
+					Description: "The description of the list.",
+				},
+				"id": schema.StringAttribute{
+					Computed:    true,
+					Description: "The ID of the list.",
+				},
+				"name": schema.StringAttribute{
+					Computed:    true,
+					Description: "The name of the list.",
+				},
+				"reference_id": schema.StringAttribute{
+					Computed:    true,
+					Description: "The reference ID of the list.",
+				},
+				"type": schema.StringAttribute{
+					Computed:    true,
+					Description: "The type of the list.",
+				},
+				"updated_at": schema.StringAttribute{
+					Computed:    true,
+					Description: "The date and time in ISO 8601 format when the list was last updated.",
+				},
+			},
+		},
+	}
+}
+
 func NewDataSource() datasource.DataSource {
 	return &DataSource{}
 }
@@ -56,42 +97,7 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 				Computed:    true,
 				Description: "Terraform data source identifier.",
 			},
-			"lists": schema.ListNestedAttribute{
-				Computed:    true,
-				Description: "The list of account-scoped NGWAF lists.",
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"created_at": schema.StringAttribute{
-							Computed:    true,
-							Description: "The date and time in ISO 8601 format when the list was created.",
-						},
-						"description": schema.StringAttribute{
-							Computed:    true,
-							Description: "The description of the list.",
-						},
-						"id": schema.StringAttribute{
-							Computed:    true,
-							Description: "The ID of the list.",
-						},
-						"name": schema.StringAttribute{
-							Computed:    true,
-							Description: "The name of the list.",
-						},
-						"reference_id": schema.StringAttribute{
-							Computed:    true,
-							Description: "The reference ID of the list.",
-						},
-						"type": schema.StringAttribute{
-							Computed:    true,
-							Description: "The type of the list.",
-						},
-						"updated_at": schema.StringAttribute{
-							Computed:    true,
-							Description: "The date and time in ISO 8601 format when the list was last updated.",
-						},
-					},
-				},
-			},
+			"lists": ListsAttribute("The list of account-scoped NGWAF lists."),
 		},
 	}
 }
@@ -126,7 +132,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		data = remote.Data
 	}
 
-	listValue, ids, diags := flattenLists(data)
+	listValue, ids, diags := FlattenLists(data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -144,7 +150,8 @@ func accountListsListInput() *lists.ListInput {
 	}
 }
 
-func flattenLists(data []lists.List) (types.List, []string, diag.Diagnostics) {
+// FlattenLists converts API lists into deterministic Terraform list state and IDs.
+func FlattenLists(data []lists.List) (types.List, []string, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	sorted := append([]lists.List(nil), data...)

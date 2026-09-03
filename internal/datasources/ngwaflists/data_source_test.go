@@ -74,12 +74,12 @@ func TestFlattenListsSortsByIDWithoutMutatingInput(t *testing.T) {
 		},
 	}
 
-	listValue, ids, diags := flattenLists(remote)
+	listValue, ids, diags := FlattenLists(remote)
 	require.False(t, diags.HasError(), diags)
 	require.Equal(t, []string{"list-a", "list-b"}, ids)
 	require.Len(t, listValue.Elements(), 2)
 
-	// flattenLists sorts a copy, not the API response slice.
+	// FlattenLists sorts a copy, not the API response slice.
 	require.Equal(t, "list-b", remote[0].ListID)
 	require.Equal(t, "list-a", remote[1].ListID)
 
@@ -134,7 +134,7 @@ func TestFlattenListsSortsByIDWithoutMutatingInput(t *testing.T) {
 }
 
 func TestFlattenListsEmpty(t *testing.T) {
-	listValue, ids, diags := flattenLists(nil)
+	listValue, ids, diags := FlattenLists(nil)
 	require.False(t, diags.HasError(), diags)
 	require.Empty(t, ids)
 	require.Empty(t, listValue.Elements())
