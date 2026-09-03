@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 
@@ -12,8 +13,10 @@ import (
 
 func TestBuildCreateInput(t *testing.T) {
 	plan := Model{
-		Name:       types.StringValue("my-key"),
-		PrivateKey: NewPrivateKeyObject(types.StringValue("-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----")),
+		Name: types.StringValue("my-key"),
+		PrivateKey: types.ObjectValueMust(privateKeyAttributeTypes, map[string]attr.Value{
+			"pem": types.StringValue("-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"),
+		}),
 	}
 
 	input := buildCreateInput(plan)
@@ -38,7 +41,9 @@ func TestFlattenToModel_full(t *testing.T) {
 		CreatedAt:     &createdAt,
 	}
 
-	privateKey := NewPrivateKeyObject(types.StringValue("pem-contents"))
+	privateKey := types.ObjectValueMust(privateKeyAttributeTypes, map[string]attr.Value{
+		"pem": types.StringValue("pem-contents"),
+	})
 	m := flattenToModel(key, privateKey)
 
 	assert.Equal(t, "key-1", m.ID.ValueString())

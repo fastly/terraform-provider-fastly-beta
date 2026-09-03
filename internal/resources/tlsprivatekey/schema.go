@@ -26,13 +26,6 @@ var privateKeyAttributeTypes = map[string]attr.Type{
 	"pem": types.StringType,
 }
 
-// NewPrivateKeyObject builds the private_key nested object from its pem value.
-func NewPrivateKeyObject(pem types.String) types.Object {
-	return types.ObjectValueMust(privateKeyAttributeTypes, map[string]attr.Value{
-		"pem": pem,
-	})
-}
-
 // PEM extracts the pem value from the model's private_key object.
 func (m Model) PEM() types.String {
 	if m.PrivateKey.IsNull() || m.PrivateKey.IsUnknown() {
