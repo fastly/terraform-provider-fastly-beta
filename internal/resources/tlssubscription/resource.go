@@ -105,6 +105,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
+	// Persist state from the create response before the follow-up GET below, so a
+	// transient failure to refresh doesn't orphan the subscription Fastly already created.
+	initialState, diags := flattenToModel(ctx, r.client, subscription)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	initialState.ForceDestroy = plan.ForceDestroy
+	initialState.ForceUpdate = plan.ForceUpdate
+	resp.Diagnostics.Append(resp.State.Set(ctx, &initialState)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	fetched, err := getSubscription(ctx, r.client, subscription.ID)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading TLS subscription", err.Error())

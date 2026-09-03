@@ -2,11 +2,12 @@ package tlssubscriptionvalidation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
-	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
+	fastlyerrors "github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -111,7 +112,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 
 	subscription, err := r.client.GetTLSSubscription(ctx, &fastly.GetTLSSubscriptionInput{ID: subscriptionID})
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if fastlyerrors.IsNotFound(err) {
 			tflog.Warn(ctx, "TLS subscription not found, removing from state", map[string]any{"subscription_id": subscriptionID})
 			resp.State.RemoveResource(ctx)
 			return
@@ -165,20 +166,28 @@ func (r *Resource) getSubscription(ctx context.Context, id string) (*fastly.TLSS
 // get is a parameter (rather than a direct API call) so the poll/timeout logic can be unit
 // tested without a live client.
 func waitForIssued(ctx context.Context, get func(ctx context.Context, id string) (*fastly.TLSSubscription, error), subscriptionID string, timeout, interval time.Duration) error {
-	deadline := time.Now().Add(timeout)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	var lastState string
 	for {
 		subscription, err := get(ctx, subscriptionID)
 		if err != nil {
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return fmt.Errorf("expected subscription state to be %s but it was %s after waiting %s", subscriptionStateIssued, lastState, timeout)
+			}
 			return err
 		}
+		lastState = subscription.State
 		if subscription.State == subscriptionStateIssued {
 			return nil
 		}
-		if !time.Now().Before(deadline) {
-			return fmt.Errorf("expected subscription state to be %s but it was %s after waiting %s", subscriptionStateIssued, subscription.State, timeout)
-		}
+
 		select {
 		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return fmt.Errorf("expected subscription state to be %s but it was %s after waiting %s", subscriptionStateIssued, lastState, timeout)
+			}
 			return ctx.Err()
 		case <-time.After(interval):
 		}
