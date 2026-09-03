@@ -1,12 +1,14 @@
-package tlsactivation
+package tlscertificate
 
 import (
 	"context"
+	"fmt"
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -30,12 +32,12 @@ func NewResource() resource.Resource {
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_tls_activation"
+	resp.TypeName = req.ProviderTypeName + "_tls_certificate"
 }
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Enables TLS on a domain using a custom certificate. TLS activations are versionless and independent of any service-version lifecycle.",
+		Description: "Uploads a custom TLS certificate. TLS certificates are versionless and independent of any service-version lifecycle.",
 		Attributes:  ResourceAttributes(),
 	}
 }
@@ -56,42 +58,21 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	certificateID := service.StringValue(plan.CertificateID)
-	if certificateID == "" {
-		resp.Diagnostics.AddError(
-			"Missing certificate_id",
-			"certificate_id is empty: the certificate for the referenced TLS subscription has not been issued yet "+
-				"(certificates are issued asynchronously after domain validation). "+
-				"Reference `fastly_tls_subscription_validation.<name>.certificate_id` instead of "+
-				"`fastly_tls_subscription.<name>.certificate_id` so the activation waits for issuance within a single apply.",
-		)
-		return
-	}
+	tflog.Debug(ctx, "Creating Fastly TLS certificate", map[string]any{"name": service.StringValue(plan.Name)})
 
-	tflog.Debug(ctx, "Creating Fastly TLS activation", map[string]any{
-		"certificate_id": certificateID,
-		"domain":         service.StringValue(plan.Domain),
+	cert, err := r.client.CreateCustomTLSCertificate(ctx, &fastly.CreateCustomTLSCertificateInput{
+		CertBlob: service.StringValue(plan.CertificateBody),
+		Name:     service.StringValue(plan.Name),
 	})
-
-	activation, err := r.client.CreateTLSActivation(ctx, buildCreateInput(plan))
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating TLS activation", err.Error())
+		resp.Diagnostics.AddError("Error creating TLS certificate", err.Error())
 		return
 	}
 
-	newState := flattenToModel(activation)
-
-	// mutual_authentication_id can only be set via a follow-up PATCH; the API rejects it at creation.
-	if mtlsID := service.StringValue(plan.MutualAuthenticationID); mtlsID != "" {
-		updated, err := r.client.UpdateTLSActivation(ctx, buildUpdateInput(newState.ID.ValueString(), plan))
-		if err != nil {
-			// Record the activation created above so a retry updates it instead of creating a duplicate.
-			resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
-			resp.Diagnostics.AddError("Error setting mutual_authentication_id on TLS activation", err.Error())
-			return
-		}
-		newState = flattenToModel(updated)
-	}
+	newState, diags := FlattenToModel(ctx, cert)
+	resp.Diagnostics.Append(diags...)
+	newState.CertificateBody = plan.CertificateBody
+	warnIfReplaceRecommended(cert, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
 }
@@ -104,20 +85,24 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 
 	id := state.ID.ValueString()
-	tflog.Debug(ctx, "Reading Fastly TLS activation", map[string]any{"id": id})
+	tflog.Debug(ctx, "Reading Fastly TLS certificate", map[string]any{"id": id})
 
-	activation, err := r.client.GetTLSActivation(ctx, &fastly.GetTLSActivationInput{ID: id})
+	cert, err := r.client.GetCustomTLSCertificate(ctx, &fastly.GetCustomTLSCertificateInput{ID: id})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			tflog.Warn(ctx, "TLS activation not found, removing from state", map[string]any{"id": id})
+			tflog.Warn(ctx, "TLS certificate not found, removing from state", map[string]any{"id": id})
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError("Error reading TLS activation", err.Error())
+		resp.Diagnostics.AddError("Error reading TLS certificate", err.Error())
 		return
 	}
 
-	newState := flattenToModel(activation)
+	newState, diags := FlattenToModel(ctx, cert)
+	resp.Diagnostics.Append(diags...)
+	newState.CertificateBody = state.CertificateBody
+	warnIfReplaceRecommended(cert, &resp.Diagnostics)
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
 }
 
@@ -130,15 +115,23 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	id := state.ID.ValueString()
-	tflog.Debug(ctx, "Updating Fastly TLS activation", map[string]any{"id": id})
+	tflog.Debug(ctx, "Updating Fastly TLS certificate", map[string]any{"id": id})
 
-	activation, err := r.client.UpdateTLSActivation(ctx, buildUpdateInput(id, plan))
+	cert, err := r.client.UpdateCustomTLSCertificate(ctx, &fastly.UpdateCustomTLSCertificateInput{
+		ID:       id,
+		CertBlob: service.StringValue(plan.CertificateBody),
+		Name:     service.StringValue(plan.Name),
+	})
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating TLS activation", err.Error())
+		resp.Diagnostics.AddError("Error updating TLS certificate", err.Error())
 		return
 	}
 
-	newState := flattenToModel(activation)
+	newState, diags := FlattenToModel(ctx, cert)
+	resp.Diagnostics.Append(diags...)
+	newState.CertificateBody = plan.CertificateBody
+	warnIfReplaceRecommended(cert, &resp.Diagnostics)
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
 }
 
@@ -150,14 +143,20 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 	}
 
 	id := state.ID.ValueString()
-	tflog.Debug(ctx, "Deleting Fastly TLS activation", map[string]any{"id": id})
+	tflog.Debug(ctx, "Deleting Fastly TLS certificate", map[string]any{"id": id})
 
-	err := r.client.DeleteTLSActivation(ctx, &fastly.DeleteTLSActivationInput{ID: id})
+	err := r.client.DeleteCustomTLSCertificate(ctx, &fastly.DeleteCustomTLSCertificateInput{ID: id})
 	if err != nil && !errors.IsNotFound(err) {
-		resp.Diagnostics.AddError("Error deleting TLS activation", err.Error())
+		resp.Diagnostics.AddError("Error deleting TLS certificate", err.Error())
 	}
 }
 
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+func warnIfReplaceRecommended(c *fastly.CustomTLSCertificate, diags *diag.Diagnostics) {
+	if c.Replace {
+		diags.AddWarning("Certificate replacement recommended", fmt.Sprintf("Fastly recommends that this certificate (%s) be replaced", c.ID))
+	}
 }

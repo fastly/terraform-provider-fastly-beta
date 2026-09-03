@@ -44,6 +44,8 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/serviceversion"
 	tlsactivationdatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsactivation"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsactivationids"
+	tlscertificatedatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlscertificate"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlscertificateids"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsconfiguration"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsconfigurationids"
 	tlsplatformcertificatedatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsplatformcertificate"
@@ -114,6 +116,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecomputeauto"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/snippet"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsactivation"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlscertificate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsmutualauthentication"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsplatformcertificate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsprivatekey"
@@ -258,6 +261,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		servicecompute.NewResource,
 		servicecomputeauto.NewResource,
 		tlsactivation.NewResource,
+		tlscertificate.NewResource,
 		tlsmutualauthentication.NewResource,
 		tlsplatformcertificate.NewResource,
 		tlsprivatekey.NewResource,
@@ -291,6 +295,8 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		serviceversion.NewDataSource,
 		tlsactivationdatasource.NewDataSource,
 		tlsactivationids.NewDataSource,
+		tlscertificatedatasource.NewDataSource,
+		tlscertificateids.NewDataSource,
 		tlsconfiguration.NewDataSource,
 		tlsconfigurationids.NewDataSource,
 		tlsplatformcertificatedatasource.NewDataSource,
