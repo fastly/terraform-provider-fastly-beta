@@ -69,12 +69,21 @@ data "fastly_tls_configuration" "config" {
   tls_service = "PLATFORM"
 }
 
+resource "fastly_tls_private_key" "key" {
+  name = "tf-demo"
+  private_key = {
+    pem = tls_private_key.key.private_key_pem
+  }
+}
+
 resource "fastly_tls_platform_certificate" "cert" {
   certificate_body   = tls_locally_signed_cert.cert.cert_pem
   intermediates_blob = tls_self_signed_cert.ca.cert_pem
 
   configuration_id     = data.fastly_tls_configuration.config.id
   allow_untrusted_root = true
+
+  depends_on = [fastly_tls_private_key.key]
 }
 ```
 
