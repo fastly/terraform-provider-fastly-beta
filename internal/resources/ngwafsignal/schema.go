@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -31,7 +32,10 @@ func resourceAttributes() map[string]schema.Attribute {
 	// Reusing the merged account-rule attribute keeps set behavior, minimum
 	// size, and wildcard exclusivity identical instead of duplicating them.
 	appliesTo := ngwafrule.AppliesToAttribute()
-	appliesTo.Description = "The workspaces this signal applies to: a set of workspace IDs, or the single entry `*` to apply the signal to every workspace in the account. The two forms are alternatives - the wildcard cannot be combined with named workspace IDs."
+	appliesTo.Description = "The workspaces this signal applies to: a set of workspace IDs, or the single entry `*` to apply the signal to every workspace in the account. The two forms are alternatives - the wildcard cannot be combined with named workspace IDs. Changing this attribute will delete and recreate the signal."
+	appliesTo.PlanModifiers = []planmodifier.Set{
+		setplanmodifier.RequiresReplace(),
+	}
 
 	return map[string]schema.Attribute{
 		"id": schema.StringAttribute{

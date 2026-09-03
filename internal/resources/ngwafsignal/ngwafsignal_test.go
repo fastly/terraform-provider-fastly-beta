@@ -58,6 +58,7 @@ func TestSchema(t *testing.T) {
 	require.True(t, ok)
 	assert.True(t, appliesTo.Required)
 	assert.Len(t, appliesTo.Validators, 3)
+	assert.Len(t, appliesTo.PlanModifiers, 1)
 
 	name, ok := attrs["name"].(schema.StringAttribute)
 	require.True(t, ok)
@@ -101,12 +102,7 @@ func TestBuildCreateInput(t *testing.T) {
 }
 
 func TestBuildUpdateInput(t *testing.T) {
-	appliesTo := types.SetValueMust(types.StringType, []attr.Value{
-		types.StringValue("*"),
-	})
-
 	plan := Model{
-		AppliesTo:   appliesTo,
 		Description: types.StringValue("updated"),
 	}
 
@@ -119,7 +115,7 @@ func TestBuildUpdateInput(t *testing.T) {
 	assert.Equal(t, "signal-id", *input.SignalID)
 	assert.Equal(t, "updated", *input.Description)
 	assert.Equal(t, scope.ScopeTypeAccount, input.Scope.Type)
-	assert.Equal(t, []string{"*"}, input.Scope.AppliesTo)
+	assert.Empty(t, input.Scope.AppliesTo)
 }
 
 func TestBuildGetAndDeleteInputsUseBareAccountScope(t *testing.T) {

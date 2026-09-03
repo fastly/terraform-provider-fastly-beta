@@ -27,19 +27,14 @@ func BuildCreateInput(ctx context.Context, plan Model) (*signals.CreateInput, di
 	}, diags
 }
 
-func BuildUpdateInput(ctx context.Context, signalID string, plan Model) (*signals.UpdateInput, diag.Diagnostics) {
-	appliesTo, diags := ngwafrule.ExpandAppliesTo(ctx, plan.AppliesTo)
-	if diags.HasError() {
-		return nil, diags
-	}
-
+func BuildUpdateInput(_ context.Context, signalID string, plan Model) (*signals.UpdateInput, diag.Diagnostics) {
 	description := service.StringValue(plan.Description)
 
 	return &signals.UpdateInput{
 		SignalID:    &signalID,
 		Description: &description,
-		Scope:       ngwafrule.AccountScope(appliesTo),
-	}, diags
+		Scope:       ngwafrule.AccountScopeByID(),
+	}, nil
 }
 
 // BuildGetInput addresses an account signal by ID alone. Read repopulates

@@ -33,7 +33,7 @@ resource "fastly_ngwaf_signal" "login_attempt" {
 
 ### Required
 
-- `applies_to` (Set of String) The workspaces this signal applies to: a set of workspace IDs, or the single entry `*` to apply the signal to every workspace in the account. The two forms are alternatives - the wildcard cannot be combined with named workspace IDs.
+- `applies_to` (Set of String) The workspaces this signal applies to: a set of workspace IDs, or the single entry `*` to apply the signal to every workspace in the account. The two forms are alternatives - the wildcard cannot be combined with named workspace IDs. Changing this attribute will delete and recreate the signal.
 - `name` (String) The name of the signal. Must be between 3 and 128 characters and contain only letters, numbers, spaces, and hyphens. Changing this attribute will delete and recreate the signal.
 
 ### Optional
