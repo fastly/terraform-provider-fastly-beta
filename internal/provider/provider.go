@@ -25,6 +25,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/domains"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/kvstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafaccountrules"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafsignals"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertdatadogintegrations"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertjiraintegrations"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacealertmailinglistintegrations"
@@ -79,6 +80,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsyslog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafrequestrule"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafsignal"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafsignalrule"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspace"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacealertdatadogintegration"
@@ -212,6 +214,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		dynamicvclsnippet.NewResource,
 		dynamicsnippetcontent.NewResource,
 		ngwafrequestrule.NewResource,
+		ngwafsignal.NewResource,
 		ngwafsignalrule.NewResource,
 		ngwafworkspacealertdatadogintegration.NewResource,
 		ngwafworkspacealertjiraintegration.NewResource,
@@ -265,6 +268,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		domains.NewDataSource,
 		kvstores.NewDataSource,
 		ngwafaccountrules.NewDataSource,
+		ngwafsignals.NewDataSource,
 		ngwafworkspacealertdatadogintegrations.NewDataSource,
 		ngwafworkspacealertjiraintegrations.NewDataSource,
 		ngwafworkspacealertmailinglistintegrations.NewDataSource,
