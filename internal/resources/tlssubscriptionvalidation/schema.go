@@ -1,6 +1,9 @@
 package tlssubscriptionvalidation
 
 import (
+	"context"
+
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -8,9 +11,10 @@ import (
 )
 
 type Model struct {
-	ID             types.String `tfsdk:"id"`
-	CertificateID  types.String `tfsdk:"certificate_id"`
-	SubscriptionID types.String `tfsdk:"subscription_id"`
+	ID             types.String   `tfsdk:"id"`
+	CertificateID  types.String   `tfsdk:"certificate_id"`
+	SubscriptionID types.String   `tfsdk:"subscription_id"`
+	Timeouts       timeouts.Value `tfsdk:"timeouts"`
 }
 
 func ResourceAttributes() map[string]schema.Attribute {
@@ -21,7 +25,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 		},
 		"certificate_id": schema.StringAttribute{
 			Computed:    true,
-			Description: "The ID of the certificate issued for the validated subscription. Only populated once the subscription reaches the `issued` state. Reference this from `fastly_tls_activation.certificate_id` to guarantee the activation is created after the certificate exists, within a single apply.",
+			Description: "The ID of the certificate issued for the validated subscription. Only populated once the subscription reaches the `issued` state. `fastly_tls_subscription` activates TLS on its domains automatically, so this attribute is informational only and should not be used to create a `fastly_tls_activation` for those domains.",
 		},
 		"subscription_id": schema.StringAttribute{
 			Required:    true,
@@ -30,5 +34,11 @@ func ResourceAttributes() map[string]schema.Attribute {
 				stringplanmodifier.RequiresReplace(),
 			},
 		},
+	}
+}
+
+func ResourceBlocks(ctx context.Context) map[string]schema.Block {
+	return map[string]schema.Block{
+		"timeouts": timeouts.Block(ctx, timeouts.Opts{Create: true}),
 	}
 }

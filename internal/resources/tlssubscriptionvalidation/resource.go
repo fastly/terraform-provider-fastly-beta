@@ -6,6 +6,7 @@ import (
 	"time"
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -17,7 +18,7 @@ import (
 
 const (
 	subscriptionStateIssued = "issued"
-	createTimeout           = 45 * time.Minute
+	defaultCreateTimeout    = 45 * time.Minute
 	pollInterval            = 10 * time.Second
 )
 
@@ -38,15 +39,16 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 	resp.TypeName = req.ProviderTypeName + "_tls_subscription_validation"
 }
 
-func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *Resource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "This resource represents a successful validation of a Fastly TLS Subscription in concert with other resources. " +
 			"Most commonly, this resource is used together with a resource for a DNS record and `fastly_tls_subscription` to request " +
 			"a DNS validated certificate, deploy the required validation records and wait for validation to complete.\n\n" +
 			"This resource implements a part of the validation workflow. It does not represent a real-world entity in Fastly, " +
-			"therefore changing or deleting this resource on its own has no immediate effect. Waits up to 45 minutes for the " +
-			"subscription to reach the `issued` state.",
+			"therefore changing or deleting this resource on its own has no immediate effect. Waits up to 45 minutes by default " +
+			"for the subscription to reach the `issued` state; override with `timeouts.create`.",
 		Attributes: ResourceAttributes(),
+		Blocks:     ResourceBlocks(ctx),
 	}
 }
 
@@ -62,6 +64,12 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	createTimeout, diags := plan.Timeouts.Create(ctx, defaultCreateTimeout)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -86,6 +94,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 			fmt.Sprintf("subscription %s reached state %q but has no issued certificate", subscriptionID, subscription.State))
 		return
 	}
+	newState.Timeouts = plan.Timeouts
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
 }
@@ -102,6 +111,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 
 	subscription, err := r.client.GetTLSSubscription(ctx, &fastly.GetTLSSubscriptionInput{ID: subscriptionID})
 	if err != nil {
+		if errors.IsNotFound(err) {
+			tflog.Warn(ctx, "TLS subscription not found, removing from state", map[string]any{"subscription_id": subscriptionID})
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("Error reading TLS subscription", err.Error())
 		return
 	}
@@ -112,6 +126,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	newState.Timeouts = state.Timeouts
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
 }
@@ -134,6 +149,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	newState := flattenToModel(subscription, subscriptionID)
+	newState.Timeouts = plan.Timeouts
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
 }
 

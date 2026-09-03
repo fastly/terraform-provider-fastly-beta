@@ -63,7 +63,18 @@ output "certificate_id" {
 
 - `subscription_id` (String) The ID of the TLS Subscription that should be validated.
 
+### Optional
+
+- `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+
 ### Read-Only
 
-- `certificate_id` (String) The ID of the certificate issued for the validated subscription. Only populated once the subscription reaches the `issued` state. Reference this from `fastly_tls_activation.certificate_id` to guarantee the activation is created after the certificate exists, within a single apply.
+- `certificate_id` (String) The ID of the certificate issued for the validated subscription. Only populated once the subscription reaches the `issued` state. `fastly_tls_subscription` activates TLS on its domains automatically, so this attribute is informational only and should not be used to create a `fastly_tls_activation` for those domains.
 - `id` (String) The ID of this resource. Matches `subscription_id` once the subscription has been validated.
+
+<a id="nestedblock--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `create` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
