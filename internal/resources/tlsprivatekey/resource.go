@@ -137,8 +137,7 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-// warnIfReplaceRecommended surfaces the API's replace recommendation as a
-// non-fatal warning, matching the legacy provider's behavior.
+// warnIfReplaceRecommended surfaces the API's replace recommendation as a non-fatal warning.
 func warnIfReplaceRecommended(diags *diag.Diagnostics, key *fastly.PrivateKey) {
 	if !key.Replace {
 		return
