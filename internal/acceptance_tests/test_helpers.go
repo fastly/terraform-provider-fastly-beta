@@ -6343,3 +6343,11 @@ func ConfigTLSMutualAuthentication(certBundle, enforced, name string) string {
 		"NAME":        name,
 	})
 }
+
+// ConfigTLSPrivateKey returns a standalone fastly_tls_private_key with the given name and PEM-encoded key material.
+func ConfigTLSPrivateKey(name, keyPEM string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/tls_private_key_single.tf", map[string]string{
+		"NAME":    name,
+		"KEY_PEM": keyPEM,
+	})
+}
