@@ -7,49 +7,91 @@ import (
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	fastly "github.com/fastly/go-fastly/v17/fastly"
 	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/lists"
+	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/scope"
 )
 
 var (
 	_ resource.Resource                = &Resource{}
 	_ resource.ResourceWithConfigure   = &Resource{}
 	_ resource.ResourceWithImportState = &Resource{}
-	_ resource.Resource                = &AccountResource{}
-	_ resource.ResourceWithConfigure   = &AccountResource{}
-	_ resource.ResourceWithImportState = &AccountResource{}
 )
 
-// Resource implements a type-specific workspace NGWAF list resource.
+// Definition describes one concrete type-specific NGWAF list resource.
+type Definition struct {
+	ListType    string
+	TypeSuffix  string
+	Description string
+	Scope       scope.Type
+}
+
+// Resource implements one concrete type-specific NGWAF list resource.
 type Resource struct {
-	client      *fastly.Client
-	listType    string
-	typeSuffix  string
-	description string
+	client     *fastly.Client
+	definition Definition
+}
+
+type resourceModel struct {
+	ID          types.String
+	WorkspaceID types.String
+	Name        types.String
+	Description types.String
+	Entries     types.List
+	ReferenceID types.String
+}
+
+// NewResource returns the NGWAF list resource described by definition.
+func NewResource(definition Definition) resource.Resource {
+	return &Resource{definition: definition}
 }
 
 // NewWorkspaceResource returns a workspace-scoped NGWAF list resource for one
 // concrete API list type.
 func NewWorkspaceResource(listType, typeSuffix, description string) resource.Resource {
-	return &Resource{
-		listType:    listType,
-		typeSuffix:  typeSuffix,
-		description: description,
-	}
+	return NewResource(Definition{
+		ListType:    listType,
+		TypeSuffix:  typeSuffix,
+		Description: description,
+		Scope:       scope.ScopeTypeWorkspace,
+	})
+}
+
+// NewAccountResource returns an account-scoped NGWAF list resource for one
+// concrete API list type.
+func NewAccountResource(listType, typeSuffix, description string) resource.Resource {
+	return NewResource(Definition{
+		ListType:    listType,
+		TypeSuffix:  typeSuffix,
+		Description: description,
+		Scope:       scope.ScopeTypeAccount,
+	})
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_ngwaf_workspace_" + r.typeSuffix + "_list"
+	scopePrefix := ""
+	if r.definition.Scope == scope.ScopeTypeWorkspace {
+		scopePrefix = "workspace_"
+	}
+	resp.TypeName = req.ProviderTypeName + "_ngwaf_" + scopePrefix + r.definition.TypeSuffix + "_list"
 }
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	attributes := AccountAttributes(r.definition.ListType)
+	if r.definition.Scope == scope.ScopeTypeWorkspace {
+		attributes = Attributes(r.definition.ListType)
+	}
+
 	resp.Schema = schema.Schema{
-		Description: r.description,
-		Attributes:  Attributes(r.listType),
+		Description: r.definition.Description,
+		Attributes:  attributes,
 	}
 }
 
@@ -64,309 +106,218 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 }
 
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan Model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	plan := r.readPlan(ctx, req.Plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	input, diags := BuildCreateInput(ctx, r.listType, plan)
+	var input *lists.CreateInput
+	var diags diag.Diagnostics
+	if r.definition.Scope == scope.ScopeTypeAccount {
+		input, diags = BuildAccountCreateInput(ctx, r.definition.ListType, plan.accountModel())
+	} else {
+		input, diags = BuildCreateInput(ctx, r.definition.ListType, plan.workspaceModel())
+	}
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	tflog.Debug(ctx, "Creating Fastly NGWAF workspace list", map[string]any{
-		"workspace_id": plan.WorkspaceID.ValueString(),
-		"type":         r.listType,
-		"name":         plan.Name.ValueString(),
-	})
+	tflog.Debug(ctx, "Creating Fastly NGWAF list", r.logFields(plan))
 
 	list, err := lists.Create(ctx, r.client, input)
 	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("Error creating NGWAF workspace %s list", r.listType), err.Error())
+		resp.Diagnostics.AddError(r.operationError("creating"), err.Error())
 		return
 	}
 
-	state, err := FlattenToModel(r.listType, plan.WorkspaceID.ValueString(), list)
+	newState, err := r.flatten(plan.WorkspaceID.ValueString(), list)
 	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("Error reading NGWAF workspace %s list", r.listType), err.Error())
+		resp.Diagnostics.AddError(r.operationError("reading"), err.Error())
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newState)...)
 }
 
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state Model
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	state := r.readState(ctx, req.State, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	workspaceID := state.WorkspaceID.ValueString()
-	listID := state.ID.ValueString()
+	var input *lists.GetInput
+	if r.definition.Scope == scope.ScopeTypeAccount {
+		input = BuildAccountGetInput(state.ID.ValueString())
+	} else {
+		input = BuildGetInput(state.WorkspaceID.ValueString(), state.ID.ValueString())
+	}
 
-	tflog.Debug(ctx, "Reading Fastly NGWAF workspace list", map[string]any{
-		"workspace_id": workspaceID,
-		"id":           listID,
-		"type":         r.listType,
-	})
+	tflog.Debug(ctx, "Reading Fastly NGWAF list", r.logFields(state))
 
-	list, err := lists.Get(ctx, r.client, BuildGetInput(workspaceID, listID))
+	list, err := lists.Get(ctx, r.client, input)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			tflog.Warn(ctx, "NGWAF workspace list not found, removing from state", map[string]any{
-				"workspace_id": workspaceID,
-				"id":           listID,
-				"type":         r.listType,
-			})
+			tflog.Warn(ctx, "NGWAF list not found, removing from state", r.logFields(state))
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(fmt.Sprintf("Error reading NGWAF workspace %s list", r.listType), err.Error())
+		resp.Diagnostics.AddError(r.operationError("reading"), err.Error())
 		return
 	}
 
-	newState, err := FlattenToModel(r.listType, workspaceID, list)
+	newState, err := r.flatten(state.WorkspaceID.ValueString(), list)
 	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("Error reading NGWAF workspace %s list", r.listType), err.Error())
+		resp.Diagnostics.AddError(r.operationError("reading"), err.Error())
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newState)...)
 }
 
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan Model
-	var state Model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	plan := r.readPlan(ctx, req.Plan, &resp.Diagnostics)
+	state := r.readState(ctx, req.State, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	listID := state.ID.ValueString()
-
-	input, diags := BuildUpdateInput(ctx, listID, plan)
+	var input *lists.UpdateInput
+	var diags diag.Diagnostics
+	if r.definition.Scope == scope.ScopeTypeAccount {
+		input, diags = BuildAccountUpdateInput(ctx, state.ID.ValueString(), plan.accountModel())
+	} else {
+		input, diags = BuildUpdateInput(ctx, state.ID.ValueString(), plan.workspaceModel())
+	}
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	tflog.Debug(ctx, "Updating Fastly NGWAF workspace list", map[string]any{
-		"workspace_id": plan.WorkspaceID.ValueString(),
-		"id":           listID,
-		"type":         r.listType,
-	})
+	tflog.Debug(ctx, "Updating Fastly NGWAF list", r.logFields(resourceModel{
+		ID:          state.ID,
+		WorkspaceID: plan.WorkspaceID,
+		Name:        plan.Name,
+	}))
 
 	list, err := lists.Update(ctx, r.client, input)
 	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("Error updating NGWAF workspace %s list", r.listType), err.Error())
+		resp.Diagnostics.AddError(r.operationError("updating"), err.Error())
 		return
 	}
 
-	newState, err := FlattenToModel(r.listType, plan.WorkspaceID.ValueString(), list)
+	newState, err := r.flatten(plan.WorkspaceID.ValueString(), list)
 	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("Error reading NGWAF workspace %s list", r.listType), err.Error())
+		resp.Diagnostics.AddError(r.operationError("reading"), err.Error())
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, newState)...)
 }
 
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state Model
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	state := r.readState(ctx, req.State, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	workspaceID := state.WorkspaceID.ValueString()
-	listID := state.ID.ValueString()
+	var input *lists.DeleteInput
+	if r.definition.Scope == scope.ScopeTypeAccount {
+		input = BuildAccountDeleteInput(state.ID.ValueString())
+	} else {
+		input = BuildDeleteInput(state.WorkspaceID.ValueString(), state.ID.ValueString())
+	}
 
-	tflog.Debug(ctx, "Deleting Fastly NGWAF workspace list", map[string]any{
-		"workspace_id": workspaceID,
-		"id":           listID,
-		"type":         r.listType,
-	})
+	tflog.Debug(ctx, "Deleting Fastly NGWAF list", r.logFields(state))
 
-	err := lists.Delete(ctx, r.client, BuildDeleteInput(workspaceID, listID))
+	err := lists.Delete(ctx, r.client, input)
 	if err != nil && !errors.IsNotFound(err) {
-		resp.Diagnostics.AddError(fmt.Sprintf("Error deleting NGWAF workspace %s list", r.listType), err.Error())
+		resp.Diagnostics.AddError(r.operationError("deleting"), err.Error())
 	}
 }
 
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if r.definition.Scope == scope.ScopeTypeAccount {
+		ImportAccountState(ctx, req, resp)
+		return
+	}
 	ImportState(ctx, req, resp)
 }
 
-// AccountResource implements one concrete type-specific account NGWAF list resource.
-type AccountResource struct {
-	client      *fastly.Client
-	listType    string
-	typeSuffix  string
-	description string
+func (r *Resource) readPlan(ctx context.Context, plan tfsdk.Plan, diags *diag.Diagnostics) resourceModel {
+	if r.definition.Scope == scope.ScopeTypeAccount {
+		var model AccountModel
+		diags.Append(plan.Get(ctx, &model)...)
+		return resourceModelFromAccount(model)
+	}
+
+	var model Model
+	diags.Append(plan.Get(ctx, &model)...)
+	return resourceModelFromWorkspace(model)
 }
 
-// NewAccountResource returns an account-scoped NGWAF list resource for one
-// concrete API list type.
-func NewAccountResource(listType, typeSuffix, description string) resource.Resource {
-	return &AccountResource{
-		listType:    listType,
-		typeSuffix:  typeSuffix,
-		description: description,
+func (r *Resource) readState(ctx context.Context, state tfsdk.State, diags *diag.Diagnostics) resourceModel {
+	if r.definition.Scope == scope.ScopeTypeAccount {
+		var model AccountModel
+		diags.Append(state.Get(ctx, &model)...)
+		return resourceModelFromAccount(model)
 	}
+
+	var model Model
+	diags.Append(state.Get(ctx, &model)...)
+	return resourceModelFromWorkspace(model)
 }
 
-func (r *AccountResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_ngwaf_" + r.typeSuffix + "_list"
+func (r *Resource) flatten(workspaceID string, list *lists.List) (any, error) {
+	if r.definition.Scope == scope.ScopeTypeAccount {
+		return FlattenAccountToModel(r.definition.ListType, list)
+	}
+	return FlattenToModel(r.definition.ListType, workspaceID, list)
 }
 
-func (r *AccountResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Description: r.description,
-		Attributes:  AccountAttributes(r.listType),
-	}
+func (r *Resource) operationError(operation string) string {
+	return fmt.Sprintf("Error %s NGWAF %s %s list", operation, r.definition.Scope, r.definition.ListType)
 }
 
-func (r *AccountResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	data, diags := fastlyclient.FromProviderData(req.ProviderData)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() || data == nil {
-		return
+func (r *Resource) logFields(model resourceModel) map[string]any {
+	fields := map[string]any{
+		"id":    model.ID.ValueString(),
+		"type":  r.definition.ListType,
+		"scope": r.definition.Scope,
 	}
-
-	r.client = data.Client
+	if !model.Name.IsNull() && !model.Name.IsUnknown() {
+		fields["name"] = model.Name.ValueString()
+	}
+	if r.definition.Scope == scope.ScopeTypeWorkspace {
+		fields["workspace_id"] = model.WorkspaceID.ValueString()
+	}
+	return fields
 }
 
-func (r *AccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan AccountModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	input, diags := BuildAccountCreateInput(ctx, r.listType, plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	tflog.Debug(ctx, "Creating Fastly NGWAF account list", map[string]any{
-		"type": r.listType,
-		"name": plan.Name.ValueString(),
-	})
-
-	list, err := lists.Create(ctx, r.client, input)
-	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("Error creating NGWAF account %s list", r.listType), err.Error())
-		return
-	}
-
-	state, err := FlattenAccountToModel(r.listType, list)
-	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("Error reading NGWAF account %s list", r.listType), err.Error())
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+func resourceModelFromWorkspace(model Model) resourceModel {
+	return resourceModel(model)
 }
 
-func (r *AccountResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state AccountModel
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	listID := state.ID.ValueString()
-
-	tflog.Debug(ctx, "Reading Fastly NGWAF account list", map[string]any{
-		"id":   listID,
-		"type": r.listType,
-	})
-
-	list, err := lists.Get(ctx, r.client, BuildAccountGetInput(listID))
-	if err != nil {
-		if errors.IsNotFound(err) {
-			tflog.Warn(ctx, "NGWAF account list not found, removing from state", map[string]any{
-				"id":   listID,
-				"type": r.listType,
-			})
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		resp.Diagnostics.AddError(fmt.Sprintf("Error reading NGWAF account %s list", r.listType), err.Error())
-		return
-	}
-
-	newState, err := FlattenAccountToModel(r.listType, list)
-	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("Error reading NGWAF account %s list", r.listType), err.Error())
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
-}
-
-func (r *AccountResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan AccountModel
-	var state AccountModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	listID := state.ID.ValueString()
-
-	input, diags := BuildAccountUpdateInput(ctx, listID, plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	tflog.Debug(ctx, "Updating Fastly NGWAF account list", map[string]any{
-		"id":   listID,
-		"type": r.listType,
-	})
-
-	list, err := lists.Update(ctx, r.client, input)
-	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("Error updating NGWAF account %s list", r.listType), err.Error())
-		return
-	}
-
-	newState, err := FlattenAccountToModel(r.listType, list)
-	if err != nil {
-		resp.Diagnostics.AddError(fmt.Sprintf("Error reading NGWAF account %s list", r.listType), err.Error())
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
-}
-
-func (r *AccountResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state AccountModel
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	listID := state.ID.ValueString()
-
-	tflog.Debug(ctx, "Deleting Fastly NGWAF account list", map[string]any{
-		"id":   listID,
-		"type": r.listType,
-	})
-
-	err := lists.Delete(ctx, r.client, BuildAccountDeleteInput(listID))
-	if err != nil && !errors.IsNotFound(err) {
-		resp.Diagnostics.AddError(fmt.Sprintf("Error deleting NGWAF account %s list", r.listType), err.Error())
+func resourceModelFromAccount(model AccountModel) resourceModel {
+	return resourceModel{
+		ID:          model.ID,
+		Name:        model.Name,
+		Description: model.Description,
+		Entries:     model.Entries,
+		ReferenceID: model.ReferenceID,
 	}
 }
 
-func (r *AccountResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	ImportAccountState(ctx, req, resp)
+func (m resourceModel) workspaceModel() Model {
+	return Model(m)
+}
+
+func (m resourceModel) accountModel() AccountModel {
+	return AccountModel{
+		ID:          m.ID,
+		Name:        m.Name,
+		Description: m.Description,
+		Entries:     m.Entries,
+		ReferenceID: m.ReferenceID,
+	}
 }

@@ -387,7 +387,7 @@ func TestFlattenAccountToModelInvalid(t *testing.T) {
 }
 
 func TestAccountImportState(t *testing.T) {
-	r := NewAccountResource("ip", "ip", "test").(*AccountResource)
+	r := NewAccountResource("ip", "ip", "test").(*Resource)
 	req := resource.ImportStateRequest{ID: "list-id"}
 	resp := &resource.ImportStateResponse{State: accountImportStateForTest(t, r)}
 
@@ -400,7 +400,7 @@ func TestAccountImportState(t *testing.T) {
 	assert.Equal(t, "list-id", gotID.ValueString())
 }
 
-func accountImportStateForTest(t *testing.T, r *AccountResource) tfsdk.State {
+func accountImportStateForTest(t *testing.T, r *Resource) tfsdk.State {
 	t.Helper()
 
 	var schemaResp resource.SchemaResponse
