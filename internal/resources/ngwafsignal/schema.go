@@ -44,7 +44,7 @@ func resourceAttributes() map[string]schema.Attribute {
 		"applies_to": appliesTo,
 		"name": schema.StringAttribute{
 			Required:    true,
-			Description: "The name of the signal. Must be between 3 and 128 characters and contain only letters, numbers, spaces, and hyphens. The name is immutable after creation.",
+			Description: "The name of the signal. Must be between 3 and 128 characters and contain only letters, numbers, spaces, and hyphens. Changing this attribute will delete and recreate the signal.",
 			Validators: []validator.String{
 				stringvalidator.LengthBetween(3, 128),
 				stringvalidator.RegexMatches(signalNamePattern, "must contain only letters, numbers, spaces, and hyphens"),
