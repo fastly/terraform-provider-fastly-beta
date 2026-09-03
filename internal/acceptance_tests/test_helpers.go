@@ -6410,3 +6410,90 @@ func ConfigTLSCertificateWithPrivateKey(certificateBody, name string) string {
 		"DEPENDS_ON_PRIVATE_KEY": "true",
 	})
 }
+
+// ConfigTLSSubscription returns a CDN auto service with two domains plus a fastly_tls_subscription
+// requesting a lets-encrypt certificate for both, so that common_name can be switched between them
+// to exercise an in-place update.
+func ConfigTLSSubscription(serviceName, domain1, domain2, backendName, commonName string) string {
+	service := fmt.Sprintf(`
+resource "fastly_service_cdn_auto" "test" {
+  name          = %q
+  force_destroy = true
+
+  domain {
+    name = %q
+  }
+
+  domain {
+    name = %q
+  }
+
+  backend {
+    name              = %q
+    address           = "api.example.com"
+    port              = 443
+    use_ssl           = true
+    ssl_cert_hostname = "api.example.com"
+    ssl_sni_hostname  = "api.example.com"
+  }
+}
+`, serviceName, domain1, domain2, backendName)
+
+	subscription := fmt.Sprintf(`
+resource "fastly_tls_subscription" "test" {
+  domains               = [%q, %q]
+  common_name           = %q
+  certificate_authority = "lets-encrypt"
+  depends_on            = [fastly_service_cdn_auto.test]
+}
+`, domain1, domain2, commonName)
+
+	return joinBlocks(service, subscription)
+}
+
+// ConfigTLSSubscriptionWithConfigurationID is ConfigTLSSubscription but also pins
+// configuration_id to a specific, non-default TLS configuration, so a later step can change it
+// alone to verify the update reaches the API.
+func ConfigTLSSubscriptionWithConfigurationID(serviceName, domain1, domain2, backendName, commonName string) string {
+	configuration := `
+data "fastly_tls_configuration" "secondary" {
+  name = "HTTP/3 & TLS v1.3 (s.sni)"
+}
+`
+
+	service := fmt.Sprintf(`
+resource "fastly_service_cdn_auto" "test" {
+  name          = %q
+  force_destroy = true
+
+  domain {
+    name = %q
+  }
+
+  domain {
+    name = %q
+  }
+
+  backend {
+    name              = %q
+    address           = "api.example.com"
+    port              = 443
+    use_ssl           = true
+    ssl_cert_hostname = "api.example.com"
+    ssl_sni_hostname  = "api.example.com"
+  }
+}
+`, serviceName, domain1, domain2, backendName)
+
+	subscription := fmt.Sprintf(`
+resource "fastly_tls_subscription" "test" {
+  domains               = [%q, %q]
+  common_name           = %q
+  certificate_authority = "lets-encrypt"
+  configuration_id      = data.fastly_tls_configuration.secondary.id
+  depends_on            = [fastly_service_cdn_auto.test]
+}
+`, domain1, domain2, commonName)
+
+	return joinBlocks(configuration, service, subscription)
+}
