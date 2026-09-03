@@ -368,9 +368,10 @@ func GetPackagePath() string {
 	return filepath.Join(wd, "fixtures", "packages", "valid.tar.gz")
 }
 
-// TODO: Replace this when implementing ACL entries
-// AddACLEntry adds an ACL entry to the specified ACL. This is used as a test side-effect
-// to populate ACLs for testing force_destroy behavior. Returns a TestCheckFunc.
+// AddACLEntry adds an ACL entry to the specified ACL via the raw API client, deliberately
+// bypassing fastly_service_cdn_acl_entries so the entry is unmanaged by Terraform. This is used
+// as a test side-effect to populate ACLs for testing force_destroy behavior, mirroring
+// AddDictionaryItem below. Returns a TestCheckFunc.
 func AddACLEntry(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
@@ -6306,34 +6307,59 @@ func ConfigIntegrationInvalidType(name string) string {
 }
 
 // ConfigTLSActivation returns a CDN auto service (with a domain and backend) plus a
-// fastly_tls_activation enabling TLS on that domain, using a certificate created
-// out-of-band (its private key has no Terraform resource yet).
-//
-// TODO(CDTOOL-1586): reference a fastly_tls_certificate resource once fastly_tls_private_key exists.
-func ConfigTLSActivation(serviceName, domainName, backendName, certificateID string) string {
+// fastly_tls_activation enabling TLS on that domain. certificateIDExpr is the raw HCL expression
+// assigned to certificate_id — either a quoted literal (e.g. `""` for validator-failure tests) or
+// a reference to a fastly_tls_certificate resource declared via ConfigTLSCertificate.
+// extraDependsOn, when given, names additional resources (e.g. "fastly_tls_certificate.test") the
+// activation's depends_on should wait on, alongside the service.
+func ConfigTLSActivation(serviceName, domainName, backendName, certificateIDExpr string, extraDependsOn ...string) string {
 	service := ConfigCDNAutoWithBackend(serviceName, domainName, backendName)
 	activation := RenderBlock("internal/acceptance_tests/blocks/tls_activation_single.tf", map[string]string{
-		"CERTIFICATE_ID": certificateID,
-		"DOMAIN_NAME":    domainName,
+		"CERTIFICATE_ID_EXPR": certificateIDExpr,
+		"DOMAIN_NAME":         domainName,
+		"EXTRA_DEPENDS_ON":    extraDependsOnHCL(extraDependsOn),
 	})
 	return joinBlocks(service, activation)
 }
 
+// extraDependsOnHCL renders extraDependsOn as a leading-comma-prefixed, comma-joined HCL fragment
+// suitable for splicing after an existing depends_on entry, e.g. ", a, b" for ["a", "b"], or "" if empty.
+func extraDependsOnHCL(extraDependsOn []string) string {
+	if len(extraDependsOn) == 0 {
+		return ""
+	}
+	return ", " + strings.Join(extraDependsOn, ", ")
+}
+
+// ConfigTLSCertificatePair returns a fastly_tls_private_key + fastly_tls_certificate pair (both
+// named resourceName) uploading keyPEM/certPEM under name, for use as a real, Terraform-managed
+// certificate_id reference from a fastly_tls_activation under test. Unlike ConfigTLSCertificate
+// (which always labels its resource "test", for tests exercising a single certificate),
+// resourceName lets a test declare more than one pair at once, e.g. for rotation scenarios.
+func ConfigTLSCertificatePair(resourceName, name, keyPEM, certPEM string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/tls_key_and_certificate.tf", map[string]string{
+		"RESOURCE_NAME": resourceName,
+		"NAME":          name,
+		"KEY_PEM":       keyPEM,
+		"CERT_PEM":      certPEM,
+	})
+}
+
 // ConfigTLSActivationWithMutualAuthentication is ConfigTLSActivation plus a
 // fastly_tls_mutual_authentication resource wired to the activation directly.
-func ConfigTLSActivationWithMutualAuthentication(serviceName, domainName, backendName, certificateID, mtlsCertBundle string) string {
+func ConfigTLSActivationWithMutualAuthentication(serviceName, domainName, backendName, certificateIDExpr, mtlsCertBundle string, extraDependsOn ...string) string {
 	service := ConfigCDNAutoWithBackend(serviceName, domainName, backendName)
 	mtls := RenderBlock("internal/acceptance_tests/blocks/tls_mutual_authentication_single.tf", map[string]string{
 		"CERT_BUNDLE": mtlsCertBundle,
 	})
 	activation := fmt.Sprintf(`
 resource "fastly_tls_activation" "test" {
-  certificate_id            = %q
+  certificate_id            = %s
   domain                    = %q
   mutual_authentication_id  = fastly_tls_mutual_authentication.test.id
-  depends_on                = [fastly_service_cdn_auto.test]
+  depends_on                = [fastly_service_cdn_auto.test%s]
 }
-`, certificateID, domainName)
+`, certificateIDExpr, domainName, extraDependsOnHCL(extraDependsOn))
 	return joinBlocks(service, mtls, activation)
 }
 
@@ -6369,5 +6395,18 @@ func ConfigTLSCertificate(certificateBody, name string) string {
 func ConfigTLSCertificateWithoutName(certificateBody string) string {
 	return RenderBlock("internal/acceptance_tests/blocks/tls_certificate_single.tf", map[string]string{
 		"CERTIFICATE_BODY": certificateBody,
+	})
+}
+
+// ConfigTLSCertificateWithPrivateKey is ConfigTLSCertificate plus depends_on =
+// [fastly_tls_private_key.test], for tests that declare that resource (via ConfigTLSPrivateKey)
+// in the same config: the Fastly API rejects a certificate upload until its matching private key
+// already exists, and nothing else ties the two resources together for Terraform to order
+// correctly. name may be "" to leave it computed, same as ConfigTLSCertificateWithoutName.
+func ConfigTLSCertificateWithPrivateKey(certificateBody, name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/tls_certificate_single.tf", map[string]string{
+		"CERTIFICATE_BODY":       certificateBody,
+		"NAME":                   name,
+		"DEPENDS_ON_PRIVATE_KEY": "true",
 	})
 }
