@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/planmodifiers"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dictionary"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/responseobject"
@@ -30,30 +31,6 @@ const DefaultFeatureRevision = 1
 // uppercaseRe matches HTTP methods that are entirely uppercase (e.g. POST, PUT), matching the
 // legacy provider's http_methods validation.
 var uppercaseRe = regexp.MustCompile(`^[A-Z]+$`)
-
-// caseInsensitiveState preserves the prior state value when the configured value is
-// case-insensitively equal to it. actionPointer/loggerTypePointer always lowercase the value
-// sent to the API, and ToModel reads state back in that lowercase form, so without this a
-// differently-cased config value (e.g. "RESPONSE") would never converge with state and
-// Terraform would show a persistent plan diff on every run.
-type caseInsensitiveState struct{}
-
-func (m caseInsensitiveState) Description(_ context.Context) string {
-	return "Preserves the prior state value when the configured value differs only in case."
-}
-
-func (m caseInsensitiveState) MarkdownDescription(ctx context.Context) string {
-	return m.Description(ctx)
-}
-
-func (m caseInsensitiveState) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
-	if req.StateValue.IsNull() || req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-		return
-	}
-	if strings.EqualFold(req.StateValue.ValueString(), req.ConfigValue.ValueString()) {
-		resp.PlanValue = req.StateValue
-	}
-}
 
 type NestedModel struct {
 	Name               types.String `tfsdk:"name"`
@@ -118,7 +95,7 @@ func CommonAttributes() map[string]schema.Attribute {
 				stringvalidator.OneOfCaseInsensitive("log_only", "response", "response_object"),
 			},
 			PlanModifiers: []planmodifier.String{
-				caseInsensitiveState{},
+				planmodifiers.CaseInsensitiveState(),
 			},
 		},
 		"client_key": schema.ListAttribute{
@@ -159,7 +136,7 @@ func CommonAttributes() map[string]schema.Attribute {
 				),
 			},
 			PlanModifiers: []planmodifier.String{
-				caseInsensitiveState{},
+				planmodifiers.CaseInsensitiveState(),
 			},
 		},
 		"penalty_box_duration": schema.Int64Attribute{
