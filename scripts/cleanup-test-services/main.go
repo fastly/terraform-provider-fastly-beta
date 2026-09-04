@@ -18,6 +18,7 @@ import (
 func main() {
 	prefix := flag.String("prefix", "tf-test-", "only delete services whose name has this prefix")
 	dryRun := flag.Bool("dry-run", false, "list matching services without deleting them")
+	warnOnly := flag.Bool("warn-only", false, "log cleanup failures instead of exiting non-zero; use for a pre-run sweep so a stale service that can't be deleted doesn't block tests from running")
 	flag.Parse()
 
 	apiToken := os.Getenv("FASTLY_API_TOKEN")
@@ -71,6 +72,10 @@ func main() {
 
 	fmt.Printf("matched %d service(s) with prefix %q\n", matched, *prefix)
 	if failures > 0 {
+		if *warnOnly {
+			fmt.Printf("WARNING: %d service(s) failed to clean up\n", failures)
+			return
+		}
 		log.Fatalf("%d service(s) failed to clean up", failures)
 	}
 }

@@ -44,7 +44,7 @@ jobs:
       - name: Clean up leftover tf-test-* services
         env:
           FASTLY_API_TOKEN: ${{ secrets.FASTLY_API_TOKEN }}
-        run: go run ./scripts/cleanup-test-services
+        run: go run ./scripts/cleanup-test-services -warn-only
 
       - name: Run full acceptance suite
         env:
