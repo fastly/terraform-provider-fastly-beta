@@ -505,6 +505,25 @@ it warrants a slot in `BASELINE_TESTS`:
   `t.Parallel()`, wall-clock is bounded by the slowest single test in the set, not the sum
   — but re-run `make test-baseline` after adding a test and confirm the total.
 
+### Scheduled Acceptance Suite
+
+`.github/workflows/weekly-acceptance.yml` runs the full `make test-acc` suite against the
+live API on a schedule (currently the 1st and 15th of each month), sweeping dangling
+`tf-test-*` services both before and after the run via `scripts/cleanup-test-services`.
+
+That cleanup script identifies dangling services by name pattern only — it cannot tell a
+truly leftover `tf-test-*` service from one currently owned by another in-progress
+acceptance run. In practice this means **acceptance tests should not be run manually
+(`make test-acc`, `make test-baseline`, etc.) at the same time this scheduled workflow is
+executing**, or the workflow's cleanup step may delete services a concurrent local run
+still depends on. Check the Actions tab before kicking off a local acceptance run if the
+scheduled job's window is near.
+
+For the same reason, don't manually name any service `tf-test-*` outside of the
+acceptance/lifecycle test suites — that prefix is reserved for services the tests create
+and clean up automatically, and a manually created service matching it is liable to be
+swept up and deleted by this workflow's cleanup step.
+
 ### Lifecycle Tests
 
 End-to-end lifecycle tests in `scripts/test-lifecycle-{cdn,compute}/`:
