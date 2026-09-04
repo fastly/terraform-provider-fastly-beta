@@ -124,6 +124,16 @@ func TestActionPointer(t *testing.T) {
 	}
 }
 
+func TestModelsEqual_actionCaseInsensitive(t *testing.T) {
+	state := fullNestedModel()
+	state.Action = types.StringValue("pass")
+
+	config := fullNestedModel()
+	config.Action = types.StringValue("PASS")
+
+	assert.True(t, state.ModelsEqual(config))
+}
+
 func TestEqual(t *testing.T) {
 	tests := []struct {
 		name     string

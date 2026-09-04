@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/planmodifiers"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
@@ -11,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -27,7 +29,7 @@ type NestedModel struct {
 
 func (n NestedModel) ModelsEqual(other NestedModel) bool {
 	return service.StringValue(n.Name) == service.StringValue(other.Name) &&
-		service.StringValue(n.Action) == service.StringValue(other.Action) &&
+		strings.EqualFold(service.StringValue(n.Action), service.StringValue(other.Action)) &&
 		service.StringValue(n.CacheCondition) == service.StringValue(other.CacheCondition) &&
 		service.Int64Value(n.StaleTTL) == service.Int64Value(other.StaleTTL) &&
 		service.Int64Value(n.TTL) == service.Int64Value(other.TTL)
@@ -44,6 +46,9 @@ func CommonAttributes() map[string]schema.Attribute {
 			Description: "One of `cache`, `pass`, or `restart`, as defined on Fastly's documentation under [\"Caching action descriptions\"](https://docs.fastly.com/en/guides/controlling-caching#caching-action-descriptions).",
 			Validators: []validator.String{
 				stringvalidator.OneOfCaseInsensitive("cache", "pass", "restart"),
+			},
+			PlanModifiers: []planmodifier.String{
+				planmodifiers.CaseInsensitiveState(),
 			},
 		},
 		"cache_condition": schema.StringAttribute{
