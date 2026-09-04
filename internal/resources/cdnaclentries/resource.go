@@ -402,7 +402,7 @@ func remoteEntryMatchesDesired(remote *fastly.ACLEntry, desired EntryModel) bool
 	if !desired.Negated.IsNull() && !desired.Negated.IsUnknown() {
 		remoteNegated := false
 		if remote.Negated != nil {
-			remoteNegated = bool(*remote.Negated)
+			remoteNegated = *remote.Negated
 		}
 		if remoteNegated != desired.Negated.ValueBool() {
 			return false
