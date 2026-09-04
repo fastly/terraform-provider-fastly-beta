@@ -499,87 +499,6 @@ func TestBuildBatchACLEntry(t *testing.T) {
 	}
 }
 
-func TestEntriesEqual(t *testing.T) {
-	tests := []struct {
-		name string
-		a    EntryModel
-		b    EntryModel
-		want bool
-	}{
-		{
-			name: "identical entries",
-			a: EntryModel{
-				IP:      types.StringValue("10.0.0.1"),
-				Subnet:  types.Int64Value(24),
-				Negated: types.BoolValue(false),
-				Comment: types.StringValue("test"),
-			},
-			b: EntryModel{
-				IP:      types.StringValue("10.0.0.1"),
-				Subnet:  types.Int64Value(24),
-				Negated: types.BoolValue(false),
-				Comment: types.StringValue("test"),
-			},
-			want: true,
-		},
-		{
-			name: "different IP",
-			a: EntryModel{
-				IP:      types.StringValue("10.0.0.1"),
-				Subnet:  types.Int64Value(24),
-				Negated: types.BoolValue(false),
-				Comment: types.StringValue("test"),
-			},
-			b: EntryModel{
-				IP:      types.StringValue("10.0.0.2"),
-				Subnet:  types.Int64Value(24),
-				Negated: types.BoolValue(false),
-				Comment: types.StringValue("test"),
-			},
-			want: false,
-		},
-		{
-			name: "different subnet",
-			a: EntryModel{
-				IP:      types.StringValue("10.0.0.1"),
-				Subnet:  types.Int64Value(24),
-				Negated: types.BoolValue(false),
-				Comment: types.StringValue("test"),
-			},
-			b: EntryModel{
-				IP:      types.StringValue("10.0.0.1"),
-				Subnet:  types.Int64Value(16),
-				Negated: types.BoolValue(false),
-				Comment: types.StringValue("test"),
-			},
-			want: false,
-		},
-		{
-			name: "null vs empty comment",
-			a: EntryModel{
-				IP:      types.StringValue("10.0.0.1"),
-				Subnet:  types.Int64Value(24),
-				Negated: types.BoolValue(false),
-				Comment: types.StringNull(),
-			},
-			b: EntryModel{
-				IP:      types.StringValue("10.0.0.1"),
-				Subnet:  types.Int64Value(24),
-				Negated: types.BoolValue(false),
-				Comment: types.StringValue(""),
-			},
-			want: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := entriesEqual(tt.a, tt.b)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
 func TestEntryAttrTypes(t *testing.T) {
 	attrs := entryAttrTypes
 
@@ -769,4 +688,124 @@ func TestEntryIdentityKey_IgnoresNegatedAndComment(t *testing.T) {
 		"different subnet must produce a different identity key")
 	assert.NotEqual(t, entryIdentityKey(original), entryIdentityKey(differentIP),
 		"different IP must produce a different identity key")
+}
+
+// TestFilterManagedRemoteEntries checks that only remote entries whose
+// identity is present in managed are returned -- entries present remotely
+// but never declared by this resource must be left out, so they are
+// preserved and ignored for drift.
+func TestFilterManagedRemoteEntries(t *testing.T) {
+	remote := []*fastly.ACLEntry{
+		{EntryID: new("e1"), IP: new("10.0.0.1"), Subnet: new(24), Negated: new(false), Comment: new("managed")},
+		{EntryID: new("e2"), IP: new("192.168.0.1"), Subnet: new(32), Negated: new(false), Comment: new("external")},
+	}
+	managed := []EntryModel{
+		{IP: types.StringValue("10.0.0.1"), Subnet: types.Int64Value(24)},
+		{IP: types.StringValue("172.16.0.1"), Subnet: types.Int64Value(16)}, // deleted externally, absent from remote
+	}
+
+	got := filterManagedRemoteEntries(remote, managed)
+
+	assert.Len(t, got, 1)
+	assert.Equal(t, "e1", *got[0].EntryID)
+}
+
+// TestBuildBatchEntries_CreatesMissingEntries checks that desired entries
+// absent from remote produce Create operations.
+func TestBuildBatchEntries_CreatesMissingEntries(t *testing.T) {
+	ctx := context.Background()
+	desired := []EntryModel{
+		{IP: types.StringValue("10.0.0.1"), Subnet: types.Int64Value(24), Negated: types.BoolValue(false), Comment: types.StringValue("new")},
+	}
+
+	batch := buildBatchEntries(ctx, nil, nil, desired)
+
+	assert.Len(t, batch, 1)
+	assert.Equal(t, fastly.CreateBatchOperation, *batch[0].Operation)
+	assert.Equal(t, "10.0.0.1", *batch[0].IP)
+}
+
+// TestBuildBatchEntries_AdoptsExistingRemoteEntry checks that when Create
+// declares an entry that already exists remotely at the same identity (e.g.
+// created outside Terraform, or left over from a prior partial apply), the
+// entry is adopted via an Update rather than re-created, since the batch API
+// rejects a Create colliding with an existing ip/subnet.
+func TestBuildBatchEntries_AdoptsExistingRemoteEntry(t *testing.T) {
+	ctx := context.Background()
+	remote := []*fastly.ACLEntry{
+		{EntryID: new("existing"), IP: new("10.0.0.1"), Subnet: new(24), Negated: new(false), Comment: new("old comment")},
+	}
+	desired := []EntryModel{
+		{IP: types.StringValue("10.0.0.1"), Subnet: types.Int64Value(24), Negated: types.BoolValue(false), Comment: types.StringValue("new comment")},
+	}
+
+	batch := buildBatchEntries(ctx, remote, nil, desired)
+
+	assert.Len(t, batch, 1)
+	assert.Equal(t, fastly.UpdateBatchOperation, *batch[0].Operation)
+	assert.Equal(t, "existing", *batch[0].EntryID)
+	assert.Equal(t, "new comment", *batch[0].Comment)
+}
+
+// TestBuildBatchEntries_NoOpWhenRemoteAlreadyMatches checks that no batch
+// operation is produced when the remote entry already matches the desired
+// content.
+func TestBuildBatchEntries_NoOpWhenRemoteAlreadyMatches(t *testing.T) {
+	ctx := context.Background()
+	remote := []*fastly.ACLEntry{
+		{EntryID: new("e1"), IP: new("10.0.0.1"), Subnet: new(24), Negated: new(false), Comment: new("same")},
+	}
+	desired := []EntryModel{
+		{IP: types.StringValue("10.0.0.1"), Subnet: types.Int64Value(24), Negated: types.BoolValue(false), Comment: types.StringValue("same")},
+	}
+
+	batch := buildBatchEntries(ctx, remote, desired, desired)
+
+	assert.Empty(t, batch)
+}
+
+// TestBuildBatchEntries_DeletesOnlyManagedAndRemoved checks that only entries
+// that were previously managed AND removed from desired are deleted, and only
+// when they still exist remotely -- unmanaged remote entries are left alone.
+func TestBuildBatchEntries_DeletesOnlyManagedAndRemoved(t *testing.T) {
+	ctx := context.Background()
+	remote := []*fastly.ACLEntry{
+		{EntryID: new("managed-removed"), IP: new("10.0.0.1"), Subnet: new(24), Negated: new(false)},
+		{EntryID: new("external"), IP: new("192.168.0.1"), Subnet: new(32), Negated: new(false)},
+	}
+	currentManaged := []EntryModel{
+		{IP: types.StringValue("10.0.0.1"), Subnet: types.Int64Value(24)},
+	}
+	var desired []EntryModel // entry removed from config
+
+	batch := buildBatchEntries(ctx, remote, currentManaged, desired)
+
+	assert.Len(t, batch, 1)
+	assert.Equal(t, fastly.DeleteBatchOperation, *batch[0].Operation)
+	assert.Equal(t, "managed-removed", *batch[0].EntryID)
+}
+
+// TestBuildBatchEntries_PreservesExternalEntries checks that remote entries
+// outside currentManaged and desired never appear in the batch, whether or
+// not they happen to share an identity that this resource cares about.
+func TestBuildBatchEntries_PreservesExternalEntries(t *testing.T) {
+	ctx := context.Background()
+	remote := []*fastly.ACLEntry{
+		{EntryID: new("external-1"), IP: new("203.0.113.1"), Subnet: new(32), Negated: new(false), Comment: new("outside terraform")},
+	}
+
+	batch := buildBatchEntries(ctx, remote, nil, nil)
+
+	assert.Empty(t, batch)
+}
+
+// TestRemoteEntryIdentityKey_MatchesEntryIdentityKey checks that the API-
+// sourced and config/state-sourced identity key builders agree for equal
+// values, since buildBatchEntries and filterManagedRemoteEntries rely on
+// matching keys across both.
+func TestRemoteEntryIdentityKey_MatchesEntryIdentityKey(t *testing.T) {
+	remote := &fastly.ACLEntry{IP: new("10.0.0.1"), Subnet: new(24)}
+	model := EntryModel{IP: types.StringValue("10.0.0.1"), Subnet: types.Int64Value(24)}
+
+	assert.Equal(t, entryIdentityKey(model), remoteEntryIdentityKey(remote))
 }

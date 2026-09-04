@@ -145,11 +145,10 @@ func setListResourceAttrs(ctx context.Context, client *fastly.Client, result *li
 	}
 
 	model := Model{
-		ID:            types.StringValue(fmt.Sprintf("%s/%s", serviceID, aclID)),
-		ServiceID:     types.StringValue(serviceID),
-		ACLID:         types.StringValue(aclID),
-		Entry:         entrySet,
-		ManageEntries: types.BoolValue(false),
+		ID:        types.StringValue(fmt.Sprintf("%s/%s", serviceID, aclID)),
+		ServiceID: types.StringValue(serviceID),
+		ACLID:     types.StringValue(aclID),
+		Entry:     entrySet,
 	}
 	diags.Append(result.Resource.Set(ctx, &model)...)
 	return diags

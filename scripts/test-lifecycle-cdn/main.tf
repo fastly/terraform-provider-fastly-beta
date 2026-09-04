@@ -53,9 +53,8 @@ resource "fastly_service_cdn_acl" "service_1_acl" {
 }
 
 resource "fastly_service_cdn_acl_entries" "service_1_acl_entries" {
-  service_id     = fastly_service_cdn.service_1.id
-  acl_id         = fastly_service_cdn_acl.service_1_acl.acl_id
-  manage_entries = true
+  service_id = fastly_service_cdn.service_1.id
+  acl_id     = fastly_service_cdn_acl.service_1_acl.acl_id
 
   entry {
     ip      = "192.168.1.0"
@@ -151,9 +150,8 @@ resource "fastly_service_cdn_acl" "service_2_acl" {
 }
 
 resource "fastly_service_cdn_acl_entries" "service_2_acl_entries" {
-  service_id     = fastly_service_cdn.service_2.id
-  acl_id         = fastly_service_cdn_acl.service_2_acl.acl_id
-  manage_entries = true
+  service_id = fastly_service_cdn.service_2.id
+  acl_id     = fastly_service_cdn_acl.service_2_acl.acl_id
 
   entry {
     ip      = "172.16.0.0"

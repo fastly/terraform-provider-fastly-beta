@@ -4,7 +4,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -12,11 +11,10 @@ import (
 )
 
 type Model struct {
-	ID            types.String `tfsdk:"id"`
-	ServiceID     types.String `tfsdk:"service_id"`
-	ACLID         types.String `tfsdk:"acl_id"`
-	Entry         types.Set    `tfsdk:"entry"`
-	ManageEntries types.Bool   `tfsdk:"manage_entries"`
+	ID        types.String `tfsdk:"id"`
+	ServiceID types.String `tfsdk:"service_id"`
+	ACLID     types.String `tfsdk:"acl_id"`
+	Entry     types.Set    `tfsdk:"entry"`
 }
 
 type EntryModel struct {
@@ -50,19 +48,13 @@ func ResourceAttributes() map[string]schema.Attribute {
 				stringplanmodifier.RequiresReplace(),
 			},
 		},
-		"manage_entries": schema.BoolAttribute{
-			Optional:    true,
-			Computed:    true,
-			Default:     booldefault.StaticBool(false),
-			Description: "Whether to reapply changes if the state of the entries drifts, i.e. if entries are managed externally. When importing this resource, `manage_entries` is always set to `true`, so any ACL entries not present in the Terraform configuration will be deleted on the next apply.",
-		},
 	}
 }
 
 func ResourceBlocks() map[string]schema.Block {
 	return map[string]schema.Block{
 		"entry": schema.SetNestedBlock{
-			Description: "ACL Entries.",
+			Description: "ACL entries owned by this resource. Entries not declared here are left unchanged.",
 			Validators: []validator.Set{
 				setvalidator.SizeAtMost(10000),
 				UniqueEntryIdentity(),
