@@ -2,7 +2,6 @@ package aclentries
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -10,10 +9,9 @@ import (
 )
 
 type Model struct {
-	ID            types.String `tfsdk:"id"`
-	ACLID         types.String `tfsdk:"acl_id"`
-	Entries       types.Map    `tfsdk:"entries"`
-	ManageEntries types.Bool   `tfsdk:"manage_entries"`
+	ID      types.String `tfsdk:"id"`
+	ACLID   types.String `tfsdk:"acl_id"`
+	Entries types.Map    `tfsdk:"entries"`
 }
 
 func ResourceAttributes() map[string]schema.Attribute {
@@ -35,16 +33,10 @@ func ResourceAttributes() map[string]schema.Attribute {
 		"entries": schema.MapAttribute{
 			Required:    true,
 			ElementType: types.StringType,
-			Description: "A map representing the entries in the ACL, where the keys are CIDR prefixes and the values are actions (`ALLOW` or `BLOCK`).",
+			Description: "The ACL entries managed by Terraform, where keys are CIDR prefixes and values are actions (`ALLOW` or `BLOCK`). Entries not declared in this map are left unchanged.",
 			Validators: []validator.Map{
 				ValidEntries(),
 			},
-		},
-		"manage_entries": schema.BoolAttribute{
-			Optional:    true,
-			Computed:    true,
-			Default:     booldefault.StaticBool(false),
-			Description: "Manage the ACL entries in Terraform (default: `false`). If `true`, Terraform will ensure that the ACL's entries match the entries in the Terraform configuration. When importing this resource, `manage_entries` is always set to `true`, so any ACL entries not present in the Terraform configuration will be deleted on the next apply.",
 		},
 	}
 }

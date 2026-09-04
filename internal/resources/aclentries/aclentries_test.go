@@ -2,15 +2,59 @@ package aclentries
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/fastly/go-fastly/v17/fastly/computeacls"
 )
+
+func TestMetadata(t *testing.T) {
+	r := NewResource()
+
+	var resp resource.MetadataResponse
+	r.Metadata(context.Background(), resource.MetadataRequest{
+		ProviderTypeName: "fastly",
+	}, &resp)
+
+	require.Equal(t, "fastly_acl_entries", resp.TypeName)
+}
+
+func TestSchema(t *testing.T) {
+	r := NewResource()
+
+	var resp resource.SchemaResponse
+	r.Schema(context.Background(), resource.SchemaRequest{}, &resp)
+
+	require.Len(t, resp.Schema.Attributes, 3)
+
+	id, ok := resp.Schema.Attributes["id"].(resourceschema.StringAttribute)
+	require.True(t, ok)
+	require.True(t, id.Computed)
+	require.False(t, id.Required)
+	require.Len(t, id.PlanModifiers, 1)
+
+	aclID, ok := resp.Schema.Attributes["acl_id"].(resourceschema.StringAttribute)
+	require.True(t, ok)
+	require.True(t, aclID.Required)
+	require.False(t, aclID.Computed)
+	require.Len(t, aclID.PlanModifiers, 1)
+
+	entries, ok := resp.Schema.Attributes["entries"].(resourceschema.MapAttribute)
+	require.True(t, ok)
+	require.True(t, entries.Required)
+	require.Equal(t, types.StringType, entries.ElementType)
+	require.Len(t, entries.Validators, 1)
+
+	_, hasManageEntries := resp.Schema.Attributes["manage_entries"]
+	require.False(t, hasManageEntries)
+}
 
 func TestExpandEntries(t *testing.T) {
 	ctx := context.Background()
@@ -18,99 +62,209 @@ func TestExpandEntries(t *testing.T) {
 	t.Run("null map returns nil", func(t *testing.T) {
 		var diags diag.Diagnostics
 		result := expandEntries(ctx, types.MapNull(types.StringType), &diags)
-		assert.Nil(t, result)
-		assert.False(t, diags.HasError())
+
+		require.Nil(t, result)
+		require.False(t, diags.HasError())
 	})
 
 	t.Run("populated map", func(t *testing.T) {
-		m, d := types.MapValue(types.StringType, map[string]attr.Value{
-			"192.0.2.0/24": types.StringValue("ALLOW"),
+		value, valueDiags := types.MapValue(types.StringType, map[string]attr.Value{
+			"192.0.2.0/24":    types.StringValue("ALLOW"),
+			"198.51.100.0/24": types.StringValue("BLOCK"),
 		})
-		assert.False(t, d.HasError())
+		require.False(t, valueDiags.HasError())
 
 		var diags diag.Diagnostics
-		result := expandEntries(ctx, m, &diags)
-		assert.False(t, diags.HasError())
-		assert.Equal(t, map[string]string{"192.0.2.0/24": "ALLOW"}, result)
+		result := expandEntries(ctx, value, &diags)
+
+		require.False(t, diags.HasError())
+		require.Equal(t, map[string]string{
+			"192.0.2.0/24":    "ALLOW",
+			"198.51.100.0/24": "BLOCK",
+		}, result)
 	})
 }
 
 func TestFlattenEntries(t *testing.T) {
 	var diags diag.Diagnostics
-	remote := []computeacls.ComputeACLEntry{
-		{Prefix: "192.0.2.0/24", Action: "ALLOW"},
-		{Prefix: "198.51.100.0/24", Action: "BLOCK"},
-	}
+	result := flattenEntries(context.Background(), map[string]string{
+		"192.0.2.0/24":    "ALLOW",
+		"198.51.100.0/24": "BLOCK",
+	}, &diags)
 
-	result := flattenEntries(remote, &diags)
-	assert.False(t, diags.HasError())
+	require.False(t, diags.HasError())
 
 	var got map[string]string
-	assert.False(t, result.ElementsAs(context.Background(), &got, false).HasError())
-	assert.Equal(t, map[string]string{
+	require.False(t, result.ElementsAs(context.Background(), &got, false).HasError())
+	require.Equal(t, map[string]string{
 		"192.0.2.0/24":    "ALLOW",
 		"198.51.100.0/24": "BLOCK",
 	}, got)
 }
 
+func TestFilterManagedRemoteEntries(t *testing.T) {
+	remote := map[string]string{
+		"192.0.2.0/24":    "BLOCK",
+		"198.51.100.0/24": "ALLOW",
+	}
+	managed := map[string]string{
+		"192.0.2.0/24":   "ALLOW",
+		"203.0.113.0/24": "BLOCK",
+	}
+
+	require.Equal(t, map[string]string{
+		"192.0.2.0/24": "BLOCK",
+	}, filterManagedRemoteEntries(remote, managed))
+}
+
+func TestFilterManagedRemoteEntriesLargeACL(t *testing.T) {
+	const (
+		remoteCount  = 1000
+		managedCount = 500
+	)
+
+	remote := make(map[string]string, remoteCount)
+	managed := make(map[string]string, managedCount)
+	want := make(map[string]string, managedCount)
+
+	for i := 0; i < remoteCount; i++ {
+		prefix := fmt.Sprintf("10.%d.%d.0/24", i/256, i%256)
+		action := "ALLOW"
+		if i%2 == 0 {
+			action = "BLOCK"
+		}
+		remote[prefix] = action
+
+		if i < managedCount {
+			managed[prefix] = "ALLOW"
+			want[prefix] = action
+		}
+	}
+
+	require.Equal(t, want, filterManagedRemoteEntries(remote, managed))
+}
+
 func TestBuildBatchEntries(t *testing.T) {
 	tests := []struct {
-		name     string
-		old      map[string]string
-		new      map[string]string
-		manage   bool
-		expected []*computeacls.BatchComputeACLEntry
+		name           string
+		remote         map[string]string
+		currentManaged map[string]string
+		desired        map[string]string
+		want           []*computeacls.BatchComputeACLEntry
 	}{
 		{
-			name: "create only",
-			old:  nil,
-			new: map[string]string{
+			name: "create new managed prefix without touching external prefixes",
+			remote: map[string]string{
+				"198.51.100.0/24": "BLOCK",
+			},
+			desired: map[string]string{
 				"192.0.2.0/24": "ALLOW",
 			},
-			manage: true,
-			expected: []*computeacls.BatchComputeACLEntry{
+			want: []*computeacls.BatchComputeACLEntry{
 				{Prefix: new("192.0.2.0/24"), Action: new("ALLOW"), Operation: new(createOperation)},
 			},
 		},
 		{
-			name: "update when prefix already exists",
-			old: map[string]string{
-				"192.0.2.0/24": "ALLOW",
-			},
-			new: map[string]string{
+			name: "adopt existing prefix and update its action",
+			remote: map[string]string{
 				"192.0.2.0/24": "BLOCK",
 			},
-			manage: true,
-			expected: []*computeacls.BatchComputeACLEntry{
+			desired: map[string]string{
+				"192.0.2.0/24": "ALLOW",
+			},
+			want: []*computeacls.BatchComputeACLEntry{
+				{Prefix: new("192.0.2.0/24"), Action: new("ALLOW"), Operation: new(updateOperation)},
+			},
+		},
+		{
+			name: "update changed managed prefix",
+			remote: map[string]string{
+				"192.0.2.0/24": "ALLOW",
+			},
+			currentManaged: map[string]string{
+				"192.0.2.0/24": "ALLOW",
+			},
+			desired: map[string]string{
+				"192.0.2.0/24": "BLOCK",
+			},
+			want: []*computeacls.BatchComputeACLEntry{
 				{Prefix: new("192.0.2.0/24"), Action: new("BLOCK"), Operation: new(updateOperation)},
 			},
 		},
 		{
-			name: "delete when managed and prefix removed",
-			old: map[string]string{
+			name: "recreate managed prefix deleted outside Terraform",
+			currentManaged: map[string]string{
 				"192.0.2.0/24": "ALLOW",
 			},
-			new:    map[string]string{},
-			manage: true,
-			expected: []*computeacls.BatchComputeACLEntry{
+			desired: map[string]string{
+				"192.0.2.0/24": "ALLOW",
+			},
+			want: []*computeacls.BatchComputeACLEntry{
+				{Prefix: new("192.0.2.0/24"), Action: new("ALLOW"), Operation: new(createOperation)},
+			},
+		},
+		{
+			name: "delete only prefix removed from Terraform ownership",
+			remote: map[string]string{
+				"192.0.2.0/24":    "ALLOW",
+				"198.51.100.0/24": "BLOCK",
+			},
+			currentManaged: map[string]string{
+				"192.0.2.0/24": "ALLOW",
+			},
+			desired: map[string]string{},
+			want: []*computeacls.BatchComputeACLEntry{
 				{Prefix: new("192.0.2.0/24"), Operation: new(deleteOperation)},
 			},
 		},
 		{
-			name: "no delete when unmanaged",
-			old: map[string]string{
+			name: "no-op when managed prefix already matches",
+			remote: map[string]string{
 				"192.0.2.0/24": "ALLOW",
 			},
-			new:      map[string]string{},
-			manage:   false,
-			expected: nil,
+			currentManaged: map[string]string{
+				"192.0.2.0/24": "ALLOW",
+			},
+			desired: map[string]string{
+				"192.0.2.0/24": "ALLOW",
+			},
+			want: nil,
+		},
+		{
+			name: "mixed operations are deterministic",
+			remote: map[string]string{
+				"192.0.2.0/24":    "ALLOW",
+				"192.0.3.0/24":    "BLOCK",
+				"198.51.100.0/24": "ALLOW",
+				"198.51.101.0/24": "BLOCK",
+				"203.0.113.0/24":  "ALLOW",
+			},
+			currentManaged: map[string]string{
+				"192.0.2.0/24":    "ALLOW",
+				"192.0.3.0/24":    "BLOCK",
+				"198.51.100.0/24": "ALLOW",
+				"198.51.101.0/24": "BLOCK",
+			},
+			desired: map[string]string{
+				"198.51.100.0/24": "BLOCK",
+				"198.51.101.0/24": "ALLOW",
+				"203.0.114.0/24":  "BLOCK",
+				"203.0.115.0/24":  "ALLOW",
+			},
+			want: []*computeacls.BatchComputeACLEntry{
+				{Prefix: new("192.0.2.0/24"), Operation: new(deleteOperation)},
+				{Prefix: new("192.0.3.0/24"), Operation: new(deleteOperation)},
+				{Prefix: new("198.51.100.0/24"), Action: new("BLOCK"), Operation: new(updateOperation)},
+				{Prefix: new("198.51.101.0/24"), Action: new("ALLOW"), Operation: new(updateOperation)},
+				{Prefix: new("203.0.114.0/24"), Action: new("BLOCK"), Operation: new(createOperation)},
+				{Prefix: new("203.0.115.0/24"), Action: new("ALLOW"), Operation: new(createOperation)},
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := buildBatchEntries(tt.old, tt.new, tt.manage)
-			assert.ElementsMatch(t, tt.expected, result)
+			require.Equal(t, tt.want, buildBatchEntries(tt.remote, tt.currentManaged, tt.desired))
 		})
 	}
 }
@@ -118,7 +272,7 @@ func TestBuildBatchEntries(t *testing.T) {
 func TestEntriesConverged(t *testing.T) {
 	tests := []struct {
 		name      string
-		remote    []computeacls.ComputeACLEntry
+		remote    map[string]string
 		batch     []*computeacls.BatchComputeACLEntry
 		converged bool
 	}{
@@ -132,8 +286,8 @@ func TestEntriesConverged(t *testing.T) {
 		},
 		{
 			name: "create visible",
-			remote: []computeacls.ComputeACLEntry{
-				{Prefix: "192.0.2.0/24", Action: "ALLOW"},
+			remote: map[string]string{
+				"192.0.2.0/24": "ALLOW",
 			},
 			batch: []*computeacls.BatchComputeACLEntry{
 				{Prefix: new("192.0.2.0/24"), Action: new("ALLOW"), Operation: new(createOperation)},
@@ -142,8 +296,8 @@ func TestEntriesConverged(t *testing.T) {
 		},
 		{
 			name: "update not yet visible",
-			remote: []computeacls.ComputeACLEntry{
-				{Prefix: "192.0.2.0/24", Action: "ALLOW"},
+			remote: map[string]string{
+				"192.0.2.0/24": "ALLOW",
 			},
 			batch: []*computeacls.BatchComputeACLEntry{
 				{Prefix: new("192.0.2.0/24"), Action: new("BLOCK"), Operation: new(updateOperation)},
@@ -152,8 +306,8 @@ func TestEntriesConverged(t *testing.T) {
 		},
 		{
 			name: "update visible",
-			remote: []computeacls.ComputeACLEntry{
-				{Prefix: "192.0.2.0/24", Action: "BLOCK"},
+			remote: map[string]string{
+				"192.0.2.0/24": "BLOCK",
 			},
 			batch: []*computeacls.BatchComputeACLEntry{
 				{Prefix: new("192.0.2.0/24"), Action: new("BLOCK"), Operation: new(updateOperation)},
@@ -162,8 +316,8 @@ func TestEntriesConverged(t *testing.T) {
 		},
 		{
 			name: "delete not yet visible",
-			remote: []computeacls.ComputeACLEntry{
-				{Prefix: "192.0.2.0/24", Action: "ALLOW"},
+			remote: map[string]string{
+				"192.0.2.0/24": "ALLOW",
 			},
 			batch: []*computeacls.BatchComputeACLEntry{
 				{Prefix: new("192.0.2.0/24"), Operation: new(deleteOperation)},
@@ -180,9 +334,9 @@ func TestEntriesConverged(t *testing.T) {
 		},
 		{
 			name: "mixed operations all converged",
-			remote: []computeacls.ComputeACLEntry{
-				{Prefix: "198.51.100.0/24", Action: "ALLOW"},
-				{Prefix: "203.0.113.0/24", Action: "BLOCK"},
+			remote: map[string]string{
+				"198.51.100.0/24": "ALLOW",
+				"203.0.113.0/24":  "BLOCK",
 			},
 			batch: []*computeacls.BatchComputeACLEntry{
 				{Prefix: new("192.0.2.0/24"), Operation: new(deleteOperation)},
@@ -193,10 +347,10 @@ func TestEntriesConverged(t *testing.T) {
 		},
 		{
 			name: "mixed operations one still pending",
-			remote: []computeacls.ComputeACLEntry{
-				{Prefix: "192.0.2.0/24", Action: "ALLOW"},
-				{Prefix: "198.51.100.0/24", Action: "ALLOW"},
-				{Prefix: "203.0.113.0/24", Action: "BLOCK"},
+			remote: map[string]string{
+				"192.0.2.0/24":    "ALLOW",
+				"198.51.100.0/24": "ALLOW",
+				"203.0.113.0/24":  "BLOCK",
 			},
 			batch: []*computeacls.BatchComputeACLEntry{
 				{Prefix: new("192.0.2.0/24"), Operation: new(deleteOperation)},
@@ -207,9 +361,9 @@ func TestEntriesConverged(t *testing.T) {
 		},
 		{
 			name: "unrelated remote entries are ignored",
-			remote: []computeacls.ComputeACLEntry{
-				{Prefix: "192.0.2.0/24", Action: "ALLOW"},
-				{Prefix: "203.0.113.0/24", Action: "BLOCK"},
+			remote: map[string]string{
+				"192.0.2.0/24":    "ALLOW",
+				"198.51.100.0/24": "BLOCK",
 			},
 			batch: []*computeacls.BatchComputeACLEntry{
 				{Prefix: new("192.0.2.0/24"), Action: new("ALLOW"), Operation: new(createOperation)},
@@ -220,7 +374,11 @@ func TestEntriesConverged(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.converged, entriesConverged(tt.remote, tt.batch))
+			require.Equal(t, tt.converged, entriesConverged(tt.remote, tt.batch))
 		})
 	}
+}
+
+func TestResourceID(t *testing.T) {
+	require.Equal(t, "acl-id/entries", resourceID("acl-id"))
 }
