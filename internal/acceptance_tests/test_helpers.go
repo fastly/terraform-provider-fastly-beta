@@ -2400,6 +2400,18 @@ func ConfigACLEntriesCreate(serviceName, domainName, aclName string) string {
 	)
 }
 
+// ConfigACLEntriesACLOnly declares the ACL container without an
+// fastly_service_cdn_acl_entries resource, so tests can seed ACL entries
+// outside of Terraform before the entries resource exists.
+func ConfigACLEntriesACLOnly(serviceName, domainName, aclName string) string {
+	svc, replacements := aclEntriesBase(serviceName, domainName, aclName)
+	return BuildConfig(svc, replacements,
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/service_cdn_backend.tf",
+		"internal/acceptance_tests/blocks/acl_explicit.tf",
+	)
+}
+
 func ConfigACLEntriesUpdate(serviceName, domainName, aclName string) string {
 	svc, replacements := aclEntriesBase(serviceName, domainName, aclName)
 	return BuildConfig(svc, replacements,
@@ -2417,26 +2429,6 @@ func ConfigACLEntriesDelete(serviceName, domainName, aclName string) string {
 		"internal/acceptance_tests/blocks/service_cdn_backend.tf",
 		"internal/acceptance_tests/blocks/acl_explicit.tf",
 		"internal/acceptance_tests/blocks/acl_entries_empty.tf",
-	)
-}
-
-func ConfigACLEntriesManageEntriesFalse(serviceName, domainName, aclName string) string {
-	svc, replacements := aclEntriesBase(serviceName, domainName, aclName)
-	return BuildConfig(svc, replacements,
-		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
-		"internal/acceptance_tests/blocks/service_cdn_backend.tf",
-		"internal/acceptance_tests/blocks/acl_explicit.tf",
-		"internal/acceptance_tests/blocks/acl_entries_manage_false.tf",
-	)
-}
-
-func ConfigACLEntriesManageEntriesFalseDifferentIP(serviceName, domainName, aclName string) string {
-	svc, replacements := aclEntriesBase(serviceName, domainName, aclName)
-	return BuildConfig(svc, replacements,
-		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
-		"internal/acceptance_tests/blocks/service_cdn_backend.tf",
-		"internal/acceptance_tests/blocks/acl_explicit.tf",
-		"internal/acceptance_tests/blocks/acl_entries_manage_false_different_ip.tf",
 	)
 }
 

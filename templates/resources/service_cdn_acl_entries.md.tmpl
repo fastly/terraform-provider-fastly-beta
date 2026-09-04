@@ -2,15 +2,24 @@
 page_title: "fastly_service_cdn_acl_entries Resource - fastly"
 subcategory: ""
 description: |-
-  Manages ACL entries for a Fastly service ACL. Provides batch operations for creating, updating, and deleting ACL entries.
+  Manages ACL entries for a Fastly service ACL. Terraform manages only the entries declared in the entry blocks and leaves other ACL entries unchanged.
 ---
 
 # fastly_service_cdn_acl_entries (Resource)
 
-Manages ACL entries for a Fastly service ACL. Provides batch operations for creating, updating, and deleting ACL entries.
+Manages ACL entries for a Fastly service ACL. Terraform manages only the entries
+declared in the `entry` blocks and leaves other ACL entries unchanged.
 
-This resource is designed to manage the entries within an ACL. It uses the Fastly
-batch operations API to efficiently handle large numbers of entries.
+Each `entry` block declared here is owned by this Terraform resource. Terraform
+creates missing managed entries, updates managed entries that drift, and deletes
+a managed entry when its `entry` block is removed from configuration.
+
+Entries that are not declared in this resource are left unchanged. This allows
+an ACL to contain Terraform-managed entries alongside entries managed by other
+systems, the Fastly API, the Fastly CLI, or the Fastly control panel.
+
+This resource uses the Fastly batch operations API to efficiently handle large
+numbers of entries.
 
 ## Example Usage
 
@@ -35,9 +44,8 @@ resource "fastly_service_cdn_acl" "example" {
 }
 
 resource "fastly_service_cdn_acl_entries" "example" {
-  service_id     = fastly_service_cdn.example.id
-  acl_id         = fastly_service_cdn_acl.example.acl_id
-  manage_entries = true
+  service_id = fastly_service_cdn.example.id
+  acl_id     = fastly_service_cdn_acl.example.acl_id
 
   entry {
     ip      = "192.0.2.1"
@@ -62,30 +70,25 @@ resource "fastly_service_cdn_acl_entries" "example" {
 }
 ```
 
-## Behavior and Drift Management
+Removing an `entry` block deletes that entry from the ACL:
 
-The `manage_entries` attribute controls whether Terraform should detect and reconcile
-drift in ACL entries:
+```terraform
+resource "fastly_service_cdn_acl_entries" "example" {
+  service_id = fastly_service_cdn.example.id
+  acl_id     = fastly_service_cdn_acl.example.acl_id
 
-- When `manage_entries = true` (recommended for Terraform-managed ACLs): Terraform
-  will refresh the state on every read and detect if entries have been modified
-  outside of Terraform. Any drift will be corrected on the next apply.
+  entry {
+    ip      = "192.0.2.1"
+    subnet  = 32
+    negated = false
+    comment = "Single IP address"
+  }
+}
+```
 
-- When `manage_entries = false` (for externally-managed ACLs): Terraform will skip
-  the refresh on reads and will not detect drift. Use this when ACL entries are
-  managed by external systems (e.g., via API, scripts, or other automation).
-
-When importing an existing ACL entries resource, `manage_entries` is automatically
-set to `true`, regardless of the value in your configuration, to enable drift
-detection.
-
-Import reads the ACL's current entries from the Fastly API into state as-is; it
-does not modify the ACL or delete anything by itself. But because `manage_entries`
-is forced to `true`, your `entry` blocks must match what was imported before you
-run `terraform apply` — any entry present in state (from the import) but missing
-from your configuration will be deleted on the next apply. Run `terraform show`
-after importing to see the entries that were read in, and copy them into your
-configuration before applying.
+In this example Terraform deletes the previously managed `198.51.100.0/24` and
+`203.0.113.10/32` entries, but does not delete unrelated ACL entries that were
+never managed by this resource.
 
 {{ .SchemaMarkdown | trimspace }}
 
@@ -103,4 +106,9 @@ Example:
 terraform import fastly_service_cdn_acl_entries.example SU1Z0isxPaozGVKXdv0eY/7Lsb7Y8w6St2eqwFgqzc
 ```
 
-Import reads the current entries from the API into state and sets `manage_entries = true`; it does not delete anything by itself. See [Behavior and Drift Management](#behavior-and-drift-management) above — make sure your `entry` blocks match the imported entries before running `terraform apply`, since `manage_entries = true` will delete any entry missing from your configuration.
+Import adopts every entry currently present in the ACL into this resource's
+Terraform state. Before applying configuration after an import, ensure that
+your `entry` blocks cover every imported entry you want Terraform to continue
+managing. Run `terraform show` after importing to see the entries that were
+read in, and copy them into your configuration before applying — removing an
+imported entry from your configuration tells Terraform to delete it.

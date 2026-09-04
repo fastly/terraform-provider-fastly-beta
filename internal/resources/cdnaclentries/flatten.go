@@ -127,3 +127,28 @@ func flattenEntries(ctx context.Context, remoteState []*fastly.ACLEntry, planned
 	diags.Append(d...)
 	return set
 }
+
+// plannedEntryContentKey builds a key from every entry field, used to find an
+// exact match in the planned entries when multiple entries share the same IP
+// (e.g. /24 and /32).
+func plannedEntryContentKey(e EntryModel) string {
+	ip := ""
+	subnet := int64(0)
+	negated := false
+	comment := ""
+
+	if !e.IP.IsNull() && !e.IP.IsUnknown() {
+		ip = e.IP.ValueString()
+	}
+	if !e.Subnet.IsNull() && !e.Subnet.IsUnknown() {
+		subnet = e.Subnet.ValueInt64()
+	}
+	if !e.Negated.IsNull() && !e.Negated.IsUnknown() {
+		negated = e.Negated.ValueBool()
+	}
+	if !e.Comment.IsNull() && !e.Comment.IsUnknown() {
+		comment = e.Comment.ValueString()
+	}
+
+	return fmt.Sprintf("%s|%d|%t|%s", ip, subnet, negated, comment)
+}

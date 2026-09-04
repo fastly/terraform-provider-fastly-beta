@@ -29,11 +29,12 @@ resource "fastly_service_cdn_acl" "example" {
   name       = "example_acl"
 }
 
-# Manage ACL entries with explicit resource
+# Manage ACL entries with explicit resource. Terraform only manages the
+# entries declared below; any other entries in this ACL (created via the API,
+# CLI, or control panel) are left untouched.
 resource "fastly_service_cdn_acl_entries" "example" {
-  service_id     = fastly_service_cdn.example.id
-  acl_id         = fastly_service_cdn_acl.example.acl_id
-  manage_entries = true
+  service_id = fastly_service_cdn.example.id
+  acl_id     = fastly_service_cdn_acl.example.acl_id
 
   entry {
     ip      = "192.0.2.1"
