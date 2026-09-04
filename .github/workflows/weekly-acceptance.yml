@@ -1,8 +1,9 @@
-name: Weekly acceptance suite
+name: Twice-monthly acceptance suite
 
 on:
   schedule:
-    - cron: "0 5 * * 0"
+    # Runs on the 1st and 15th of each month at 05:00 UTC.
+    - cron: "0 5 1,15 * *"
   workflow_dispatch:
     inputs:
       parallel:
