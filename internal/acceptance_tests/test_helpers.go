@@ -2662,7 +2662,7 @@ func ConfigACLEntriesManyEntries(serviceName, domainName, aclName string, count 
 // Configuration helpers for the standalone Compute ACL entries resource (fastly_acl_entries)
 
 // ConfigACLEntries returns a config declaring a fastly_acl resource alongside a
-// fastly_acl_entries resource (with manage_entries = true) that targets it.
+// fastly_acl_entries resource that targets it.
 func ConfigACLEntries(aclName string, entries map[string]string) string {
 	return RenderBlock("internal/acceptance_tests/blocks/acl_entries_resource.tf", map[string]string{
 		"ACL_NAME": aclName,

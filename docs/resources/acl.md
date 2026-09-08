@@ -11,6 +11,8 @@ Provides an Access Control List (ACL) that defines CIDR-based access rules (e.g.
 
 This resource is versionless: it is not tied to a service version and is managed independently of any `fastly_service_compute` resource.
 
+This resource manages the ACL container itself. Manage CIDR entries separately with the `fastly_acl_entries` resource.
+
 ## Example Usage
 
 ```terraform

@@ -19,7 +19,7 @@ import (
 	"github.com/fastly/go-fastly/v17/fastly/computeacls"
 )
 
-// The compute ACL batch update endpoint responds 202 Accepted and applies the
+// The Compute ACL batch update endpoint responds 202 Accepted and applies the
 // batch asynchronously, so a list call immediately afterward can race the
 // propagation. Poll until the listed entries reflect the batch we sent.
 const (
@@ -30,7 +30,6 @@ const (
 var (
 	_ resource.Resource                = &Resource{}
 	_ resource.ResourceWithImportState = &Resource{}
-	_ resource.ResourceWithModifyPlan  = &Resource{}
 )
 
 type Resource struct {
@@ -47,7 +46,7 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages CIDR-based allow/block entries within a Fastly ACL.",
+		Description: "Manages CIDR-based allow/block entries within a Fastly ACL. Terraform manages only the prefixes declared in the entries map and leaves other ACL entries unchanged.",
 		Attributes:  ResourceAttributes(),
 	}
 }
@@ -69,38 +68,33 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	aclID := plan.ACLID.ValueString()
-
-	tflog.Debug(ctx, "Creating Fastly ACL entries", map[string]any{
-		"acl_id": aclID,
-	})
-
-	newEntries := expandEntries(ctx, plan.Entries, &resp.Diagnostics)
+	desired := expandEntries(ctx, plan.Entries, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	batch := buildBatchEntries(nil, newEntries, plan.ManageEntries.ValueBool())
-	if err := r.updateEntries(ctx, aclID, batch); err != nil {
-		resp.Diagnostics.AddError("Error creating ACL entries", fmt.Sprintf("ACL %s: %s", aclID, err))
-		return
-	}
+	aclID := plan.ACLID.ValueString()
+	tflog.Debug(ctx, "Creating Fastly ACL entries", map[string]any{
+		"acl_id": aclID,
+		"count":  len(desired),
+	})
 
-	plan.ID = types.StringValue(fmt.Sprintf("%s/entries", aclID))
-
-	if len(newEntries) == 0 && !plan.ManageEntries.ValueBool() {
-		tflog.Debug(ctx, "Skipping ACL entries refresh after create: manage_entries is false and no entries were configured")
-		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-		return
-	}
-
-	remote, err := r.waitForEntries(ctx, aclID, batch)
+	remote, err := r.listEntries(ctx, aclID)
 	if err != nil {
-		resp.Diagnostics.AddError("Error refreshing ACL entries", err.Error())
+		resp.Diagnostics.AddError("Error reading ACL entries before create", err.Error())
 		return
 	}
 
-	plan.Entries = flattenEntries(remote, &resp.Diagnostics)
+	batch := buildBatchEntries(remote, nil, desired)
+	if err := r.applyBatch(ctx, aclID, batch); err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating ACL entries",
+			fmt.Sprintf("ACL %s: %s", aclID, err),
+		)
+		return
+	}
+
+	plan.ID = types.StringValue(resourceID(aclID))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -111,13 +105,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 
-	if !state.ManageEntries.ValueBool() {
-		tflog.Debug(ctx, "Skipping ACL entries refresh: manage_entries is false")
-		return
-	}
-
 	aclID := state.ACLID.ValueString()
-
 	tflog.Debug(ctx, "Reading Fastly ACL entries", map[string]any{
 		"acl_id": aclID,
 	})
@@ -131,48 +119,78 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		resp.Diagnostics.AddError("Error reading ACL entries", err.Error())
 		return
 	}
 
-	state.Entries = flattenEntries(remote, &resp.Diagnostics)
+	// Import starts with acl_id and id only. In that case, adopt every existing
+	// entry into Terraform state. During ordinary refreshes, preserve partial
+	// ownership by reading only prefixes that this resource already owns.
+	if state.Entries.IsNull() || state.Entries.IsUnknown() {
+		state.Entries = flattenEntries(ctx, remote, &resp.Diagnostics)
+	} else {
+		managed := expandEntries(ctx, state.Entries, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		state.Entries = flattenEntries(ctx, filterManagedRemoteEntries(remote, managed), &resp.Diagnostics)
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	state.ID = types.StringValue(resourceID(aclID))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan Model
-	var state Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var state Model
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	aclID := plan.ACLID.ValueString()
-
-	tflog.Debug(ctx, "Updating Fastly ACL entries", map[string]any{
-		"acl_id": aclID,
-	})
-
-	oldEntries := expandEntries(ctx, state.Entries, &resp.Diagnostics)
-	newEntries := expandEntries(ctx, plan.Entries, &resp.Diagnostics)
+	desired := expandEntries(ctx, plan.Entries, &resp.Diagnostics)
+	currentManaged := expandEntries(ctx, state.Entries, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	batch := buildBatchEntries(oldEntries, newEntries, plan.ManageEntries.ValueBool())
-	if err := r.updateEntries(ctx, aclID, batch); err != nil {
-		resp.Diagnostics.AddError("Error updating ACL entries", fmt.Sprintf("ACL %s: %s", aclID, err))
-		return
-	}
+	aclID := plan.ACLID.ValueString()
+	tflog.Debug(ctx, "Updating Fastly ACL entries", map[string]any{
+		"acl_id": aclID,
+		"count":  len(desired),
+	})
 
-	remote, err := r.waitForEntries(ctx, aclID, batch)
+	remote, err := r.listEntries(ctx, aclID)
 	if err != nil {
-		resp.Diagnostics.AddError("Error refreshing ACL entries", err.Error())
+		if errors.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
+		resp.Diagnostics.AddError("Error reading ACL entries before update", err.Error())
 		return
 	}
 
-	plan.Entries = flattenEntries(remote, &resp.Diagnostics)
+	batch := buildBatchEntries(remote, currentManaged, desired)
+	if err := r.applyBatch(ctx, aclID, batch); err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating ACL entries",
+			fmt.Sprintf("ACL %s: %s", aclID, err),
+		)
+		return
+	}
+
+	plan.ID = types.StringValue(resourceID(aclID))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -183,29 +201,43 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 		return
 	}
 
-	aclID := state.ACLID.ValueString()
-
-	tflog.Debug(ctx, "Deleting Fastly ACL entries", map[string]any{
-		"acl_id": aclID,
-	})
-
-	entries := expandEntries(ctx, state.Entries, &resp.Diagnostics)
+	managed := expandEntries(ctx, state.Entries, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	batch := buildBatchEntries(entries, nil, true)
-	if err := r.updateEntries(ctx, aclID, batch); err != nil {
+	aclID := state.ACLID.ValueString()
+	tflog.Debug(ctx, "Deleting Fastly ACL entries", map[string]any{
+		"acl_id": aclID,
+		"count":  len(managed),
+	})
+
+	remote, err := r.listEntries(ctx, aclID)
+	if err != nil {
 		if errors.IsNotFound(err) {
 			return
 		}
-		resp.Diagnostics.AddError("Error deleting ACL entries", fmt.Sprintf("ACL %s: %s", aclID, err))
+
+		resp.Diagnostics.AddError("Error reading ACL entries before delete", err.Error())
+		return
+	}
+
+	batch := buildBatchEntries(remote, managed, nil)
+	if err := r.applyBatch(ctx, aclID, batch); err != nil {
+		if errors.IsNotFound(err) {
+			return
+		}
+
+		resp.Diagnostics.AddError(
+			"Error deleting ACL entries",
+			fmt.Sprintf("ACL %s: %s", aclID, err),
+		)
 	}
 }
 
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	aclID, suffix, ok := strings.Cut(req.ID, "/")
-	if !ok || suffix != "entries" {
+	if !ok || aclID == "" || suffix != "entries" {
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",
 			fmt.Sprintf("Invalid id: %s. The ID should be in the format <acl_id>/entries", req.ID),
@@ -217,44 +249,12 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 		"acl_id": aclID,
 	})
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), fmt.Sprintf("%s/entries", aclID))...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), resourceID(aclID))...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("acl_id"), aclID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("manage_entries"), true)...)
 }
 
-// ModifyPlan preserves the prior state's entries when manage_entries is
-// false, so unmanaged drift in the config doesn't surface as a plan diff.
-func (r *Resource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() {
-		return
-	}
-
-	var plan Model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if plan.ManageEntries.ValueBool() {
-		return
-	}
-
-	var state Model
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if !plan.ACLID.Equal(state.ACLID) {
-		return
-	}
-
-	plan.Entries = state.Entries
-	resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
-}
-
-func (r *Resource) listEntries(ctx context.Context, aclID string) ([]computeacls.ComputeACLEntry, error) {
-	var entries []computeacls.ComputeACLEntry
+func (r *Resource) listEntries(ctx context.Context, aclID string) (map[string]string, error) {
+	entries := make(map[string]string)
 	var cursor *string
 
 	for {
@@ -266,7 +266,9 @@ func (r *Resource) listEntries(ctx context.Context, aclID string) ([]computeacls
 			return nil, err
 		}
 
-		entries = append(entries, page.Entries...)
+		for _, entry := range page.Entries {
+			entries[entry.Prefix] = entry.Action
+		}
 
 		if page.Meta.NextCursor == "" {
 			break
@@ -277,36 +279,42 @@ func (r *Resource) listEntries(ctx context.Context, aclID string) ([]computeacls
 	return entries, nil
 }
 
-func (r *Resource) updateEntries(ctx context.Context, aclID string, batch []*computeacls.BatchComputeACLEntry) error {
+// applyBatch sends a batch update and waits for Fastly's asynchronous ACL API
+// to converge before Terraform commits the planned managed entries to state.
+func (r *Resource) applyBatch(ctx context.Context, aclID string, batch []*computeacls.BatchComputeACLEntry) error {
 	if len(batch) == 0 {
 		return nil
 	}
 
-	return computeacls.Update(ctx, r.client, &computeacls.UpdateInput{
+	if err := computeacls.Update(ctx, r.client, &computeacls.UpdateInput{
 		ComputeACLID: &aclID,
 		Entries:      batch,
-	})
+	}); err != nil {
+		return err
+	}
+
+	return r.waitForEntries(ctx, aclID, batch)
 }
 
 // waitForEntries polls listEntries until the remote state reflects every
 // operation in batch, since the batch update endpoint applies asynchronously.
-func (r *Resource) waitForEntries(ctx context.Context, aclID string, batch []*computeacls.BatchComputeACLEntry) ([]computeacls.ComputeACLEntry, error) {
+func (r *Resource) waitForEntries(ctx context.Context, aclID string, batch []*computeacls.BatchComputeACLEntry) error {
 	ctx, cancel := context.WithTimeout(ctx, entriesPollTimeout)
 	defer cancel()
 
 	for {
 		remote, err := r.listEntries(ctx, aclID)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if entriesConverged(remote, batch) {
-			return remote, nil
+			return nil
 		}
 
 		select {
 		case <-ctx.Done():
-			return nil, fmt.Errorf("timed out after %s waiting for ACL entries to reflect the update: %w", entriesPollTimeout, ctx.Err())
+			return fmt.Errorf("timed out after %s waiting for ACL entries to reflect the update: %w", entriesPollTimeout, ctx.Err())
 		case <-time.After(entriesPollInterval):
 		}
 	}
@@ -315,24 +323,24 @@ func (r *Resource) waitForEntries(ctx context.Context, aclID string, batch []*co
 // entriesConverged reports whether remote already reflects every operation
 // in batch: deleted prefixes absent, created/updated prefixes present with
 // the expected action.
-func entriesConverged(remote []computeacls.ComputeACLEntry, batch []*computeacls.BatchComputeACLEntry) bool {
-	remoteActions := make(map[string]string, len(remote))
-	for _, e := range remote {
-		remoteActions[e.Prefix] = e.Action
-	}
-
+func entriesConverged(remote map[string]string, batch []*computeacls.BatchComputeACLEntry) bool {
 	for _, op := range batch {
-		action, exists := remoteActions[*op.Prefix]
+		action, exists := remote[*op.Prefix]
 		if *op.Operation == deleteOperation {
 			if exists {
 				return false
 			}
 			continue
 		}
+
 		if !exists || action != *op.Action {
 			return false
 		}
 	}
 
 	return true
+}
+
+func resourceID(aclID string) string {
+	return fmt.Sprintf("%s/entries", aclID)
 }
