@@ -167,7 +167,7 @@ EOF
     cat > .terraformrc << EOF
 provider_installation {
   dev_overrides {
-    "fastly/fastly" = "$REPO_ROOT"
+    "fastly/fastly-beta" = "$REPO_ROOT"
   }
   direct {}
 }
