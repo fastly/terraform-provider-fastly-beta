@@ -34,7 +34,7 @@ Fastly service Blob Storage logging endpoint resource. Writes directly to the sp
 - `period` (Number) How frequently log files are finalized so they can be available for reading in seconds. Default `3600`.
 - `placement` (String) Where in the generated VCL the logging call should be placed. If not set, endpoints with `format_version` of `2` are placed in `vcl_log` and those with `format_version` of `1` are placed in `vcl_deliver`. Valid value is `none`.
 - `processing_region` (String) Region where logs will be processed before streaming to the destination. Valid values are `none`, `us` and `eu`.
-- `public_key` (String, Sensitive) A PGP public key that Fastly will use to encrypt your log files before writing them to disk.
+- `public_key` (String) A PGP public key that Fastly will use to encrypt your log files before writing them to disk.
 - `response_condition` (String) The name of an existing condition in the configured endpoint, or leave blank to always execute.
 - `timestamp_format` (String) `strftime`-specified timestamp format for log filename.
 

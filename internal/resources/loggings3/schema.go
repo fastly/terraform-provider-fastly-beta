@@ -354,10 +354,9 @@ func sharedAttributes() map[string]schema.Attribute {
 			Description: "Region where logs will be processed before streaming to the destination. Valid values are `none`, `us` and `eu`.",
 		},
 		"public_key": schema.StringAttribute{
-			Optional:  true,
-			Computed:  true,
-			Sensitive: true,
-			Default:   stringdefault.StaticString(DefaultPublicKey),
+			Optional: true,
+			Computed: true,
+			Default:  stringdefault.StaticString(DefaultPublicKey),
 			Validators: []validator.String{
 				notTrimmed{},
 			},
