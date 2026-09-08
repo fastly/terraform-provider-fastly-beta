@@ -192,3 +192,7 @@ reflect that they apply to a workspace, not the entire account.
 
 The deprecated aliases `fastly_domain_v1` and
 `fastly_domain_v1_service_link` are not available.
+
+`fastly_configstore_entries` was renamed to `fastly_configstore_items`
+to match the vocabulary used in the Fastly Control Panel and API
+documentation.
