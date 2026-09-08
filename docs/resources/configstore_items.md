@@ -1,0 +1,83 @@
+---
+page_title: "fastly_configstore_items Resource - fastly"
+subcategory: ""
+description: |-
+  Manages key-value items in a Fastly Config Store.
+---
+
+# fastly_configstore_items (Resource)
+
+Manages key-value items in a Fastly Config Store.
+
+Each key declared in `items` is owned by this Terraform resource. Terraform
+creates missing managed keys, updates managed values that drift, and deletes a
+managed key when it is removed from the `items` map.
+
+Items that are not declared in this resource are left unchanged. This allows a
+Config Store to contain Terraform-managed items alongside items managed by other
+systems, the Fastly API, the Fastly CLI, or the Fastly control panel.
+
+Config Store updates are versionless and immediately visible to linked Compute
+services. Do not use Config Stores for personal information, secrets, or other
+sensitive data.
+
+## Example Usage
+
+```terraform
+resource "fastly_configstore" "example" {
+  name = "application_configuration"
+}
+
+resource "fastly_configstore_items" "example" {
+  store_id = fastly_configstore.example.id
+
+  items = {
+    environment = "production"
+    feature_x   = "enabled"
+    api_version = "v2"
+  }
+}
+```
+
+Removing a key from `items` deletes that key from the Config Store:
+
+```terraform
+resource "fastly_configstore_items" "example" {
+  store_id = fastly_configstore.example.id
+
+  items = {
+    environment = "production"
+    api_version = "v2"
+  }
+}
+```
+
+In this example Terraform deletes the previously managed `feature_x` item, but
+does not delete unrelated Config Store items that were never managed by this
+resource.
+
+## Schema
+
+### Required
+
+- `items` (Map of String) The Config Store items managed by Terraform, represented as key-value pairs. Items not declared in this map are left unchanged.
+- `store_id` (String) An alphanumeric string identifying the Config Store.
+
+### Read-Only
+
+- `id` (String) Terraform resource identifier. Format: `<store_id>/items`.
+
+## Import
+
+Fastly Config Store items can be imported with the Config Store ID followed by
+the `/items` suffix:
+
+```shell
+terraform import fastly_configstore_items.example <config_store_id>/items
+```
+
+Import adopts all items currently present in the Config Store into this
+resource's Terraform state. Before applying configuration after an import,
+ensure that the `items` map contains every imported key you want Terraform to
+continue managing. Removing an imported key from `items` tells Terraform to
+delete that key.

@@ -6,6 +6,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -454,6 +455,182 @@ func AddDictionaryItem(resourceName, dictionaryAttrPrefix string) resource.TestC
 
 		return nil
 	}
+}
+
+// ConfigServiceDictionaryItems returns a CDN auto service with a single dictionary, plus a
+// fastly_service_dictionary_items resource managing the supplied key-value pairs in that
+// dictionary.
+func ConfigServiceDictionaryItems(serviceName, domainName, dictionaryName string, items map[string]string) string {
+	return ConfigCDNAutoWithDictionary(serviceName, domainName, dictionaryName) + "\n" + RenderBlock(
+		"internal/acceptance_tests/blocks/service_dictionary_items.tf",
+		map[string]string{
+			"SERVICE_ID_REF":    "fastly_service_cdn_auto.test.id",
+			"DICTIONARY_ID_REF": "fastly_service_cdn_auto.test.dictionary[0].dictionary_id",
+			"ITEMS":             stringMapHCL(items),
+		},
+	)
+}
+
+// InsertDictionaryItem creates a Dictionary item directly through the API, bypassing
+// Terraform, using the service_id/dictionary_id recorded in the given
+// fastly_service_dictionary_items resource's state.
+func InsertDictionaryItem(resourceName, key, value string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		serviceID, dictionaryID, err := serviceDictionaryIDsFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		client, err := NewFastlyClient()
+		if err != nil {
+			return fmt.Errorf("error creating Fastly client: %w", err)
+		}
+
+		_, err = client.CreateDictionaryItem(context.Background(), &fastly.CreateDictionaryItemInput{
+			ServiceID:    serviceID,
+			DictionaryID: dictionaryID,
+			ItemKey:      new(key),
+			ItemValue:    new(value),
+		})
+		if err != nil {
+			return fmt.Errorf("error creating Dictionary item %q: %w", key, err)
+		}
+
+		return nil
+	}
+}
+
+// UpdateDictionaryItemDirect updates a Dictionary item directly through the API, bypassing
+// Terraform, to simulate out-of-band drift on a Terraform-managed key.
+func UpdateDictionaryItemDirect(resourceName, key, value string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		serviceID, dictionaryID, err := serviceDictionaryIDsFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		client, err := NewFastlyClient()
+		if err != nil {
+			return fmt.Errorf("error creating Fastly client: %w", err)
+		}
+
+		err = client.BatchModifyDictionaryItems(context.Background(), &fastly.BatchModifyDictionaryItemsInput{
+			ServiceID:    serviceID,
+			DictionaryID: dictionaryID,
+			Items: []*fastly.BatchDictionaryItem{
+				{
+					Operation: new(fastly.UpdateBatchOperation),
+					ItemKey:   new(key),
+					ItemValue: new(value),
+				},
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("error updating Dictionary item %q: %w", key, err)
+		}
+
+		return nil
+	}
+}
+
+// CheckServiceDictionaryItemsRemoteState asserts that the live Dictionary items for the
+// service_id/dictionary_id recorded in the given fastly_service_dictionary_items resource's
+// state match want exactly.
+func CheckServiceDictionaryItemsRemoteState(resourceName string, want map[string]string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		serviceID, dictionaryID, err := serviceDictionaryIDsFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+		return checkDictionaryItemsRemoteState(serviceID, dictionaryID, want)
+	}
+}
+
+// CheckDictionaryRemoteState asserts that the live Dictionary items for the service/dictionary
+// identified by resourceName (a service resource ID) and dictionaryAttrPrefix (e.g.
+// "dictionary.0") match want exactly. Unlike CheckServiceDictionaryItemsRemoteState, this reads
+// the service_id/dictionary_id from the owning service resource rather than the
+// fastly_service_dictionary_items resource, so it still works after that resource has been
+// removed from configuration.
+func CheckDictionaryRemoteState(resourceName, dictionaryAttrPrefix string, want map[string]string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("not found: %s", resourceName)
+		}
+
+		serviceID := rs.Primary.ID
+		dictionaryID := rs.Primary.Attributes[dictionaryAttrPrefix+".dictionary_id"]
+		if serviceID == "" || dictionaryID == "" {
+			return fmt.Errorf("service_id or dictionary_id not set in state")
+		}
+
+		return checkDictionaryItemsRemoteState(serviceID, dictionaryID, want)
+	}
+}
+
+func checkDictionaryItemsRemoteState(serviceID, dictionaryID string, want map[string]string) error {
+	got, err := listDictionaryItemsRemote(serviceID, dictionaryID)
+	if err != nil {
+		return err
+	}
+
+	if !maps.Equal(got, want) {
+		return fmt.Errorf("unexpected Dictionary items:\ngot:  %#v\nwant: %#v", got, want)
+	}
+
+	return nil
+}
+
+func listDictionaryItemsRemote(serviceID, dictionaryID string) (map[string]string, error) {
+	client, err := NewFastlyClient()
+	if err != nil {
+		return nil, fmt.Errorf("error creating Fastly client: %w", err)
+	}
+
+	items, err := client.ListDictionaryItems(context.Background(), &fastly.ListDictionaryItemsInput{
+		ServiceID:    serviceID,
+		DictionaryID: dictionaryID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error listing Dictionary items: %w", err)
+	}
+
+	result := make(map[string]string, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		result[fastly.ToValue(item.ItemKey)] = fastly.ToValue(item.ItemValue)
+	}
+
+	return result, nil
+}
+
+// stringMapHCL renders a Go map as an HCL map literal with deterministic key ordering.
+// mergeStringMaps combines multiple string maps into one, with later maps taking precedence
+// on overlapping keys.
+func mergeStringMaps(mapsToMerge ...map[string]string) map[string]string {
+	result := make(map[string]string)
+	for _, values := range mapsToMerge {
+		maps.Copy(result, values)
+	}
+	return result
+}
+
+func serviceDictionaryIDsFromState(s *terraform.State, resourceName string) (serviceID, dictionaryID string, err error) {
+	rs, ok := s.RootModule().Resources[resourceName]
+	if !ok {
+		return "", "", fmt.Errorf("not found: %s", resourceName)
+	}
+
+	serviceID = rs.Primary.Attributes["service_id"]
+	dictionaryID = rs.Primary.Attributes["dictionary_id"]
+	if serviceID == "" || dictionaryID == "" {
+		return "", "", fmt.Errorf("%s has no service_id/dictionary_id set in state", resourceName)
+	}
+
+	return serviceID, dictionaryID, nil
 }
 
 // Configuration helpers for CDN Auto service
@@ -2400,6 +2577,18 @@ func ConfigACLEntriesCreate(serviceName, domainName, aclName string) string {
 	)
 }
 
+// ConfigACLEntriesACLOnly declares the ACL container without an
+// fastly_service_cdn_acl_entries resource, so tests can seed ACL entries
+// outside of Terraform before the entries resource exists.
+func ConfigACLEntriesACLOnly(serviceName, domainName, aclName string) string {
+	svc, replacements := aclEntriesBase(serviceName, domainName, aclName)
+	return BuildConfig(svc, replacements,
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/service_cdn_backend.tf",
+		"internal/acceptance_tests/blocks/acl_explicit.tf",
+	)
+}
+
 func ConfigACLEntriesUpdate(serviceName, domainName, aclName string) string {
 	svc, replacements := aclEntriesBase(serviceName, domainName, aclName)
 	return BuildConfig(svc, replacements,
@@ -2417,26 +2606,6 @@ func ConfigACLEntriesDelete(serviceName, domainName, aclName string) string {
 		"internal/acceptance_tests/blocks/service_cdn_backend.tf",
 		"internal/acceptance_tests/blocks/acl_explicit.tf",
 		"internal/acceptance_tests/blocks/acl_entries_empty.tf",
-	)
-}
-
-func ConfigACLEntriesManageEntriesFalse(serviceName, domainName, aclName string) string {
-	svc, replacements := aclEntriesBase(serviceName, domainName, aclName)
-	return BuildConfig(svc, replacements,
-		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
-		"internal/acceptance_tests/blocks/service_cdn_backend.tf",
-		"internal/acceptance_tests/blocks/acl_explicit.tf",
-		"internal/acceptance_tests/blocks/acl_entries_manage_false.tf",
-	)
-}
-
-func ConfigACLEntriesManageEntriesFalseDifferentIP(serviceName, domainName, aclName string) string {
-	svc, replacements := aclEntriesBase(serviceName, domainName, aclName)
-	return BuildConfig(svc, replacements,
-		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
-		"internal/acceptance_tests/blocks/service_cdn_backend.tf",
-		"internal/acceptance_tests/blocks/acl_explicit.tf",
-		"internal/acceptance_tests/blocks/acl_entries_manage_false_different_ip.tf",
 	)
 }
 
@@ -2497,7 +2666,7 @@ func ConfigACLEntriesManyEntries(serviceName, domainName, aclName string, count 
 func ConfigACLEntries(aclName string, entries map[string]string) string {
 	return RenderBlock("internal/acceptance_tests/blocks/acl_entries_resource.tf", map[string]string{
 		"ACL_NAME": aclName,
-		"ENTRIES":  entriesHCL(entries),
+		"ENTRIES":  stringMapHCL(entries),
 	})
 }
 
@@ -2506,15 +2675,21 @@ func ConfigACLEntries(aclName string, entries map[string]string) string {
 func ConfigACLEntriesUnmanaged(aclName string, entries map[string]string) string {
 	return RenderBlock("internal/acceptance_tests/blocks/acl_entries_resource_unmanaged.tf", map[string]string{
 		"ACL_NAME": aclName,
-		"ENTRIES":  entriesHCL(entries),
+		"ENTRIES":  stringMapHCL(entries),
 	})
 }
 
-func entriesHCL(entries map[string]string) string {
+func stringMapHCL(entries map[string]string) string {
+	keys := make([]string, 0, len(entries))
+	for key := range entries {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
 	var hcl strings.Builder
 	hcl.WriteString("{\n")
-	for prefix, action := range entries {
-		fmt.Fprintf(&hcl, "    %q = %q\n", prefix, action)
+	for _, key := range keys {
+		fmt.Fprintf(&hcl, "    %q = %q\n", key, entries[key])
 	}
 	hcl.WriteString("  }")
 	return hcl.String()
@@ -6028,6 +6203,17 @@ func ConfigConfigStore(name string) string {
 	})
 }
 
+// ConfigConfigStoreItems returns a Config Store and a fastly_configstore_items
+// resource managing the supplied key-value pairs.
+func ConfigConfigStoreItems(name string, items map[string]string) string {
+	return ConfigConfigStore(name) + "\n" + RenderBlock(
+		"internal/acceptance_tests/blocks/configstore_items.tf",
+		map[string]string{
+			"ITEMS": stringMapHCL(items),
+		},
+	)
+}
+
 // ConfigConfigStoreWithComputeAutoResourceLink returns a Config Store plus a Compute auto
 // service with a resource_link pointing at that Config Store. The Compute package is included
 // so this is a complete runnable Compute service config, not an isolated resource test.
@@ -6060,6 +6246,48 @@ func ConfigConfigStoreWithComputeAutoUnlinked(storeName, serviceName, domainName
 func ConfigConfigStoresDataSource(h string) string {
 	return RenderBlock("internal/acceptance_tests/blocks/configstore_with_datasource.tf", map[string]string{
 		"CONFIGSTORE_NAME": fmt.Sprintf("tf_%s", h),
+	})
+}
+
+// ConfigSecretStore returns a standalone fastly_secretstore configuration.
+func ConfigSecretStore(name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/secretstore_single.tf", map[string]string{
+		"SECRETSTORE_NAME": name,
+	})
+}
+
+// ConfigSecretStoreWithComputeAutoResourceLink returns a Secret Store plus a Compute auto
+// service with a resource_link pointing at that Secret Store. The Compute package is included
+// so this is a complete runnable Compute service config, not an isolated resource test.
+func ConfigSecretStoreWithComputeAutoResourceLink(storeName, serviceName, domainName, linkName string) string {
+	return ConfigSecretStore(storeName) + "\n" + BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"DOMAIN_NAME":             domainName,
+			"PACKAGE_PATH":            GetPackagePath(),
+			"RESOURCE_LINK_NAME":      linkName,
+			"RESOURCE_LINK_TARGET_ID": "fastly_secretstore.store.id",
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/resource_link_ref.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigSecretStoreWithComputeAutoUnlinked returns a Secret Store plus the same Compute auto
+// service without the resource_link. This is the required intermediate state before deleting a
+// store that was linked to a service.
+func ConfigSecretStoreWithComputeAutoUnlinked(storeName, serviceName, domainName string) string {
+	return ConfigSecretStore(storeName) + "\n" + ConfigComputeAutoBasic(serviceName, domainName)
+}
+
+// ConfigSecretStoresDataSource returns one fastly_secretstore resource and a
+// fastly_secretstores data source that depends on it. One known store is sufficient
+// to verify enumeration without consuming the account's limited Secret Store quota.
+func ConfigSecretStoresDataSource(h string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/secretstore_with_datasource.tf", map[string]string{
+		"SECRETSTORE_NAME": fmt.Sprintf("tf_%s", h),
 	})
 }
 
@@ -6294,8 +6522,8 @@ func ConfigIntegration(name, description, integrationType string, config map[str
 		"NAME":           name,
 		"DESCRIPTION":    description,
 		"TYPE":           integrationType,
-		"CONFIG":         entriesHCL(nonSensitive),
-		"AUTHENTICATION": entriesHCL(sensitive),
+		"CONFIG":         stringMapHCL(nonSensitive),
+		"AUTHENTICATION": stringMapHCL(sensitive),
 	})
 }
 

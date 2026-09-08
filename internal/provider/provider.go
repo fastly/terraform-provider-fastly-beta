@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/fastly/go-fastly/v17/fastly"
+
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/computepackageupload"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/versionactivate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/versionclone"
@@ -42,6 +43,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacesignals"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacethresholds"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacevirtualpatches"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/secretstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/serviceversion"
 	tlsactivationdatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsactivation"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsactivationids"
@@ -66,6 +68,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cdnaclentries"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/condition"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/configstore"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/configstoreitems"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customdashboard"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dnszone"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domain"
@@ -118,10 +121,12 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacewildcardlist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/productenablement"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/resourcelink"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/secretstore"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecdn"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecdnauto"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecompute"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecomputeauto"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicedictionaryitems"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/snippet"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsactivation"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlscertificate"
@@ -207,6 +212,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		cdnaclentries.NewResource,
 		condition.NewResource,
 		configstore.NewResource,
+		configstoreitems.NewResource,
 		customdashboard.NewResource,
 		dnszone.NewResource,
 		domain.NewResource,
@@ -271,10 +277,12 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		productenablement.NewDDoSProtectionResource,
 		productenablement.NewNGWAFResource,
 		resourcelink.NewResource,
+		secretstore.NewResource,
 		servicecdn.NewResource,
 		servicecdnauto.NewResource,
 		servicecompute.NewResource,
 		servicecomputeauto.NewResource,
+		servicedictionaryitems.NewResource,
 		tlsactivation.NewResource,
 		tlscertificate.NewResource,
 		tlsmutualauthentication.NewResource,
@@ -310,6 +318,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		ngwafworkspacesignals.NewDataSource,
 		ngwafworkspacethresholds.NewDataSource,
 		ngwafworkspacevirtualpatches.NewDataSource,
+		secretstores.NewDataSource,
 		serviceversion.NewDataSource,
 		tlsactivationdatasource.NewDataSource,
 		tlsactivationids.NewDataSource,
