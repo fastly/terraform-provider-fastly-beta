@@ -14,7 +14,7 @@ provider "fastly" {
 }
 
 # Create a Service
-resource "fastly_service_cdn" "myservice" {
+resource "fastly_service_cdn_auto" "myservice" {
   name = "myawesometestservice"
 
   domain {
