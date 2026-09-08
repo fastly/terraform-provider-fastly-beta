@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/fastly/go-fastly/v17/fastly"
+
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/computepackageupload"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/versionactivate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/versionclone"
@@ -67,6 +68,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cdnaclentries"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/condition"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/configstore"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/configstoreitems"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customdashboard"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dnszone"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domain"
@@ -210,6 +212,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		cdnaclentries.NewResource,
 		condition.NewResource,
 		configstore.NewResource,
+		configstoreitems.NewResource,
 		customdashboard.NewResource,
 		dnszone.NewResource,
 		domain.NewResource,

@@ -40,7 +40,7 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Provides an Access Control List (ACL) that defines CIDR-based access rules (e.g., allow/block IP ranges) and is accessible to Compute services during request processing.",
+		Description: "Provides a versionless Fastly ACL container for CIDR-based access rules. Manage entries separately with the fastly_acl_entries resource.",
 		Attributes:  ResourceAttributes(),
 	}
 }

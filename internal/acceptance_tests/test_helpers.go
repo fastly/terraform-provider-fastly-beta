@@ -608,22 +608,6 @@ func listDictionaryItemsRemote(serviceID, dictionaryID string) (map[string]strin
 }
 
 // stringMapHCL renders a Go map as an HCL map literal with deterministic key ordering.
-func stringMapHCL(entries map[string]string) string {
-	keys := make([]string, 0, len(entries))
-	for key := range entries {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	var hcl strings.Builder
-	hcl.WriteString("{\n")
-	for _, key := range keys {
-		fmt.Fprintf(&hcl, "    %q = %q\n", key, entries[key])
-	}
-	hcl.WriteString("  }")
-	return hcl.String()
-}
-
 // mergeStringMaps combines multiple string maps into one, with later maps taking precedence
 // on overlapping keys.
 func mergeStringMaps(mapsToMerge ...map[string]string) map[string]string {
@@ -2593,6 +2577,18 @@ func ConfigACLEntriesCreate(serviceName, domainName, aclName string) string {
 	)
 }
 
+// ConfigACLEntriesACLOnly declares the ACL container without an
+// fastly_service_cdn_acl_entries resource, so tests can seed ACL entries
+// outside of Terraform before the entries resource exists.
+func ConfigACLEntriesACLOnly(serviceName, domainName, aclName string) string {
+	svc, replacements := aclEntriesBase(serviceName, domainName, aclName)
+	return BuildConfig(svc, replacements,
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/service_cdn_backend.tf",
+		"internal/acceptance_tests/blocks/acl_explicit.tf",
+	)
+}
+
 func ConfigACLEntriesUpdate(serviceName, domainName, aclName string) string {
 	svc, replacements := aclEntriesBase(serviceName, domainName, aclName)
 	return BuildConfig(svc, replacements,
@@ -2610,26 +2606,6 @@ func ConfigACLEntriesDelete(serviceName, domainName, aclName string) string {
 		"internal/acceptance_tests/blocks/service_cdn_backend.tf",
 		"internal/acceptance_tests/blocks/acl_explicit.tf",
 		"internal/acceptance_tests/blocks/acl_entries_empty.tf",
-	)
-}
-
-func ConfigACLEntriesManageEntriesFalse(serviceName, domainName, aclName string) string {
-	svc, replacements := aclEntriesBase(serviceName, domainName, aclName)
-	return BuildConfig(svc, replacements,
-		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
-		"internal/acceptance_tests/blocks/service_cdn_backend.tf",
-		"internal/acceptance_tests/blocks/acl_explicit.tf",
-		"internal/acceptance_tests/blocks/acl_entries_manage_false.tf",
-	)
-}
-
-func ConfigACLEntriesManageEntriesFalseDifferentIP(serviceName, domainName, aclName string) string {
-	svc, replacements := aclEntriesBase(serviceName, domainName, aclName)
-	return BuildConfig(svc, replacements,
-		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
-		"internal/acceptance_tests/blocks/service_cdn_backend.tf",
-		"internal/acceptance_tests/blocks/acl_explicit.tf",
-		"internal/acceptance_tests/blocks/acl_entries_manage_false_different_ip.tf",
 	)
 }
 
@@ -2686,11 +2662,11 @@ func ConfigACLEntriesManyEntries(serviceName, domainName, aclName string, count 
 // Configuration helpers for the standalone Compute ACL entries resource (fastly_acl_entries)
 
 // ConfigACLEntries returns a config declaring a fastly_acl resource alongside a
-// fastly_acl_entries resource (with manage_entries = true) that targets it.
+// fastly_acl_entries resource that targets it.
 func ConfigACLEntries(aclName string, entries map[string]string) string {
 	return RenderBlock("internal/acceptance_tests/blocks/acl_entries_resource.tf", map[string]string{
 		"ACL_NAME": aclName,
-		"ENTRIES":  entriesHCL(entries),
+		"ENTRIES":  stringMapHCL(entries),
 	})
 }
 
@@ -2699,15 +2675,21 @@ func ConfigACLEntries(aclName string, entries map[string]string) string {
 func ConfigACLEntriesUnmanaged(aclName string, entries map[string]string) string {
 	return RenderBlock("internal/acceptance_tests/blocks/acl_entries_resource_unmanaged.tf", map[string]string{
 		"ACL_NAME": aclName,
-		"ENTRIES":  entriesHCL(entries),
+		"ENTRIES":  stringMapHCL(entries),
 	})
 }
 
-func entriesHCL(entries map[string]string) string {
+func stringMapHCL(entries map[string]string) string {
+	keys := make([]string, 0, len(entries))
+	for key := range entries {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
 	var hcl strings.Builder
 	hcl.WriteString("{\n")
-	for prefix, action := range entries {
-		fmt.Fprintf(&hcl, "    %q = %q\n", prefix, action)
+	for _, key := range keys {
+		fmt.Fprintf(&hcl, "    %q = %q\n", key, entries[key])
 	}
 	hcl.WriteString("  }")
 	return hcl.String()
@@ -6221,6 +6203,17 @@ func ConfigConfigStore(name string) string {
 	})
 }
 
+// ConfigConfigStoreItems returns a Config Store and a fastly_configstore_items
+// resource managing the supplied key-value pairs.
+func ConfigConfigStoreItems(name string, items map[string]string) string {
+	return ConfigConfigStore(name) + "\n" + RenderBlock(
+		"internal/acceptance_tests/blocks/configstore_items.tf",
+		map[string]string{
+			"ITEMS": stringMapHCL(items),
+		},
+	)
+}
+
 // ConfigConfigStoreWithComputeAutoResourceLink returns a Config Store plus a Compute auto
 // service with a resource_link pointing at that Config Store. The Compute package is included
 // so this is a complete runnable Compute service config, not an isolated resource test.
@@ -6529,8 +6522,8 @@ func ConfigIntegration(name, description, integrationType string, config map[str
 		"NAME":           name,
 		"DESCRIPTION":    description,
 		"TYPE":           integrationType,
-		"CONFIG":         entriesHCL(nonSensitive),
-		"AUTHENTICATION": entriesHCL(sensitive),
+		"CONFIG":         stringMapHCL(nonSensitive),
+		"AUTHENTICATION": stringMapHCL(sensitive),
 	})
 }
 

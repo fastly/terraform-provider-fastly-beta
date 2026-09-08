@@ -1,20 +1,14 @@
 package aclentries
 
 import (
-	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"context"
+
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	"github.com/fastly/go-fastly/v17/fastly/computeacls"
 )
 
-func flattenEntries(remote []computeacls.ComputeACLEntry, diags *diag.Diagnostics) types.Map {
-	elements := make(map[string]attr.Value, len(remote))
-	for _, e := range remote {
-		elements[e.Prefix] = types.StringValue(e.Action)
-	}
-
-	m, d := types.MapValue(types.StringType, elements)
-	diags.Append(d...)
-	return m
+func flattenEntries(ctx context.Context, entries map[string]string, diags *diag.Diagnostics) types.Map {
+	value, valueDiags := types.MapValueFrom(ctx, types.StringType, entries)
+	diags.Append(valueDiags...)
+	return value
 }
