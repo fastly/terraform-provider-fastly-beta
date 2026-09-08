@@ -10,7 +10,7 @@ tell Git about your signing key.
 
 1. Merge all PRs intended for the release.
 1. Rebase latest remote main branch locally (`git pull --rebase origin main`).
-1. Ensure all analysis checks and tests are passing (`TEST_PARALLELISM=8 make test-acc`).
+1. Ensure the code is release-ready (`make release-check`), which runs the build, lint, baseline test suite, and generates/validates docs.
 1. Manually update generated `docs/index.md`.
 1. Open a new PR to update CHANGELOG ([example](https://github.com/fastly/terraform-provider-fastly/pull/498/files)).
     - make sure to use the `Skip-Docs` label before opening to ensure the docs action doesn't fail with the new version.

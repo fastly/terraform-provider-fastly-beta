@@ -13,7 +13,7 @@ OVERRIDES_FILE := $(BIN_DIR)/developer_overrides.tfrc
 GOLANGCI_LINT_VERSION := v2.12.2
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 
-.PHONY: fmt build dev-overrides clean test-unit test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle lint install-linter check-linter-version help
+.PHONY: fmt build dev-overrides clean test-unit test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle lint install-linter check-linter-version release-check help
 
 help:
 	@echo "Available targets:"
@@ -32,6 +32,7 @@ help:
 	@echo "  make test-lifecycle-cdn     - Run CDN lifecycle tests (requires FASTLY_API_TOKEN)"
 	@echo "  make test-lifecycle-compute - Run Compute lifecycle tests (requires FASTLY_API_TOKEN)"
 	@echo "  make test-lifecycle         - Run all lifecycle tests (requires FASTLY_API_TOKEN)"
+	@echo "  make release-check          - Run build, lint, test-baseline, and docs (requires FASTLY_API_TOKEN)"
 
 fmt:
 	@echo "==> Formatting Go code..."
@@ -146,3 +147,6 @@ test-lifecycle-compute:
 
 test-lifecycle: test-lifecycle-cdn test-lifecycle-compute
 	@echo "==> All lifecycle tests completed"
+
+release-check: build lint test-baseline docs
+	@echo "==> Release check passed"
