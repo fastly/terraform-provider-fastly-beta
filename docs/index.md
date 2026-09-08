@@ -5,7 +5,7 @@ description: |-
 
 # fastly Provider
 
--> **Note:** The `-beta` suffix shown in this provider's name and navigation refers only to its Registry distribution during the beta program. Resource and data source type names are unaffected and keep their standard `fastly_` prefix (e.g. `fastly_service_cdn`), with no `-beta` in the name.
+-> **Note:** The `-beta` suffix shown in this provider's name and navigation refers only to its Registry distribution during the beta program. Resource and data source type names are unaffected and keep their standard `fastly_` prefix (e.g. `fastly_service_cdn_auto`), with no `-beta` in the name.
 
 ## Example Usage
 
