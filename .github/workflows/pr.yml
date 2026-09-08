@@ -6,8 +6,6 @@ on:
       - opened
       - synchronize
       - reopened
-      - labeled
-      - unlabeled
     branches:
       - main
 
@@ -94,7 +92,6 @@ jobs:
 
   docs:
     runs-on: ubuntu-24.04-arm
-    if: "!contains(github.event.pull_request.labels.*.name, 'Skip-Docs')"
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
