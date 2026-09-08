@@ -32,7 +32,9 @@ the `activate` and `stage` attributes available in the legacy provider
 are not available. The `auto` service resources will always clone,
 modify, and activate a new version of the service during `terraform
 apply` if the plan includes changes to the service or any of its
-nested blocks.
+nested blocks. This is the same behavior provided by the legacy
+provider when `activate = true` and `stage = false` were used in the
+resource configuration.
 
 ### Product Enablement
 
