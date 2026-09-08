@@ -3,11 +3,11 @@ package logginghttps
 import (
 	"context"
 
-	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
-	"github.com/fastly/terraform-provider-fastly/internal/errors"
-	"github.com/fastly/terraform-provider-fastly/internal/importutil"
-	"github.com/fastly/terraform-provider-fastly/internal/service"
-	"github.com/fastly/terraform-provider-fastly/internal/validation"
+	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/importutil"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"

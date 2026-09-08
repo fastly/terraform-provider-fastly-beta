@@ -1,0 +1,24 @@
+---
+page_title: "fastly_ngwaf_workspace_alert_jira_integrations Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to retrieve Jira alert integrations scoped to a single Fastly Next-Gen WAF workspace.
+---
+
+# fastly_ngwaf_workspace_alert_jira_integrations (Data Source)
+
+Use this data source to retrieve `jira` alert integrations scoped to a single Fastly Next-Gen WAF workspace.
+
+## Example Usage
+
+```terraform
+data "fastly_ngwaf_workspace_alert_jira_integrations" "example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+}
+
+output "ngwaf_workspace_alert_jira_integrations" {
+  value = data.fastly_ngwaf_workspace_alert_jira_integrations.example.alerts
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

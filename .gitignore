@@ -1,6 +1,7 @@
-# Provider binary
+# Provider binaries
 bin/
-terraform-provider-fastly
+dist/
+terraform-provider-fastly-beta
 
 # Terraform
 .terraform/

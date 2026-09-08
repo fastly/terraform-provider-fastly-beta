@@ -1,0 +1,36 @@
+---
+page_title: "fastly_tls_private_key Resource - fastly"
+subcategory: ""
+description: |-
+  Provisions a private key for use with Fastly's TLS/SSL support. Private keys are versionless and independent of any service-version lifecycle. The resource is immutable: any change to name or private_key destroys and recreates it.
+---
+
+# fastly_tls_private_key (Resource)
+
+Provisions a private key for use with Fastly's TLS/SSL support. Private keys are versionless and independent of any service-version lifecycle. The resource is immutable: any change to `name` or `private_key` destroys and recreates it.
+
+Private key material is not returned once it has been uploaded, so `private_key.pem` cannot be verified after a `terraform import` and will not be present in state until the next apply that (re)creates the resource.
+
+## Example Usage
+
+```terraform
+resource "fastly_tls_private_key" "example" {
+  name = "example-key"
+
+  private_key = {
+    pem = file("example.com.key")
+  }
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A TLS private key can be imported using its ID, e.g.
+
+```shell
+terraform import fastly_tls_private_key.example xxxxxxxx
+```
+
+`private_key.pem` is not returned by the API and so is not populated by import; the next `terraform apply` will show a forced replacement unless `private_key.pem` in your configuration exactly matches the key data of the private key you are importing.

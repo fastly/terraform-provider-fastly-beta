@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fastly/terraform-provider-fastly/internal/service"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 )
 
 // EnsureServiceTypeSupported checks that a service ID belongs to one of the

@@ -23,14 +23,14 @@ func TestAccFastlyServiceDomain_basic(t *testing.T) {
 		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigDomainBasic(serviceName, domainName),
+				Config: ConfigServiceDomainBasic(serviceName, domainName),
 				Check: resource.ComposeTestCheckFunc(
 					CheckServiceExists("fastly_service_cdn.test"),
 					resource.TestCheckResourceAttr("fastly_service_domain.test", "name", domainName),
 					resource.TestCheckResourceAttr("fastly_service_domain.test", "version", "1"),
 					resource.TestCheckResourceAttrSet("fastly_service_domain.test", "service_id"),
 					resource.TestCheckResourceAttrSet("fastly_service_domain.test", "id"),
-					CheckDomainExistsInFastly("fastly_service_cdn.test", domainName, 1),
+					CheckServiceDomainExistsInFastly("fastly_service_cdn.test", domainName, 1),
 				),
 			},
 		},
@@ -48,7 +48,7 @@ func TestAccFastlyServiceDomain_withComment(t *testing.T) {
 		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigDomainWithComment(serviceName, domainName, "Production domain"),
+				Config: ConfigServiceDomainWithComment(serviceName, domainName, "Production domain"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("fastly_service_domain.test", "name", domainName),
 					resource.TestCheckResourceAttr("fastly_service_domain.test", "comment", "Production domain"),
@@ -69,14 +69,14 @@ func TestAccFastlyServiceDomain_update(t *testing.T) {
 		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigDomainBasic(serviceName, domainName),
+				Config: ConfigServiceDomainBasic(serviceName, domainName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("fastly_service_domain.test", "name", domainName),
 					resource.TestCheckNoResourceAttr("fastly_service_domain.test", "comment"),
 				),
 			},
 			{
-				Config: ConfigDomainWithComment(serviceName, domainName, "Updated comment"),
+				Config: ConfigServiceDomainWithComment(serviceName, domainName, "Updated comment"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("fastly_service_domain.test", "name", domainName),
 					resource.TestCheckResourceAttr("fastly_service_domain.test", "comment", "Updated comment"),
@@ -98,7 +98,7 @@ func TestAccFastlyServiceDomain_multipleDomains(t *testing.T) {
 		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigDomainMultiple(serviceName, domain1Name, domain2Name),
+				Config: ConfigServiceDomainMultiple(serviceName, domain1Name, domain2Name),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("fastly_service_domain.primary", "name", domain1Name),
 					resource.TestCheckResourceAttr("fastly_service_domain.additional", "name", domain2Name),
@@ -120,11 +120,11 @@ func TestAccFastlyServiceDomain_vclService(t *testing.T) {
 		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigDomainBasic(serviceName, domainName),
+				Config: ConfigServiceDomainBasic(serviceName, domainName),
 				Check: resource.ComposeTestCheckFunc(
 					CheckServiceExists("fastly_service_cdn.test"),
 					resource.TestCheckResourceAttr("fastly_service_domain.test", "name", domainName),
-					CheckDomainExistsInFastly("fastly_service_cdn.test", domainName, 1),
+					CheckServiceDomainExistsInFastly("fastly_service_cdn.test", domainName, 1),
 				),
 			},
 		},
@@ -146,7 +146,7 @@ func TestAccFastlyServiceDomain_importBasic(t *testing.T) {
 		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigDomainForImport(serviceName, domainName, additionalDomainName),
+				Config: ConfigServiceDomainForImport(serviceName, domainName, additionalDomainName),
 				Check: resource.ComposeTestCheckFunc(
 					CheckServiceExists("fastly_service_cdn.test"),
 					resource.TestCheckResourceAttr("fastly_service_domain.additional", "name", additionalDomainName),
@@ -192,7 +192,7 @@ func TestAccFastlyServiceDomain_importWithSubdomain(t *testing.T) {
 		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigDomainForImport(serviceName, domainName, subdomainName),
+				Config: ConfigServiceDomainForImport(serviceName, domainName, subdomainName),
 				Check: resource.ComposeTestCheckFunc(
 					CheckServiceExists("fastly_service_cdn.test"),
 					resource.TestCheckResourceAttr("fastly_service_domain.additional", "name", subdomainName),
@@ -220,8 +220,8 @@ func TestAccFastlyServiceDomain_importWithSubdomain(t *testing.T) {
 	})
 }
 
-// CheckDomainExistsInFastly verifies a domain exists in Fastly API.
-func CheckDomainExistsInFastly(serviceName, domainName string, version int) resource.TestCheckFunc {
+// CheckServiceDomainExistsInFastly verifies a domain exists in Fastly API.
+func CheckServiceDomainExistsInFastly(serviceName, domainName string, version int) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[serviceName]
 		if !ok {

@@ -3,8 +3,8 @@ package healthcheck
 import (
 	"context"
 
-	"github.com/fastly/terraform-provider-fastly/internal/reconcile"
-	"github.com/fastly/terraform-provider-fastly/internal/service"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"

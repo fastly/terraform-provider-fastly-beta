@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/fastly/terraform-provider-fastly/internal/errors"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 

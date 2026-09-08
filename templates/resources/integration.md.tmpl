@@ -1,0 +1,184 @@
+---
+page_title: "fastly_integration Resource - fastly"
+subcategory: ""
+description: |-
+  Provides a Fastly integration. Fastly will use these integrations to send you notifications and alerts related to the Fastly product.
+---
+
+# fastly_integration (Resource)
+
+Provides a Fastly integration. Fastly will use these integrations to send you notifications
+and alerts related to the Fastly product. Datadog, Jira, Jira Service Management, Mailing
+list, Microsoft Teams, New Relic, OpsGenie, PagerDuty, Slack, Splunk On-Call, and webhook are
+supported as integrations.
+
+Integrations are versionless and independent of any service-version lifecycle. A
+`fastly_alert` notifies through one or more integrations via its `integration_ids` attribute.
+
+~> **IMPORTANT:** Mailing list integrations require confirmation. To send a confirmation email
+and verify integration status, after applying changes using Terraform, please visit
+https://manage.fastly.com/observability/alerts/integrations
+
+## Example Usage
+
+Sensitive fields (API keys, tokens, and webhook URLs) belong under `authentication`;
+non-sensitive fields belong under `config`.
+
+```terraform
+resource "fastly_integration" "datadog_example" {
+  name        = "my Datadog integration"
+  description = "example Datadog integration"
+  type        = "datadog"
+
+  config = {
+    # Datadog site (optional, defaults to the US site)
+    site = "datadoghq.eu"
+  }
+
+  authentication = {
+    # Datadog API key
+    apikey = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  }
+}
+
+resource "fastly_integration" "jiraissue_example" {
+  name        = "my Jira integration"
+  description = "example Jira integration"
+  type        = "jiraissue"
+
+  config = {
+    # base URL of the Jira instance
+    baseurl = "https://my-org.atlassian.net"
+    # Jira username (email address) used to authenticate
+    username = "user@my-org.com"
+    # key of the Jira project where issues will be created
+    projectkey = "ABC"
+    # type of Jira issue to create
+    issuetype = "Bug"
+  }
+
+  authentication = {
+    # Jira API token
+    token = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  }
+}
+
+resource "fastly_integration" "jsm_example" {
+  name        = "my Jira Service Management integration"
+  description = "example Jira Service Management integration"
+  type        = "jsm"
+
+  authentication = {
+    # Jira Service Management API key
+    apikey = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  }
+}
+
+resource "fastly_integration" "mailinglist_example" {
+  name        = "my mailing list integration"
+  description = "example mailing list integration"
+  type        = "mailinglist"
+
+  config = {
+    # mailing list address
+    address = "incoming-hook@my.domain.com"
+  }
+}
+
+resource "fastly_integration" "microsoftteams_example" {
+  name        = "my Microsoft Teams integration"
+  description = "example Microsoft Teams integration"
+  type        = "microsoftteams"
+
+  authentication = {
+    # Microsoft Teams webhook URL
+    webhook = "https://m365x012345.webhook.office.com"
+  }
+}
+
+resource "fastly_integration" "newrelic_example" {
+  name        = "my New Relic integration"
+  description = "example New Relic integration"
+  type        = "newrelic"
+
+  config = {
+    # New Relic account ID
+    account = "XXXXXXX"
+  }
+
+  authentication = {
+    # New Relic license key
+    key = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  }
+}
+
+resource "fastly_integration" "opsgenie_example" {
+  name        = "my OpsGenie integration"
+  description = "example OpsGenie integration"
+  type        = "opsgenie"
+
+  authentication = {
+    # OpsGenie API key
+    apikey = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  }
+}
+
+resource "fastly_integration" "pagerduty_example" {
+  name        = "my PagerDuty integration"
+  description = "example PagerDuty integration"
+  type        = "pagerduty"
+
+  authentication = {
+    # PagerDuty integration key
+    key = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  }
+}
+
+resource "fastly_integration" "slack_example" {
+  name        = "my Slack integration"
+  description = "example Slack integration"
+  type        = "slack"
+
+  authentication = {
+    # Slack webhook URL
+    webhook = "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+  }
+}
+
+resource "fastly_integration" "splunkoncall_example" {
+  name        = "my Splunk On-Call integration"
+  description = "example Splunk On-Call integration"
+  type        = "splunkoncall"
+
+  authentication = {
+    # Splunk On-Call webhook URL
+    url = "https://alert.victorops.com/integrations/generic/20131114/alert/XXXXXXXXXXXXXXXXXXXXXXXX"
+  }
+}
+
+resource "fastly_integration" "webhook_example" {
+  name        = "my webhook integration"
+  description = "example webhook integration"
+  type        = "webhook"
+
+  authentication = {
+    # webhook URL
+    webhook = "https://my.domain.com/webhook"
+  }
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Fastly Integrations can be imported using their integration ID, e.g.
+
+```shell
+terraform import fastly_integration.example <integration_id>
+```
+
+-> **Note:** The Fastly API only returns `config` on read (e.g. `address` for a `mailinglist`
+integration); `authentication` fields such as API keys, tokens, and webhook URLs are never
+echoed back. Importing a `fastly_integration` will therefore always show a diff on
+`authentication` until the next `apply` re-applies the configured value.

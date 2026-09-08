@@ -1,0 +1,25 @@
+---
+page_title: "fastly_ngwaf_workspace_virtual_patches Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to retrieve a list of Fastly Next-Gen WAF virtual patches for a workspace.
+---
+
+# fastly_ngwaf_workspace_virtual_patches (Data Source)
+
+Use this data source to retrieve a list of Fastly Next-Gen WAF virtual patches
+for a workspace.
+
+## Example Usage
+
+```terraform
+data "fastly_ngwaf_workspace_virtual_patches" "example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+}
+
+output "ngwaf_workspace_virtual_patches" {
+  value = data.fastly_ngwaf_workspace_virtual_patches.example.virtual_patches
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

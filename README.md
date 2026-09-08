@@ -1,7 +1,7 @@
 # Fastly Terraform Provider - Beta
 
-This repository contains the source code for the 'fastly-beta'
-Terraform provider, a new implementation of the existing 'fastly'
+This repository contains the source code for the `fastly-beta`
+Terraform provider, a new implementation of the existing `fastly`
 Terraform provider. The provider is built on the HashiCorp Terraform
 plugin framework unlike the previous provider which is built on the
 Terraform Plugin SDK v2.
@@ -12,7 +12,7 @@ before the end of 2026.
 
 ## Design overview
 
-This providers offers a **dual-model design** with two separate resource
+This provider offers a **dual-model design** with two separate resource
 families:
 
 - an **automatic compatibility resource family** for users who want
@@ -51,6 +51,37 @@ Compatibility service resources:
 
 - `fastly_service_cdn_auto`
 - `fastly_service_compute_auto`
+
+### Explicit/default resources still under development
+
+All explicit/default resources are still under active development and are **not ready for
+use**. Use the automatic compatibility family (`fastly_service_cdn_auto` /
+`fastly_service_compute_auto`) instead until these reach parity:
+
+- `fastly_service_cdn`
+- `fastly_service_compute`
+- `fastly_service_domain`
+- `fastly_service_backend`
+- `fastly_service_vcl`
+- `fastly_service_vcl_snippet`
+- `fastly_service_dynamic_vcl_snippet`
+- `fastly_service_dynamic_snippet_content`
+- `fastly_service_condition`
+- `fastly_service_cdn_acl`
+- `fastly_service_cdn_acl_entries`
+- `fastly_service_resource_link`
+- `fastly_service_dictionary_items`
+- `fastly_service_logging_bigquery`
+- `fastly_service_logging_blobstorage`
+- `fastly_service_logging_datadog`
+- `fastly_service_logging_gcs`
+- `fastly_service_logging_https`
+- `fastly_service_logging_newrelic`
+- `fastly_service_logging_newrelicotlp`
+- `fastly_service_logging_s3`
+- `fastly_service_logging_splunk`
+- `fastly_service_logging_sumologic`
+- `fastly_service_logging_syslog`
 
 ### Explicit/default family
 

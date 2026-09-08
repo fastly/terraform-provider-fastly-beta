@@ -1,0 +1,80 @@
+---
+page_title: "fastly_tls_activation Resource - fastly"
+subcategory: ""
+description: |-
+  Enables TLS on a domain using a custom certificate. TLS activations are versionless and independent of any service-version lifecycle.
+---
+
+# fastly_tls_activation (Resource)
+
+Enables TLS on a domain using a custom certificate. TLS activations are versionless and independent of any service-version lifecycle.
+
+This resource is for custom (uploaded) certificates. Do not pair it with a subscription-based (managed) certificate — Fastly automatically activates TLS on a subscription's domains once the managed certificate is issued, so creating an activation for those domains fails with `400 domain_id has already been taken`.
+
+The Fastly service the domain belongs to must be provisioned _prior_ to enabling TLS on it. This can be achieved in Terraform using [`depends_on`](https://developer.hashicorp.com/terraform/language/meta-arguments/depends_on).
+
+## Example Usage
+
+```terraform
+resource "fastly_service_cdn_auto" "example" {
+  name = "example-service"
+
+  domain {
+    name = "example.com"
+  }
+
+  backend {
+    address = "127.0.0.1"
+    name    = "localhost"
+  }
+}
+
+resource "fastly_tls_certificate" "example" {
+  certificate_body = file("example.com.crt")
+  name             = "example-cert"
+}
+
+resource "fastly_tls_activation" "example" {
+  certificate_id = fastly_tls_certificate.example.id
+  domain         = "example.com"
+  depends_on     = [fastly_service_cdn_auto.example]
+}
+```
+
+Rotating the certificate should be done in multiple plan/apply steps to avoid downtime: create the new `fastly_tls_certificate` alongside the currently active one, update `fastly_tls_activation.certificate_id` to point at it, then delete the old certificate.
+
+`mutual_authentication_id` can only be applied via an update after the activation is created, so setting it at creation time still requires two applies:
+
+```terraform
+resource "fastly_tls_activation" "example" {
+  certificate_id           = fastly_tls_certificate.example.id
+  domain                   = "example.com"
+  mutual_authentication_id = fastly_tls_mutual_authentication.example.id
+  depends_on               = [fastly_service_cdn_auto.example]
+}
+```
+
+## Schema
+
+### Required
+
+- `certificate_id` (String) ID of certificate to use. Must have the `domain` specified in the certificate's Subject Alternative Names.
+- `domain` (String) Domain to enable TLS on. Must be assigned to an existing Fastly Service.
+
+### Optional
+
+- `configuration_id` (String) ID of TLS configuration to be used to terminate TLS traffic, or use the default one if missing.
+- `mutual_authentication_id` (String) An alphanumeric string identifying a mutual authentication.
+
+### Read-Only
+
+- `created_at` (String) Time-stamp (GMT) when TLS was enabled.
+- `id` (String) Alphanumeric string identifying a TLS activation.
+
+## Import
+
+A TLS activation can be imported using its ID, e.g.
+
+```shell
+terraform import fastly_tls_activation.example xxxxxxxx
+```

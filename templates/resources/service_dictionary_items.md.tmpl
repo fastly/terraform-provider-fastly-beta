@@ -1,0 +1,89 @@
+---
+page_title: "fastly_service_dictionary_items Resource - fastly"
+subcategory: ""
+description: |-
+  Manages key-value items in a Fastly Dictionary.
+---
+
+# fastly_service_dictionary_items (Resource)
+
+Manages key-value items in a Fastly Dictionary.
+
+Each key declared in `items` is owned by this Terraform resource. Terraform
+creates missing managed keys, updates managed values that drift, and deletes a
+managed key when it is removed from the `items` map.
+
+Items that are not declared in this resource are left unchanged. This allows a
+Dictionary to contain Terraform-managed items alongside items managed by other
+systems, the Fastly API, the Fastly CLI, or the Fastly control panel.
+
+Dictionary items are versionless and immediately visible to the linked
+service, regardless of which version is active.
+
+## Limitations
+
+- `write_only` dictionaries are not supported: their items cannot be read back
+  from the API, so Terraform cannot detect or reconcile drift for them.
+
+## Example Usage
+
+```terraform
+resource "fastly_service_cdn_auto" "example" {
+  name          = "example-service"
+  force_destroy = true
+
+  domain {
+    name = "example.com"
+  }
+
+  dictionary {
+    name = "application_configuration"
+  }
+}
+
+resource "fastly_service_dictionary_items" "example" {
+  service_id    = fastly_service_cdn_auto.example.id
+  dictionary_id = fastly_service_cdn_auto.example.dictionary[0].dictionary_id
+
+  items = {
+    environment = "production"
+    feature_x   = "enabled"
+    api_version = "v2"
+  }
+}
+```
+
+Removing a key from `items` deletes that key from the Dictionary:
+
+```terraform
+resource "fastly_service_dictionary_items" "example" {
+  service_id    = fastly_service_cdn_auto.example.id
+  dictionary_id = fastly_service_cdn_auto.example.dictionary[0].dictionary_id
+
+  items = {
+    environment = "production"
+    api_version = "v2"
+  }
+}
+```
+
+In this example Terraform deletes the previously managed `feature_x` item, but
+does not delete unrelated Dictionary items that were never managed by this
+resource.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Fastly Dictionary items can be imported using the service ID and dictionary ID
+separated by a forward slash:
+
+```shell
+terraform import fastly_service_dictionary_items.example <service_id>/<dictionary_id>
+```
+
+Import adopts all items currently present in the Dictionary into this
+resource's Terraform state. Before applying configuration after an import,
+ensure that the `items` map contains every imported key you want Terraform to
+continue managing. Removing an imported key from `items` tells Terraform to
+delete that key.

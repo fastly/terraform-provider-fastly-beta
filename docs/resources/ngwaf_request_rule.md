@@ -1,0 +1,262 @@
+---
+page_title: "fastly_ngwaf_request_rule Resource - fastly"
+subcategory: ""
+description: |-
+  Manages a Fastly Next-Gen WAF request rule defined at account scope.
+---
+
+# fastly_ngwaf_request_rule (Resource)
+
+Manages a Fastly Next-Gen WAF `request` rule defined at account scope: it
+inspects incoming requests and allows, blocks, or tags them in every workspace
+named in `applies_to`.
+
+`applies_to` takes either a set of workspace IDs or the single entry `*`, which
+applies the rule to every workspace in the account. It is a request body field
+rather than a path segment, so adding or removing a workspace updates the rule
+in place rather than replacing it.
+
+The `action` block accepts `allow`, `block`, and `add_signal`, and a `block` at
+account scope carries no `redirect_url` or `response_code`.
+
+Every rule must define at least one `condition`, `group_condition`, or
+`multival_condition`, and no more than 10 of them combined - a
+`group_condition` or `multival_condition` counts as one entry however many
+conditions it nests.
+
+Account scope also supports `signal` rules, managed by
+`fastly_ngwaf_signal_rule`. Both are read back by the `fastly_ngwaf_rules` data
+source.
+
+## Example Usage
+
+```terraform
+resource "fastly_ngwaf_workspace" "example" {
+  name        = "Example Workspace"
+  description = "Managed by Terraform"
+  mode        = "block"
+
+  attack_signal_thresholds {}
+}
+
+resource "fastly_ngwaf_request_rule" "example" {
+  applies_to  = [fastly_ngwaf_workspace.example.id]
+  description = "Block a specific IP"
+  enabled     = true
+
+  condition {
+    field    = "ip"
+    operator = "equals"
+    value    = "127.0.0.1"
+  }
+
+  action {
+    type = "block"
+  }
+}
+```
+
+### Every workspace in the account
+
+```terraform
+resource "fastly_ngwaf_request_rule" "block_legacy_clients" {
+  applies_to  = ["*"]
+  description = "Block requests negotiating an obsolete protocol version"
+  enabled     = true
+
+  condition {
+    field    = "protocol_version"
+    operator = "equals"
+    value    = "HTTP/1.0"
+  }
+
+  action {
+    type = "block"
+  }
+}
+```
+
+### Two actions on one rule
+
+A request rule accepts up to two actions, so it can both tag a request with a
+signal and act on it.
+
+```terraform
+resource "fastly_ngwaf_request_rule" "block_suspect_agents" {
+  applies_to  = ["*"]
+  description = "Tag and block requests from a suspicious user agent"
+  enabled     = true
+
+  condition {
+    field    = "user_agent"
+    operator = "contains"
+    value    = "curl"
+  }
+
+  action {
+    type   = "add_signal"
+    signal = "SUSPECTED-BOT"
+  }
+
+  action {
+    type = "block"
+  }
+}
+```
+
+### Grouped and multi-value conditions
+
+```terraform
+resource "fastly_ngwaf_request_rule" "grouped_example" {
+  applies_to  = [fastly_ngwaf_workspace.example.id]
+  description = "Block admin paths hit without the expected header"
+  enabled     = true
+
+  group_condition {
+    group_operator = "all"
+
+    condition {
+      field    = "path"
+      operator = "contains"
+      value    = "/admin"
+    }
+
+    multival_condition {
+      field          = "request_header"
+      operator       = "does_not_exist"
+      group_operator = "any"
+
+      condition {
+        field    = "name"
+        operator = "equals"
+        value    = "X-Internal-Token"
+      }
+    }
+  }
+
+  action {
+    type = "block"
+  }
+}
+```
+
+## Schema
+
+### Required
+
+- `applies_to` (Set of String) The workspaces this rule applies to: a set of workspace IDs, or the single entry `*` to apply the rule to every workspace in the account. The two forms are alternatives - the wildcard cannot be combined with named workspace IDs.
+- `description` (String) The description of the rule.
+- `enabled` (Boolean) Whether the rule is currently enabled.
+
+### Optional
+
+- `action` (Block List) Actions to perform when the rule matches. Must contain between 1 and 2 entries. (see [below for nested schema](#nestedblock--action))
+- `condition` (Block List) Flat list of individual conditions. Each must include `field`, `operator`, and `value`. (see [below for nested schema](#nestedblock--condition))
+- `group_condition` (Block List) List of grouped conditions with nested logic. Each group must define a `group_operator` and at least one `condition` or `multival_condition`. (see [below for nested schema](#nestedblock--group_condition))
+- `group_operator` (String) Logical operator applied across the rule's top-level condition, group_condition, and multival_condition entries. One of `any` or `all`. Defaults to `all`.
+- `multival_condition` (Block List) List of multival conditions with nested logic. Each multival must define a `field`, `operator`, and `group_operator`, and at least one condition. (see [below for nested schema](#nestedblock--multival_condition))
+- `request_logging` (String) Logging behavior for matching requests. One of `sampled` or `none`. Defaults to `sampled`.
+
+### Read-Only
+
+- `id` (String) The rule identifier generated by Fastly.
+
+<a id="nestedblock--action"></a>
+### Nested Schema for `action`
+
+Required:
+
+- `type` (String) The action type. One of `allow`, `block`, or `add_signal`.
+
+Optional:
+
+- `signal` (String) Reference ID of the signal. Required by `add_signal`.
+
+
+<a id="nestedblock--condition"></a>
+### Nested Schema for `condition`
+
+Required:
+
+- `field` (String) Field to inspect. One of `agent_name`, `country`, `domain`, `ip`, `ip_remote`, `ja3_fingerprint`, `ja4_fingerprint`, `key_name`, `method`, `parameter_name`, `parameter_value`, `path`, `protocol_version`, `response_code`, `scheme`, or `user_agent`.
+- `operator` (String) Operator to apply. One of `equals`, `does_not_equal`, `contains`, `does_not_contain`, `like`, `not_like`, `in_list`, `not_in_list`, `matches`, `does_not_match`, `greater_equal`, or `lesser_equal`.
+- `value` (String) The value to test the field against.
+
+
+<a id="nestedblock--group_condition"></a>
+### Nested Schema for `group_condition`
+
+Required:
+
+- `group_operator` (String) Logical operator for the group. One of `any` or `all`.
+
+Optional:
+
+- `condition` (Block List) A list of nested conditions in this group. (see [below for nested schema](#nestedblock--group_condition--condition))
+- `multival_condition` (Block List) List of nested multival conditions in this group. Each multival must define a `field`, `operator`, and `group_operator`, and at least one condition. (see [below for nested schema](#nestedblock--group_condition--multival_condition))
+
+<a id="nestedblock--group_condition--condition"></a>
+### Nested Schema for `group_condition.condition`
+
+Required:
+
+- `field` (String) Field to inspect. One of `agent_name`, `country`, `domain`, `ip`, `ip_remote`, `ja3_fingerprint`, `ja4_fingerprint`, `key_name`, `method`, `parameter_name`, `parameter_value`, `path`, `protocol_version`, `response_code`, `scheme`, or `user_agent`.
+- `operator` (String) Operator to apply. One of `equals`, `does_not_equal`, `contains`, `does_not_contain`, `like`, `not_like`, `in_list`, `not_in_list`, `matches`, `does_not_match`, `greater_equal`, or `lesser_equal`.
+- `value` (String) The value to test the field against.
+
+
+<a id="nestedblock--group_condition--multival_condition"></a>
+### Nested Schema for `group_condition.multival_condition`
+
+Required:
+
+- `field` (String) Field to inspect. One of `post_parameter`, `query_parameter`, `request_cookie`, `request_header`, `response_header`, or `signal`.
+- `group_operator` (String) Logical operator used to evaluate the nested conditions. One of `any` or `all`.
+- `operator` (String) Whether the nested conditions check for existence or non-existence of matching field values. One of `exists` or `does_not_exist`.
+
+Optional:
+
+- `condition` (Block List) Nested conditions evaluated against the multival field. At least one is required. (see [below for nested schema](#nestedblock--group_condition--multival_condition--condition))
+
+<a id="nestedblock--group_condition--multival_condition--condition"></a>
+### Nested Schema for `group_condition.multival_condition.condition`
+
+Required:
+
+- `field` (String) Field to inspect. One of `name`, `value`, `value_string`, `value_int`, `value_ip`, `signal_id`, `parameter_name`, or `parameter_value`.
+- `operator` (String) Operator to apply. One of `equals`, `does_not_equal`, `contains`, `does_not_contain`, `like`, `not_like`, `in_list`, `not_in_list`, `matches`, `does_not_match`, `greater_equal`, or `lesser_equal`.
+- `value` (String) The value to test the field against.
+
+
+
+
+<a id="nestedblock--multival_condition"></a>
+### Nested Schema for `multival_condition`
+
+Required:
+
+- `field` (String) Field to inspect. One of `post_parameter`, `query_parameter`, `request_cookie`, `request_header`, `response_header`, or `signal`.
+- `group_operator` (String) Logical operator used to evaluate the nested conditions. One of `any` or `all`.
+- `operator` (String) Whether the nested conditions check for existence or non-existence of matching field values. One of `exists` or `does_not_exist`.
+
+Optional:
+
+- `condition` (Block List) Nested conditions evaluated against the multival field. At least one is required. (see [below for nested schema](#nestedblock--multival_condition--condition))
+
+<a id="nestedblock--multival_condition--condition"></a>
+### Nested Schema for `multival_condition.condition`
+
+Required:
+
+- `field` (String) Field to inspect. One of `name`, `value`, `value_string`, `value_int`, `value_ip`, `signal_id`, `parameter_name`, or `parameter_value`.
+- `operator` (String) Operator to apply. One of `equals`, `does_not_equal`, `contains`, `does_not_contain`, `like`, `not_like`, `in_list`, `not_in_list`, `matches`, `does_not_match`, `greater_equal`, or `lesser_equal`.
+- `value` (String) The value to test the field against.
+
+## Import
+
+Next-Gen WAF account request rules are imported using the rule ID alone: the
+account rules endpoint addresses a rule by ID, with no workspace path segment.
+
+```shell
+terraform import fastly_ngwaf_request_rule.example RULE_ID
+```

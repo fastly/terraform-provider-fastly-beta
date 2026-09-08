@@ -291,13 +291,3 @@ func configStoreIDFromState(s *terraform.State, resourceName string) (string, er
 	}
 	return rs.Primary.ID, nil
 }
-
-func mergeStringMaps(mapsToMerge ...map[string]string) map[string]string {
-	result := make(map[string]string)
-	for _, values := range mapsToMerge {
-		for key, value := range values {
-			result[key] = value
-		}
-	}
-	return result
-}

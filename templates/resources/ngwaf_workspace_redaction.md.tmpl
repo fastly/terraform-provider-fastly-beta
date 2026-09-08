@@ -1,0 +1,43 @@
+---
+page_title: "fastly_ngwaf_workspace_redaction Resource - fastly"
+subcategory: ""
+description: |-
+  Manages a Fastly Next-Gen WAF field redaction scoped to a single workspace.
+---
+
+# fastly_ngwaf_workspace_redaction (Resource)
+
+Manages a Fastly Next-Gen WAF field redaction scoped to a single workspace.
+
+Redactions prevent a specific request parameter, request header, or response
+header from being logged or displayed. Workspace redactions are versionless
+and belong to an NGWAF workspace, not to a Fastly service version.
+
+## Example Usage
+
+```terraform
+resource "fastly_ngwaf_workspace" "example" {
+  name        = "Example Workspace"
+  description = "Managed by Terraform"
+  mode        = "block"
+
+  attack_signal_thresholds {}
+}
+
+resource "fastly_ngwaf_workspace_redaction" "example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+  field        = "credit_card_number"
+  type         = "request_parameter"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Workspace redactions are imported using a combination of the workspace ID and
+the redaction ID, separated by a `/`:
+
+```shell
+terraform import fastly_ngwaf_workspace_redaction.example WORKSPACE_ID/REDACTION_ID
+```

@@ -1,0 +1,36 @@
+---
+page_title: "fastly_ngwaf_rules Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to retrieve the list of Fastly Next-Gen WAF rules defined at account scope.
+---
+
+# fastly_ngwaf_rules (Data Source)
+
+Use this data source to retrieve the list of Fastly Next-Gen WAF rules defined
+at account scope, across every workspace they apply to.
+
+Each entry reports its own `scope` and the workspaces it `applies_to`, and its
+`type` says which resource manages it — `fastly_ngwaf_request_rule` or
+`fastly_ngwaf_signal_rule`. To list the rules of a single workspace, including
+the workspace-only `rate_limit` and `templated_signal` types, use the
+`fastly_ngwaf_workspace_rules` data source instead.
+
+## Example Usage
+
+```terraform
+data "fastly_ngwaf_rules" "example" {}
+
+output "fastly_ngwaf_rules_all" {
+  value = data.fastly_ngwaf_rules.example.rules
+}
+
+output "fastly_ngwaf_rules_enabled_only" {
+  value = [
+    for rule in data.fastly_ngwaf_rules.example.rules : rule.id
+    if rule.enabled
+  ]
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

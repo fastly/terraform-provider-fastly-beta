@@ -1,0 +1,104 @@
+---
+page_title: "fastly_alert Resource - fastly"
+subcategory: ""
+description: |-
+  Provides a Fastly Alert. Alerts send notifications to custom integrations when an observed metric either exceeds or falls below a threshold.
+---
+
+# fastly_alert (Resource)
+
+Provides a Fastly Alert. Alerts send notifications to custom integrations (e.g., Slack
+channels, PagerDuty, Microsoft Teams and New Relic) when an observed metric either exceeds
+or falls below a threshold.
+
+Alerts are versionless and independent of any service-version lifecycle: creating,
+updating, or deleting an alert never clones or activates a new service version.
+
+An alert's `source` determines whether `service_id` is required:
+
+- `domains` and `origins` alerts monitor a specific service, so `service_id` is required.
+- `stats` alerts can either monitor a specific service (`service_id` set) or aggregate
+  across the whole account (`service_id` omitted).
+
+## Example Usage
+
+### Alert scoped to a service
+
+```terraform
+resource "fastly_service_cdn" "example" {
+  name    = "my_vcl_service"
+  version = 1
+
+  force_destroy = true
+}
+
+resource "fastly_service_domain" "example" {
+  service_id = fastly_service_cdn.example.id
+  version    = fastly_service_cdn.example.version
+
+  name = "demo.notexample.com"
+}
+
+resource "fastly_alert" "example" {
+  name       = "${fastly_service_cdn.example.name} errors"
+  service_id = fastly_service_cdn.example.id
+  source     = "stats"
+  metric     = "status_5xx"
+
+  evaluation_strategy {
+    type      = "above_threshold"
+    period    = "5m"
+    threshold = 10
+  }
+}
+```
+
+### Account-wide alert
+
+Omitting `service_id` is only supported when `source` is `stats`:
+
+```terraform
+resource "fastly_alert" "account_wide" {
+  name   = "account-wide 4xx rate"
+  source = "stats"
+  metric = "status_4xx"
+
+  evaluation_strategy {
+    type         = "percent_increase"
+    period       = "2m"
+    threshold    = 0.25
+    ignore_below = 10
+  }
+}
+```
+
+### Alert restricted to specific domains
+
+```terraform
+resource "fastly_alert" "domain_scoped" {
+  name       = "checkout domain errors"
+  service_id = fastly_service_cdn.example.id
+  source     = "domains"
+  metric     = "status_5xx"
+
+  dimensions {
+    domains = ["checkout.example.com"]
+  }
+
+  evaluation_strategy {
+    type      = "above_threshold"
+    period    = "5m"
+    threshold = 10
+  }
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Fastly Alerts can be imported using their alert definition ID:
+
+```shell
+terraform import fastly_alert.example <alert_definition_id>
+```

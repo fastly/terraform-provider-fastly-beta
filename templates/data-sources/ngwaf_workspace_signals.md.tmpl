@@ -1,0 +1,25 @@
+---
+page_title: "fastly_ngwaf_workspace_signals Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to retrieve Fastly Next-Gen WAF custom signals scoped to a single workspace.
+---
+
+# fastly_ngwaf_workspace_signals (Data Source)
+
+Use this data source to retrieve Fastly Next-Gen WAF custom signals scoped to a
+single workspace.
+
+## Example Usage
+
+```terraform
+data "fastly_ngwaf_workspace_signals" "example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+}
+
+output "workspace_signals" {
+  value = data.fastly_ngwaf_workspace_signals.example.signals
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

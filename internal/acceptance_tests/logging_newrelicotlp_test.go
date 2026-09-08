@@ -13,7 +13,7 @@ import (
 
 	"github.com/fastly/go-fastly/v17/fastly"
 
-	"github.com/fastly/terraform-provider-fastly/internal/constants"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/constants"
 )
 
 func TestAccFastlyServiceLoggingNewRelicOTLP_basic(t *testing.T) {

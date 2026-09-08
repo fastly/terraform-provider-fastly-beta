@@ -12,9 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/fastly/go-fastly/v17/fastly"
-	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
-	"github.com/fastly/terraform-provider-fastly/internal/service"
-	"github.com/fastly/terraform-provider-fastly/internal/validation"
+	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 )
 
 var (

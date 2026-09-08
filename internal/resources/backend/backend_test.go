@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fastly/terraform-provider-fastly/internal/resources/healthcheck"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/healthcheck"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"

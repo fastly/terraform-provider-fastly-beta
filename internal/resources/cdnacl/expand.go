@@ -3,7 +3,7 @@ package cdnacl
 import (
 	fastly "github.com/fastly/go-fastly/v17/fastly"
 
-	"github.com/fastly/terraform-provider-fastly/internal/service"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 )
 
 func BuildCreateInput(serviceID string, version int, m NestedModel) *fastly.CreateACLInput {

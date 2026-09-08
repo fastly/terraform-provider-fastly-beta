@@ -1,0 +1,30 @@
+---
+page_title: "fastly_domains Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to retrieve a list of Fastly domains.
+---
+
+# fastly_domains (Data Source)
+
+Use this data source to retrieve a list of Fastly domains.
+
+## Example Usage
+
+```terraform
+data "fastly_domains" "example" {}
+
+output "fastly_domains_all" {
+  value = data.fastly_domains.example.domains
+}
+
+output "fastly_domains_filtered" {
+  # Example: get the ID of the domain with fqdn "www.example.com"
+  value = one([
+    for domain in data.fastly_domains.example.domains :
+    domain.id if domain.fqdn == "www.example.com"
+  ])
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

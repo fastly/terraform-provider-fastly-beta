@@ -18,10 +18,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/fastly/go-fastly/v17/fastly"
-	"github.com/fastly/terraform-provider-fastly/internal/errors"
-	"github.com/fastly/terraform-provider-fastly/internal/provider"
-	"github.com/fastly/terraform-provider-fastly/internal/resources/imageoptimizerdefaultsettings"
-	"github.com/fastly/terraform-provider-fastly/internal/resources/settings"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/provider"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/imageoptimizerdefaultsettings"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/settings"
 )
 
 // ProtoV6ProviderFactories returns the provider factories for acceptance tests.
@@ -369,9 +369,10 @@ func GetPackagePath() string {
 	return filepath.Join(wd, "fixtures", "packages", "valid.tar.gz")
 }
 
-// TODO: Replace this when implementing ACL entries
-// AddACLEntry adds an ACL entry to the specified ACL. This is used as a test side-effect
-// to populate ACLs for testing force_destroy behavior. Returns a TestCheckFunc.
+// AddACLEntry adds an ACL entry to the specified ACL via the raw API client, deliberately
+// bypassing fastly_service_cdn_acl_entries so the entry is unmanaged by Terraform. This is used
+// as a test side-effect to populate ACLs for testing force_destroy behavior, mirroring
+// AddDictionaryItem below. Returns a TestCheckFunc.
 func AddACLEntry(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
@@ -454,6 +455,182 @@ func AddDictionaryItem(resourceName, dictionaryAttrPrefix string) resource.TestC
 
 		return nil
 	}
+}
+
+// ConfigServiceDictionaryItems returns a CDN auto service with a single dictionary, plus a
+// fastly_service_dictionary_items resource managing the supplied key-value pairs in that
+// dictionary.
+func ConfigServiceDictionaryItems(serviceName, domainName, dictionaryName string, items map[string]string) string {
+	return ConfigCDNAutoWithDictionary(serviceName, domainName, dictionaryName) + "\n" + RenderBlock(
+		"internal/acceptance_tests/blocks/service_dictionary_items.tf",
+		map[string]string{
+			"SERVICE_ID_REF":    "fastly_service_cdn_auto.test.id",
+			"DICTIONARY_ID_REF": "fastly_service_cdn_auto.test.dictionary[0].dictionary_id",
+			"ITEMS":             stringMapHCL(items),
+		},
+	)
+}
+
+// InsertDictionaryItem creates a Dictionary item directly through the API, bypassing
+// Terraform, using the service_id/dictionary_id recorded in the given
+// fastly_service_dictionary_items resource's state.
+func InsertDictionaryItem(resourceName, key, value string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		serviceID, dictionaryID, err := serviceDictionaryIDsFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		client, err := NewFastlyClient()
+		if err != nil {
+			return fmt.Errorf("error creating Fastly client: %w", err)
+		}
+
+		_, err = client.CreateDictionaryItem(context.Background(), &fastly.CreateDictionaryItemInput{
+			ServiceID:    serviceID,
+			DictionaryID: dictionaryID,
+			ItemKey:      new(key),
+			ItemValue:    new(value),
+		})
+		if err != nil {
+			return fmt.Errorf("error creating Dictionary item %q: %w", key, err)
+		}
+
+		return nil
+	}
+}
+
+// UpdateDictionaryItemDirect updates a Dictionary item directly through the API, bypassing
+// Terraform, to simulate out-of-band drift on a Terraform-managed key.
+func UpdateDictionaryItemDirect(resourceName, key, value string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		serviceID, dictionaryID, err := serviceDictionaryIDsFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		client, err := NewFastlyClient()
+		if err != nil {
+			return fmt.Errorf("error creating Fastly client: %w", err)
+		}
+
+		err = client.BatchModifyDictionaryItems(context.Background(), &fastly.BatchModifyDictionaryItemsInput{
+			ServiceID:    serviceID,
+			DictionaryID: dictionaryID,
+			Items: []*fastly.BatchDictionaryItem{
+				{
+					Operation: new(fastly.UpdateBatchOperation),
+					ItemKey:   new(key),
+					ItemValue: new(value),
+				},
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("error updating Dictionary item %q: %w", key, err)
+		}
+
+		return nil
+	}
+}
+
+// CheckServiceDictionaryItemsRemoteState asserts that the live Dictionary items for the
+// service_id/dictionary_id recorded in the given fastly_service_dictionary_items resource's
+// state match want exactly.
+func CheckServiceDictionaryItemsRemoteState(resourceName string, want map[string]string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		serviceID, dictionaryID, err := serviceDictionaryIDsFromState(s, resourceName)
+		if err != nil {
+			return err
+		}
+		return checkDictionaryItemsRemoteState(serviceID, dictionaryID, want)
+	}
+}
+
+// CheckDictionaryRemoteState asserts that the live Dictionary items for the service/dictionary
+// identified by resourceName (a service resource ID) and dictionaryAttrPrefix (e.g.
+// "dictionary.0") match want exactly. Unlike CheckServiceDictionaryItemsRemoteState, this reads
+// the service_id/dictionary_id from the owning service resource rather than the
+// fastly_service_dictionary_items resource, so it still works after that resource has been
+// removed from configuration.
+func CheckDictionaryRemoteState(resourceName, dictionaryAttrPrefix string, want map[string]string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("not found: %s", resourceName)
+		}
+
+		serviceID := rs.Primary.ID
+		dictionaryID := rs.Primary.Attributes[dictionaryAttrPrefix+".dictionary_id"]
+		if serviceID == "" || dictionaryID == "" {
+			return fmt.Errorf("service_id or dictionary_id not set in state")
+		}
+
+		return checkDictionaryItemsRemoteState(serviceID, dictionaryID, want)
+	}
+}
+
+func checkDictionaryItemsRemoteState(serviceID, dictionaryID string, want map[string]string) error {
+	got, err := listDictionaryItemsRemote(serviceID, dictionaryID)
+	if err != nil {
+		return err
+	}
+
+	if !maps.Equal(got, want) {
+		return fmt.Errorf("unexpected Dictionary items:\ngot:  %#v\nwant: %#v", got, want)
+	}
+
+	return nil
+}
+
+func listDictionaryItemsRemote(serviceID, dictionaryID string) (map[string]string, error) {
+	client, err := NewFastlyClient()
+	if err != nil {
+		return nil, fmt.Errorf("error creating Fastly client: %w", err)
+	}
+
+	items, err := client.ListDictionaryItems(context.Background(), &fastly.ListDictionaryItemsInput{
+		ServiceID:    serviceID,
+		DictionaryID: dictionaryID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error listing Dictionary items: %w", err)
+	}
+
+	result := make(map[string]string, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		result[fastly.ToValue(item.ItemKey)] = fastly.ToValue(item.ItemValue)
+	}
+
+	return result, nil
+}
+
+// stringMapHCL renders a Go map as an HCL map literal with deterministic key ordering.
+// mergeStringMaps combines multiple string maps into one, with later maps taking precedence
+// on overlapping keys.
+func mergeStringMaps(mapsToMerge ...map[string]string) map[string]string {
+	result := make(map[string]string)
+	for _, values := range mapsToMerge {
+		maps.Copy(result, values)
+	}
+	return result
+}
+
+func serviceDictionaryIDsFromState(s *terraform.State, resourceName string) (serviceID, dictionaryID string, err error) {
+	rs, ok := s.RootModule().Resources[resourceName]
+	if !ok {
+		return "", "", fmt.Errorf("not found: %s", resourceName)
+	}
+
+	serviceID = rs.Primary.Attributes["service_id"]
+	dictionaryID = rs.Primary.Attributes["dictionary_id"]
+	if serviceID == "" || dictionaryID == "" {
+		return "", "", fmt.Errorf("%s has no service_id/dictionary_id set in state", resourceName)
+	}
+
+	return serviceID, dictionaryID, nil
 }
 
 // Configuration helpers for CDN Auto service
@@ -1792,6 +1969,63 @@ func ConfigNGWAFWorkspacesDataSource(h string) string {
 	})
 }
 
+// ConfigNGWAFWorkspaceSignal returns a config declaring a workspace-scoped NGWAF signal.
+func ConfigNGWAFWorkspaceSignal(workspaceName, signalName, signalDescription string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/ngwaf_workspace_signal_basic.tf", map[string]string{
+		"WORKSPACE_NAME":     workspaceName,
+		"SIGNAL_NAME":        signalName,
+		"SIGNAL_DESCRIPTION": signalDescription,
+	})
+}
+
+// ConfigNGWAFWorkspaceSignalUpdated returns a config updating the description of a
+// workspace-scoped NGWAF signal. Signal names are immutable and require replacement.
+func ConfigNGWAFWorkspaceSignalUpdated(workspaceName, signalName, updatedDescription string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/ngwaf_workspace_signal_updated.tf", map[string]string{
+		"WORKSPACE_NAME":             workspaceName,
+		"SIGNAL_NAME":                signalName,
+		"SIGNAL_DESCRIPTION_UPDATED": updatedDescription,
+	})
+}
+
+// ConfigNGWAFWorkspaceSignalsDataSource returns a config declaring two workspace-scoped
+// NGWAF signals alongside a fastly_ngwaf_workspace_signals data source.
+func ConfigNGWAFWorkspaceSignalsDataSource(workspaceName, signalName1, signalName2 string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/ngwaf_workspace_signals_with_datasource.tf", map[string]string{
+		"WORKSPACE_NAME": workspaceName,
+		"SIGNAL_NAME_1":  signalName1,
+		"SIGNAL_NAME_2":  signalName2,
+	})
+}
+
+// ConfigNGWAFWorkspaceRedaction returns a config declaring a workspace-scoped NGWAF
+// field redaction.
+func ConfigNGWAFWorkspaceRedaction(workspaceName, redactionField string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/ngwaf_workspace_redaction_basic.tf", map[string]string{
+		"WORKSPACE_NAME":  workspaceName,
+		"REDACTION_FIELD": redactionField,
+	})
+}
+
+// ConfigNGWAFWorkspaceRedactionUpdated returns a config updating the field of a
+// workspace-scoped NGWAF field redaction.
+func ConfigNGWAFWorkspaceRedactionUpdated(workspaceName, updatedRedactionField string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/ngwaf_workspace_redaction_updated.tf", map[string]string{
+		"WORKSPACE_NAME":          workspaceName,
+		"REDACTION_FIELD_UPDATED": updatedRedactionField,
+	})
+}
+
+// ConfigNGWAFWorkspaceRedactionsDataSource returns a config declaring two workspace-scoped
+// NGWAF field redactions alongside a fastly_ngwaf_workspace_redactions data source.
+func ConfigNGWAFWorkspaceRedactionsDataSource(workspaceName, redactionField1, redactionField2 string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/ngwaf_workspace_redactions_with_datasource.tf", map[string]string{
+		"WORKSPACE_NAME":    workspaceName,
+		"REDACTION_FIELD_1": redactionField1,
+		"REDACTION_FIELD_2": redactionField2,
+	})
+}
+
 // ConfigComputeAutoWithACLResourceLink returns a Compute auto service config with a
 // domain, package, and a resource_link block pointing at a Terraform-managed fastly_acl
 // (declared as a sibling resource, referenced by ID rather than a literal string).
@@ -2259,10 +2493,10 @@ func ConfigConditionForImport(serviceName, domainName, conditionName string) str
 	)
 }
 
-// Configuration helpers for domain resources (explicit version management)
+// Configuration helpers for fastly_service_domain resources (explicit version management)
 
-// ConfigDomainBasic returns a basic domain resource config.
-func ConfigDomainBasic(serviceName, domainName string) string {
+// ConfigServiceDomainBasic returns a basic domain resource config.
+func ConfigServiceDomainBasic(serviceName, domainName string) string {
 	return BuildConfig(
 		ServiceCDN,
 		map[string]string{
@@ -2271,12 +2505,12 @@ func ConfigDomainBasic(serviceName, domainName string) string {
 			"SERVICE_VERSION": "1",
 			"DOMAIN_NAME":     domainName,
 		},
-		"internal/acceptance_tests/blocks/domain_basic.tf",
+		"internal/acceptance_tests/blocks/service_domain_basic.tf",
 	)
 }
 
-// ConfigDomainWithComment returns a domain resource config with a comment.
-func ConfigDomainWithComment(serviceName, domainName, comment string) string {
+// ConfigServiceDomainWithComment returns a domain resource config with a comment.
+func ConfigServiceDomainWithComment(serviceName, domainName, comment string) string {
 	return BuildConfig(
 		ServiceCDN,
 		map[string]string{
@@ -2286,12 +2520,12 @@ func ConfigDomainWithComment(serviceName, domainName, comment string) string {
 			"DOMAIN_NAME":     domainName,
 			"DOMAIN_COMMENT":  comment,
 		},
-		"internal/acceptance_tests/blocks/domain_with_comment.tf",
+		"internal/acceptance_tests/blocks/service_domain_with_comment.tf",
 	)
 }
 
-// ConfigDomainMultiple returns a config with multiple domain resources.
-func ConfigDomainMultiple(serviceName, domain1Name, domain2Name string) string {
+// ConfigServiceDomainMultiple returns a config with multiple domain resources.
+func ConfigServiceDomainMultiple(serviceName, domain1Name, domain2Name string) string {
 	return BuildConfig(
 		ServiceCDN,
 		map[string]string{
@@ -2301,12 +2535,12 @@ func ConfigDomainMultiple(serviceName, domain1Name, domain2Name string) string {
 			"DOMAIN_1_NAME":   domain1Name,
 			"DOMAIN_2_NAME":   domain2Name,
 		},
-		"internal/acceptance_tests/blocks/domain_multi.tf",
+		"internal/acceptance_tests/blocks/service_domain_multi.tf",
 	)
 }
 
-// ConfigDomainForImport returns a test configuration for importing a domain.
-func ConfigDomainForImport(serviceName, domainName, additionalDomainName string) string {
+// ConfigServiceDomainForImport returns a test configuration for importing a domain.
+func ConfigServiceDomainForImport(serviceName, domainName, additionalDomainName string) string {
 	return BuildConfig(
 		ServiceCDN,
 		map[string]string{
@@ -2316,7 +2550,7 @@ func ConfigDomainForImport(serviceName, domainName, additionalDomainName string)
 			"DOMAIN_1_NAME":   domainName,
 			"DOMAIN_2_NAME":   additionalDomainName,
 		},
-		"internal/acceptance_tests/blocks/domain_multi.tf",
+		"internal/acceptance_tests/blocks/service_domain_multi.tf",
 	)
 }
 
@@ -6021,4 +6255,481 @@ func ConfigConfigStoresDataSource(h string) string {
 	return RenderBlock("internal/acceptance_tests/blocks/configstore_with_datasource.tf", map[string]string{
 		"CONFIGSTORE_NAME": fmt.Sprintf("tf_%s", h),
 	})
+}
+
+// ConfigSecretStore returns a standalone fastly_secretstore configuration.
+func ConfigSecretStore(name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/secretstore_single.tf", map[string]string{
+		"SECRETSTORE_NAME": name,
+	})
+}
+
+// ConfigSecretStoreWithComputeAutoResourceLink returns a Secret Store plus a Compute auto
+// service with a resource_link pointing at that Secret Store. The Compute package is included
+// so this is a complete runnable Compute service config, not an isolated resource test.
+func ConfigSecretStoreWithComputeAutoResourceLink(storeName, serviceName, domainName, linkName string) string {
+	return ConfigSecretStore(storeName) + "\n" + BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"DOMAIN_NAME":             domainName,
+			"PACKAGE_PATH":            GetPackagePath(),
+			"RESOURCE_LINK_NAME":      linkName,
+			"RESOURCE_LINK_TARGET_ID": "fastly_secretstore.store.id",
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/resource_link_ref.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigSecretStoreWithComputeAutoUnlinked returns a Secret Store plus the same Compute auto
+// service without the resource_link. This is the required intermediate state before deleting a
+// store that was linked to a service.
+func ConfigSecretStoreWithComputeAutoUnlinked(storeName, serviceName, domainName string) string {
+	return ConfigSecretStore(storeName) + "\n" + ConfigComputeAutoBasic(serviceName, domainName)
+}
+
+// ConfigSecretStoresDataSource returns one fastly_secretstore resource and a
+// fastly_secretstores data source that depends on it. One known store is sufficient
+// to verify enumeration without consuming the account's limited Secret Store quota.
+func ConfigSecretStoresDataSource(h string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/secretstore_with_datasource.tf", map[string]string{
+		"SECRETSTORE_NAME": fmt.Sprintf("tf_%s", h),
+	})
+}
+
+// ConfigNGWAFWorkspaceListsByType returns a config declaring one workspace-scoped
+// NGWAF list of every supported type alongside the workspace lists data source.
+func ConfigNGWAFWorkspaceListsByType(workspaceName string, names map[string]string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/ngwaf_workspace_lists_by_type.tf", map[string]string{
+		"WORKSPACE_NAME":     workspaceName,
+		"IP_LIST_NAME":       names["ip"],
+		"STRING_LIST_NAME":   names["string"],
+		"WILDCARD_LIST_NAME": names["wildcard"],
+		"COUNTRY_LIST_NAME":  names["country"],
+		"SIGNAL_LIST_NAME":   names["signal"],
+	})
+}
+
+// ConfigAPISecurityOperation returns a CDN service plus a fastly_api_security_operation
+// resource. Passing an empty description omits the attribute from config entirely, to
+// exercise the transition back to an unset (rather than empty-string) description.
+func ConfigAPISecurityOperation(serviceName, method, domain, path, description string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"METHOD":          method,
+			"DOMAIN":          domain,
+			"PATH":            path,
+			"DESCRIPTION":     description,
+		},
+		"internal/acceptance_tests/blocks/api_security_operation.tf",
+	)
+}
+
+// ConfigAPISecurityOperationWithTag returns a CDN service plus a
+// fastly_api_security_operation_tag and a fastly_api_security_operation that references
+// it via tag_ids. Used to prove tag_ids survives an update that only touches description.
+func ConfigAPISecurityOperationWithTag(serviceName, method, domain, path, tagName, description string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"METHOD":          method,
+			"DOMAIN":          domain,
+			"PATH":            path,
+			"TAG_NAME":        tagName,
+			"DESCRIPTION":     description,
+		},
+		"internal/acceptance_tests/blocks/api_security_operation_with_tag.tf",
+	)
+}
+
+// ConfigAPISecurityOperationTag returns a CDN service plus a
+// fastly_api_security_operation_tag resource. Passing an empty description omits the
+// attribute from config entirely, to exercise the transition back to an unset (rather
+// than empty-string) description.
+func ConfigAPISecurityOperationTag(serviceName, tagName, description string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"TAG_NAME":        tagName,
+			"DESCRIPTION":     description,
+		},
+		"internal/acceptance_tests/blocks/api_security_operation_tag.tf",
+	)
+}
+
+// ConfigAlertStatsAccountWide returns a standalone account-wide fastly_alert (source "stats", no service_id).
+func ConfigAlertStatsAccountWide(alertName, description, metric, evalType, evalPeriod string, threshold float64) string {
+	return RenderBlock("internal/acceptance_tests/blocks/alert_stats_account_wide.tf", map[string]string{
+		"ALERT_NAME":        alertName,
+		"ALERT_DESCRIPTION": description,
+		"METRIC":            metric,
+		"EVAL_TYPE":         evalType,
+		"EVAL_PERIOD":       evalPeriod,
+		"EVAL_THRESHOLD":    strconv.FormatFloat(threshold, 'f', -1, 64),
+	})
+}
+
+// ConfigAlertDomainsScoped returns a CDN auto service with Domain Inspector enabled plus a
+// fastly_alert scoped to that service and restricted to domainName via a dimensions block.
+func ConfigAlertDomainsScoped(serviceName, domainName, alertName, description, metric, evalType, evalPeriod string, threshold float64) string {
+	service := ConfigCDNAutoBasic(serviceName, domainName)
+	domainInspector := productEnablementBlock("domain_inspector", "fastly_service_cdn_auto.test.id", nil)
+	alert := RenderBlock("internal/acceptance_tests/blocks/alert_domains_scoped.tf", map[string]string{
+		"ALERT_NAME":        alertName,
+		"ALERT_DESCRIPTION": description,
+		"SERVICE_ID_REF":    "fastly_service_cdn_auto.test.id",
+		"DOMAIN_NAME":       domainName,
+		"METRIC":            metric,
+		"EVAL_TYPE":         evalType,
+		"EVAL_PERIOD":       evalPeriod,
+		"EVAL_THRESHOLD":    strconv.FormatFloat(threshold, 'f', -1, 64),
+	})
+
+	return joinBlocks(service, domainInspector, alert)
+}
+
+// ConfigAlertDomainsMissingServiceID returns a "domains" source fastly_alert with no service_id.
+func ConfigAlertDomainsMissingServiceID(alertName, metric string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/alert_domains_missing_service_id.tf", map[string]string{
+		"ALERT_NAME": alertName,
+		"METRIC":     metric,
+	})
+}
+
+// ConfigAlertPercentIncreaseWithIgnoreBelow returns a "stats" fastly_alert using the
+// percent_increase evaluation strategy with ignore_below set.
+func ConfigAlertPercentIncreaseWithIgnoreBelow(alertName string, threshold, ignoreBelow float64) string {
+	return RenderBlock("internal/acceptance_tests/blocks/alert_percent_increase.tf", map[string]string{
+		"ALERT_NAME":   alertName,
+		"THRESHOLD":    strconv.FormatFloat(threshold, 'f', -1, 64),
+		"IGNORE_BELOW": strconv.FormatFloat(ignoreBelow, 'f', -1, 64),
+	})
+}
+
+// ConfigDNSZone returns a standalone fastly_dns_zone with a name and description.
+func ConfigDNSZone(name, description string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_basic.tf", map[string]string{
+		"ZONE_NAME":        name,
+		"ZONE_DESCRIPTION": description,
+	})
+}
+
+// ConfigDNSZoneMinimal returns a standalone fastly_dns_zone with only name set.
+func ConfigDNSZoneMinimal(name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_minimal.tf", map[string]string{
+		"ZONE_NAME": name,
+	})
+}
+
+// ConfigDNSZoneWithXfrConfig returns a fastly_dns_zone with an xfr_config_inbound block
+// containing one primary and no inbound_tsig_key_id.
+func ConfigDNSZoneWithXfrConfig(name, description, primaryAddress, primaryDescription string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_with_xfr_config.tf", map[string]string{
+		"ZONE_NAME":           name,
+		"ZONE_DESCRIPTION":    description,
+		"PRIMARY_ADDRESS":     primaryAddress,
+		"PRIMARY_DESCRIPTION": primaryDescription,
+	})
+}
+
+// ConfigDNSZoneWithTSIGKey returns a fastly_dns_zone with an xfr_config_inbound block
+// that references an out-of-band-created TSIG key ID.
+func ConfigDNSZoneWithTSIGKey(name, description, tsigKeyID, primaryAddress, primaryDescription string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_with_tsig.tf", map[string]string{
+		"ZONE_NAME":           name,
+		"ZONE_DESCRIPTION":    description,
+		"TSIG_KEY_ID":         tsigKeyID,
+		"PRIMARY_ADDRESS":     primaryAddress,
+		"PRIMARY_DESCRIPTION": primaryDescription,
+	})
+}
+
+// ConfigDNSZonesDataSource returns a config declaring three fastly_dns_zone resources
+// alongside a fastly_dns_zones data source that depends on all three.
+func ConfigDNSZonesDataSource(name1, name2, name3 string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_three_with_datasource.tf", map[string]string{
+		"ZONE_NAME_1": name1,
+		"ZONE_NAME_2": name2,
+		"ZONE_NAME_3": name3,
+	})
+}
+
+// ConfigFastlyDomain returns a standalone fastly_domain with an fqdn and description.
+func ConfigFastlyDomain(fqdn, description string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/fastly_domain_basic.tf", map[string]string{
+		"DOMAIN_FQDN":        fqdn,
+		"DOMAIN_DESCRIPTION": description,
+	})
+}
+
+// ConfigFastlyDomainMinimal returns a standalone fastly_domain with only fqdn set.
+func ConfigFastlyDomainMinimal(fqdn string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/fastly_domain_minimal.tf", map[string]string{
+		"DOMAIN_FQDN": fqdn,
+	})
+}
+
+// ConfigFastlyDomainWithServiceLink returns a CDN service, a fastly_domain, and a link between them.
+func ConfigFastlyDomainWithServiceLink(serviceName, fqdn string) string {
+	service := ConfigServiceCDNBasic(serviceName)
+	link := RenderBlock("internal/acceptance_tests/blocks/fastly_domain_service_link.tf", map[string]string{
+		"DOMAIN_FQDN":    fqdn,
+		"SERVICE_ID_REF": "fastly_service_cdn.test.id",
+	})
+	return joinBlocks(service, link)
+}
+
+// ConfigFastlyDomainsDataSource returns three fastly_domain resources plus a fastly_domains data source.
+func ConfigFastlyDomainsDataSource(fqdn1, fqdn2, fqdn3 string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/fastly_domain_three_with_datasource.tf", map[string]string{
+		"DOMAIN_FQDN_1": fqdn1,
+		"DOMAIN_FQDN_2": fqdn2,
+		"DOMAIN_FQDN_3": fqdn3,
+	})
+}
+
+// integrationAuthKeys are the config keys that hold secret values (API keys, tokens,
+// webhook URLs) and so belong under `authentication` rather than `config`.
+var integrationAuthKeys = map[string]struct{}{
+	"apikey":  {},
+	"token":   {},
+	"key":     {},
+	"webhook": {},
+	"url":     {},
+}
+
+// splitIntegrationConfig splits a flat integration config map into the non-sensitive
+// fields (config) and sensitive fields (authentication), mirroring the resource schema.
+func splitIntegrationConfig(config map[string]string) (nonSensitive, sensitive map[string]string) {
+	nonSensitive = map[string]string{}
+	sensitive = map[string]string{}
+	for k, v := range config {
+		if _, ok := integrationAuthKeys[k]; ok {
+			sensitive[k] = v
+			continue
+		}
+		nonSensitive[k] = v
+	}
+	return nonSensitive, sensitive
+}
+
+// ConfigIntegration returns a standalone fastly_integration with the given name, description,
+// type, and config. Sensitive keys (see integrationAuthKeys) are rendered under `authentication`.
+func ConfigIntegration(name, description, integrationType string, config map[string]string) string {
+	nonSensitive, sensitive := splitIntegrationConfig(config)
+	return RenderBlock("internal/acceptance_tests/blocks/integration_basic.tf", map[string]string{
+		"NAME":           name,
+		"DESCRIPTION":    description,
+		"TYPE":           integrationType,
+		"CONFIG":         stringMapHCL(nonSensitive),
+		"AUTHENTICATION": stringMapHCL(sensitive),
+	})
+}
+
+// ConfigIntegrationInvalidType returns a fastly_integration using an unsupported type, for validator-failure testing.
+func ConfigIntegrationInvalidType(name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/integration_invalid_type.tf", map[string]string{
+		"NAME": name,
+	})
+}
+
+// ConfigTLSActivation returns a CDN auto service (with a domain and backend) plus a
+// fastly_tls_activation enabling TLS on that domain. certificateIDExpr is the raw HCL expression
+// assigned to certificate_id — either a quoted literal (e.g. `""` for validator-failure tests) or
+// a reference to a fastly_tls_certificate resource declared via ConfigTLSCertificate.
+// extraDependsOn, when given, names additional resources (e.g. "fastly_tls_certificate.test") the
+// activation's depends_on should wait on, alongside the service.
+func ConfigTLSActivation(serviceName, domainName, backendName, certificateIDExpr string, extraDependsOn ...string) string {
+	service := ConfigCDNAutoWithBackend(serviceName, domainName, backendName)
+	activation := RenderBlock("internal/acceptance_tests/blocks/tls_activation_single.tf", map[string]string{
+		"CERTIFICATE_ID_EXPR": certificateIDExpr,
+		"DOMAIN_NAME":         domainName,
+		"EXTRA_DEPENDS_ON":    extraDependsOnHCL(extraDependsOn),
+	})
+	return joinBlocks(service, activation)
+}
+
+// extraDependsOnHCL renders extraDependsOn as a leading-comma-prefixed, comma-joined HCL fragment
+// suitable for splicing after an existing depends_on entry, e.g. ", a, b" for ["a", "b"], or "" if empty.
+func extraDependsOnHCL(extraDependsOn []string) string {
+	if len(extraDependsOn) == 0 {
+		return ""
+	}
+	return ", " + strings.Join(extraDependsOn, ", ")
+}
+
+// ConfigTLSCertificatePair returns a fastly_tls_private_key + fastly_tls_certificate pair (both
+// named resourceName) uploading keyPEM/certPEM under name, for use as a real, Terraform-managed
+// certificate_id reference from a fastly_tls_activation under test. Unlike ConfigTLSCertificate
+// (which always labels its resource "test", for tests exercising a single certificate),
+// resourceName lets a test declare more than one pair at once, e.g. for rotation scenarios.
+func ConfigTLSCertificatePair(resourceName, name, keyPEM, certPEM string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/tls_key_and_certificate.tf", map[string]string{
+		"RESOURCE_NAME": resourceName,
+		"NAME":          name,
+		"KEY_PEM":       keyPEM,
+		"CERT_PEM":      certPEM,
+	})
+}
+
+// ConfigTLSActivationWithMutualAuthentication is ConfigTLSActivation plus a
+// fastly_tls_mutual_authentication resource wired to the activation directly.
+func ConfigTLSActivationWithMutualAuthentication(serviceName, domainName, backendName, certificateIDExpr, mtlsCertBundle string, extraDependsOn ...string) string {
+	service := ConfigCDNAutoWithBackend(serviceName, domainName, backendName)
+	mtls := RenderBlock("internal/acceptance_tests/blocks/tls_mutual_authentication_single.tf", map[string]string{
+		"CERT_BUNDLE": mtlsCertBundle,
+	})
+	activation := fmt.Sprintf(`
+resource "fastly_tls_activation" "test" {
+  certificate_id            = %s
+  domain                    = %q
+  mutual_authentication_id  = fastly_tls_mutual_authentication.test.id
+  depends_on                = [fastly_service_cdn_auto.test%s]
+}
+`, certificateIDExpr, domainName, extraDependsOnHCL(extraDependsOn))
+	return joinBlocks(service, mtls, activation)
+}
+
+// ConfigTLSMutualAuthentication returns a standalone fastly_tls_mutual_authentication.
+// enforced/name are omitted from the config when passed as "".
+func ConfigTLSMutualAuthentication(certBundle, enforced, name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/tls_mutual_authentication_single.tf", map[string]string{
+		"CERT_BUNDLE": certBundle,
+		"ENFORCED":    enforced,
+		"NAME":        name,
+	})
+}
+
+// ConfigTLSPrivateKey returns a standalone fastly_tls_private_key with the given name and PEM-encoded key material.
+func ConfigTLSPrivateKey(name, keyPEM string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/tls_private_key_single.tf", map[string]string{
+		"NAME":    name,
+		"KEY_PEM": keyPEM,
+	})
+}
+
+// ConfigTLSCertificate returns a fastly_tls_certificate uploading certificateBody, with an
+// explicit name.
+func ConfigTLSCertificate(certificateBody, name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/tls_certificate_single.tf", map[string]string{
+		"CERTIFICATE_BODY": certificateBody,
+		"NAME":             name,
+	})
+}
+
+// ConfigTLSCertificateWithoutName is ConfigTLSCertificate but leaves name unset, so it is
+// computed by the API from the certificate's Common Name/SAN.
+func ConfigTLSCertificateWithoutName(certificateBody string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/tls_certificate_single.tf", map[string]string{
+		"CERTIFICATE_BODY": certificateBody,
+	})
+}
+
+// ConfigTLSCertificateWithPrivateKey is ConfigTLSCertificate plus depends_on =
+// [fastly_tls_private_key.test], for tests that declare that resource (via ConfigTLSPrivateKey)
+// in the same config: the Fastly API rejects a certificate upload until its matching private key
+// already exists, and nothing else ties the two resources together for Terraform to order
+// correctly. name may be "" to leave it computed, same as ConfigTLSCertificateWithoutName.
+func ConfigTLSCertificateWithPrivateKey(certificateBody, name string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/tls_certificate_single.tf", map[string]string{
+		"CERTIFICATE_BODY":       certificateBody,
+		"NAME":                   name,
+		"DEPENDS_ON_PRIVATE_KEY": "true",
+	})
+}
+
+// ConfigTLSSubscription returns a CDN auto service with two domains plus a fastly_tls_subscription
+// requesting a lets-encrypt certificate for both, so that common_name can be switched between them
+// to exercise an in-place update.
+func ConfigTLSSubscription(serviceName, domain1, domain2, backendName, commonName string) string {
+	service := fmt.Sprintf(`
+resource "fastly_service_cdn_auto" "test" {
+  name          = %q
+  force_destroy = true
+
+  domain {
+    name = %q
+  }
+
+  domain {
+    name = %q
+  }
+
+  backend {
+    name              = %q
+    address           = "api.example.com"
+    port              = 443
+    use_ssl           = true
+    ssl_cert_hostname = "api.example.com"
+    ssl_sni_hostname  = "api.example.com"
+  }
+}
+`, serviceName, domain1, domain2, backendName)
+
+	subscription := fmt.Sprintf(`
+resource "fastly_tls_subscription" "test" {
+  domains               = [%q, %q]
+  common_name           = %q
+  certificate_authority = "lets-encrypt"
+  depends_on            = [fastly_service_cdn_auto.test]
+}
+`, domain1, domain2, commonName)
+
+	return joinBlocks(service, subscription)
+}
+
+// ConfigTLSSubscriptionWithConfigurationID is ConfigTLSSubscription but also pins
+// configuration_id to a specific, non-default TLS configuration, so a later step can change it
+// alone to verify the update reaches the API.
+func ConfigTLSSubscriptionWithConfigurationID(serviceName, domain1, domain2, backendName, commonName string) string {
+	configuration := `
+data "fastly_tls_configuration" "secondary" {
+  name = "HTTP/3 & TLS v1.3 (s.sni)"
+}
+`
+
+	service := fmt.Sprintf(`
+resource "fastly_service_cdn_auto" "test" {
+  name          = %q
+  force_destroy = true
+
+  domain {
+    name = %q
+  }
+
+  domain {
+    name = %q
+  }
+
+  backend {
+    name              = %q
+    address           = "api.example.com"
+    port              = 443
+    use_ssl           = true
+    ssl_cert_hostname = "api.example.com"
+    ssl_sni_hostname  = "api.example.com"
+  }
+}
+`, serviceName, domain1, domain2, backendName)
+
+	subscription := fmt.Sprintf(`
+resource "fastly_tls_subscription" "test" {
+  domains               = [%q, %q]
+  common_name           = %q
+  certificate_authority = "lets-encrypt"
+  configuration_id      = data.fastly_tls_configuration.secondary.id
+  depends_on            = [fastly_service_cdn_auto.test]
+}
+`, domain1, domain2, commonName)
+
+	return joinBlocks(configuration, service, subscription)
 }

@@ -1,0 +1,43 @@
+---
+page_title: "fastly_ngwaf_workspace_signal Resource - fastly"
+subcategory: ""
+description: |-
+  Manages a Fastly Next-Gen WAF custom signal scoped to a single workspace.
+---
+
+# fastly_ngwaf_workspace_signal (Resource)
+
+Manages a Fastly Next-Gen WAF custom signal scoped to a single workspace.
+
+Workspace signals are versionless and belong to an NGWAF workspace, not to a
+Fastly service version. The generated `reference_id` can be used by other NGWAF
+configuration, such as workspace rules.
+
+## Example Usage
+
+```terraform
+resource "fastly_ngwaf_workspace" "example" {
+  name        = "Example Workspace"
+  description = "Managed by Terraform"
+  mode        = "block"
+
+  attack_signal_thresholds {}
+}
+
+resource "fastly_ngwaf_workspace_signal" "example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+  name         = "Login Attempt"
+  description  = "Tracks login attempts for workspace rules"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Workspace signals are imported using a combination of the workspace ID and the
+signal ID, separated by a `/`:
+
+```shell
+terraform import fastly_ngwaf_workspace_signal.example WORKSPACE_ID/SIGNAL_ID
+```

@@ -1,0 +1,24 @@
+---
+page_title: "fastly_ngwaf_workspace_alert_datadog_integrations Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to retrieve Datadog alert integrations scoped to a single Fastly Next-Gen WAF workspace.
+---
+
+# fastly_ngwaf_workspace_alert_datadog_integrations (Data Source)
+
+Use this data source to retrieve `datadog` alert integrations scoped to a single Fastly Next-Gen WAF workspace.
+
+## Example Usage
+
+```terraform
+data "fastly_ngwaf_workspace_alert_datadog_integrations" "example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+}
+
+output "ngwaf_workspace_alert_datadog_integrations" {
+  value = data.fastly_ngwaf_workspace_alert_datadog_integrations.example.alerts
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

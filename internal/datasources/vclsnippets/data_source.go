@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strconv"
 
-	fastlyclient "github.com/fastly/terraform-provider-fastly/internal/client"
-	"github.com/fastly/terraform-provider-fastly/internal/datasources/idhash"
-	"github.com/fastly/terraform-provider-fastly/internal/service"
-	"github.com/fastly/terraform-provider-fastly/internal/validation"
+	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/idhash"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/fastly/terraform-provider-fastly/internal/provider"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/provider"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
