@@ -36,7 +36,7 @@ Fastly service S3 logging endpoint resource. Writes directly to the specified wr
 - `period` (Number) How frequently log files are finalized so they can be available for reading in seconds. Default `3600`.
 - `placement` (String) Where in the generated VCL the logging call should be placed. If not set, endpoints with format_version of 2 are placed in vcl_log and those with format_version of 1 are placed in vcl_deliver. Valid value is `none`.
 - `processing_region` (String) Region where logs will be processed before streaming to the destination. Valid values are `none`, `us` and `eu`.
-- `public_key` (String, Sensitive) PGP public key that Fastly will use to encrypt your log files before writing them to disk.
+- `public_key` (String) PGP public key that Fastly will use to encrypt your log files before writing them to disk.
 - `redundancy` (String) The S3 redundancy level. Valid values are `standard`, `intelligent_tiering`, `standard_ia`, `onezone_ia`, `glacier_ir`, `glacier`, `deep_archive`, and `reduced_redundancy`.
 - `response_condition` (String) The name of an existing condition in the configured endpoint, or leave blank to always execute.
 - `server_side_encryption` (String) Server-side encryption method. Valid values are `AES256` and `aws:kms`.
