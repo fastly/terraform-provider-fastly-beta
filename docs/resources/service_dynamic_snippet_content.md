@@ -14,7 +14,7 @@ Dynamic VCL snippets have two lifecycle parts:
 
 - metadata such as `name`, `type`, and `priority`, which is versioned service
   configuration
-- content, which is versionless and is managed by this resource
+- content, which is versionless
 
 In the automatic compatibility family, dynamic snippet metadata is managed by
 the `dynamic_snippet` block on `fastly_service_cdn_auto`.
@@ -24,6 +24,21 @@ managed by `fastly_service_dynamic_vcl_snippet`.
 
 Updating this resource's `content` does not clone, validate, stage, or activate a
 service version. Changes are applied immediately to the dynamic snippet.
+
+Both metadata resources also accept their own optional `content` attribute, as
+an alternative to managing content here. If other VCL - for example a main
+VCL's `include "snippet::name"` - references code that must exist in the
+snippet, set it there instead of here: a metadata resource's `content` seeds
+the snippet when it's first created, so the very first service version - the
+one validated and activated during that same create - actually contains it.
+This resource can't help with that specific case, since it depends on the
+metadata resource's computed `snippet_id`, which isn't available until after
+that first version has already been validated and activated.
+
+If a metadata resource's `content` is set, it keeps enforcing that same value
+on every subsequent apply too, not just at creation - so don't configure
+content on both a metadata resource and this resource for the same snippet;
+they'll fight over it on every apply that touches either one.
 
 ## Example Usage with automatic compatibility metadata
 

@@ -210,6 +210,11 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
+	if err := dynamicsnippet.PushConfiguredContent(ctx, r.providerData.Client, plan.Service.ValueString(), fastly.ToValue(s.SnippetID), plan.NestedModel); err != nil {
+		resp.Diagnostics.AddError("Error updating dynamic VCL snippet content", err.Error())
+		return
+	}
+
 	if err := flatten(ctx, s, &plan); err != nil {
 		resp.Diagnostics.AddError("Error reading dynamic VCL snippet after update", err.Error())
 		return
@@ -305,6 +310,12 @@ func flatten(ctx context.Context, s *fastly.Snippet, m *Model) error {
 	if err != nil {
 		return err
 	}
+	// Content is versionless and intentionally left unset by FlattenToNestedModel, since it can be
+	// written by fastly_service_dynamic_snippet_content outside of this resource's own
+	// create/update; preserve whatever this resource previously had configured/planned instead of
+	// losing it - or overwriting that other resource's writes with a stale/empty value - on every
+	// flatten.
+	nested.Content = m.Content
 
 	m.ID = types.StringValue(ID(fastly.ToValue(s.ServiceID), fastly.ToValue(s.ServiceVersion), fastly.ToValue(s.Name)))
 	m.Service = types.StringValue(fastly.ToValue(s.ServiceID))

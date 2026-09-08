@@ -36,6 +36,139 @@ func TestBuildCreateInput(t *testing.T) {
 	}
 }
 
+func TestBuildCreateInputDefaultsToEmptyContent(t *testing.T) {
+	model := NestedModel{
+		Name:     types.StringValue("dynamic_recv"),
+		Type:     types.StringValue("recv"),
+		Priority: types.Int64Value(50),
+	}
+
+	input := BuildCreateInput("service-id", 1, model)
+
+	if fastly.ToValue(input.Content) != "" {
+		t.Fatalf("Content = %q, want empty string when unconfigured", fastly.ToValue(input.Content))
+	}
+}
+
+func TestBuildCreateInputSeedsConfiguredContent(t *testing.T) {
+	model := NestedModel{
+		Name:     types.StringValue("dynamic_recv"),
+		Type:     types.StringValue("recv"),
+		Priority: types.Int64Value(50),
+		Content:  types.StringValue("sub my_helper {}"),
+	}
+
+	input := BuildCreateInput("service-id", 1, model)
+
+	if fastly.ToValue(input.Content) != "sub my_helper {}" {
+		t.Fatalf("Content = %q, want configured seed content", fastly.ToValue(input.Content))
+	}
+}
+
+func TestBuildUpdateInputNeverIncludesContent(t *testing.T) {
+	// The Fastly API rejects a content field on the per-version snippet Update endpoint for a
+	// dynamic snippet ("Dynamic content can only be updated by the Dynamic Snippet API
+	// endpoint"), regardless of whether the value is configured. PushConfiguredContent is the
+	// only path allowed to write it, via UpdateDynamicSnippet.
+	unconfigured := NestedModel{
+		Name:     types.StringValue("dynamic_recv"),
+		Type:     types.StringValue("recv"),
+		Priority: types.Int64Value(50),
+	}
+	if got := BuildUpdateInput("service-id", 1, unconfigured).Content; got != nil {
+		t.Fatalf("Content = %q, want nil when unconfigured", fastly.ToValue(got))
+	}
+
+	configured := NestedModel{
+		Name:     types.StringValue("dynamic_recv"),
+		Type:     types.StringValue("recv"),
+		Priority: types.Int64Value(50),
+		Content:  types.StringValue("sub my_helper {}"),
+	}
+	if got := BuildUpdateInput("service-id", 1, configured).Content; got != nil {
+		t.Fatalf("Content = %q, want nil even when configured - see PushConfiguredContent", fastly.ToValue(got))
+	}
+}
+
+func TestModelsEqualIgnoresUnconfiguredContent(t *testing.T) {
+	desired := NestedModel{
+		Name:     types.StringValue("dynamic_recv"),
+		Type:     types.StringValue("recv"),
+		Priority: types.Int64Value(50),
+	}
+	// FlattenToNestedModel never populates Content, so the "remote" side is always null/empty.
+	remote := NestedModel{
+		Name:     types.StringValue("dynamic_recv"),
+		Type:     types.StringValue("recv"),
+		Priority: types.Int64Value(50),
+	}
+
+	if !desired.ModelsEqual(remote) {
+		t.Fatal("expected models to be equal when content is left unconfigured on both sides")
+	}
+}
+
+func TestModelsEqualDetectsConfiguredContentChange(t *testing.T) {
+	desired := NestedModel{
+		Name:     types.StringValue("dynamic_recv"),
+		Type:     types.StringValue("recv"),
+		Priority: types.Int64Value(50),
+		Content:  types.StringValue("sub my_helper {}"),
+	}
+	remote := NestedModel{
+		Name:     types.StringValue("dynamic_recv"),
+		Type:     types.StringValue("recv"),
+		Priority: types.Int64Value(50),
+	}
+
+	if desired.ModelsEqual(remote) {
+		t.Fatal("expected models to differ when content is configured but remote has none")
+	}
+}
+
+func TestMatchOrderPreservePlanFieldsPreservesContent(t *testing.T) {
+	items := []NestedModel{
+		{Name: types.StringValue("dynamic_recv"), Type: types.StringValue("recv"), Priority: types.Int64Value(50), SnippetID: types.StringValue("snippet-1")},
+	}
+	plan := []NestedModel{
+		{Name: types.StringValue("dynamic_recv"), Type: types.StringValue("recv"), Priority: types.Int64Value(50), Content: types.StringValue("sub my_helper {}")},
+	}
+
+	result := MatchOrderPreservePlanFields(items, plan)
+
+	if len(result) != 1 {
+		t.Fatalf("len(result) = %d, want 1", len(result))
+	}
+	if got := result[0].Content.ValueString(); got != "sub my_helper {}" {
+		t.Fatalf("Content = %q, want the plan's configured content", got)
+	}
+	if got := result[0].SnippetID.ValueString(); got != "snippet-1" {
+		t.Fatalf("SnippetID = %q, want the API's computed snippet_id", got)
+	}
+}
+
+func TestMatchOrderPreserveContentCarriesForwardPreviousValue(t *testing.T) {
+	items := []NestedModel{
+		{Name: types.StringValue("dynamic_recv"), Type: types.StringValue("deliver"), Priority: types.Int64Value(25), SnippetID: types.StringValue("snippet-1")},
+	}
+	previous := []NestedModel{
+		{Name: types.StringValue("dynamic_recv"), Type: types.StringValue("recv"), Priority: types.Int64Value(50), Content: types.StringValue("sub my_helper {}")},
+	}
+
+	result := MatchOrderPreserveContent(items, previous)
+
+	if len(result) != 1 {
+		t.Fatalf("len(result) = %d, want 1", len(result))
+	}
+	if got := result[0].Content.ValueString(); got != "sub my_helper {}" {
+		t.Fatalf("Content = %q, want the previously known content carried forward", got)
+	}
+	// Fields the API actually tracks should still refresh to the latest remote values.
+	if got := result[0].Type.ValueString(); got != "deliver" {
+		t.Fatalf("Type = %q, want the freshly read remote value", got)
+	}
+}
+
 func TestFlattenToNestedModelRejectsRegularSnippet(t *testing.T) {
 	dynamic := 0
 	name := "regular_recv"

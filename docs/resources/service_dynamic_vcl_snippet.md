@@ -18,9 +18,15 @@ manages the versioned metadata for a dynamic VCL snippet:
 - `priority`
 - computed `snippet_id`
 
-It does not manage dynamic snippet content. Dynamic snippet content is
-versionless and is managed separately with
-`fastly_service_dynamic_snippet_content`.
+Dynamic snippet content itself is versionless, and is normally managed
+separately, on an ongoing basis, with `fastly_service_dynamic_snippet_content`.
+This resource's own optional `content` attribute is an alternative: it seeds
+the snippet's content when this resource is first created, which is needed if
+other VCL (for example an `include "snippet::name"`) references code that
+must exist in the snippet for the service version to compile. If set, it
+keeps enforcing that same value on every subsequent apply too, not just at
+creation - so don't manage the same snippet's content with both this
+resource's `content` and `fastly_service_dynamic_snippet_content` at once.
 
 Use this resource when you want to manage dynamic VCL snippet metadata explicitly
 against a known writable service version. For automatic service version cloning,
@@ -64,6 +70,7 @@ resource "fastly_service_dynamic_snippet_content" "block_scrapers" {
 
 ### Optional
 
+- `content` (String) The VCL code the dynamic snippet is seeded with when it is first created, so the very first service version - the one validated and activated during that create - actually contains it. Set this when other VCL (for example an `include "snippet::name"`) references code that must exist in the snippet for the version to compile. If set, this attribute keeps enforcing its configured value on every subsequent apply too, not just at creation, so don't configure it and manage the same snippet's content with `fastly_service_dynamic_snippet_content` at the same time - the two will fight over the content. Leave unset to manage all content, including the initial value, via `fastly_service_dynamic_snippet_content` instead.
 - `priority` (Number) Priority determines execution order. Lower numbers execute first. Default `100`.
 
 ### Read-Only
@@ -91,9 +98,9 @@ This resource does not clone, activate, or stage service versions. Use explicit
 service-version lifecycle actions to clone, validate, stage, or activate a
 service version.
 
-Only the dynamic snippet metadata is versioned. Dynamic snippet content is
-versionless and is managed separately with
-`fastly_service_dynamic_snippet_content`.
+Only the dynamic snippet metadata is versioned. Dynamic snippet content itself
+is versionless and, other than the optional creation-time seed described
+above, is managed separately with `fastly_service_dynamic_snippet_content`.
 
 Terraform can apply metadata and content in one run when the content resource
 references the computed `snippet_id`. The metadata resource still writes to the
