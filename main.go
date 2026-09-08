@@ -11,7 +11,7 @@ import (
 
 func main() {
 	err := providerserver.Serve(context.Background(), provider.New, providerserver.ServeOpts{
-		Address: "registry.terraform.io/fastly/fastly",
+		Address: "registry.terraform.io/fastly/fastly-beta",
 	})
 	if err != nil {
 		log.Fatal(err)

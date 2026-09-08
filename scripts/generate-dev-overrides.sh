@@ -6,7 +6,7 @@ OVERRIDES_FILE=$BIN_DIR/developer_overrides.tfrc
 cat << EOF > $OVERRIDES_FILE
 provider_installation {
   dev_overrides {
-    "fastly/fastly" = "$BIN_DIR"
+    "fastly/fastly-beta" = "$BIN_DIR"
   }
   direct {}
 }
