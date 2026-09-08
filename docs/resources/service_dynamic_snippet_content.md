@@ -35,10 +35,39 @@ This resource can't help with that specific case, since it depends on the
 metadata resource's computed `snippet_id`, which isn't available until after
 that first version has already been validated and activated.
 
-If a metadata resource's `content` is set, it keeps enforcing that same value
-on every subsequent apply too, not just at creation - so don't configure
-content on both a metadata resource and this resource for the same snippet;
-they'll fight over it on every apply that touches either one.
+### Configuring content on both a metadata resource and this resource
+
+If a metadata resource's `content` is set, don't also manage the same
+snippet's content with this resource - the two don't fail cleanly, they
+silently overwrite each other, and which one wins depends on which last ran:
+
+- **`dynamic_snippet` on `fastly_service_cdn_auto`.** Its content is re-pushed
+  whenever `fastly_service_cdn_auto` clones a new service version for *any*
+  reason - not only when the snippet's own configuration changes. Since every
+  create/update on that resource re-clones and re-validates a version whenever
+  *anything* in the service changed, an edit to a completely unrelated
+  attribute (a different backend, a header, a second domain) can silently
+  reset this snippet's content back to the block's configured value, even
+  though neither the block nor this resource's own config changed.
+- **`fastly_service_dynamic_vcl_snippet`.** Its content is re-pushed whenever
+  *that* resource is updated for any reason - for example a `priority` or
+  `type` change, or retargeting it to a different writable `version` - not
+  only when its own `content` changes.
+
+Whether this resource notices the overwrite depends on `manage_snippets`:
+left at its default `false`, this resource never re-reads the live content,
+so its Terraform state can silently diverge from what's actually on the
+snippet, with no diff shown on the next plan. Set to `true`, the next plan
+detects the drift and re-applies this resource's own `content`, undoing the
+metadata resource's overwrite - so the two can flip back and forth depending
+on which one happens to apply next.
+
+There is no safe way to have both manage the same snippet's content
+concurrently. Pick exactly one owner per snippet: set a metadata resource's
+`content` only for the one-time create-time seed described above (and leave
+it unset afterward, or accept that it keeps re-asserting that seed value),
+or manage all of a snippet's content here and never configure the metadata
+resource's `content` attribute at all.
 
 ## Example Usage with automatic compatibility metadata
 

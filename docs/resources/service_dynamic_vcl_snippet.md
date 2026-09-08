@@ -23,10 +23,17 @@ separately, on an ongoing basis, with `fastly_service_dynamic_snippet_content`.
 This resource's own optional `content` attribute is an alternative: it seeds
 the snippet's content when this resource is first created, which is needed if
 other VCL (for example an `include "snippet::name"`) references code that
-must exist in the snippet for the service version to compile. If set, it
-keeps enforcing that same value on every subsequent apply too, not just at
-creation - so don't manage the same snippet's content with both this
-resource's `content` and `fastly_service_dynamic_snippet_content` at once.
+must exist in the snippet for the service version to compile.
+
+If set, this attribute is re-pushed - silently overwriting whatever
+`fastly_service_dynamic_snippet_content` currently holds for the same
+snippet - whenever this resource is updated for *any* reason, not only when
+`content` itself changes: for example a `priority` or `type` change, or
+retargeting `version` to a different writable service version. See
+[`fastly_service_dynamic_snippet_content`'s documentation](https://registry.terraform.io/providers/fastly/fastly-beta/latest/docs/resources/service_dynamic_snippet_content#configuring-content-on-both-a-metadata-resource-and-this-resource)
+for exactly how the two resources interact if both are configured for the
+same snippet - there is no safe way to have both manage the same snippet's
+content concurrently.
 
 Use this resource when you want to manage dynamic VCL snippet metadata explicitly
 against a known writable service version. For automatic service version cloning,
@@ -70,7 +77,7 @@ resource "fastly_service_dynamic_snippet_content" "block_scrapers" {
 
 ### Optional
 
-- `content` (String) The VCL code the dynamic snippet is seeded with when it is first created, so the very first service version - the one validated and activated during that create - actually contains it. Set this when other VCL (for example an `include "snippet::name"`) references code that must exist in the snippet for the version to compile. If set, this attribute keeps enforcing its configured value on every subsequent apply too, not just at creation, so don't configure it and manage the same snippet's content with `fastly_service_dynamic_snippet_content` at the same time - the two will fight over the content. Leave unset to manage all content, including the initial value, via `fastly_service_dynamic_snippet_content` instead.
+- `content` (String) The VCL code the dynamic snippet is seeded with when it is first created, so the very first service version - the one validated and activated during that create - actually contains it. Set this when other VCL (for example an `include "snippet::name"`) references code that must exist in the snippet for the version to compile. If set, this attribute silently overwrites whatever `fastly_service_dynamic_snippet_content` currently holds for the same snippet, any time this resource is next updated for any reason - not only when this attribute's own value changes; see `fastly_service_dynamic_snippet_content`'s documentation for exactly when that happens and how to avoid it. Leave unset to manage all content, including the initial value, via `fastly_service_dynamic_snippet_content` instead.
 - `priority` (Number) Priority determines execution order. Lower numbers execute first. Default `100`.
 
 ### Read-Only

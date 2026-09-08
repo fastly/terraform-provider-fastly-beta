@@ -73,7 +73,7 @@ func CommonAttributes() map[string]schema.Attribute {
 		},
 		"content": schema.StringAttribute{
 			Optional:    true,
-			Description: "The VCL code the dynamic snippet is seeded with when it is first created, so the very first service version - the one validated and activated during that create - actually contains it. Set this when other VCL (for example an `include \"snippet::name\"`) references code that must exist in the snippet for the version to compile. If set, this attribute keeps enforcing its configured value on every subsequent apply too, not just at creation, so don't configure it and manage the same snippet's content with `fastly_service_dynamic_snippet_content` at the same time - the two will fight over the content. Leave unset to manage all content, including the initial value, via `fastly_service_dynamic_snippet_content` instead.",
+			Description: "The VCL code the dynamic snippet is seeded with when it is first created, so the very first service version - the one validated and activated during that create - actually contains it. Set this when other VCL (for example an `include \"snippet::name\"`) references code that must exist in the snippet for the version to compile. If set, this attribute silently overwrites whatever `fastly_service_dynamic_snippet_content` currently holds for the same snippet, any time this resource is next updated for any reason - not only when this attribute's own value changes; see `fastly_service_dynamic_snippet_content`'s documentation for exactly when that happens and how to avoid it. Leave unset to manage all content, including the initial value, via `fastly_service_dynamic_snippet_content` instead.",
 		},
 		"snippet_id": schema.StringAttribute{
 			Computed:    true,
