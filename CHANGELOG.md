@@ -6,6 +6,8 @@
 
 ### BUG FIXES:
 
+- fix(docs): add a note to the provider index page clarifying that the `-beta` suffix applies only to the Registry distribution, not to resource or data source type names ([#76](https://github.com/fastly/terraform-provider-fastly-beta/pull/76))
+
 ### Dependencies
 
 ## 0.1.0 (September 8, 2026)
