@@ -762,7 +762,7 @@ func readSteps(state *Model, imported bool) []readStep {
 				if err != nil {
 					return err
 				}
-				state.DynamicSnippet = dynamicsnippet.MatchOrder(items, state.DynamicSnippet)
+				state.DynamicSnippet = dynamicsnippet.MatchOrderPreserveContent(items, state.DynamicSnippet)
 				return nil
 			},
 		},

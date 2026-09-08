@@ -41,13 +41,15 @@ type NestedModel struct {
 	Name      types.String `tfsdk:"name"`
 	Type      types.String `tfsdk:"type"`
 	Priority  types.Int64  `tfsdk:"priority"`
+	Content   types.String `tfsdk:"content"`
 	SnippetID types.String `tfsdk:"snippet_id"`
 }
 
 func (n NestedModel) ModelsEqual(other NestedModel) bool {
 	return service.StringValue(n.Name) == service.StringValue(other.Name) &&
 		normalizeType(service.StringValue(n.Type)) == normalizeType(service.StringValue(other.Type)) &&
-		service.Int64Value(n.Priority) == service.Int64Value(other.Priority)
+		service.Int64Value(n.Priority) == service.Int64Value(other.Priority) &&
+		regularsnippet.ContentEqual(service.StringValue(n.Content), service.StringValue(other.Content))
 }
 
 func CommonAttributes() map[string]schema.Attribute {
@@ -69,6 +71,10 @@ func CommonAttributes() map[string]schema.Attribute {
 			Default:     int64default.StaticInt64(DefaultPriority),
 			Description: "Priority determines execution order. Lower numbers execute first. Default `100`.",
 		},
+		"content": schema.StringAttribute{
+			Optional:    true,
+			Description: "The VCL code the dynamic snippet is seeded with when it is first created, so the very first service version - the one validated and activated during that create - actually contains it. Set this when other VCL (for example an `include \"snippet::name\"`) references code that must exist in the snippet for the version to compile. If set, this attribute silently overwrites whatever `fastly_service_dynamic_snippet_content` currently holds for the same snippet, any time this resource is next updated for any reason - not only when this attribute's own value changes; see `fastly_service_dynamic_snippet_content`'s documentation for exactly when that happens and how to avoid it. Leave unset to manage all content, including the initial value, via `fastly_service_dynamic_snippet_content` instead.",
+		},
 		"snippet_id": schema.StringAttribute{
 			Computed:    true,
 			Description: "The Fastly-generated dynamic snippet ID. Use this value with `fastly_service_dynamic_snippet_content` to manage versionless snippet code.",
@@ -78,7 +84,7 @@ func CommonAttributes() map[string]schema.Attribute {
 
 func NestedBlockSchema() schema.ListNestedBlock {
 	return schema.ListNestedBlock{
-		Description: "Dynamic VCL snippet metadata attached to this service version. Dynamic snippet content is managed separately by `fastly_service_dynamic_snippet_content`.",
+		Description: "Dynamic VCL snippet metadata attached to this service version. This block's own `content` attribute is optional: if set, it seeds the snippet's content on creation and keeps enforcing that same configured value on every subsequent apply; leave it unset to manage all content, including the initial value, externally and on an ongoing basis via `fastly_service_dynamic_snippet_content` instead.",
 		NestedObject: schema.NestedBlockObject{
 			Attributes: CommonAttributes(),
 		},
@@ -189,7 +195,16 @@ func (o ops) Equal(desired NestedModel, remote *fastly.Snippet) bool {
 }
 
 func (o ops) Update(ctx context.Context, client *fastly.Client, serviceID string, version int, desired NestedModel) (*fastly.Snippet, error) {
-	return client.UpdateSnippet(ctx, BuildUpdateInput(serviceID, version, desired))
+	updated, err := client.UpdateSnippet(ctx, BuildUpdateInput(serviceID, version, desired))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := PushConfiguredContent(ctx, client, serviceID, fastly.ToValue(updated.SnippetID), desired); err != nil {
+		return nil, err
+	}
+
+	return updated, nil
 }
 
 func (o ops) ToModel(api *fastly.Snippet) NestedModel {
@@ -244,6 +259,32 @@ func MatchOrderPreservePlanFields(items, plan []NestedModel) []NestedModel {
 			ordered[i].Name = planned.Name
 			ordered[i].Type = planned.Type
 			ordered[i].Priority = planned.Priority
+			ordered[i].Content = planned.Content
+		}
+	}
+
+	return ordered
+}
+
+// MatchOrderPreserveContent reorders freshly-read items to match previous and carries each
+// item's previously known Content forward. Content is deliberately never read back from the API
+// (see FlattenToNestedModel) since it's versionless and can be written by
+// fastly_service_dynamic_snippet_content outside this block's own reconcile; refreshing it here
+// would surface whatever's currently live instead of what this block last configured, causing
+// spurious diffs against an unset config, or clobbering that other resource's writes on the next
+// apply that touches this block.
+func MatchOrderPreserveContent(items, previous []NestedModel) []NestedModel {
+	ordered := MatchOrder(items, previous)
+
+	previousByName := make(map[string]NestedModel, len(previous))
+	for _, item := range previous {
+		previousByName[service.StringValue(item.Name)] = item
+	}
+
+	for i := range ordered {
+		name := service.StringValue(ordered[i].Name)
+		if prior, ok := previousByName[name]; ok {
+			ordered[i].Content = prior.Content
 		}
 	}
 

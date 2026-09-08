@@ -6120,6 +6120,47 @@ func ConfigCDNAutoWithDynamicSnippetContent(serviceName, domainName, backendName
 	return joinBlocks(serviceConfig, contentResource)
 }
 
+// dynamicSnippetSeedContent returns the VCL body used by
+// ConfigCDNAutoWithDynamicSnippetSeededContent and ConfigServiceDynamicVCLSnippetSeededContent,
+// with a marker comment so successive test steps can configure (and later verify) distinct
+// content for the same subroutine name.
+func dynamicSnippetSeedContent(subName, marker string) string {
+	return fmt.Sprintf("sub %s {\n  # %s\n}\n", subName, marker)
+}
+
+// ConfigCDNAutoWithDynamicSnippetSeededContent returns a CDN auto service whose main VCL
+// includes a dynamic snippet by name, with the dynamic_snippet block's content attribute
+// seeding the snippet's content so the very first service version - the one validated and
+// activated during Create - actually contains what the include references.
+//
+// Regression test for #75: fastly_service_cdn_auto could not create a service whose main VCL
+// includes a dynamic snippet, because dynamic snippet content is otherwise only ever set later
+// by fastly_service_dynamic_snippet_content, after the version has already been validated and
+// activated - so the include's referenced subroutine was undefined and validation failed.
+func ConfigCDNAutoWithDynamicSnippetSeededContent(serviceName, domainName, backendName, snippetName, vclName, subName, marker string) string {
+	snippetContent := dynamicSnippetSeedContent(subName, marker)
+	mainVCL := fmt.Sprintf("include \"snippet::%s\";\n\nsub vcl_recv {\n  #FASTLY recv\n  call %s;\n}\n", snippetName, subName)
+
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":                   serviceName,
+			"DOMAIN_NAME":                    domainName,
+			"BACKEND_NAME":                   backendName,
+			"DYNAMIC_SNIPPET_NAME":           snippetName,
+			"DYNAMIC_SNIPPET_TYPE":           "none",
+			"DYNAMIC_SNIPPET_PRIORITY":       "100",
+			"DYNAMIC_SNIPPET_INLINE_CONTENT": strconv.Quote(snippetContent),
+			"VCL_NAME":                       vclName,
+			"VCL_INLINE_CONTENT":             strconv.Quote(mainVCL),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/backend_single.tf",
+		"internal/acceptance_tests/blocks/dynamic_snippet_nested_with_content.tf",
+		"internal/acceptance_tests/blocks/vcl_nested_inline.tf",
+	)
+}
+
 // ConfigCDNAutoWithRegularAndDynamicSnippetConflict returns a CDN auto service
 // with regular and dynamic snippets using the same name.
 func ConfigCDNAutoWithRegularAndDynamicSnippetConflict(serviceName, domainName, backendName, snippetName, snippetFilePath string) string {
@@ -6151,6 +6192,26 @@ func ConfigServiceDynamicVCLSnippet(serviceName, snippetName, snippetType string
 			"DYNAMIC_SNIPPET_PRIORITY": strconv.Itoa(priority),
 		},
 		"internal/acceptance_tests/blocks/dynamic_snippet_explicit.tf",
+	)
+}
+
+// ConfigServiceDynamicVCLSnippetSeededContent returns a CDN service with one explicit/default
+// first-class dynamic VCL snippet metadata resource whose own content attribute seeds the
+// snippet's content directly, exercising the same content-seeding path added for #75 in the
+// explicit/default resource family (fastly_service_dynamic_vcl_snippet shares its schema with the
+// dynamic_snippet block on fastly_service_cdn_auto).
+func ConfigServiceDynamicVCLSnippetSeededContent(serviceName, snippetName, snippetType string, priority int, content string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":                   serviceName,
+			"SERVICE_COMMENT":                "Dynamic VCL snippet acceptance test",
+			"DYNAMIC_SNIPPET_NAME":           snippetName,
+			"DYNAMIC_SNIPPET_TYPE":           snippetType,
+			"DYNAMIC_SNIPPET_PRIORITY":       strconv.Itoa(priority),
+			"DYNAMIC_SNIPPET_INLINE_CONTENT": strconv.Quote(content),
+		},
+		"internal/acceptance_tests/blocks/dynamic_snippet_explicit_with_content.tf",
 	)
 }
 

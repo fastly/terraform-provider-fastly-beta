@@ -24,6 +24,13 @@ func FlattenToNestedModel(api *fastly.Snippet) (NestedModel, error) {
 		return NestedModel{}, err
 	}
 
+	// Content is deliberately left unset here: it's versionless, and can be written by
+	// fastly_service_dynamic_snippet_content outside of this snippet's own reconcile. Reading it
+	// back from a per-version ListSnippets call would surface whatever's currently live instead of
+	// what this model's own config/plan says, which either fights with that resource for ownership
+	// (when configured here) or shows spurious drift against an unset config (when not).
+	// See MatchOrderPreserveContent and MatchOrderPreservePlanFields, which restore it from
+	// plan/previous state instead.
 	return NestedModel{
 		Name:      types.StringValue(fastly.ToValue(api.Name)),
 		Type:      types.StringValue(string(fastly.ToValue(api.Type))),

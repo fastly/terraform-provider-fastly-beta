@@ -28,7 +28,7 @@ Automatic-lifecycle Fastly CDN service resource with nested versioned configurat
 - `dictionary` (Block List) Edge dictionaries attached to this service. (see [below for nested schema](#nestedblock--dictionary))
 - `director` (Block List) Directors attached to this service. (see [below for nested schema](#nestedblock--director))
 - `domain` (Block List) Domains attached to this service. (see [below for nested schema](#nestedblock--domain))
-- `dynamic_snippet` (Block List) Dynamic VCL snippet metadata attached to this service version. Dynamic snippet content is managed separately by `fastly_service_dynamic_snippet_content`. (see [below for nested schema](#nestedblock--dynamic_snippet))
+- `dynamic_snippet` (Block List) Dynamic VCL snippet metadata attached to this service version. This block's own `content` attribute is optional: if set, it seeds the snippet's content on creation and keeps enforcing that same configured value on every subsequent apply; leave it unset to manage all content, including the initial value, externally and on an ongoing basis via `fastly_service_dynamic_snippet_content` instead. (see [below for nested schema](#nestedblock--dynamic_snippet))
 - `force_destroy` (Boolean) Deactivate the active version before deleting the service. Default `false`.
 - `gzip` (Block List) Gzip configurations attached to this service. (see [below for nested schema](#nestedblock--gzip))
 - `header` (Block List) Header manipulations attached to this service. (see [below for nested schema](#nestedblock--header))
@@ -207,6 +207,7 @@ Required:
 
 Optional:
 
+- `content` (String) The VCL code the dynamic snippet is seeded with when it is first created, so the very first service version - the one validated and activated during that create - actually contains it. Set this when other VCL (for example an `include "snippet::name"`) references code that must exist in the snippet for the version to compile. If set, this attribute silently overwrites whatever `fastly_service_dynamic_snippet_content` currently holds for the same snippet, any time this resource is next updated for any reason - not only when this attribute's own value changes; see `fastly_service_dynamic_snippet_content`'s documentation for exactly when that happens and how to avoid it. Leave unset to manage all content, including the initial value, via `fastly_service_dynamic_snippet_content` instead.
 - `priority` (Number) Priority determines execution order. Lower numbers execute first. Default `100`.
 
 Read-Only:

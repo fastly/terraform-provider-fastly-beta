@@ -6,6 +6,8 @@
 
 ### BUG FIXES:
 
+- resource/fastly_service_cdn_auto, resource/fastly_service_dynamic_vcl_snippet: add an optional `content` attribute to dynamic VCL snippet metadata (the `dynamic_snippet` block, and the standalone resource), seeded into the snippet on creation so a service whose main VCL `include`s a dynamic snippet can be created in one apply ([#78](https://github.com/fastly/terraform-provider-fastly-beta/pull/78)).
+
 ### Dependencies
 
 ## 0.1.1 (September 8, 2026)
