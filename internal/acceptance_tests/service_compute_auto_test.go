@@ -2,10 +2,12 @@ package acceptancetests
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 )
 
 func TestAccFastlyServiceComputeAuto_basic(t *testing.T) {
@@ -60,6 +62,46 @@ func TestAccFastlyServiceComputeAuto_withBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("fastly_service_compute_auto.test", "backend.0.port", "443"),
 					resource.TestCheckResourceAttr("fastly_service_compute_auto.test", "backend.0.use_ssl", "true"),
 					// Verify version 1 is created and activated with backend
+					resource.TestCheckResourceAttr("fastly_service_compute_auto.test", "active_version", "1"),
+					resource.TestCheckResourceAttr("fastly_service_compute_auto.test", "managed_version", "1"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceComputeAuto_survivesPartialCreateFailure covers CDTOOL-1731: an invalid
+// package archive fails the live package-upload call after domain/backend already reconciled, so
+// Create returns partway through. Terraform Core taints the object and plans a destroy-then-create
+// replace on the next apply - the "destroy" only exists because the service ID survived in state,
+// proving the service wasn't silently orphaned.
+func TestAccFastlyServiceComputeAuto_survivesPartialCreateFailure(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-pkg-recover-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	backendName := fmt.Sprintf("backend-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_compute_auto"),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigComputeAutoWithBackendAndPackagePath(serviceName, domainName, backendName, GetInvalidPackagePath()),
+				ExpectError: regexp.MustCompile(`Error updating Compute package|package`),
+			},
+			{
+				Config: ConfigComputeAutoWithBackendAndPackagePath(serviceName, domainName, backendName, GetPackagePath()),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("fastly_service_compute_auto.test", plancheck.ResourceActionDestroyBeforeCreate),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_compute_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_compute_auto.test", "name", serviceName),
+					resource.TestCheckResourceAttr("fastly_service_compute_auto.test", "backend.#", "1"),
+					resource.TestCheckResourceAttr("fastly_service_compute_auto.test", "backend.0.name", backendName),
 					resource.TestCheckResourceAttr("fastly_service_compute_auto.test", "active_version", "1"),
 					resource.TestCheckResourceAttr("fastly_service_compute_auto.test", "managed_version", "1"),
 				),

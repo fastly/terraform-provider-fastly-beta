@@ -369,6 +369,18 @@ func GetPackagePath() string {
 	return filepath.Join(wd, "fixtures", "packages", "valid.tar.gz")
 }
 
+// GetInvalidPackagePath returns the path to a fixture that isn't a valid Compute package archive.
+// The Fastly API rejects it when uploaded, unlike ValidateInput's structural-only local checks, so
+// it's used to trigger a package-upload failure that only the live API can catch.
+// Assumes tests are always run from the acceptance_tests package directory.
+func GetInvalidPackagePath() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(fmt.Sprintf("failed to get working directory: %v", err))
+	}
+	return filepath.Join(wd, "fixtures", "packages", "invalid.tar.gz")
+}
+
 // AddACLEntry adds an ACL entry to the specified ACL via the raw API client, deliberately
 // bypassing fastly_service_cdn_acl_entries so the entry is unmanaged by Terraform. This is used
 // as a test side-effect to populate ACLs for testing force_destroy behavior, mirroring
@@ -1805,6 +1817,24 @@ func ConfigComputeAutoWithBackend(serviceName, domainName, backendName string) s
 			"DOMAIN_NAME":  domainName,
 			"BACKEND_NAME": backendName,
 			"PACKAGE_PATH": GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/backend_single.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigComputeAutoWithBackendAndPackagePath returns a Compute auto service config with a domain,
+// backend, and a package sourced from the given local file path, letting callers substitute an
+// invalid package archive to exercise package-upload failures.
+func ConfigComputeAutoWithBackendAndPackagePath(serviceName, domainName, backendName, packagePath string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME": serviceName,
+			"DOMAIN_NAME":  domainName,
+			"BACKEND_NAME": backendName,
+			"PACKAGE_PATH": packagePath,
 		},
 		"internal/acceptance_tests/blocks/domain_single.tf",
 		"internal/acceptance_tests/blocks/backend_single.tf",

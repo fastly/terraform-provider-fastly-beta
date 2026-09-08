@@ -157,6 +157,22 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 	r.providerData = data
 }
 
+// partialCreateState is recorded once CreateService succeeds but before the remaining
+// reconcile/validate/activate steps complete, so a failure partway through Create leaves the
+// service trackable instead of orphaned. Nested blocks are left empty - Update reconciles and
+// reads them back from the live API on the next apply regardless.
+func partialCreateState(serviceID string, version int, plan *Model) *Model {
+	return &Model{
+		ID:             types.StringValue(serviceID),
+		Name:           plan.Name,
+		Comment:        plan.Comment,
+		ForceDestroy:   plan.ForceDestroy,
+		Reuse:          plan.Reuse,
+		ManagedVersion: types.Int64Value(int64(version)),
+		ActiveVersion:  types.Int64Null(),
+	}
+}
+
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -195,13 +211,21 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		"version":    version,
 	})
 
+	// Once CreateService succeeds, every subsequent failure must record the service ID (and what
+	// else is known) before returning - see CDTOOL-1731.
+	recordOrphanSafeState := func() {
+		resp.Diagnostics.Append(resp.State.Set(ctx, partialCreateState(serviceID, version, &plan))...)
+	}
+
 	if err := domain.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.Domain); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling domains", err.Error())
 		return
 	}
 
 	domains, err := domain.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading service domains", err.Error())
 		return
 	}
@@ -211,198 +235,231 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	// by name, and the Fastly API rejects a backend create that names a health check which
 	// doesn't exist yet in this version.
 	if err := healthcheck.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.HealthCheck); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling health checks", err.Error())
 		return
 	}
 
 	healthChecks, err := healthcheck.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading service health checks", err.Error())
 		return
 	}
 	plan.HealthCheck = healthcheck.MatchOrder(healthChecks, plan.HealthCheck)
 
 	if err := backend.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.Backend); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling backends", err.Error())
 		return
 	}
 
 	backends, err := backend.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading service backends", err.Error())
 		return
 	}
 	plan.Backend = backend.MatchOrder(backends, plan.Backend)
 
 	if err := dictionary.ReconcileWithPrevious(ctx, r.providerData.AutoClient(), serviceID, version, nil, plan.Dictionary); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling dictionaries", err.Error())
 		return
 	}
 
 	dictionaries, err := dictionary.ReadForVersionWithPlan(ctx, r.providerData.AutoClient(), serviceID, version, plan.Dictionary)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading service dictionaries", err.Error())
 		return
 	}
 	plan.Dictionary = dictionary.MatchOrder(dictionaries, plan.Dictionary)
 
 	if err := resourcelink.Reconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.ResourceLink); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling resource links", err.Error())
 		return
 	}
 
 	resourceLinks, err := resourcelink.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading service resource links", err.Error())
 		return
 	}
 	plan.ResourceLink = resourcelink.MatchOrder(resourceLinks, plan.ResourceLink)
 
 	if err := loggingblobstorage.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingBlobStorage); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling Blob Storage logging endpoints", err.Error())
 		return
 	}
 
 	loggingBlobStorages, err := loggingblobstorage.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading Blob Storage logging endpoints", err.Error())
 		return
 	}
 	plan.LoggingBlobStorage = loggingblobstorage.ComputeMatchOrder(loggingBlobStorages, plan.LoggingBlobStorage)
 
 	if err := loggings3.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingS3); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling S3 logging endpoints", err.Error())
 		return
 	}
 
 	loggingS3s, err := loggings3.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading S3 logging endpoints", err.Error())
 		return
 	}
 	plan.LoggingS3 = loggings3.ComputeMatchOrder(loggingS3s, plan.LoggingS3)
 
 	if err := loggingnewrelicotlp.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingNewRelicOTLP); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling New Relic OTLP logging endpoints", err.Error())
 		return
 	}
 
 	loggingNewRelicOTLPs, err := loggingnewrelicotlp.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading New Relic OTLP logging endpoints", err.Error())
 		return
 	}
 	plan.LoggingNewRelicOTLP = loggingnewrelicotlp.ComputeMatchOrder(loggingNewRelicOTLPs, plan.LoggingNewRelicOTLP)
 
 	if err := loggingnewrelic.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingNewRelic); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling New Relic logging endpoints", err.Error())
 		return
 	}
 
 	loggingNewRelics, err := loggingnewrelic.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading New Relic logging endpoints", err.Error())
 		return
 	}
 	plan.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(loggingNewRelics, plan.LoggingNewRelic)
 
 	if err := loggingdatadog.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingDatadog); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling Datadog logging endpoints", err.Error())
 		return
 	}
 
 	loggingDatadogs, err := loggingdatadog.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading Datadog logging endpoints", err.Error())
 		return
 	}
 	plan.LoggingDatadog = loggingdatadog.ComputeMatchOrder(loggingDatadogs, plan.LoggingDatadog)
 
 	if err := loggingbigquery.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingBigQuery); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling BigQuery logging endpoints", err.Error())
 		return
 	}
 
 	loggingBigQueries, err := loggingbigquery.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading BigQuery logging endpoints", err.Error())
 		return
 	}
 	plan.LoggingBigQuery = loggingbigquery.ComputeMatchOrder(loggingBigQueries, plan.LoggingBigQuery)
 
 	if err := logginggcs.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingGCS); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling GCS logging endpoints", err.Error())
 		return
 	}
 
 	loggingGCSs, err := logginggcs.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading GCS logging endpoints", err.Error())
 		return
 	}
 	plan.LoggingGCS = logginggcs.ComputeMatchOrder(loggingGCSs, plan.LoggingGCS)
 
 	if err := loggingsplunk.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingSplunk); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling Splunk logging endpoints", err.Error())
 		return
 	}
 
 	loggingSplunks, err := loggingsplunk.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading Splunk logging endpoints", err.Error())
 		return
 	}
 	plan.LoggingSplunk = loggingsplunk.ComputeMatchOrder(loggingSplunks, plan.LoggingSplunk)
 
 	if err := logginghttps.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingHTTPS); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling HTTPS logging endpoints", err.Error())
 		return
 	}
 
 	loggingHTTPS, err := logginghttps.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading HTTPS logging endpoints", err.Error())
 		return
 	}
 	plan.LoggingHTTPS = logginghttps.ComputeMatchOrder(loggingHTTPS, plan.LoggingHTTPS)
 
 	if err := loggingsumologic.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingSumologic); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling Sumologic logging endpoints", err.Error())
 		return
 	}
 
 	loggingSumologics, err := loggingsumologic.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading Sumologic logging endpoints", err.Error())
 		return
 	}
 	plan.LoggingSumologic = loggingsumologic.ComputeMatchOrder(loggingSumologics, plan.LoggingSumologic)
 
 	if err := loggingsyslog.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingSyslog); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling Syslog logging endpoints", err.Error())
 		return
 	}
 
 	loggingSyslogs, err := loggingsyslog.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading Syslog logging endpoints", err.Error())
 		return
 	}
 	plan.LoggingSyslog = loggingsyslog.ComputeMatchOrder(loggingSyslogs, plan.LoggingSyslog)
 
 	if err := computepackage.Update(ctx, r.providerData.AutoClient(), serviceID, version, plan.Package); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error updating Compute package", err.Error())
 		return
 	}
 
 	packages, err := computepackage.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version, plan.Package)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading Compute package", err.Error())
 		return
 	}
 	plan.Package = packages
 
 	if err := service.ValidateVersion(ctx, r.providerData.AutoClient(), serviceID, version); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error validating service version", err.Error())
 		return
 	}
@@ -414,6 +471,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 	}); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error activating service version", err.Error())
 		return
 	}
