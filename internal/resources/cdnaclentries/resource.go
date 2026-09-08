@@ -3,6 +3,7 @@ package cdnaclentries
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/fastly/go-fastly/v17/fastly"
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 )
@@ -20,7 +22,6 @@ import (
 var (
 	_ resource.Resource                = &Resource{}
 	_ resource.ResourceWithImportState = &Resource{}
-	_ resource.ResourceWithModifyPlan  = &Resource{}
 )
 
 type Resource struct {
@@ -37,7 +38,7 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages ACL entries for a Fastly service ACL. Provides batch operations for creating, updating, and deleting ACL entries.",
+		Description: "Manages ACL entries for a Fastly service ACL. Terraform manages only the entries declared in the `entry` blocks and leaves other ACL entries unchanged.",
 		Attributes:  ResourceAttributes(),
 		Blocks:      ResourceBlocks(),
 	}
@@ -68,24 +69,25 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	tflog.Debug(ctx, "Creating Fastly service ACL entries", map[string]any{
-		"service_id": serviceID,
-		"acl_id":     aclID,
-	})
-
-	entries := expandEntries(ctx, plan.Entry, &resp.Diagnostics)
+	desired := expandEntries(ctx, plan.Entry, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var batchEntries []*fastly.BatchACLEntry
-	for _, entry := range entries {
-		batchEntry := buildBatchACLEntry(ctx, entry, fastly.CreateBatchOperation)
-		batchEntries = append(batchEntries, batchEntry)
+	tflog.Debug(ctx, "Creating Fastly service ACL entries", map[string]any{
+		"service_id": serviceID,
+		"acl_id":     aclID,
+		"count":      len(desired),
+	})
+
+	remote, err := r.listEntries(ctx, serviceID, aclID)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading ACL entries before create", err.Error())
+		return
 	}
 
-	err := executeBatchACLOperations(ctx, r.providerData.Client, serviceID, aclID, batchEntries)
-	if err != nil {
+	batch := buildBatchEntries(ctx, remote, nil, desired)
+	if err := r.executeBatch(ctx, serviceID, aclID, batch); err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating ACL entries",
 			fmt.Sprintf("service %s, ACL %s: %s", serviceID, aclID, err),
@@ -95,19 +97,13 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 	plan.ID = types.StringValue(fmt.Sprintf("%s/%s", serviceID, aclID))
 
-	if len(entries) == 0 && !plan.ManageEntries.ValueBool() {
-		tflog.Debug(ctx, "Skipping ACL entries refresh after create: manage_entries is false and no entries were configured")
-		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-		return
-	}
-
-	refreshedEntries, err := r.refreshEntries(ctx, serviceID, aclID)
+	refreshed, err := r.listEntries(ctx, serviceID, aclID)
 	if err != nil {
 		resp.Diagnostics.AddError("Error refreshing ACL entries", err.Error())
 		return
 	}
 
-	plan.Entry = flattenEntries(ctx, refreshedEntries, plan.Entry, &resp.Diagnostics)
+	plan.Entry = flattenEntries(ctx, filterManagedRemoteEntries(refreshed, desired), plan.Entry, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -118,34 +114,46 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 
-	if !state.ManageEntries.ValueBool() {
-		tflog.Debug(ctx, "Skipping ACL entries refresh: manage_entries is false")
-		return
-	}
-
 	serviceID := state.ServiceID.ValueString()
 	aclID := state.ACLID.ValueString()
 
-	tflog.Debug(ctx, "Refreshing ACL entries configuration", map[string]any{
+	tflog.Debug(ctx, "Reading Fastly service ACL entries", map[string]any{
 		"service_id": serviceID,
 		"acl_id":     aclID,
 	})
 
-	remoteState, err := r.refreshEntries(ctx, serviceID, aclID)
+	remote, err := r.listEntries(ctx, serviceID, aclID)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			tflog.Warn(ctx, "ACL not found, removing ACL entries from state", map[string]any{
+				"service_id": serviceID,
+				"acl_id":     aclID,
+			})
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("Error reading ACL entries", err.Error())
 		return
 	}
 
-	for _, entry := range remoteState {
-		tflog.Debug(ctx, "Read: Remote entry from API", map[string]any{
-			"ip":      entry.IP,
-			"negated": entry.Negated,
-			"subnet":  entry.Subnet,
-		})
+	// Import starts with only service_id/acl_id known, so entry is null. In that
+	// case, adopt every existing entry into Terraform state. During ordinary
+	// refreshes, preserve partial ownership by reading only entries that this
+	// resource already manages.
+	if state.Entry.IsNull() || state.Entry.IsUnknown() {
+		state.Entry = flattenEntries(ctx, remote, state.Entry, &resp.Diagnostics)
+	} else {
+		managed := expandEntries(ctx, state.Entry, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		state.Entry = flattenEntries(ctx, filterManagedRemoteEntries(remote, managed), state.Entry, &resp.Diagnostics)
+	}
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	state.Entry = flattenEntries(ctx, remoteState, state.Entry, &resp.Diagnostics)
+	state.ID = types.StringValue(fmt.Sprintf("%s/%s", serviceID, aclID))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -167,78 +175,30 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	tflog.Debug(ctx, "Updating Fastly service ACL entries", map[string]any{
-		"service_id": serviceID,
-		"acl_id":     aclID,
-	})
-
-	var batchEntries []*fastly.BatchACLEntry
-
-	oldEntries := expandEntries(ctx, state.Entry, &resp.Diagnostics)
-	newEntries := expandEntries(ctx, plan.Entry, &resp.Diagnostics)
+	desired := expandEntries(ctx, plan.Entry, &resp.Diagnostics)
+	currentManaged := expandEntries(ctx, state.Entry, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Entries are matched across old/new by (ip, subnet), which is what Fastly's ACL
-	// enforces uniqueness on -- not the full content key. Matching on full content
-	// (including negated/comment) would treat a comment-only change as a delete of
-	// the old entry plus a create of a new one at the same ip/subnet, and the batch
-	// API rejects that create as a duplicate before the delete takes effect.
-	oldByIdentity := make(map[string]EntryModel)
-	for _, e := range oldEntries {
-		if !e.ID.IsNull() && !e.ID.IsUnknown() {
-			oldByIdentity[entryIdentityKey(e)] = e
-		}
-	}
+	tflog.Debug(ctx, "Updating Fastly service ACL entries", map[string]any{
+		"service_id": serviceID,
+		"acl_id":     aclID,
+		"count":      len(desired),
+	})
 
-	newByIdentity := make(map[string]EntryModel)
-	for _, e := range newEntries {
-		newByIdentity[entryIdentityKey(e)] = e
-	}
-
-	for identityKey, oldEntry := range oldByIdentity {
-		if _, exists := newByIdentity[identityKey]; !exists {
-			batchEntries = append(batchEntries, &fastly.BatchACLEntry{
-				Operation: new(fastly.BatchOperation),
-				EntryID:   oldEntry.ID.ValueStringPointer(),
-			})
-			*batchEntries[len(batchEntries)-1].Operation = fastly.DeleteBatchOperation
-			tflog.Debug(ctx, "Deleting entry", map[string]any{"ip": oldEntry.IP.ValueString()})
-		}
-	}
-
-	for _, newEntry := range newEntries {
-		identityKey := entryIdentityKey(newEntry)
-		oldEntry, existsInOld := oldByIdentity[identityKey]
-
-		tflog.Debug(ctx, "Processing entry in update", map[string]any{
-			"ip":            newEntry.IP.ValueString(),
-			"exists_in_old": existsInOld,
-		})
-
-		if !existsInOld {
-			batchEntry := buildBatchACLEntry(ctx, newEntry, fastly.CreateBatchOperation)
-			batchEntries = append(batchEntries, batchEntry)
-			tflog.Debug(ctx, "Creating new entry", map[string]any{"ip": newEntry.IP.ValueString()})
-			continue
-		}
-
-		if !entriesEqual(oldEntry, newEntry) {
-			updatedEntry := newEntry
-			updatedEntry.ID = oldEntry.ID
-			batchEntry := buildBatchACLEntry(ctx, updatedEntry, fastly.UpdateBatchOperation)
-			batchEntries = append(batchEntries, batchEntry)
-			tflog.Debug(ctx, "Updating existing entry", map[string]any{"ip": newEntry.IP.ValueString()})
-		} else {
-			tflog.Debug(ctx, "Entry unchanged", map[string]any{"ip": newEntry.IP.ValueString()})
-		}
-	}
-
-	tflog.Debug(ctx, "Batch operations to execute", map[string]any{"count": len(batchEntries)})
-
-	err := executeBatchACLOperations(ctx, r.providerData.Client, serviceID, aclID, batchEntries)
+	remote, err := r.listEntries(ctx, serviceID, aclID)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		resp.Diagnostics.AddError("Error reading ACL entries before update", err.Error())
+		return
+	}
+
+	batch := buildBatchEntries(ctx, remote, currentManaged, desired)
+	if err := r.executeBatch(ctx, serviceID, aclID, batch); err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating ACL entries",
 			fmt.Sprintf("service %s, ACL %s: %s", serviceID, aclID, err),
@@ -246,13 +206,15 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	remoteState, err := r.refreshEntries(ctx, serviceID, aclID)
+	plan.ID = types.StringValue(fmt.Sprintf("%s/%s", serviceID, aclID))
+
+	refreshed, err := r.listEntries(ctx, serviceID, aclID)
 	if err != nil {
 		resp.Diagnostics.AddError("Error refreshing ACL entries", err.Error())
 		return
 	}
 
-	plan.Entry = flattenEntries(ctx, remoteState, plan.Entry, &resp.Diagnostics)
+	plan.Entry = flattenEntries(ctx, filterManagedRemoteEntries(refreshed, desired), plan.Entry, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -271,29 +233,31 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 		return
 	}
 
-	tflog.Debug(ctx, "Deleting Fastly service ACL entries", map[string]any{
-		"service_id": serviceID,
-		"acl_id":     aclID,
-	})
-
-	entries := expandEntries(ctx, state.Entry, &resp.Diagnostics)
+	managed := expandEntries(ctx, state.Entry, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var batchEntries []*fastly.BatchACLEntry
-	for _, entry := range entries {
-		if !entry.ID.IsNull() && !entry.ID.IsUnknown() {
-			batchEntries = append(batchEntries, &fastly.BatchACLEntry{
-				Operation: new(fastly.BatchOperation),
-				EntryID:   entry.ID.ValueStringPointer(),
-			})
-			*batchEntries[len(batchEntries)-1].Operation = fastly.DeleteBatchOperation
+	tflog.Debug(ctx, "Deleting Fastly service ACL entries", map[string]any{
+		"service_id": serviceID,
+		"acl_id":     aclID,
+		"count":      len(managed),
+	})
+
+	remote, err := r.listEntries(ctx, serviceID, aclID)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return
 		}
+		resp.Diagnostics.AddError("Error reading ACL entries before delete", err.Error())
+		return
 	}
 
-	err := executeBatchACLOperations(ctx, r.providerData.Client, serviceID, aclID, batchEntries)
-	if err != nil {
+	batch := buildBatchEntries(ctx, remote, managed, nil)
+	if err := r.executeBatch(ctx, serviceID, aclID, batch); err != nil {
+		if errors.IsNotFound(err) {
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error deleting ACL entries",
 			fmt.Sprintf("service %s, ACL %s: %s", serviceID, aclID, err),
@@ -317,11 +281,10 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("service_id"), serviceID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("acl_id"), aclID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("manage_entries"), true)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
 }
 
-func (r *Resource) refreshEntries(ctx context.Context, serviceID, aclID string) ([]*fastly.ACLEntry, error) {
+func (r *Resource) listEntries(ctx context.Context, serviceID, aclID string) ([]*fastly.ACLEntry, error) {
 	paginator := r.providerData.Client.GetACLEntries(ctx, &fastly.GetACLEntriesInput{
 		ServiceID: serviceID,
 		ACLID:     aclID,
@@ -338,83 +301,136 @@ func (r *Resource) refreshEntries(ctx context.Context, serviceID, aclID string) 
 	return entries, nil
 }
 
-func executeBatchACLOperations(ctx context.Context, client *fastly.Client, serviceID, aclID string, batchACLEntries []*fastly.BatchACLEntry) error {
-	batchSize := fastly.BatchModifyMaximumOperations
-
-	tflog.Debug(ctx, "executeBatchACLOperations", map[string]any{
-		"total_entries": len(batchACLEntries),
-		"batch_size":    batchSize,
-	})
-
-	for i, entry := range batchACLEntries {
-		negatedStr := "nil"
-		if entry.Negated != nil {
-			negatedStr = fmt.Sprintf("%v (type: %T)", *entry.Negated, *entry.Negated)
-		}
-		tflog.Debug(ctx, "Batch entry details", map[string]any{
-			"index":   i,
-			"ip":      entry.IP,
-			"negated": negatedStr,
-			"op":      entry.Operation,
-		})
+func (r *Resource) executeBatch(ctx context.Context, serviceID, aclID string, batch []*fastly.BatchACLEntry) error {
+	if len(batch) == 0 {
+		return nil
 	}
 
-	for i := 0; i < len(batchACLEntries); i += batchSize {
-		j := min(i+batchSize, len(batchACLEntries))
+	batchSize := fastly.BatchModifyMaximumOperations
+	for i := 0; i < len(batch); i += batchSize {
+		j := min(i+batchSize, len(batch))
 
-		tflog.Debug(ctx, "Calling BatchModifyACLEntries", map[string]any{
-			"batch_start": i,
-			"batch_end":   j,
-			"count":       j - i,
-		})
-
-		err := client.BatchModifyACLEntries(ctx, &fastly.BatchModifyACLEntriesInput{
+		if err := r.providerData.Client.BatchModifyACLEntries(ctx, &fastly.BatchModifyACLEntriesInput{
 			ServiceID: serviceID,
 			ACLID:     aclID,
-			Entries:   batchACLEntries[i:j],
-		})
-		if err != nil {
-			tflog.Error(ctx, "BatchModifyACLEntries failed", map[string]any{"error": err.Error()})
+			Entries:   batch[i:j],
+		}); err != nil {
 			return err
 		}
-		tflog.Debug(ctx, "BatchModifyACLEntries succeeded")
 	}
 
 	return nil
 }
 
-func entriesEqual(a, b EntryModel) bool {
-	return a.IP.Equal(b.IP) &&
-		a.Subnet.Equal(b.Subnet) &&
-		a.Negated.Equal(b.Negated) &&
-		a.Comment.Equal(b.Comment)
+// buildBatchEntries reconciles Terraform-owned entries against current Fastly
+// state. currentManaged determines which entries Terraform may delete; remote
+// entries that were never managed by this resource are left untouched.
+// Entries are matched by (ip, subnet), which is what Fastly's ACL enforces
+// uniqueness on -- not the full content -- so a comment/negated-only change is
+// diffed as an update to the existing entry rather than a delete-and-create
+// pair at the same ip/subnet, which the batch API would reject.
+func buildBatchEntries(ctx context.Context, remote []*fastly.ACLEntry, currentManaged, desired []EntryModel) []*fastly.BatchACLEntry {
+	remoteByIdentity := make(map[string]*fastly.ACLEntry, len(remote))
+	for _, e := range remote {
+		remoteByIdentity[remoteEntryIdentityKey(e)] = e
+	}
+
+	desiredByIdentity := make(map[string]EntryModel, len(desired))
+	for _, e := range desired {
+		desiredByIdentity[entryIdentityKey(e)] = e
+	}
+
+	var batch []*fastly.BatchACLEntry
+
+	deleteIDs := make([]string, 0)
+	for _, e := range currentManaged {
+		key := entryIdentityKey(e)
+		if _, stillDesired := desiredByIdentity[key]; stillDesired {
+			continue
+		}
+		if remoteEntry, exists := remoteByIdentity[key]; exists && remoteEntry.EntryID != nil {
+			deleteIDs = append(deleteIDs, *remoteEntry.EntryID)
+		}
+	}
+	sort.Strings(deleteIDs)
+	for _, id := range deleteIDs {
+		op := fastly.DeleteBatchOperation
+		batch = append(batch, &fastly.BatchACLEntry{Operation: &op, EntryID: new(id)})
+	}
+
+	desiredKeys := make([]string, 0, len(desired))
+	for key := range desiredByIdentity {
+		desiredKeys = append(desiredKeys, key)
+	}
+	sort.Strings(desiredKeys)
+
+	for _, key := range desiredKeys {
+		entry := desiredByIdentity[key]
+		remoteEntry, exists := remoteByIdentity[key]
+
+		if !exists {
+			batch = append(batch, buildBatchACLEntry(ctx, entry, fastly.CreateBatchOperation))
+			continue
+		}
+
+		if !remoteEntryMatchesDesired(remoteEntry, entry) {
+			adopted := entry
+			if remoteEntry.EntryID != nil {
+				adopted.ID = types.StringValue(*remoteEntry.EntryID)
+			}
+			batch = append(batch, buildBatchACLEntry(ctx, adopted, fastly.UpdateBatchOperation))
+		}
+	}
+
+	return batch
 }
 
-func plannedEntryContentKey(e EntryModel) string {
-	ip := ""
-	subnet := int64(0)
-	negated := false
-	comment := ""
-
-	if !e.IP.IsNull() && !e.IP.IsUnknown() {
-		ip = e.IP.ValueString()
-	}
-	if !e.Subnet.IsNull() && !e.Subnet.IsUnknown() {
-		subnet = e.Subnet.ValueInt64()
-	}
-	if !e.Negated.IsNull() && !e.Negated.IsUnknown() {
-		negated = e.Negated.ValueBool()
-	}
-	if !e.Comment.IsNull() && !e.Comment.IsUnknown() {
-		comment = e.Comment.ValueString()
+// remoteEntryMatchesDesired reports whether the remote entry already reflects
+// the desired negated/comment values. Fields left null/unknown in desired are
+// not compared, since there is nothing to diff against.
+func remoteEntryMatchesDesired(remote *fastly.ACLEntry, desired EntryModel) bool {
+	if !desired.Comment.IsNull() && !desired.Comment.IsUnknown() {
+		remoteComment := ""
+		if remote.Comment != nil {
+			remoteComment = *remote.Comment
+		}
+		if remoteComment != desired.Comment.ValueString() {
+			return false
+		}
 	}
 
-	return fmt.Sprintf("%s|%d|%t|%s", ip, subnet, negated, comment)
+	if !desired.Negated.IsNull() && !desired.Negated.IsUnknown() {
+		remoteNegated := false
+		if remote.Negated != nil {
+			remoteNegated = *remote.Negated
+		}
+		if remoteNegated != desired.Negated.ValueBool() {
+			return false
+		}
+	}
+
+	return true
 }
 
-// entryIdentityKey returns the (ip, subnet) pair Fastly's ACL enforces uniqueness on.
-// Used to match entries across old/new state when deciding create vs. update vs. delete,
-// as opposed to plannedEntryContentKey which also factors in negated/comment.
+// filterManagedRemoteEntries returns only remote entries already owned by
+// this Terraform resource. Undeclared ACL entries are intentionally ignored.
+func filterManagedRemoteEntries(remote []*fastly.ACLEntry, managed []EntryModel) []*fastly.ACLEntry {
+	managedIdentities := make(map[string]struct{}, len(managed))
+	for _, e := range managed {
+		managedIdentities[entryIdentityKey(e)] = struct{}{}
+	}
+
+	var result []*fastly.ACLEntry
+	for _, e := range remote {
+		if _, ok := managedIdentities[remoteEntryIdentityKey(e)]; ok {
+			result = append(result, e)
+		}
+	}
+	return result
+}
+
+// entryIdentityKey returns the (ip, subnet) pair Fastly's ACL enforces
+// uniqueness on, for entries sourced from Terraform configuration/state.
 func entryIdentityKey(e EntryModel) string {
 	ip := ""
 	subnet := int64(0)
@@ -429,26 +445,17 @@ func entryIdentityKey(e EntryModel) string {
 	return fmt.Sprintf("%s|%d", ip, subnet)
 }
 
-func (r *Resource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if req.Plan.Raw.IsNull() {
-		return
+// remoteEntryIdentityKey mirrors entryIdentityKey for entries sourced from the API.
+func remoteEntryIdentityKey(e *fastly.ACLEntry) string {
+	ip := ""
+	subnet := 0
+
+	if e.IP != nil {
+		ip = *e.IP
+	}
+	if e.Subnet != nil {
+		subnet = *e.Subnet
 	}
 
-	var plan Model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if !plan.ManageEntries.ValueBool() && !req.State.Raw.IsNull() {
-		var state Model
-		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		if plan.ACLID.Equal(state.ACLID) {
-			plan.Entry = state.Entry
-			resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
-		}
-	}
+	return fmt.Sprintf("%s|%d", ip, subnet)
 }
