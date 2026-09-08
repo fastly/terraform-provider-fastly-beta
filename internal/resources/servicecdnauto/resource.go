@@ -428,6 +428,22 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 	}
 }
 
+// partialCreateState is recorded once CreateService succeeds but before the remaining
+// reconcile/validate/activate steps complete, so a failure partway through Create leaves the
+// service trackable instead of orphaned. Nested blocks are left empty - Update reconciles and
+// reads them back from the live API on the next apply regardless.
+func partialCreateState(serviceID string, version int, plan *Model) *Model {
+	return &Model{
+		ID:             types.StringValue(serviceID),
+		Name:           plan.Name,
+		Comment:        plan.Comment,
+		ForceDestroy:   plan.ForceDestroy,
+		Reuse:          plan.Reuse,
+		ManagedVersion: types.Int64Value(int64(version)),
+		ActiveVersion:  types.Int64Null(),
+	}
+}
+
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -492,18 +508,27 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	client := r.providerData.AutoClient()
 	previous := &Model{}
 
+	// Once CreateService succeeds, every subsequent failure must record the service ID (and what
+	// else is known) before returning - see CDTOOL-1731.
+	recordOrphanSafeState := func() {
+		resp.Diagnostics.Append(resp.State.Set(ctx, partialCreateState(serviceID, version, &plan))...)
+	}
+
 	if label, phase, err := runMutateSteps(ctx, client, serviceID, version, beforeBackendAndDirectorSteps(&plan, previous)); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError(fmt.Sprintf("Error %s %s", phase, label), err.Error())
 		return
 	}
 
 	if err := backend.Reconcile(ctx, client, serviceID, version, plan.Backend); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling backends", err.Error())
 		return
 	}
 
 	backends, err := backend.ReadForVersion(ctx, client, serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading service backends", err.Error())
 		return
 	}
@@ -512,29 +537,34 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	// Directors reconcile after backends: a director's backends can reference one by name, and
 	// creating a director naming one that doesn't exist yet fails.
 	if err := director.Reconcile(ctx, client, serviceID, version, plan.Director); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling directors", err.Error())
 		return
 	}
 
 	directors, err := director.ReadForVersion(ctx, client, serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading service directors", err.Error())
 		return
 	}
 	plan.Director = director.MatchOrder(directors, plan.Director)
 
 	if label, phase, err := runMutateSteps(ctx, client, serviceID, version, beforeDictionaryAndRateLimiterSteps(&plan, previous)); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError(fmt.Sprintf("Error %s %s", phase, label), err.Error())
 		return
 	}
 
 	if err := dictionary.ReconcileWithPrevious(ctx, client, serviceID, version, nil, plan.Dictionary); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling dictionaries", err.Error())
 		return
 	}
 
 	dictionaries, err := dictionary.ReadForVersionWithPlan(ctx, client, serviceID, version, plan.Dictionary)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading service dictionaries", err.Error())
 		return
 	}
@@ -543,23 +573,27 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	// Rate limiters reconcile after dictionaries: uri_dictionary_name can reference one by name,
 	// and creating a rate limiter naming one that doesn't exist yet fails.
 	if err := ratelimiter.Reconcile(ctx, client, serviceID, version, plan.RateLimiter); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling rate limiters", err.Error())
 		return
 	}
 
 	rateLimiters, err := ratelimiter.ReadForVersion(ctx, client, serviceID, version)
 	if err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading service rate limiters", err.Error())
 		return
 	}
 	plan.RateLimiter = ratelimiter.MatchOrder(rateLimiters, plan.RateLimiter)
 
 	if label, phase, err := runMutateSteps(ctx, client, serviceID, version, afterDictionaryAndRateLimiterSteps(&plan, previous)); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError(fmt.Sprintf("Error %s %s", phase, label), err.Error())
 		return
 	}
 
 	if err := service.ValidateVersion(ctx, r.providerData.AutoClient(), serviceID, version); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error validating service version", err.Error())
 		return
 	}
@@ -571,6 +605,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 	}); err != nil {
+		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error activating service version", err.Error())
 		return
 	}

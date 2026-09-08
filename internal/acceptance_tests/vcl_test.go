@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/fastly/go-fastly/v17/fastly"
@@ -245,6 +246,55 @@ func TestAccFastlyServiceCDNAuto_VCLValidationInvalidSyntax(t *testing.T) {
 			{
 				Config:      ConfigCDNAutoWithVCLInline(serviceName, domainName, backendName, vclName, invalidContent),
 				ExpectError: regexp.MustCompile(`Error validating service version|VCL|invalid`),
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceCDNAuto_survivesPartialCreateFailure covers CDTOOL-1731: invalid VCL fails
+// the live service.ValidateVersion call after domain/backend already reconciled, so Create returns
+// partway through. Terraform Core taints the object and plans a destroy-then-create replace on the
+// next apply - the "destroy" only exists because the service ID survived in state, proving the
+// service wasn't silently orphaned.
+func TestAccFastlyServiceCDNAuto_survivesPartialCreateFailure(t *testing.T) {
+	t.Parallel()
+
+	serviceName := fmt.Sprintf("tf-test-vcl-recover-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	backendName := fmt.Sprintf("backend-%s", acctest.RandString(10))
+	vclName := fmt.Sprintf("main_%s", acctest.RandString(10))
+	invalidContent := `sub vcl_recv {
+#FASTLY recv
+  this is not valid vcl
+}
+`
+	validContent := vclBoilerplate("recovered")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn_auto"),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigCDNAutoWithVCLInline(serviceName, domainName, backendName, vclName, invalidContent),
+				ExpectError: regexp.MustCompile(`Error validating service version|VCL|invalid`),
+			},
+			{
+				Config: ConfigCDNAutoWithVCLInline(serviceName, domainName, backendName, vclName, validContent),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("fastly_service_cdn_auto.test", plancheck.ResourceActionDestroyBeforeCreate),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "name", serviceName),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "backend.#", "1"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "backend.0.name", backendName),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "vcl.0.content", validContent),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "active_version", "1"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "managed_version", "1"),
+				),
 			},
 		},
 	})

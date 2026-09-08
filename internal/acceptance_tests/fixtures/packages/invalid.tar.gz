@@ -1,0 +1,1 @@
+this is not a valid Compute package archive - used by TestAccFastlyServiceComputeAuto_survivesPartialCreateFailure to trigger a live API rejection at the package-upload step, after domain/backend have already reconciled successfully.
