@@ -56,8 +56,8 @@ https://registry.terraform.io/tools/doc-preview
 
 The pull request workflow runs documentation checks in a dedicated `docs` job.
 
-The job runs unless the pull request has the `Skip-Docs` label. It performs the
-same commands that should be run locally:
+It runs on every pull request and performs the same commands that should be
+run locally:
 
 ```shell
 make generate-docs

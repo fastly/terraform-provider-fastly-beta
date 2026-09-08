@@ -10,15 +10,14 @@ tell Git about your signing key.
 
 1. Merge all PRs intended for the release.
 1. Rebase latest remote main branch locally (`git pull --rebase origin main`).
-1. Ensure the code is release-ready (`make release-check`), which runs the build, lint, baseline test suite, and generates/validates docs.
-1. Manually update generated `docs/index.md`.
+1. Ensure the code is release-ready (`make release-check`), which runs the build, lint, baseline test suite, and generates/validates docs. Requires `FASTLY_API_TOKEN` to be set, since the baseline test suite makes real API calls.
+1. Update the `version` constraint in `examples/provider/provider.tf` to the new release version, then run `make docs` to regenerate the docs
 1. Open a new PR to update CHANGELOG ([example](https://github.com/fastly/terraform-provider-fastly/pull/498/files)).
-    - make sure to use the `Skip-Docs` label before opening to ensure the docs action doesn't fail with the new version.
     - We utilize [Semantic Versioning](https://semver.org/) and only include relevant/significant changes within the CHANGELOG.
 1. 🚨 Ensure any _removals_ are considered a BREAKING CHANGE and must be published in a major release.
 1. Merge CHANGELOG.
 1. Rebase latest remote main branch locally (`git pull --rebase origin main`).
-1. Create a new signed tag (replace `{{remote}}` with the remote pointing to the official repository i.e. `origin` or `upstream` depending on your Git workflow): `tag=vX.Y.Z && git tag -s $tag -m $tag && git push {{remote}} $tag`.
+1. Create a new signed tag: `tag=vX.Y.Z && git tag -s $tag -m $tag && git push origin $tag`.
     - Triggers a [GitHub Action](https://github.com/fastly/terraform-provider-fastly-beta/blob/main/.github/workflows/release.yml) that produces a 'draft' release.
 1. Copy/paste CHANGELOG into the [draft release](https://github.com/fastly/terraform-provider-fastly-beta/releases).
 1. Publish draft release.
