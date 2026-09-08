@@ -53,7 +53,7 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 			},
 			"stores": schema.SetNestedAttribute{
 				Computed:    true,
-				Description: "The Secret Stores available to the account. Set semantics are used because the Fastly API does not guarantee list ordering.",
+				Description: "The Secret Stores available to the account. Set semantics are used because Secret Stores are not returned in a guaranteed order.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{

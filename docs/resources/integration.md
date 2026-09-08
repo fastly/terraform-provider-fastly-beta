@@ -177,7 +177,7 @@ resource "fastly_integration" "webhook_example" {
 
 ### Optional
 
-- `authentication` (Map of String, Sensitive) Sensitive configuration specific to the integration `type`, such as API keys, tokens, and webhook URLs (see documentation examples). The Fastly API never returns these values, so they are not refreshed on read or import.
+- `authentication` (Map of String, Sensitive) Sensitive configuration specific to the integration `type`, such as API keys, tokens, and webhook URLs (see documentation examples). These values are never returned on read, so they are not refreshed on read or import.
 - `config` (Map of String) Non-sensitive configuration specific to the integration `type` (see documentation examples). Credentials and other secret values belong in `authentication` instead.
 - `description` (String) User submitted description of the integration.
 
@@ -193,7 +193,7 @@ Fastly Integrations can be imported using their integration ID, e.g.
 terraform import fastly_integration.example <integration_id>
 ```
 
--> **Note:** The Fastly API only returns `config` on read (e.g. `address` for a `mailinglist`
+-> **Note:** Only `config` is returned on read (e.g. `address` for a `mailinglist`
 integration); `authentication` fields such as API keys, tokens, and webhook URLs are never
 echoed back. Importing a `fastly_integration` will therefore always show a diff on
 `authentication` until the next `apply` re-applies the configured value.

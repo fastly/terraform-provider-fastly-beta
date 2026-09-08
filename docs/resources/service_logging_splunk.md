@@ -177,7 +177,7 @@ Optional:
 ## Import
 
 For import-from-scratch with the Terraform CLI, include the service version in
-the import ID so the provider can read the endpoint from the Fastly API and
+the import ID so the provider can read the endpoint and
 populate full state:
 
 ```shell
@@ -201,8 +201,7 @@ service version.
 - `authentication` groups the Splunk token as the other logging endpoints group
   credentials. Unlike some of the other logging endpoints, it is Optional and
   Computed: when omitted entirely it defaults to the `FASTLY_SPLUNK_TOKEN`
-  environment variable, preserving the live (SDKv2) provider's behavior.
-  `token` is sensitive and never appears in plan output.
+  environment variable. `token` is sensitive and never appears in plan output.
 - `tls` groups the certificate material used for mutual TLS to the Splunk
   collector. `ca_cert` and `client_cert` default to the `FASTLY_SPLUNK_CA_CERT`
   and `FASTLY_SPLUNK_CLIENT_CERT` environment variables when omitted; `client_key`

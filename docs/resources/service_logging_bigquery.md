@@ -182,7 +182,7 @@ Optional:
 ## Import
 
 For import-from-scratch with the Terraform CLI, include the service version in
-the import ID so the provider can read the endpoint from the Fastly API and
+the import ID so the provider can read the endpoint and
 populate full state:
 
 ```shell
@@ -213,16 +213,15 @@ activate a service version.
   the same Google Cloud service account. `email` and `secret_key` are
   sensitive and never appear in plan output. Once `account_name` is set, it
   can only be changed to a different value — not cleared back to unset —
-  since the Fastly API rejects an explicit empty `account_name` on update.
+  since an explicit empty `account_name` is rejected on update.
   `account_name` also falls back to the deprecated `FASTLY_GCS_ACCOUNT_NAME`
-  environment variable (used by the live provider) when
-  `FASTLY_GOOGLE_SERVICE_ACCOUNT_NAME` is unset, emitting a deprecation
-  warning so upgrading practitioners are not silently broken.
+  environment variable when `FASTLY_GOOGLE_SERVICE_ACCOUNT_NAME` is unset,
+  emitting a deprecation warning so upgrading practitioners are not silently
+  broken.
 - `secret_key` must be a real PEM-encoded private key (PKCS8 or PKCS1) and
-  must not contain leading or trailing whitespace — the Fastly API validates
-  the credential and rejects both.
+  must not contain leading or trailing whitespace — both are rejected.
 - `format` must produce valid JSON that matches the schema of your BigQuery
-  table. If `format` is not sent, the API falls back to a general JSON log
+  table. If `format` is not sent, it falls back to a general JSON log
   format similar to the one used by other streaming-logs integrations.
 - Leaving `placement` unset is not the same as setting it to `none`: unset
   lets Fastly place the logging call automatically (`vcl_log` for

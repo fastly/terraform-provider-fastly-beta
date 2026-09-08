@@ -52,7 +52,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 		},
 		"include": schema.StringAttribute{
 			Optional:    true,
-			Description: "A comma-separated list used by the Terraform provider during a state refresh to return more data related to your mutual authentication from the Fastly API (permitted values: `tls_activations`).",
+			Description: "A comma-separated list used by the Terraform provider during a state refresh to return more data related to your mutual authentication (permitted values: `tls_activations`).",
 		},
 		"name": schema.StringAttribute{
 			Optional:    true,

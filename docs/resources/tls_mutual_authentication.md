@@ -55,7 +55,7 @@ resource "fastly_tls_mutual_authentication" "example" {
 
 - `activation_ids` (Set of String) List of TLS Activation IDs
 - `enforced` (Boolean) Determines whether Mutual TLS will fail closed (enforced) or fail open. A true value will require a successful Mutual TLS handshake for the connection to continue and will fail closed if unsuccessful. A false value will fail open and allow the connection to proceed (if this attribute is not set we default to `false`).
-- `include` (String) A comma-separated list used by the Terraform provider during a state refresh to return more data related to your mutual authentication from the Fastly API (permitted values: `tls_activations`).
+- `include` (String) A comma-separated list used by the Terraform provider during a state refresh to return more data related to your mutual authentication (permitted values: `tls_activations`).
 - `name` (String) A custom name for your mutual authentication. If name is not supplied we will auto-generate one.
 
 ### Read-Only

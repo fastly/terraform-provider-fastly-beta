@@ -112,7 +112,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 
 	if created.ServiceID == nil {
-		resp.Diagnostics.AddError("Error creating Fastly Compute service", "Fastly API returned nil service ID.")
+		resp.Diagnostics.AddError("Error creating Fastly Compute service", "Service creation returned no service ID.")
 		return
 	}
 

@@ -165,7 +165,7 @@ Optional:
 ## Import
 
 For import-from-scratch with the Terraform CLI, include the service version in
-the import ID so the provider can read the endpoint from the Fastly API and
+the import ID so the provider can read the endpoint and
 populate full state:
 
 ```shell

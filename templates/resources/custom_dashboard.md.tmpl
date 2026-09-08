@@ -73,7 +73,7 @@ Each dashboard item has two distinct identifiers:
 
 - `key` is required configuration and is owned by Terraform. It must be unique
   within the dashboard and remains stable across ordinary edits and reordering.
-- `id` is computed and owned by Fastly. It is assigned by the API when an item
+- `id` is computed and owned by Fastly. It is assigned when an item
   is created and is reused by the provider for subsequent updates.
 
 Changing `key` causes Terraform to treat the item as a new logical dashboard

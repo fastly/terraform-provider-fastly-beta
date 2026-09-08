@@ -97,7 +97,7 @@ A certificate can be imported using its Fastly certificate ID, e.g.
 terraform import fastly_tls_platform_certificate.example xxxxxxxxxxx
 ```
 
-Import does not recover `certificate_body`, `intermediates_blob`, or `allow_untrusted_root` - the
-Fastly API never returns them for an existing certificate, so they are left unset in state after
+Import does not recover `certificate_body`, `intermediates_blob`, or `allow_untrusted_root` - they
+are never returned for an existing certificate, so they are left unset in state after
 import. Applying an unmodified configuration afterward re-sends the values already in that
 configuration.

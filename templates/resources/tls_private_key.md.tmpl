@@ -33,4 +33,4 @@ A TLS private key can be imported using its ID, e.g.
 terraform import fastly_tls_private_key.example xxxxxxxx
 ```
 
-`private_key.pem` is not returned by the API and so is not populated by import; the next `terraform apply` will show a forced replacement unless `private_key.pem` in your configuration exactly matches the key data of the private key you are importing.
+`private_key.pem` is not returned on read and so is not populated by import; the next `terraform apply` will show a forced replacement unless `private_key.pem` in your configuration exactly matches the key data of the private key you are importing.
