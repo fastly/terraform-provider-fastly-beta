@@ -132,7 +132,7 @@ Create a normal Terraform provider configuration.
 terraform {
   required_providers {
     fastly = {
-      source = "fastly/fastly"
+      source  = "fastly/fastly-beta"
     }
   }
 }
