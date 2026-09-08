@@ -79,7 +79,7 @@ When importing an existing ACL entries resource, `manage_entries` is automatical
 set to `true`, regardless of the value in your configuration, to enable drift
 detection.
 
-Import reads the ACL's current entries from the Fastly API into state as-is; it
+Import reads the ACL's current entries into state as-is; it
 does not modify the ACL or delete anything by itself. But because `manage_entries`
 is forced to `true`, your `entry` blocks must match what was imported before you
 run `terraform apply` — any entry present in state (from the import) but missing
@@ -103,4 +103,4 @@ Example:
 terraform import fastly_service_cdn_acl_entries.example SU1Z0isxPaozGVKXdv0eY/7Lsb7Y8w6St2eqwFgqzc
 ```
 
-Import reads the current entries from the API into state and sets `manage_entries = true`; it does not delete anything by itself. See [Behavior and Drift Management](#behavior-and-drift-management) above — make sure your `entry` blocks match the imported entries before running `terraform apply`, since `manage_entries = true` will delete any entry missing from your configuration.
+Import reads the current entries into state and sets `manage_entries = true`; it does not delete anything by itself. See [Behavior and Drift Management](#behavior-and-drift-management) above — make sure your `entry` blocks match the imported entries before running `terraform apply`, since `manage_entries = true` will delete any entry missing from your configuration.

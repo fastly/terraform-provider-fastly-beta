@@ -852,7 +852,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		if len(state.Package) > 0 && len(plan.Package) == 0 {
 			resp.Diagnostics.AddError(
 				"Removing Compute packages is not supported",
-				"The Fastly API does not currently support deleting a package from a service version. Provide a package block or create a new service/version workflow that does not rely on package removal.",
+				"Deleting a package from a service version is not currently supported. Provide a package block or create a new service/version workflow that does not rely on package removal.",
 			)
 			return
 		}

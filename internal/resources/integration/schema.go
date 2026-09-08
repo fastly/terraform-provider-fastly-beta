@@ -95,7 +95,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 			Optional:    true,
 			ElementType: types.StringType,
 			Sensitive:   true,
-			Description: "Sensitive configuration specific to the integration `type`, such as API keys, tokens, and webhook URLs (see documentation examples). The Fastly API never returns these values, so they are not refreshed on read or import.",
+			Description: "Sensitive configuration specific to the integration `type`, such as API keys, tokens, and webhook URLs (see documentation examples). These values are never returned on read, so they are not refreshed on read or import.",
 		},
 	}
 }

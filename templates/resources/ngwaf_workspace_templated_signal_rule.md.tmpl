@@ -17,10 +17,10 @@ request attributes alone, which is what the `multival_condition` on
 
 Two things set this rule type apart from the others:
 
-- It takes no `description`; the API accepts only an empty one.
-- Every change replaces the rule. The API rejects an update to a
-  `templated_signal` rule that carries actions, and its action is mandatory,
-  so there is nothing to change in place.
+- It takes no `description`; only an empty one is accepted.
+- Every change replaces the rule. Updating a `templated_signal` rule that
+  carries actions is rejected, and its action is mandatory, so there is
+  nothing to change in place.
 
 Rules of other types are managed by their own resources -
 `fastly_ngwaf_workspace_request_rule`,

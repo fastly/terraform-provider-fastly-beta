@@ -17,7 +17,7 @@ Use this data source to retrieve all Fastly Secret Stores available to the accou
 ### Read-Only
 
 - `id` (String) Stable Terraform data source identifier derived from the returned Secret Store IDs.
-- `stores` (Attributes Set) The Secret Stores available to the account. Set semantics are used because the Fastly API does not guarantee list ordering. (see [below for nested schema](#nestedatt--stores))
+- `stores` (Attributes Set) The Secret Stores available to the account. Set semantics are used because Secret Stores are not returned in a guaranteed order. (see [below for nested schema](#nestedatt--stores))
 
 <a id="nestedatt--stores"></a>
 ### Nested Schema for `stores`

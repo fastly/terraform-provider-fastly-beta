@@ -178,7 +178,7 @@ Fastly Integrations can be imported using their integration ID, e.g.
 terraform import fastly_integration.example <integration_id>
 ```
 
--> **Note:** The Fastly API only returns `config` on read (e.g. `address` for a `mailinglist`
+-> **Note:** Only `config` is returned on read (e.g. `address` for a `mailinglist`
 integration); `authentication` fields such as API keys, tokens, and webhook URLs are never
 echoed back. Importing a `fastly_integration` will therefore always show a diff on
 `authentication` until the next `apply` re-applies the configured value.

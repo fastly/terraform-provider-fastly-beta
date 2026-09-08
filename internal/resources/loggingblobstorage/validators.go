@@ -48,7 +48,7 @@ func (gzipLevelCodecConflict) ValidateInt64(ctx context.Context, req validator.I
 	resp.Diagnostics.AddAttributeError(
 		req.Path,
 		"Conflicting `gzip_level` and `compression_codec`",
-		"`gzip_level` and `compression_codec` cannot be set together — the Fastly API rejects a request that specifies both.\n\n"+
+		"`gzip_level` and `compression_codec` cannot be set together — setting both is rejected.\n\n"+
 			"- To compress at a specific gzip level, leave `compression_codec` unset and set `gzip_level`.\n"+
 			"- To use a codec (`zstd`, `snappy`, or `gzip`), remove `gzip_level`. With `compression_codec = \"gzip\"`, the level defaults to `3`.",
 	)

@@ -123,7 +123,7 @@ resource "fastly_service_compute_auto" "example" {
 ## Import
 
 For import-from-scratch with the Terraform CLI, include the service version in
-the import ID so the provider can read the endpoint from the Fastly API and
+the import ID so the provider can read the endpoint and
 populate full state:
 
 ```shell
@@ -148,14 +148,14 @@ service version.
   server. None of its fields have an environment variable fallback; all default
   to an empty string when omitted. `client_key` is sensitive and never appears
   in plan output.
-- `gzip_level` and `compression_codec` are mutually exclusive — the Fastly API
-  rejects a request that sets both. Leave `compression_codec` unset and set
+- `gzip_level` and `compression_codec` are mutually exclusive — setting both
+  is rejected. Leave `compression_codec` unset and set
   `gzip_level` for a specific level, or set `compression_codec` (`zstd`,
   `snappy`, or `gzip`) and let the API manage the level.
 - `header_name`/`header_value` add one custom HTTP header to every request the
   endpoint sends — for example an `Authorization` header some HTTPS log
   collectors require. Neither is treated as sensitive by this resource, since
-  the Fastly API accepts arbitrary header values here, not only credentials;
+  arbitrary header values are accepted here, not only credentials;
   mark the input variable holding `header_value` sensitive yourself if you use
   it for an authorization token.
 - Leaving `placement` unset is not the same as setting it to `none`: unset lets

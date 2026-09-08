@@ -379,8 +379,8 @@ You should see:
 - This example is for the automatic compatibility resource family only.
 - Do not mix `fastly_service_cdn_auto` with first-class explicit/default
   resources for the same Fastly service.
-- This first cut is intended to mirror the current provider’s
-  convenience-oriented lifecycle behavior for service, domain, and backend.
+- This resource is intended to provide convenience-oriented lifecycle
+  behavior for service, domain, and backend.
 - At most one `image_optimizer_default_settings` block is supported per
   service, and it requires the Image Optimizer product to already be enabled
   on that service.

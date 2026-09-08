@@ -45,7 +45,7 @@ The `version` argument is not part of the stable identity because explicit
 resources can move the same logical condition from one service version to another.
 
 For import-from-scratch with the Terraform CLI, include the service version in
-the import ID so the provider can read the condition from the Fastly API and
+the import ID so the provider can read the condition and
 populate full state:
 
 ```shell
@@ -89,6 +89,6 @@ service version.
 
 ## Type changes
 
-The Fastly API does not support changing a condition's `type` in place. When
+Changing a condition's `type` in place is not supported. When
 `type` changes, the provider deletes and recreates the condition on the same
 service version instead of issuing an update.

@@ -124,7 +124,7 @@ func flattenChallenges(authorizations []*fastly.TLSAuthorizations) (dns, http ty
 		for _, challenge := range authorization.Challenges {
 			if challenge.Type == "managed-dns" {
 				if len(challenge.Values) < 1 {
-					diags.AddError("Error reading TLS subscription", "fastly API returned no record values for a managed DNS challenge")
+					diags.AddError("Error reading TLS subscription", "no record values were returned for a managed DNS challenge")
 					continue
 				}
 				obj, objDiags := types.ObjectValue(managedDNSChallengeAttrTypes, map[string]attr.Value{
