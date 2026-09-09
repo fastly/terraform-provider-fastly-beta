@@ -235,15 +235,6 @@ func configNGWAFWorkspaceList(blockFile, workspaceName, listName, listDescriptio
 	})
 }
 
-func terraformStringList(values []string) string {
-	quoted := make([]string, len(values))
-	for i, value := range values {
-		quoted[i] = fmt.Sprintf("%q", value)
-	}
-
-	return "[" + strings.Join(quoted, ", ") + "]"
-}
-
 func CheckNGWAFWorkspaceListEntries(resourceName string, expected []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
