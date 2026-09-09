@@ -3,6 +3,7 @@ logging_gcs {
   bucket_name = "fastly-test-bucket-1"
   authentication = {
     email = "test-gcs@fastly-test-project.iam.gserviceaccount.com"
+    # generated solely for this test fixture; not tied to any real account or service.
     secret_key = chomp(<<-EOT
       -----BEGIN PRIVATE KEY-----
       MIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkpAgEAAoICAQCd4jPcvMlmvT/j
@@ -66,6 +67,7 @@ logging_gcs {
   bucket_name = "fastly-test-bucket-2"
   authentication = {
     email = "test-gcs@fastly-test-project.iam.gserviceaccount.com"
+    # generated solely for this test fixture; not tied to any real account or service.
     secret_key = chomp(<<-EOT
       -----BEGIN PRIVATE KEY-----
       MIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkpAgEAAoICAQCd4jPcvMlmvT/j

@@ -5,6 +5,7 @@ resource "fastly_service_logging_gcs" "test" {
   bucket_name = "fastly-test-bucket"
   authentication = {
     email = "test-gcs@fastly-test-project.iam.gserviceaccount.com"
+    # generated solely for this test fixture; not tied to any real account or service.
     secret_key = chomp(<<-EOT
       -----BEGIN PRIVATE KEY-----
       MIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkpAgEAAoICAQCd4jPcvMlmvT/j

@@ -7,6 +7,7 @@ resource "fastly_service_logging_bigquery" "test" {
   table      = "fastly_test_table"
   authentication = {
     email = "test-bigquery@fastly-test-project.iam.gserviceaccount.com"
+    # generated solely for this test fixture; not tied to any real account or service.
     secret_key = chomp(<<-EOT
       -----BEGIN PRIVATE KEY-----
       MIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkpAgEAAoICAQCd4jPcvMlmvT/j

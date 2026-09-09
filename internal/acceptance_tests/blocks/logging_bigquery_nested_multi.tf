@@ -5,6 +5,7 @@ logging_bigquery {
   table      = "fastly_test_table_1"
   authentication = {
     email = "test-bigquery@fastly-test-project.iam.gserviceaccount.com"
+    # generated solely for this test fixture; not tied to any real account or service.
     secret_key = chomp(<<-EOT
       -----BEGIN PRIVATE KEY-----
       MIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkpAgEAAoICAQCd4jPcvMlmvT/j
@@ -70,6 +71,7 @@ logging_bigquery {
   table      = "fastly_test_table_2"
   authentication = {
     email = "test-bigquery@fastly-test-project.iam.gserviceaccount.com"
+    # generated solely for this test fixture; not tied to any real account or service.
     secret_key = chomp(<<-EOT
       -----BEGIN PRIVATE KEY-----
       MIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkpAgEAAoICAQCd4jPcvMlmvT/j
