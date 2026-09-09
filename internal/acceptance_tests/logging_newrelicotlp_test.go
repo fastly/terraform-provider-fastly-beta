@@ -44,6 +44,46 @@ func TestAccFastlyServiceLoggingNewRelicOTLP_basic(t *testing.T) {
 	})
 }
 
+// TestAccFastlyServiceLoggingNewRelicOTLP_emptyFormat verifies an explicit
+// format = "" is rejected at validate time rather than failing apply.
+func TestAccFastlyServiceLoggingNewRelicOTLP_emptyFormat(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("newrelic-logger-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigLoggingNewRelicOTLPEmptyFormat(serviceName, domainName, loggerName),
+				ExpectError: regexp.MustCompile("`format` cannot be explicitly set to an empty string"),
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceLoggingNewRelicOTLP_emptyRegion verifies an explicit
+// region = "" is rejected at validate time.
+func TestAccFastlyServiceLoggingNewRelicOTLP_emptyRegion(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("newrelic-logger-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigLoggingNewRelicOTLPEmptyRegion(serviceName, domainName, loggerName),
+				ExpectError: regexp.MustCompile("`region` cannot be explicitly set to an empty string"),
+			},
+		},
+	})
+}
+
 func TestAccFastlyServiceLoggingNewRelicOTLP_update(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))

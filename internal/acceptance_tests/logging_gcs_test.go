@@ -63,6 +63,46 @@ func TestAccFastlyServiceLoggingGCS_basic(t *testing.T) {
 //
 // Not run in parallel: t.Setenv panics if the test also calls t.Parallel, and
 // this test needs the env vars set for its own duration only.
+// TestAccFastlyServiceLoggingGCS_emptyFormat verifies an explicit
+// format = "" is rejected at validate time rather than failing apply.
+func TestAccFastlyServiceLoggingGCS_emptyFormat(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("gcs-logger-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigLoggingGCSEmptyFormat(serviceName, domainName, loggerName),
+				ExpectError: regexp.MustCompile("`format` cannot be explicitly set to an empty string"),
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceLoggingGCS_emptyTimestampFormat verifies an explicit
+// timestamp_format = "" is rejected at validate time.
+func TestAccFastlyServiceLoggingGCS_emptyTimestampFormat(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("gcs-logger-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigLoggingGCSEmptyTimestampFormat(serviceName, domainName, loggerName),
+				ExpectError: regexp.MustCompile("`timestamp_format` cannot be explicitly set to an empty string"),
+			},
+		},
+	})
+}
+
 func TestAccFastlyServiceLoggingGCS_authEnvDefaults(t *testing.T) {
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))

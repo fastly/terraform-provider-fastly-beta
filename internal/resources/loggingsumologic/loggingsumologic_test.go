@@ -637,10 +637,12 @@ func TestSchemaValidators(t *testing.T) {
 	for _, tt := range stringCases {
 		t.Run(tt.name, func(t *testing.T) {
 			a := attrs[tt.attr].(schema.StringAttribute)
-			require.Len(t, a.Validators, 1)
+			require.NotEmpty(t, a.Validators)
 			resp := &validator.StringResponse{}
-			a.Validators[0].ValidateString(context.Background(),
-				validator.StringRequest{ConfigValue: types.StringValue(tt.value)}, resp)
+			for _, v := range a.Validators {
+				v.ValidateString(context.Background(),
+					validator.StringRequest{ConfigValue: types.StringValue(tt.value)}, resp)
+			}
 			assert.Equal(t, tt.valid, !resp.Diagnostics.HasError())
 		})
 	}

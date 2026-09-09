@@ -3054,6 +3054,58 @@ func ConfigLoggingS3Basic(serviceName, domainName, loggerName, bucketName string
 	)
 }
 
+// ConfigLoggingS3EmptyFormat sets format = "" - see TestAccFastlyServiceLoggingS3_emptyFormat.
+func ConfigLoggingS3EmptyFormat(serviceName, domainName, loggerName, bucketName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"LOGGING_S3_NAME": loggerName,
+			"BUCKET_NAME":     bucketName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_s3_empty_format.tf",
+	)
+}
+
+// ConfigLoggingS3EmptyTimestampFormat sets timestamp_format = "" - see
+// TestAccFastlyServiceLoggingS3_emptyTimestampFormat.
+func ConfigLoggingS3EmptyTimestampFormat(serviceName, domainName, loggerName, bucketName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"LOGGING_S3_NAME": loggerName,
+			"BUCKET_NAME":     bucketName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_s3_empty_timestamp_format.tf",
+	)
+}
+
+// ConfigLoggingS3EmptyDomain sets domain = "" - see TestAccFastlyServiceLoggingS3_emptyDomain.
+func ConfigLoggingS3EmptyDomain(serviceName, domainName, loggerName, bucketName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"LOGGING_S3_NAME": loggerName,
+			"BUCKET_NAME":     bucketName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_s3_empty_domain.tf",
+	)
+}
+
 func ConfigLoggingS3AtVersion(serviceName, domainName, loggerName, bucketName string, version int) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -3315,6 +3367,41 @@ func ConfigLoggingBlobStorageBasic(serviceName, domainName, loggerName, containe
 		},
 		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
 		"internal/acceptance_tests/blocks/logging_blobstorage_basic.tf",
+	)
+}
+
+// ConfigLoggingBlobStorageEmptyFormat sets format = "" - see TestAccFastlyServiceLoggingBlobStorage_emptyFormat.
+func ConfigLoggingBlobStorageEmptyFormat(serviceName, domainName, loggerName, containerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":             serviceName,
+			"SERVICE_COMMENT":          "",
+			"DOMAIN_NAME":              domainName,
+			"SERVICE_VERSION":          "1",
+			"LOGGING_BLOBSTORAGE_NAME": loggerName,
+			"CONTAINER_NAME":           containerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_blobstorage_empty_format.tf",
+	)
+}
+
+// ConfigLoggingBlobStorageEmptyTimestampFormat sets timestamp_format = ""
+// - see TestAccFastlyServiceLoggingBlobStorage_emptyTimestampFormat.
+func ConfigLoggingBlobStorageEmptyTimestampFormat(serviceName, domainName, loggerName, containerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":             serviceName,
+			"SERVICE_COMMENT":          "",
+			"DOMAIN_NAME":              domainName,
+			"SERVICE_VERSION":          "1",
+			"LOGGING_BLOBSTORAGE_NAME": loggerName,
+			"CONTAINER_NAME":           containerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_blobstorage_empty_timestamp_format.tf",
 	)
 }
 
@@ -3607,6 +3694,38 @@ func ConfigLoggingNewRelicOTLPBasic(serviceName, domainName, loggerName string) 
 	)
 }
 
+// ConfigLoggingNewRelicOTLPEmptyFormat sets format = "" - see TestAccFastlyServiceLoggingNewRelicOTLP_emptyFormat.
+func ConfigLoggingNewRelicOTLPEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":          serviceName,
+			"SERVICE_COMMENT":       "",
+			"DOMAIN_NAME":           domainName,
+			"SERVICE_VERSION":       "1",
+			"LOGGING_NEWRELIC_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_newrelicotlp_empty_format.tf",
+	)
+}
+
+// ConfigLoggingNewRelicOTLPEmptyRegion sets region = "" - see TestAccFastlyServiceLoggingNewRelicOTLP_emptyRegion.
+func ConfigLoggingNewRelicOTLPEmptyRegion(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":          serviceName,
+			"SERVICE_COMMENT":       "",
+			"DOMAIN_NAME":           domainName,
+			"SERVICE_VERSION":       "1",
+			"LOGGING_NEWRELIC_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_newrelicotlp_empty_region.tf",
+	)
+}
+
 func ConfigLoggingNewRelicOTLPUpdated(serviceName, domainName, loggerName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -3783,6 +3902,22 @@ func ConfigLoggingDatadogBasic(serviceName, domainName, loggerName string) strin
 		},
 		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
 		"internal/acceptance_tests/blocks/logging_datadog_basic.tf",
+	)
+}
+
+// ConfigLoggingDatadogEmptyFormat sets format = "" - see TestAccFastlyServiceLoggingDatadog_emptyFormat.
+func ConfigLoggingDatadogEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"SERVICE_COMMENT":      "",
+			"DOMAIN_NAME":          domainName,
+			"SERVICE_VERSION":      "1",
+			"LOGGING_DATADOG_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_datadog_empty_format.tf",
 	)
 }
 
@@ -3987,6 +4122,22 @@ func ConfigLoggingNewRelicBasic(serviceName, domainName, loggerName string) stri
 	)
 }
 
+// ConfigLoggingNewRelicEmptyFormat sets format = "" - see TestAccFastlyServiceLoggingNewRelic_emptyFormat.
+func ConfigLoggingNewRelicEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":          serviceName,
+			"SERVICE_COMMENT":       "",
+			"DOMAIN_NAME":           domainName,
+			"SERVICE_VERSION":       "1",
+			"LOGGING_NEWRELIC_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_newrelic_empty_format.tf",
+	)
+}
+
 func ConfigLoggingNewRelicUpdated(serviceName, domainName, loggerName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -4185,6 +4336,22 @@ func ConfigLoggingBigQueryBasic(serviceName, domainName, loggerName string) stri
 		},
 		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
 		"internal/acceptance_tests/blocks/logging_bigquery_basic.tf",
+	)
+}
+
+// ConfigLoggingBigQueryEmptyFormat sets format = "" - see TestAccFastlyServiceLoggingBigQuery_emptyFormat.
+func ConfigLoggingBigQueryEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":          serviceName,
+			"SERVICE_COMMENT":       "",
+			"DOMAIN_NAME":           domainName,
+			"SERVICE_VERSION":       "1",
+			"LOGGING_BIGQUERY_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_bigquery_empty_format.tf",
 	)
 }
 
@@ -4443,6 +4610,39 @@ func ConfigLoggingGCSBasic(serviceName, domainName, loggerName string) string {
 	)
 }
 
+// ConfigLoggingGCSEmptyFormat sets format = "" - see TestAccFastlyServiceLoggingGCS_emptyFormat.
+func ConfigLoggingGCSEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"LOGGING_GCS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_gcs_empty_format.tf",
+	)
+}
+
+// ConfigLoggingGCSEmptyTimestampFormat sets timestamp_format = "" - see
+// TestAccFastlyServiceLoggingGCS_emptyTimestampFormat.
+func ConfigLoggingGCSEmptyTimestampFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"LOGGING_GCS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_gcs_empty_timestamp_format.tf",
+	)
+}
+
 func ConfigLoggingGCSUpdated(serviceName, domainName, loggerName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -4694,6 +4894,22 @@ func ConfigLoggingSplunkBasic(serviceName, domainName, loggerName string) string
 		},
 		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
 		"internal/acceptance_tests/blocks/logging_splunk_basic.tf",
+	)
+}
+
+// ConfigLoggingSplunkEmptyFormat sets format = "" - see TestAccFastlyServiceLoggingSplunk_emptyFormat.
+func ConfigLoggingSplunkEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     "1",
+			"LOGGING_SPLUNK_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_splunk_empty_format.tf",
 	)
 }
 
@@ -5037,6 +5253,22 @@ func ConfigCDNAutoWithLoggingHTTPSUpdated(serviceName, domainName, loggerName st
 	)
 }
 
+// ConfigCDNAutoWithLoggingHTTPSEmptyFormat mirrors fastly/fiddle's
+// tf_modules/exec_services logging_https block, which sets format = ""
+// explicitly - see TestAccFastlyServiceCDNAuto_loggingHTTPSEmptyFormat.
+func ConfigCDNAutoWithLoggingHTTPSEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":       serviceName,
+			"DOMAIN_NAME":        domainName,
+			"LOGGING_HTTPS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_https_nested_empty_format.tf",
+	)
+}
+
 func ConfigCDNAutoWithMultipleLoggingHTTPS(serviceName, domainName, loggerName1, loggerName2 string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
@@ -5093,6 +5325,22 @@ func ConfigLoggingSumologicBasic(serviceName, domainName, loggerName string) str
 		},
 		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
 		"internal/acceptance_tests/blocks/logging_sumologic_basic.tf",
+	)
+}
+
+// ConfigLoggingSumologicEmptyFormat sets format = "" - see TestAccFastlyServiceLoggingSumologic_emptyFormat.
+func ConfigLoggingSumologicEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"DOMAIN_NAME":            domainName,
+			"SERVICE_VERSION":        "1",
+			"LOGGING_SUMOLOGIC_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_sumologic_empty_format.tf",
 	)
 }
 
@@ -5315,6 +5563,22 @@ func ConfigLoggingSyslogBasic(serviceName, domainName, loggerName string) string
 		},
 		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
 		"internal/acceptance_tests/blocks/logging_syslog_basic.tf",
+	)
+}
+
+// ConfigLoggingSyslogEmptyFormat sets format = "" - see TestAccFastlyServiceLoggingSyslog_emptyFormat.
+func ConfigLoggingSyslogEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     "1",
+			"LOGGING_SYSLOG_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_syslog_empty_format.tf",
 	)
 }
 
