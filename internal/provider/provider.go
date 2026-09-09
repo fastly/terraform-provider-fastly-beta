@@ -120,6 +120,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacethreshold"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacevirtualpatch"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacewildcardlist"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/objectstorageaccesskey"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/productenablement"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/resourcelink"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/secretstore"
@@ -267,6 +268,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		ngwafworkspacethreshold.NewResource,
 		ngwafworkspacevirtualpatch.NewResource,
 		ngwafworkspacewildcardlist.NewResource,
+		objectstorageaccesskey.NewResource,
 		productenablement.NewFanoutResource,
 		productenablement.NewBrotliCompressionResource,
 		productenablement.NewImageOptimizerResource,

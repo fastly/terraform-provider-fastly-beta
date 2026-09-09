@@ -6846,3 +6846,22 @@ resource "fastly_tls_subscription" "test" {
 
 	return joinBlocks(configuration, service, subscription)
 }
+
+// ConfigObjectStorageAccessKey returns a fastly_object_storage_access_keys resource. buckets may
+// be empty, in which case the attribute is omitted from the config entirely.
+func ConfigObjectStorageAccessKey(description, permission string, buckets []string) string {
+	bucketsHCL := ""
+	if len(buckets) > 0 {
+		quoted := make([]string, len(buckets))
+		for i, b := range buckets {
+			quoted[i] = fmt.Sprintf("%q", b)
+		}
+		bucketsHCL = fmt.Sprintf("buckets = [%s]", strings.Join(quoted, ", "))
+	}
+
+	return RenderBlock("internal/acceptance_tests/blocks/object_storage_access_keys_single.tf", map[string]string{
+		"DESCRIPTION": description,
+		"PERMISSION":  permission,
+		"BUCKETS":     bucketsHCL,
+	})
+}
