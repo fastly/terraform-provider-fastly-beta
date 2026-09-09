@@ -21,6 +21,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/imageoptimizerdefaultsettings"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingbigquery"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingblobstorage"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingcloudfiles"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdatadog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
@@ -96,6 +97,7 @@ type Model struct {
 	Dictionary                    []dictionary.NestedModel                    `tfsdk:"dictionary"`
 	RateLimiter                   []ratelimiter.NestedModel                   `tfsdk:"rate_limiter"`
 	LoggingBlobStorage            []loggingblobstorage.NestedModel            `tfsdk:"logging_blobstorage"`
+	LoggingCloudfiles             []loggingcloudfiles.NestedModel             `tfsdk:"logging_cloudfiles"`
 	LoggingS3                     []loggings3.NestedModel                     `tfsdk:"logging_s3"`
 	LoggingNewRelicOTLP           []loggingnewrelicotlp.NestedModel           `tfsdk:"logging_newrelicotlp"`
 	LoggingNewRelic               []loggingnewrelic.NestedModel               `tfsdk:"logging_newrelic"`
@@ -174,6 +176,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"dictionary":                       dictionary.NestedBlockSchema(),
 			"rate_limiter":                     ratelimiter.NestedBlockSchema(),
 			"logging_blobstorage":              loggingblobstorage.NestedBlockSchema(),
+			"logging_cloudfiles":               loggingcloudfiles.NestedBlockSchema(),
 			"logging_s3":                       loggings3.NestedBlockSchema(),
 			"logging_newrelicotlp":             loggingnewrelicotlp.NestedBlockSchema(),
 			"logging_newrelic":                 loggingnewrelic.NestedBlockSchema(),
@@ -359,6 +362,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		resp.Diagnostics.AddAttributeError(
 			path.Root("logging_datadog"),
 			"Invalid Datadog logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingcloudfiles.ValidateConditionReferences(config.LoggingCloudfiles, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_cloudfiles"),
+			"Invalid Cloud Files logging configuration",
 			err.Error(),
 		)
 	}
