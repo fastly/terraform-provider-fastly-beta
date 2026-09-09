@@ -39,6 +39,7 @@ Automatic-lifecycle Fastly CDN service resource with nested versioned configurat
 - `logging_cloudfiles` (Block List) Cloud Files logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_cloudfiles))
 - `logging_datadog` (Block List) Datadog logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_datadog))
 - `logging_gcs` (Block List) GCS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_gcs))
+- `logging_grafanacloudlogs` (Block List) Grafana Cloud Logs logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_grafanacloudlogs))
 - `logging_https` (Block List) HTTPS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_https))
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
@@ -447,6 +448,34 @@ Optional:
 - `account_name` (String) The name of the Google Cloud Platform service account associated with the target log collection service. Not required if `email` and `secret_key` are provided. Can be set via the `FASTLY_GOOGLE_SERVICE_ACCOUNT_NAME` environment variable (shared with Fastly's BigQuery and Pub/Sub logging endpoints), falling back to `FASTLY_GCS_ACCOUNT_NAME`.
 - `email` (String, Sensitive) The `client_email` field in your service account authentication JSON. Not required if `account_name` is provided. Can be set via the `FASTLY_GCS_EMAIL` environment variable.
 - `secret_key` (String, Sensitive) The `private_key` field in your service account authentication JSON. Not required if `account_name` is provided. Can be set via the `FASTLY_GCS_SECRET_KEY` environment variable.
+
+
+
+<a id="nestedblock--logging_grafanacloudlogs"></a>
+### Nested Schema for `logging_grafanacloudlogs`
+
+Required:
+
+- `authentication` (Attributes) Grafana Cloud Logs authentication credentials. (see [below for nested schema](#nestedatt--logging_grafanacloudlogs--authentication))
+- `index` (String) The Stream Labels, a JSON string used to identify the stream.
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+- `url` (String) The URL of the Loki instance in your Grafana stack.
+- `user` (String) The Grafana Cloud Logs Dataset you want to log to.
+
+Optional:
+
+- `format` (String) A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/). Omit this attribute to use the default format; an explicit empty string is rejected.
+- `format_version` (Number) The version of the custom logging format used for the configured endpoint. The logging call gets placed by default in `vcl_log` if `format_version` is set to `2` and in `vcl_deliver` if `format_version` is set to `1`.
+- `placement` (String) Where in the generated VCL the logging call should be placed. If not set, endpoints with `format_version` of `2` are placed in `vcl_log` and those with `format_version` of `1` are placed in `vcl_deliver`. Valid value is `none`.
+- `processing_region` (String) The geographic region where the logs will be processed before streaming. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+- `response_condition` (String) The name of an existing condition in the configured endpoint, or leave blank to always execute.
+
+<a id="nestedatt--logging_grafanacloudlogs--authentication"></a>
+### Nested Schema for `logging_grafanacloudlogs.authentication`
+
+Required:
+
+- `token` (String, Sensitive) The Grafana Access Policy token with `logs:write` access scoped to your Loki instance.
 
 
 
