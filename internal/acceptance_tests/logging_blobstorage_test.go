@@ -43,6 +43,48 @@ func TestAccFastlyServiceLoggingBlobStorage_basic(t *testing.T) {
 	})
 }
 
+// TestAccFastlyServiceLoggingBlobStorage_emptyFormat verifies an explicit
+// format = "" is rejected at validate time rather than failing apply.
+func TestAccFastlyServiceLoggingBlobStorage_emptyFormat(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("blobstorage-logger-%s", acctest.RandString(10))
+	containerName := fmt.Sprintf("tf-test-container-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigLoggingBlobStorageEmptyFormat(serviceName, domainName, loggerName, containerName),
+				ExpectError: regexp.MustCompile("`format` cannot be explicitly set to an empty string"),
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceLoggingBlobStorage_emptyTimestampFormat verifies an
+// explicit timestamp_format = "" is rejected at validate time.
+func TestAccFastlyServiceLoggingBlobStorage_emptyTimestampFormat(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("blobstorage-logger-%s", acctest.RandString(10))
+	containerName := fmt.Sprintf("tf-test-container-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigLoggingBlobStorageEmptyTimestampFormat(serviceName, domainName, loggerName, containerName),
+				ExpectError: regexp.MustCompile("`timestamp_format` cannot be explicitly set to an empty string"),
+			},
+		},
+	})
+}
+
 // TestAccFastlyServiceLoggingBlobStorage_authEnvDefaults verifies that account_name and
 // sas_token still pick up FASTLY_AZURE_ACCOUNT_NAME / FASTLY_AZURE_SHARED_ACCESS_SIGNATURE
 // when the entire authentication object is omitted from config. This exercises the

@@ -294,9 +294,12 @@ func sharedAttributes() map[string]schema.Attribute {
 			Description: "The codec used for compressing your logs. Valid values are `zstd`, `snappy`, and `gzip`. If the codec is `gzip`, `gzip_level` defaults to `3`; to use a different level, leave `compression_codec` unset and set `gzip_level` instead. Conflicts with `gzip_level`: setting both in the same request will result in an error.",
 		},
 		"domain": schema.StringAttribute{
-			Optional:    true,
-			Computed:    true,
-			Default:     stringdefault.StaticString(DefaultDomain),
+			Optional: true,
+			Computed: true,
+			Default:  stringdefault.StaticString(DefaultDomain),
+			Validators: []validator.String{
+				validation.NotBlank("domain"),
+			},
 			Description: "The Domain of the Amazon S3 endpoint.",
 		},
 		"file_max_bytes": schema.Int64Attribute{
@@ -399,9 +402,12 @@ func sharedAttributes() map[string]schema.Attribute {
 			Description: "KMS key ID to use for `server_side_encryption`. Required when `server_side_encryption` is `aws:kms`.",
 		},
 		"timestamp_format": schema.StringAttribute{
-			Optional:    true,
-			Computed:    true,
-			Default:     stringdefault.StaticString(DefaultTimestampFormat),
+			Optional: true,
+			Computed: true,
+			Default:  stringdefault.StaticString(DefaultTimestampFormat),
+			Validators: []validator.String{
+				validation.NotBlank("timestamp_format"),
+			},
 			Description: "strftime-specified timestamp format for log filename.",
 		},
 	}
@@ -417,6 +423,7 @@ func vclOnlyAttributes() map[string]schema.Attribute {
 			Default:  stringdefault.StaticString(constants.LoggingS3DefaultFormat),
 			Validators: []validator.String{
 				stringvalidator.LengthAtMost(maximumFormatLength),
+				validation.NotBlank("format"),
 			},
 			Description: "A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/).",
 		},

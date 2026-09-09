@@ -187,6 +187,7 @@ func vclOnlyAttributes() map[string]schema.Attribute {
 			Default:  stringdefault.StaticString(constants.LoggingNewRelicDefaultFormat),
 			Validators: []validator.String{
 				stringvalidator.LengthAtMost(maximumFormatLength),
+				validation.NotBlank("format"),
 			},
 			Description: "A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/). Must produce valid JSON that New Relic Logs can ingest.",
 		},
