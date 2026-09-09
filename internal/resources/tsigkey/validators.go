@@ -25,11 +25,21 @@ func (base64Validator) ValidateString(_ context.Context, req validator.StringReq
 	}
 
 	v := req.ConfigValue.ValueString()
-	if _, err := base64.StdEncoding.DecodeString(v); err != nil {
+	decoded, err := base64.StdEncoding.DecodeString(v)
+	if err != nil {
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Attribute Value",
 			fmt.Sprintf("must be valid Base64, got: %q", v),
+		)
+		return
+	}
+
+	if len(decoded) == 0 {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid Attribute Value",
+			"must decode to a non-empty secret",
 		)
 	}
 }

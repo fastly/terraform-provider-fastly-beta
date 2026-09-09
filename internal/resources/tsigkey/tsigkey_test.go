@@ -179,7 +179,7 @@ func TestBase64Validator(t *testing.T) {
 		valid bool
 	}{
 		{"c2VjcmV0", true},
-		{"", true},
+		{"", false},
 		{"not base64!!", false},
 	}
 
