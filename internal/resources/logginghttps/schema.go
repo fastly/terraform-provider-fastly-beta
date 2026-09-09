@@ -380,8 +380,9 @@ func vclOnlyAttributes() map[string]schema.Attribute {
 			Default:  stringdefault.StaticString(constants.LoggingHTTPSDefaultFormat),
 			Validators: []validator.String{
 				stringvalidator.LengthAtMost(maximumFormatLength),
+				validation.NotBlank("format"),
 			},
-			Description: "A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/).",
+			Description: "A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/). Omit this attribute to use the default format; an explicit empty string is rejected.",
 		},
 		"format_version": schema.Int64Attribute{
 			Optional: true,

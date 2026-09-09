@@ -198,6 +198,29 @@ func TestAccFastlyServiceCDNAuto_loggingHTTPSPlacementUnsetVsNone(t *testing.T) 
 	})
 }
 
+// TestAccFastlyServiceCDNAuto_loggingHTTPSEmptyFormat covers the failure seen
+// in fastly/fiddle CI (run 34388361955): its logging_https block sets
+// format = "" explicitly, which used to fail apply with the opaque "Provider
+// produced inconsistent result after apply". validation.NotBlank now rejects
+// it at validate time instead - see internal/resources/logginghttps/schema.go.
+func TestAccFastlyServiceCDNAuto_loggingHTTPSEmptyFormat(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("https-logger-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigCDNAutoWithLoggingHTTPSEmptyFormat(serviceName, domainName, loggerName),
+				ExpectError: regexp.MustCompile("`format` cannot be explicitly set to an empty string"),
+			},
+		},
+	})
+}
+
 // TestAccFastlyServiceCDNAuto_withMultipleLoggingHTTPS verifies that multiple
 // nested HTTPS logging endpoints reconcile correctly and preserve configured
 // order across reads.

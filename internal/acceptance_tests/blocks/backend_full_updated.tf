@@ -9,6 +9,7 @@ resource "fastly_service_backend" "origin" {
   ssl_cert_hostname     = "cert.example.com"
   ssl_sni_hostname      = "sni.example.com"
   ssl_client_secrets = {
+    # generated solely for this test fixture; not tied to any real account or service.
     ssl_client_cert = <<-EOT
 -----BEGIN CERTIFICATE-----
 MIIDQTCCAimgAwIBAgIUKp4VT3Ue7gL5L3MIYbexM0+MQNIwDQYJKoZIhvcNAQEL
@@ -31,6 +32,7 @@ N2vwnZfyOYTxgVf2oN9v33KBvFM2esVVdHHDLb81MS0cr0z9Tz+JO04GzE8LNM48
 dJmR5YwzXAbyvuekuRVzwqcroKii
 -----END CERTIFICATE-----
 EOT
+    # generated solely for this test fixture; not tied to any real account or service.
     ssl_client_key = <<-EOT
 -----BEGIN PRIVATE KEY-----
 MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDEZOCTK+jxA9SE

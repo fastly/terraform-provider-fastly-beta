@@ -43,6 +43,69 @@ func TestAccFastlyServiceLoggingS3_basic(t *testing.T) {
 	})
 }
 
+// TestAccFastlyServiceLoggingS3_emptyFormat verifies an explicit format = ""
+// is rejected at validate time rather than failing apply.
+func TestAccFastlyServiceLoggingS3_emptyFormat(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("s3-logger-%s", acctest.RandString(10))
+	bucketName := fmt.Sprintf("tf-test-bucket-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigLoggingS3EmptyFormat(serviceName, domainName, loggerName, bucketName),
+				ExpectError: regexp.MustCompile("`format` cannot be explicitly set to an empty string"),
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceLoggingS3_emptyTimestampFormat verifies an explicit
+// timestamp_format = "" is rejected at validate time.
+func TestAccFastlyServiceLoggingS3_emptyTimestampFormat(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("s3-logger-%s", acctest.RandString(10))
+	bucketName := fmt.Sprintf("tf-test-bucket-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigLoggingS3EmptyTimestampFormat(serviceName, domainName, loggerName, bucketName),
+				ExpectError: regexp.MustCompile("`timestamp_format` cannot be explicitly set to an empty string"),
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceLoggingS3_emptyDomain verifies an explicit domain = ""
+// is rejected at validate time.
+func TestAccFastlyServiceLoggingS3_emptyDomain(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("s3-logger-%s", acctest.RandString(10))
+	bucketName := fmt.Sprintf("tf-test-bucket-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigLoggingS3EmptyDomain(serviceName, domainName, loggerName, bucketName),
+				ExpectError: regexp.MustCompile("`domain` cannot be explicitly set to an empty string"),
+			},
+		},
+	})
+}
+
 func TestAccFastlyServiceLoggingS3_update(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))

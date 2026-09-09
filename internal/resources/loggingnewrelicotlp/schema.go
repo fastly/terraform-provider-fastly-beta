@@ -171,9 +171,12 @@ func sharedAttributes() map[string]schema.Attribute {
 			Description: "Region where logs will be processed before streaming to the destination. Valid values are `none`, `us` and `eu`.",
 		},
 		"region": schema.StringAttribute{
-			Optional:    true,
-			Computed:    true,
-			Default:     stringdefault.StaticString(DefaultRegion),
+			Optional: true,
+			Computed: true,
+			Default:  stringdefault.StaticString(DefaultRegion),
+			Validators: []validator.String{
+				validation.NotBlank("region"),
+			},
 			Description: "The region that log data will be sent to. Default: `US`.",
 		},
 		"url": schema.StringAttribute{
@@ -195,6 +198,7 @@ func vclOnlyAttributes() map[string]schema.Attribute {
 			Default:  stringdefault.StaticString(constants.LoggingNewRelicOTLPDefaultFormat),
 			Validators: []validator.String{
 				stringvalidator.LengthAtMost(maximumFormatLength),
+				validation.NotBlank("format"),
 			},
 			Description: "A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/). Must produce valid JSON that New Relic can ingest.",
 		},
