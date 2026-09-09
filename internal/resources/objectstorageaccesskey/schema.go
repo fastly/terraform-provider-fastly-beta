@@ -1,6 +1,8 @@
 package objectstorageaccesskey
 
 import (
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -72,9 +74,6 @@ func ResourceAttributes() map[string]schema.Attribute {
 					Computed:    true,
 					Sensitive:   true,
 					Description: "Secret key for the object storage access key. Only returned at creation time, so it is not populated after a `terraform import`.",
-					PlanModifiers: []planmodifier.String{
-						stringplanmodifier.UseStateForUnknown(),
-					},
 				},
 			},
 		},
@@ -87,7 +86,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 		},
 		"permission": schema.StringAttribute{
 			Required:    true,
-			Description: "The permissions of the access key. Access keys cannot be updated, so changing this attribute destroys and recreates the resource.",
+			Description: "The permissions of the access key. Must be one of `" + strings.Join(accesskeys.PERMISSIONS, "`, `") + "`. Access keys cannot be updated, so changing this attribute destroys and recreates the resource.",
 			Validators: []validator.String{
 				stringvalidator.OneOf(accesskeys.PERMISSIONS...),
 			},

@@ -26,7 +26,7 @@ resource "fastly_object_storage_access_keys" "example" {
 ### Required
 
 - `description` (String) The description of the access key. Access keys cannot be updated, so changing this attribute destroys and recreates the resource.
-- `permission` (String) The permissions of the access key. Access keys cannot be updated, so changing this attribute destroys and recreates the resource.
+- `permission` (String) The permissions of the access key. Must be one of `read-write-admin`, `read-only-admin`, `read-write-objects`, `read-only-objects`. Access keys cannot be updated, so changing this attribute destroys and recreates the resource.
 
 ### Optional
 

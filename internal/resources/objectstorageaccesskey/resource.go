@@ -73,7 +73,12 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	newState, diags := flattenToModel(ctx, created, plan.SecretKey())
+	if created.AccessKeyID == "" || created.SecretKey == "" {
+		resp.Diagnostics.AddError("Error creating Object Storage Access Key", "API response is missing the access key ID or secret key")
+		return
+	}
+
+	newState, diags := flattenToModel(ctx, created, plan.SecretKey(), plan.Buckets)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -102,7 +107,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 
-	newState, diags := flattenToModel(ctx, key, state.SecretKey())
+	newState, diags := flattenToModel(ctx, key, state.SecretKey(), state.Buckets)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

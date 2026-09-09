@@ -125,7 +125,7 @@ func TestFlattenToModel(t *testing.T) {
 		Buckets:     []string{"bucket1"},
 	}
 
-	m, diags := flattenToModel(context.Background(), key, types.StringNull())
+	m, diags := flattenToModel(context.Background(), key, types.StringNull(), types.ListNull(types.StringType))
 	require.False(t, diags.HasError(), diags)
 	require.Equal(t, "AKID", m.ID.ValueString())
 	require.Equal(t, "AKID", m.AccessKeyID.ValueString())
@@ -147,13 +147,13 @@ func TestFlattenToModel_preservesSecretKeyOnRead(t *testing.T) {
 		Permission:  accesskeys.ReadWriteObject,
 	}
 
-	m, diags := flattenToModel(context.Background(), key, types.StringValue("shh"))
+	m, diags := flattenToModel(context.Background(), key, types.StringValue("shh"), types.ListNull(types.StringType))
 	require.False(t, diags.HasError(), diags)
 	require.Equal(t, "shh", m.SecretKey().ValueString())
 }
 
-// No buckets returned: buckets must flatten to null, not an empty list, so it
-// matches an Optional attribute left unset in config.
+// No buckets returned and no prior known list: buckets must flatten to null,
+// not an empty list, so it matches an Optional attribute left unset in config.
 func TestFlattenToModel_noBuckets(t *testing.T) {
 	key := &accesskeys.AccessKey{
 		AccessKeyID: "AKID",
@@ -161,7 +161,28 @@ func TestFlattenToModel_noBuckets(t *testing.T) {
 		Permission:  accesskeys.ReadWriteObject,
 	}
 
-	m, diags := flattenToModel(context.Background(), key, types.StringNull())
+	m, diags := flattenToModel(context.Background(), key, types.StringNull(), types.ListNull(types.StringType))
 	require.False(t, diags.HasError(), diags)
 	require.True(t, m.Buckets.IsNull())
+}
+
+// No buckets returned but the prior plan/state had a known (non-null) list —
+// e.g. `buckets = []` in config: buckets must flatten to a known empty list,
+// not null, or Terraform reports an inconsistent result for this
+// Optional-but-not-Computed attribute.
+func TestFlattenToModel_emptyBucketsPreservesKnownEmptyList(t *testing.T) {
+	key := &accesskeys.AccessKey{
+		AccessKeyID: "AKID",
+		Description: "a test key",
+		Permission:  accesskeys.ReadWriteObject,
+	}
+
+	priorBuckets := types.ListValueMust(types.StringType, []attr.Value{})
+	m, diags := flattenToModel(context.Background(), key, types.StringNull(), priorBuckets)
+	require.False(t, diags.HasError(), diags)
+	require.False(t, m.Buckets.IsNull())
+
+	var buckets []string
+	require.False(t, m.Buckets.ElementsAs(context.Background(), &buckets, false).HasError())
+	require.Empty(t, buckets)
 }
