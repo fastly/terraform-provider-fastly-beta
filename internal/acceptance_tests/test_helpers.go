@@ -6524,15 +6524,45 @@ func ConfigDNSZoneWithXfrConfig(name, description, primaryAddress, primaryDescri
 	})
 }
 
-// ConfigDNSZoneWithTSIGKey returns a fastly_dns_zone with an xfr_config_inbound block
-// that references an out-of-band-created TSIG key ID.
-func ConfigDNSZoneWithTSIGKey(name, description, tsigKeyID, primaryAddress, primaryDescription string) string {
-	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_with_tsig.tf", map[string]string{
-		"ZONE_NAME":           name,
-		"ZONE_DESCRIPTION":    description,
-		"TSIG_KEY_ID":         tsigKeyID,
+// ConfigDNSZoneWithTSIGKeyResource returns a fastly_tsig_key and a fastly_dns_zone referencing it.
+func ConfigDNSZoneWithTSIGKeyResource(zoneName, zoneDescription, keyName, secret, primaryAddress, primaryDescription string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_with_tsig_key_resource.tf", map[string]string{
+		"ZONE_NAME":           zoneName,
+		"ZONE_DESCRIPTION":    zoneDescription,
+		"KEY_NAME":            keyName,
+		"SECRET":              secret,
 		"PRIMARY_ADDRESS":     primaryAddress,
 		"PRIMARY_DESCRIPTION": primaryDescription,
+	})
+}
+
+// ConfigDNSZoneWithTSIGKeyResourceCleared is ConfigDNSZoneWithTSIGKeyResource with inbound_tsig_key_id removed.
+func ConfigDNSZoneWithTSIGKeyResourceCleared(zoneName, keyName, secret, primaryAddress, primaryDescription string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/dns_zone_with_tsig_key_resource_cleared.tf", map[string]string{
+		"ZONE_NAME":           zoneName,
+		"KEY_NAME":            keyName,
+		"SECRET":              secret,
+		"PRIMARY_ADDRESS":     primaryAddress,
+		"PRIMARY_DESCRIPTION": primaryDescription,
+	})
+}
+
+// ConfigTSIGKey returns a standalone fastly_tsig_key.
+func ConfigTSIGKey(name, algorithm, secret string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/tsig_key_basic.tf", map[string]string{
+		"NAME":      name,
+		"ALGORITHM": algorithm,
+		"SECRET":    secret,
+	})
+}
+
+// ConfigTSIGKeyWithDescription returns a fastly_tsig_key with a description set.
+func ConfigTSIGKeyWithDescription(name, algorithm, description, secret string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/tsig_key_with_description.tf", map[string]string{
+		"NAME":        name,
+		"ALGORITHM":   algorithm,
+		"DESCRIPTION": description,
+		"SECRET":      secret,
 	})
 }
 

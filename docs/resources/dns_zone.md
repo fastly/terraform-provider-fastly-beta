@@ -24,15 +24,21 @@ resource "fastly_dns_zone" "example" {
 
 With inbound zone transfer configuration:
 
-<!-- TODO: once fastly_tsig_key is supported in this provider, update this
-     example to reference it instead of a hardcoded TSIG key ID. -->
 ```terraform
+resource "fastly_tsig_key" "example" {
+  name      = "example.com."
+  algorithm = "hmac-sha256"
+  secret = {
+    value = "c2VjcmV0a2V5MTIzNDU2Nzg="
+  }
+}
+
 resource "fastly_dns_zone" "example" {
   name        = "example.com."
   description = "Managed by Terraform"
 
   xfr_config_inbound {
-    inbound_tsig_key_id = "TSIG_KEY_ID"
+    inbound_tsig_key_id = fastly_tsig_key.example.id
 
     primaries {
       address     = "203.0.113.1"
