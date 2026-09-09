@@ -37,7 +37,7 @@ func (v notBlank) ValidateString(_ context.Context, req validator.StringRequest,
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			fmt.Sprintf("Invalid `%s`", v.attrName),
-			fmt.Sprintf("`%s` cannot be explicitly set to an empty string. The Fastly API always substitutes its own default in that case, which can never match an explicitly configured \"\". Remove the `%s` attribute entirely to use the default.", v.attrName, v.attrName),
+			fmt.Sprintf("`%s` cannot be explicitly set to an empty string. Remove the `%s` attribute entirely to use the default.", v.attrName, v.attrName),
 		)
 	}
 }
