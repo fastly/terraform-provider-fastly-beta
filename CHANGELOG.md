@@ -4,6 +4,8 @@
 
 ### ENHANCEMENTS:
 
+- feat(logging_cloudfiles): add support for Cloudfiles Logging ([#85](https://github.com/fastly/terraform-provider-fastly-beta/pull/85))
+
 ### BUG FIXES:
 
 ### Dependencies:

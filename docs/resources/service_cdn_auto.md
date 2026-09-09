@@ -36,6 +36,7 @@ Automatic-lifecycle Fastly CDN service resource with nested versioned configurat
 - `image_optimizer_default_settings` (Block List) Image Optimizer default settings for this service. At most one block is supported. The Image Optimizer product must already be enabled on the service (e.g. via `fastly_service_product_image_optimizer`) before these settings can be persisted; enabling the product and configuring this block cannot be done in the same initial `apply`, since this block is reconciled as part of this resource's own create step, before a separate product-enablement resource (which depends on this resource's `id`) can run. Enable the product in a prior `apply` first. (see [below for nested schema](#nestedblock--image_optimizer_default_settings))
 - `logging_bigquery` (Block List) BigQuery logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_bigquery))
 - `logging_blobstorage` (Block List) Blob Storage logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_blobstorage))
+- `logging_cloudfiles` (Block List) Cloud Files logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_cloudfiles))
 - `logging_datadog` (Block List) Datadog logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_datadog))
 - `logging_gcs` (Block List) GCS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_gcs))
 - `logging_https` (Block List) HTTPS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_https))
@@ -350,6 +351,41 @@ Optional:
 
 - `account_name` (String) The unique Azure Blob Storage namespace in which your data objects are stored. Can be set via the `FASTLY_AZURE_ACCOUNT_NAME` environment variable.
 - `sas_token` (String, Sensitive) The Azure shared access signature providing write access to the blob service objects. Be sure to update your token before it expires or the logging functionality will not work. Can be set via the `FASTLY_AZURE_SHARED_ACCESS_SIGNATURE` environment variable.
+
+
+
+<a id="nestedblock--logging_cloudfiles"></a>
+### Nested Schema for `logging_cloudfiles`
+
+Required:
+
+- `authentication` (Attributes) Authentication credentials for your Rackspace Cloud Files account. (see [below for nested schema](#nestedatt--logging_cloudfiles--authentication))
+- `bucket_name` (String) The name of your Cloud Files container.
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+
+Optional:
+
+- `compression_codec` (String) The codec used for compressing your logs. Valid values are `zstd`, `snappy`, and `gzip`. If the codec is `gzip`, `gzip_level` defaults to `3`; to use a different level, leave `compression_codec` unset and set `gzip_level` instead. Conflicts with `gzip_level`: setting both in the same request will result in an error.
+- `format` (String) A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/).
+- `format_version` (Number) The version of the custom logging format used for the configured endpoint. The logging call gets placed by default in vcl_log if format_version is set to `2` and in `vcl_deliver` if `format_version` is set to `1`.
+- `gzip_level` (Number) The level of gzip encoding when sending logs. Valid values are `0` (no compression) through `9`. To compress at a specific gzip level, leave `compression_codec` unset and set this. Conflicts with `compression_codec`: setting both in the same request will result in an error.
+- `message_type` (String) How the message should be formatted. Valid values are `classic`, `loggly`, `logplex`, and `blank`. Default `blank`.
+- `path` (String) The path to upload logs to.
+- `period` (Number) How frequently log files are finalized so they can be available for reading in seconds. Default `3600`.
+- `placement` (String) Where in the generated VCL the logging call should be placed. If not set, endpoints with format_version of 2 are placed in vcl_log and those with format_version of 1 are placed in vcl_deliver. Valid value is `none`.
+- `processing_region` (String) Region where logs will be processed before streaming to the destination. Valid values are `none`, `us` and `eu`.
+- `public_key` (String) PGP public key that Fastly will use to encrypt your log files before writing them to disk.
+- `region` (String) The region to stream logs to. One of: `DFW` (Dallas), `ORD` (Chicago), `IAD` (Northern Virginia), `LON` (London), `SYD` (Sydney), `HKG` (Hong Kong).
+- `response_condition` (String) The name of an existing condition in the configured endpoint, or leave blank to always execute.
+- `timestamp_format` (String) strftime-specified timestamp format for log filename.
+
+<a id="nestedatt--logging_cloudfiles--authentication"></a>
+### Nested Schema for `logging_cloudfiles.authentication`
+
+Required:
+
+- `access_key` (String, Sensitive) Your Cloud Files account access key.
+- `user` (String) The username for your Cloud Files account.
 
 
 

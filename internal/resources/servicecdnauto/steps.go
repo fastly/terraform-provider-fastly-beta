@@ -17,6 +17,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/imageoptimizerdefaultsettings"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingbigquery"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingblobstorage"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingcloudfiles"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdatadog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
@@ -252,6 +253,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 					return err
 				}
 				plan.LoggingBlobStorage = loggingblobstorage.MatchOrder(items, plan.LoggingBlobStorage)
+				return nil
+			},
+		},
+		{
+			label: "Cloud Files logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return loggingcloudfiles.Reconcile(ctx, client, serviceID, version, plan.LoggingCloudfiles)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingcloudfiles.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingCloudfiles = loggingcloudfiles.MatchOrder(items, plan.LoggingCloudfiles)
 				return nil
 			},
 		},
@@ -624,6 +639,17 @@ func readSteps(state *Model, imported bool) []readStep {
 			},
 		},
 		{
+			label: "Cloud Files logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingcloudfiles.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingCloudfiles = loggingcloudfiles.MatchOrder(items, state.LoggingCloudfiles)
+				return nil
+			},
+		},
+		{
 			label: "S3 logging endpoints",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				items, err := loggings3.ReadForVersion(ctx, client, serviceID, version)
@@ -844,6 +870,12 @@ func planSteps(plan, state *Model) []planStep {
 			equal: func() bool { return loggingblobstorage.Equal(plan.LoggingBlobStorage, state.LoggingBlobStorage) },
 			matchOnly: func() {
 				plan.LoggingBlobStorage = loggingblobstorage.MatchOrder(state.LoggingBlobStorage, plan.LoggingBlobStorage)
+			},
+		},
+		{
+			equal: func() bool { return loggingcloudfiles.Equal(plan.LoggingCloudfiles, state.LoggingCloudfiles) },
+			matchOnly: func() {
+				plan.LoggingCloudfiles = loggingcloudfiles.MatchOrder(state.LoggingCloudfiles, plan.LoggingCloudfiles)
 			},
 		},
 		{

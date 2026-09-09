@@ -13,6 +13,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/healthcheck"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingbigquery"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingblobstorage"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingcloudfiles"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdatadog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
@@ -67,6 +68,7 @@ type Model struct {
 	ResourceLink        []resourcelink.NestedModel               `tfsdk:"resource_link"`
 	Package             []computepackage.Model                   `tfsdk:"package"`
 	LoggingBlobStorage  []loggingblobstorage.ComputeNestedModel  `tfsdk:"logging_blobstorage"`
+	LoggingCloudfiles   []loggingcloudfiles.ComputeNestedModel   `tfsdk:"logging_cloudfiles"`
 	LoggingS3           []loggings3.ComputeNestedModel           `tfsdk:"logging_s3"`
 	LoggingNewRelicOTLP []loggingnewrelicotlp.ComputeNestedModel `tfsdk:"logging_newrelicotlp"`
 	LoggingNewRelic     []loggingnewrelic.ComputeNestedModel     `tfsdk:"logging_newrelic"`
@@ -133,6 +135,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"resource_link":        resourcelink.NestedBlockSchema(),
 			"package":              computepackage.NestedBlockSchema(),
 			"logging_blobstorage":  loggingblobstorage.ComputeNestedBlockSchema(),
+			"logging_cloudfiles":   loggingcloudfiles.ComputeNestedBlockSchema(),
 			"logging_s3":           loggings3.ComputeNestedBlockSchema(),
 			"logging_newrelicotlp": loggingnewrelicotlp.ComputeNestedBlockSchema(),
 			"logging_newrelic":     loggingnewrelic.ComputeNestedBlockSchema(),
@@ -303,6 +306,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 	plan.LoggingBlobStorage = loggingblobstorage.ComputeMatchOrder(loggingBlobStorages, plan.LoggingBlobStorage)
+
+	if err := loggingcloudfiles.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingCloudfiles); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling Cloud Files logging endpoints", err.Error())
+		return
+	}
+
+	loggingCloudfiless, err := loggingcloudfiles.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading Cloud Files logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingCloudfiles = loggingcloudfiles.ComputeMatchOrder(loggingCloudfiless, plan.LoggingCloudfiles)
 
 	if err := loggings3.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingS3); err != nil {
 		recordOrphanSafeState()
@@ -553,6 +570,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading Blob Storage logging endpoints", err.Error())
 		return
 	}
+	loggingCloudfiless, err := loggingcloudfiles.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Cloud Files logging endpoints", err.Error())
+		return
+	}
 	loggingS3s, err := loggings3.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading S3 logging endpoints", err.Error())
@@ -608,6 +630,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.Backend = backend.MatchOrder(backends, state.Backend)
 	state.Dictionary = dictionary.MatchOrder(dictionaries, state.Dictionary)
 	state.LoggingBlobStorage = loggingblobstorage.ComputeMatchOrder(loggingBlobStorages, state.LoggingBlobStorage)
+	state.LoggingCloudfiles = loggingcloudfiles.ComputeMatchOrder(loggingCloudfiless, state.LoggingCloudfiles)
 	state.LoggingS3 = loggings3.ComputeMatchOrder(loggingS3s, state.LoggingS3)
 	state.LoggingNewRelicOTLP = loggingnewrelicotlp.ComputeMatchOrder(loggingNewRelicOTLPs, state.LoggingNewRelicOTLP)
 	state.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(loggingNewRelics, state.LoggingNewRelic)
@@ -668,6 +691,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!resourcelink.Equal(plan.ResourceLink, state.ResourceLink) ||
 		!computepackage.Equal(plan.Package, state.Package) ||
 		!loggingblobstorage.ComputeEqual(plan.LoggingBlobStorage, state.LoggingBlobStorage) ||
+		!loggingcloudfiles.ComputeEqual(plan.LoggingCloudfiles, state.LoggingCloudfiles) ||
 		!loggings3.ComputeEqual(plan.LoggingS3, state.LoggingS3) ||
 		!loggingnewrelicotlp.ComputeEqual(plan.LoggingNewRelicOTLP, state.LoggingNewRelicOTLP) ||
 		!loggingnewrelic.ComputeEqual(plan.LoggingNewRelic, state.LoggingNewRelic) ||
@@ -786,6 +810,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 			return
 		}
 		plan.LoggingBlobStorage = loggingblobstorage.ComputeMatchOrder(loggingBlobStorages, plan.LoggingBlobStorage)
+
+		if err := loggingcloudfiles.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingCloudfiles); err != nil {
+			resp.Diagnostics.AddError("Error reconciling Cloud Files logging endpoints", err.Error())
+			return
+		}
+
+		loggingCloudfiless, err := loggingcloudfiles.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading Cloud Files logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingCloudfiles = loggingcloudfiles.ComputeMatchOrder(loggingCloudfiless, plan.LoggingCloudfiles)
 
 		if err := loggings3.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingS3); err != nil {
 			resp.Diagnostics.AddError("Error reconciling S3 logging endpoints", err.Error())
@@ -953,6 +989,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.ResourceLink = resourcelink.MatchOrder(state.ResourceLink, plan.ResourceLink)
 		plan.Package = state.Package
 		plan.LoggingBlobStorage = loggingblobstorage.ComputeMatchOrder(state.LoggingBlobStorage, plan.LoggingBlobStorage)
+		plan.LoggingCloudfiles = loggingcloudfiles.ComputeMatchOrder(state.LoggingCloudfiles, plan.LoggingCloudfiles)
 		plan.LoggingS3 = loggings3.ComputeMatchOrder(state.LoggingS3, plan.LoggingS3)
 		plan.LoggingNewRelicOTLP = loggingnewrelicotlp.ComputeMatchOrder(state.LoggingNewRelicOTLP, plan.LoggingNewRelicOTLP)
 		plan.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(state.LoggingNewRelic, plan.LoggingNewRelic)

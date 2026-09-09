@@ -81,6 +81,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/kvstore"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingbigquery"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingblobstorage"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingcloudfiles"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdatadog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
@@ -223,6 +224,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		domainservicelink.NewResource,
 		loggingbigquery.NewResource,
 		loggingblobstorage.NewResource,
+		loggingcloudfiles.NewResource,
 		loggingdatadog.NewResource,
 		logginggcs.NewResource,
 		logginghttps.NewResource,
@@ -351,6 +353,7 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		domain.NewListResource,
 		loggingbigquery.NewListResource,
 		loggingblobstorage.NewListResource,
+		loggingcloudfiles.NewListResource,
 		loggingdatadog.NewListResource,
 		logginggcs.NewListResource,
 		logginghttps.NewListResource,

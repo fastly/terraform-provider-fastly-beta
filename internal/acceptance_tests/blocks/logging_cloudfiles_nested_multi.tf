@@ -1,0 +1,17 @@
+logging_cloudfiles {
+  name        = "{{.LOGGING_CLOUDFILES_NAME_1}}"
+  bucket_name = "test-cloudfiles-bucket"
+  authentication = {
+    user       = "test-user"
+    access_key = "test-access-key"
+  }
+}
+
+logging_cloudfiles {
+  name        = "{{.LOGGING_CLOUDFILES_NAME_2}}"
+  bucket_name = "test-cloudfiles-bucket"
+  authentication = {
+    user       = "test-user"
+    access_key = "test-access-key"
+  }
+}
