@@ -13,6 +13,8 @@
 ### ENHANCEMENTS:
 
 - feat(logging_cloudfiles): add support for Cloudfiles Logging ([#85](https://github.com/fastly/terraform-provider-fastly-beta/pull/85))
+- feat(rtsig_key): add `fastly_tsig_key` resource and `fastly_tsig_keys` data source ([#83](https://github.com/fastly/terraform-provider-fastly-beta/pull/83))
+- feat(object_storage_access_keys): add resource for managing Fastly object storage access keys ([#84](https://github.com/fastly/terraform-provider-fastly-beta/pull/84))
 
 ### BUG FIXES:
 
