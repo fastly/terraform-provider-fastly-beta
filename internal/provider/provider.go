@@ -57,6 +57,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsprivatekeyids"
 	tlssubscriptiondatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlssubscription"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlssubscriptionids"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tsigkeys"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/vclsnippets"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/acl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/aclentries"
@@ -135,6 +136,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsprivatekey"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlssubscription"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlssubscriptionvalidation"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tsigkey"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/vcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/version"
 )
@@ -290,6 +292,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		tlsprivatekey.NewResource,
 		tlssubscription.NewResource,
 		tlssubscriptionvalidation.NewResource,
+		tsigkey.NewResource,
 	}
 }
 
@@ -332,6 +335,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		tlsprivatekeyids.NewDataSource,
 		tlssubscriptiondatasource.NewDataSource,
 		tlssubscriptionids.NewDataSource,
+		tsigkeys.NewDataSource,
 		vclsnippets.NewDataSource,
 	}
 }

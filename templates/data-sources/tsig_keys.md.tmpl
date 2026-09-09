@@ -1,0 +1,22 @@
+---
+page_title: "fastly_tsig_keys Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to retrieve a list of Fastly TSIG keys.
+---
+
+# fastly_tsig_keys (Data Source)
+
+Use this data source to retrieve a list of Fastly TSIG keys.
+
+## Example Usage
+
+```terraform
+data "fastly_tsig_keys" "example" {}
+
+output "fastly_tsig_keys_all" {
+  value = data.fastly_tsig_keys.example.keys
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

@@ -3,7 +3,6 @@ package acceptancetests
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -16,7 +15,6 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 
 	"github.com/fastly/go-fastly/v17/fastly/dns/v1/dnszones"
-	"github.com/fastly/go-fastly/v17/fastly/dns/v1/tsigkeys"
 )
 
 func testZoneName(t *testing.T) string {
@@ -172,54 +170,26 @@ func TestAccFastlyDNSZone_withXfrConfig(t *testing.T) {
 	})
 }
 
-// TestAccFastlyDNSZone_clearInboundTSIGKeyID mirrors the legacy provider's
-// ClearFields test: creates a zone referencing a TSIG key made out-of-band
-// (no fastly_tsig_key resource exists yet), then clears just
-// inbound_tsig_key_id while keeping xfr_config_inbound configured.
-//
-// TODO: once fastly_tsig_key exists, rework this test to create the TSIG
-// key via that resource instead of the raw go-fastly client.
+// TestAccFastlyDNSZone_clearInboundTSIGKeyID clears inbound_tsig_key_id while
+// keeping the rest of xfr_config_inbound configured.
 func TestAccFastlyDNSZone_clearInboundTSIGKeyID(t *testing.T) {
 	t.Parallel()
-	if os.Getenv("TF_ACC") == "" {
-		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
-	}
-
-	client, err := NewFastlyClient()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	name := testZoneName(t)
-	tsigKeyName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
-
-	tsigKey, err := tsigkeys.Create(context.Background(), client, &tsigkeys.CreateInput{
-		Name:      &tsigKeyName,
-		Algorithm: new("hmac-sha256"),
-		Secret:    new("dGVzdHNlY3JldA=="),
-	})
-	if err != nil {
-		t.Fatalf("creating out-of-band TSIG key: %s", err)
-	}
-	t.Cleanup(func() {
-		if err := tsigkeys.Delete(context.Background(), client, &tsigkeys.DeleteInput{TSIGKeyID: tsigKey.ID}); err != nil {
-			t.Logf("cleanup: deleting out-of-band TSIG key %s: %s", *tsigKey.ID, err)
-		}
-	})
+	keyName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { PreCheck(t) },
 		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
-		CheckDestroy:             CheckDNSZoneDestroy,
+		CheckDestroy:             resource.ComposeTestCheckFunc(CheckDNSZoneDestroy, CheckTSIGKeyDestroy),
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigDNSZoneWithTSIGKey(name, "description to be cleared", *tsigKey.ID, "1.2.3.4", "primary server"),
+				Config: ConfigDNSZoneWithTSIGKeyResource(name, "description to be cleared", keyName, "dGVzdHNlY3JldA==", "1.2.3.4", "primary server"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("fastly_dns_zone.test", "xfr_config_inbound.0.inbound_tsig_key_id"),
 				),
 			},
 			{
-				Config: ConfigDNSZoneWithXfrConfig(name, "", "1.2.3.4", "primary server"),
+				Config: ConfigDNSZoneWithTSIGKeyResourceCleared(name, keyName, "dGVzdHNlY3JldA==", "1.2.3.4", "primary server"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckNoResourceAttr("fastly_dns_zone.test", "xfr_config_inbound.0.inbound_tsig_key_id"),
 					resource.TestCheckResourceAttr("fastly_dns_zone.test", "description", ""),

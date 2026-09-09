@@ -1,0 +1,37 @@
+---
+page_title: "fastly_tsig_key Resource - fastly"
+subcategory: ""
+description: |-
+  Provides a Fastly TSIG Key.
+---
+
+# fastly_tsig_key (Resource)
+
+Provides a Fastly TSIG Key.
+
+This resource is versionless: it is not tied to a service version and is managed independently of any `fastly_service_cdn` or `fastly_service_compute` resource.
+
+## Example Usage
+
+```terraform
+resource "fastly_tsig_key" "example" {
+  name      = "example.com."
+  algorithm = "hmac-sha256"
+  secret = {
+    value = "c2VjcmV0a2V5MTIzNDU2Nzg="
+  }
+  description = "My TSIG key"
+}
+```
+
+Deleting a TSIG key that's still referenced by a `fastly_dns_zone`'s `inbound_tsig_key_id` requires removing that reference first, in a separate `terraform apply`.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Fastly TSIG Keys can be imported using their Key ID, e.g.
+
+```shell
+terraform import fastly_tsig_key.example xxxxxxxxxxxxxxxxxxxx
+```
