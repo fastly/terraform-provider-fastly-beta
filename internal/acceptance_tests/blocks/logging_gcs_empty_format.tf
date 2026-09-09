@@ -1,12 +1,10 @@
-resource "fastly_service_logging_bigquery" "test" {
-  service_id = fastly_service_cdn.test.id
-  version    = {{.SERVICE_VERSION}}
-  name       = "{{.LOGGING_BIGQUERY_NAME}}"
-  project_id = "fastly-test-project"
-  dataset    = "fastly_test_dataset"
-  table      = "fastly_test_table"
+resource "fastly_service_logging_gcs" "test" {
+  service_id  = fastly_service_cdn.test.id
+  version     = {{.SERVICE_VERSION}}
+  name        = "{{.LOGGING_GCS_NAME}}"
+  bucket_name = "fastly-test-bucket"
   authentication = {
-    email = "test-bigquery@fastly-test-project.iam.gserviceaccount.com"
+    email = "test-gcs@fastly-test-project.iam.gserviceaccount.com"
     # generated solely for this test fixture; not tied to any real account or service.
     secret_key = chomp(<<-EOT
       -----BEGIN PRIVATE KEY-----
@@ -64,4 +62,5 @@ resource "fastly_service_logging_bigquery" "test" {
       EOT
     )
   }
+  format = ""
 }

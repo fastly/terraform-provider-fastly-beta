@@ -54,6 +54,26 @@ func TestAccFastlyServiceLoggingSplunk_basic(t *testing.T) {
 	})
 }
 
+// TestAccFastlyServiceLoggingSplunk_emptyFormat verifies an explicit
+// format = "" is rejected at validate time rather than failing apply.
+func TestAccFastlyServiceLoggingSplunk_emptyFormat(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("splunk-logger-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigLoggingSplunkEmptyFormat(serviceName, domainName, loggerName),
+				ExpectError: regexp.MustCompile("`format` cannot be explicitly set to an empty string"),
+			},
+		},
+	})
+}
+
 func TestAccFastlyServiceLoggingSplunk_update(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))

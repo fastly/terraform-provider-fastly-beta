@@ -7,6 +7,7 @@ resource "fastly_service_logging_splunk" "test" {
     token = "updated-splunk-token"
   }
   tls = {
+    # generated solely for this test fixture; not tied to any real account or service.
     ca_cert = chomp(<<-EOT
 -----BEGIN CERTIFICATE-----
 MIIDQTCCAimgAwIBAgIUKp4VT3Ue7gL5L3MIYbexM0+MQNIwDQYJKoZIhvcNAQEL
@@ -30,6 +31,7 @@ dJmR5YwzXAbyvuekuRVzwqcroKii
 -----END CERTIFICATE-----
 EOT
     )
+    # generated solely for this test fixture; not tied to any real account or service.
     client_cert = chomp(<<-EOT
 -----BEGIN CERTIFICATE-----
 MIIDQTCCAimgAwIBAgIUKp4VT3Ue7gL5L3MIYbexM0+MQNIwDQYJKoZIhvcNAQEL
@@ -53,6 +55,7 @@ dJmR5YwzXAbyvuekuRVzwqcroKii
 -----END CERTIFICATE-----
 EOT
     )
+    # generated solely for this test fixture; not tied to any real account or service.
     client_key = chomp(<<-EOT
 -----BEGIN PRIVATE KEY-----
 MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDEZOCTK+jxA9SE

@@ -54,6 +54,27 @@ func TestAccFastlyServiceLoggingBigQuery_basic(t *testing.T) {
 	})
 }
 
+// TestAccFastlyServiceLoggingBigQuery_emptyFormat verifies an explicit
+// format = "" is rejected at validate time rather than failing apply with
+// "Provider produced inconsistent result after apply".
+func TestAccFastlyServiceLoggingBigQuery_emptyFormat(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("bigquery-logger-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigLoggingBigQueryEmptyFormat(serviceName, domainName, loggerName),
+				ExpectError: regexp.MustCompile("`format` cannot be explicitly set to an empty string"),
+			},
+		},
+	})
+}
+
 // TestAccFastlyServiceLoggingBigQuery_authEnvDefaults verifies that
 // account_name, email, and secret_key still pick up FASTLY_GOOGLE_SERVICE_ACCOUNT_NAME /
 // FASTLY_BQ_EMAIL / FASTLY_BQ_SECRET_KEY when the entire authentication object

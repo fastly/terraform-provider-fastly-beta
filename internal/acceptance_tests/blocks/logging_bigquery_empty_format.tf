@@ -64,4 +64,5 @@ resource "fastly_service_logging_bigquery" "test" {
       EOT
     )
   }
+  format = ""
 }
