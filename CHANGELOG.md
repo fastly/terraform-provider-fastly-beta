@@ -4,11 +4,19 @@
 
 ### ENHANCEMENTS:
 
+### BUG FIXES:
+
+### Dependencies:
+
+## 0.1.3 (September 8, 2026)
+
+### ENHANCEMENTS:
+
 - feat(logging_cloudfiles): add support for Cloudfiles Logging ([#85](https://github.com/fastly/terraform-provider-fastly-beta/pull/85))
 
 ### BUG FIXES:
 
-### Dependencies:
+- fix(logging): reject explicit empty string on defaulted format-like attributes (`format`, `timestamp_format`, `region`, `domain`) on Optional+Computed logging attributes, which previously bypassed the schema default and caused "Provider produced inconsistent result after apply" ([#86](https://github.com/fastly/terraform-provider-fastly-beta/pull/86))
 
 ## 0.1.2 (September 8, 2026)
 
