@@ -4321,6 +4321,219 @@ func ConfigComputeAutoWithLoggingCloudfiles(serviceName, domainName, loggerName 
 	)
 }
 
+func ConfigLoggingGrafanaCloudLogsBasic(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":                  serviceName,
+			"SERVICE_COMMENT":               "",
+			"DOMAIN_NAME":                   domainName,
+			"SERVICE_VERSION":               "1",
+			"LOGGING_GRAFANACLOUDLOGS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_grafanacloudlogs_basic.tf",
+	)
+}
+
+// ConfigLoggingGrafanaCloudLogsEmptyFormat sets format = "" - see
+// TestAccFastlyServiceLoggingGrafanaCloudLogs_emptyFormat.
+func ConfigLoggingGrafanaCloudLogsEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":                  serviceName,
+			"SERVICE_COMMENT":               "",
+			"DOMAIN_NAME":                   domainName,
+			"SERVICE_VERSION":               "1",
+			"LOGGING_GRAFANACLOUDLOGS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_grafanacloudlogs_empty_format.tf",
+	)
+}
+
+func ConfigLoggingGrafanaCloudLogsUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":                  serviceName,
+			"SERVICE_COMMENT":               "",
+			"DOMAIN_NAME":                   domainName,
+			"SERVICE_VERSION":               "1",
+			"LOGGING_GRAFANACLOUDLOGS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_grafanacloudlogs_updated.tf",
+	)
+}
+
+func ConfigLoggingGrafanaCloudLogsAtVersion(serviceName, domainName, loggerName string, version int) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":                  serviceName,
+			"SERVICE_COMMENT":               "",
+			"DOMAIN_NAME":                   domainName,
+			"SERVICE_VERSION":               fmt.Sprintf("%d", version),
+			"LOGGING_GRAFANACLOUDLOGS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_grafanacloudlogs_basic.tf",
+	)
+}
+
+func ConfigLoggingGrafanaCloudLogsForImport(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":                  serviceName,
+			"SERVICE_COMMENT":               "",
+			"DOMAIN_NAME":                   domainName,
+			"SERVICE_VERSION":               "1",
+			"LOGGING_GRAFANACLOUDLOGS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_grafanacloudlogs_basic.tf",
+	)
+}
+
+// ConfigLoggingGrafanaCloudLogsComputeFormat returns a config attaching
+// fastly_service_logging_grafanacloudlogs to an explicit Compute service with
+// format set, a VCL-only attribute. The standalone resource's schema is
+// shared by both service types, so this is expected to fail at apply time via
+// ValidateNoVCLOnlyAttributesForCompute rather than at Terraform's own
+// schema-validation stage.
+func ConfigLoggingGrafanaCloudLogsComputeFormat(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":                  serviceName,
+			"SERVICE_COMMENT":               "",
+			"SERVICE_VERSION":               "1",
+			"LOGGING_GRAFANACLOUDLOGS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_grafanacloudlogs_compute_format.tf",
+	)
+}
+
+// ConfigLoggingGrafanaCloudLogsCompute returns a config attaching
+// fastly_service_logging_grafanacloudlogs to an explicit Compute service with
+// no VCL-only attributes set. ClearVCLOnlyCreateFields strips format from the
+// create request, so the endpoint ends up with whatever format the Fastly API
+// defaults to - see TestAccFastlyServiceLoggingGrafanaCloudLogs_formatDefault.
+func ConfigLoggingGrafanaCloudLogsCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":                  serviceName,
+			"SERVICE_COMMENT":               "",
+			"SERVICE_VERSION":               "1",
+			"LOGGING_GRAFANACLOUDLOGS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_grafanacloudlogs_compute.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingGrafanaCloudLogs(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":                  serviceName,
+			"DOMAIN_NAME":                   domainName,
+			"LOGGING_GRAFANACLOUDLOGS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_grafanacloudlogs_nested.tf",
+	)
+}
+
+// ConfigCDNAutoWithLoggingGrafanaCloudLogsEmptyFormat sets format = "" on the
+// nested logging_grafanacloudlogs block - see
+// TestAccFastlyServiceCDNAuto_loggingGrafanaCloudLogsEmptyFormat.
+func ConfigCDNAutoWithLoggingGrafanaCloudLogsEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":                  serviceName,
+			"DOMAIN_NAME":                   domainName,
+			"LOGGING_GRAFANACLOUDLOGS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_grafanacloudlogs_nested_empty_format.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingGrafanaCloudLogsPlacementNone(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":                  serviceName,
+			"DOMAIN_NAME":                   domainName,
+			"LOGGING_GRAFANACLOUDLOGS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_grafanacloudlogs_nested_placement_none.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingGrafanaCloudLogsUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":                  serviceName,
+			"DOMAIN_NAME":                   domainName,
+			"LOGGING_GRAFANACLOUDLOGS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_grafanacloudlogs_nested_updated.tf",
+	)
+}
+
+func ConfigCDNAutoWithMultipleLoggingGrafanaCloudLogs(serviceName, domainName, loggerName1, loggerName2 string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":                    serviceName,
+			"DOMAIN_NAME":                     domainName,
+			"LOGGING_GRAFANACLOUDLOGS_NAME_1": loggerName1,
+			"LOGGING_GRAFANACLOUDLOGS_NAME_2": loggerName2,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_grafanacloudlogs_nested_multi.tf",
+	)
+}
+
+func ConfigCDNAutoWithBackendAndLoggingGrafanaCloudLogs(serviceName, domainName, backendName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":                  serviceName,
+			"DOMAIN_NAME":                   domainName,
+			"BACKEND_NAME":                  backendName,
+			"LOGGING_GRAFANACLOUDLOGS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/backend_single.tf",
+		"internal/acceptance_tests/blocks/logging_grafanacloudlogs_nested.tf",
+	)
+}
+
+func ConfigComputeAutoWithLoggingGrafanaCloudLogs(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":                  serviceName,
+			"DOMAIN_NAME":                   domainName,
+			"LOGGING_GRAFANACLOUDLOGS_NAME": loggerName,
+			"PACKAGE_PATH":                  GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_grafanacloudlogs_nested.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
 // ConfigComputeAutoWithLoggingCloudfilesFormat returns a Compute auto service
 // config whose nested logging_cloudfiles block sets format, a VCL-only
 // attribute. service_compute_auto's logging_cloudfiles schema
@@ -4338,6 +4551,27 @@ func ConfigComputeAutoWithLoggingCloudfilesFormat(serviceName, domainName, logge
 		},
 		"internal/acceptance_tests/blocks/domain_single.tf",
 		"internal/acceptance_tests/blocks/logging_cloudfiles_nested_compute_format.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigComputeAutoWithLoggingGrafanaCloudLogsFormat returns a Compute auto
+// service config whose nested logging_grafanacloudlogs block sets format, a
+// VCL-only attribute. service_compute_auto's logging_grafanacloudlogs schema
+// (ComputeNestedBlockSchema) omits format/format_version/placement/response_condition
+// entirely, so this is expected to fail Terraform's own schema validation
+// ("Unsupported argument") rather than reach the Fastly API.
+func ConfigComputeAutoWithLoggingGrafanaCloudLogsFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":                  serviceName,
+			"DOMAIN_NAME":                   domainName,
+			"LOGGING_GRAFANACLOUDLOGS_NAME": loggerName,
+			"PACKAGE_PATH":                  GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_grafanacloudlogs_nested_compute_format.tf",
 		"internal/acceptance_tests/blocks/package.tf",
 	)
 }
