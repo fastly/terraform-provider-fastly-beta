@@ -4137,6 +4137,40 @@ func ConfigLoggingCloudfilesUpdated(serviceName, domainName, loggerName string) 
 	)
 }
 
+// ConfigLoggingCloudfilesEmptyFormat sets format = "" - see
+// TestAccFastlyServiceLoggingCloudfiles_emptyFormat.
+func ConfigLoggingCloudfilesEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"SERVICE_COMMENT":         "",
+			"DOMAIN_NAME":             domainName,
+			"SERVICE_VERSION":         "1",
+			"LOGGING_CLOUDFILES_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_cloudfiles_empty_format.tf",
+	)
+}
+
+// ConfigLoggingCloudfilesEmptyTimestampFormat sets timestamp_format = "" -
+// see TestAccFastlyServiceLoggingCloudfiles_emptyTimestampFormat.
+func ConfigLoggingCloudfilesEmptyTimestampFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"SERVICE_COMMENT":         "",
+			"DOMAIN_NAME":             domainName,
+			"SERVICE_VERSION":         "1",
+			"LOGGING_CLOUDFILES_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_cloudfiles_empty_timestamp_format.tf",
+	)
+}
+
 func ConfigLoggingCloudfilesAtVersion(serviceName, domainName, loggerName string, version int) string {
 	return BuildConfig(
 		ServiceCDN,
