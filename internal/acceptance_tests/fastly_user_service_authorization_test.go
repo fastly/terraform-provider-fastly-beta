@@ -92,6 +92,34 @@ func TestAccFastlyUserServiceAuthorization_basic(t *testing.T) {
 	})
 }
 
+func TestAccFastlyUserServiceAuthorization_permissionDefault(t *testing.T) {
+	t.Parallel()
+	if os.Getenv("TF_ACC") == "" {
+		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
+	}
+
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	userID := createTestUser(t)
+	resourceName := "fastly_user_service_authorization.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckUserServiceAuthorizationDestroy,
+		Steps: []resource.TestStep{
+			{
+				// permission omitted entirely: both the schema default and the API's own
+				// server-side default must agree on "full".
+				Config: ConfigUserServiceAuthorization(serviceName, userID, ""),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckUserServiceAuthorizationExists(),
+					resource.TestCheckResourceAttr(resourceName, "permission", "full"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccFastlyUserServiceAuthorization_invalidPermission(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("TF_ACC") == "" {

@@ -32,9 +32,12 @@ resource "fastly_user_service_authorization" "example" {
 
 ### Required
 
-- `permission` (String) The permissions to grant the user. Can be `full`, `read_only`, `purge_select` or `purge_all`.
 - `service_id` (String) The ID of the service to grant permissions for.
-- `user_id` (String) The ID of the user which will receive the granted permissions.
+- `user_id` (String) The ID of the user being given access to the service.
+
+### Optional
+
+- `permission` (String) The permissions to grant the user. Can be `full`, `read_only`, `purge_select` or `purge_all`. Default: `full`.
 
 ### Read-Only
 

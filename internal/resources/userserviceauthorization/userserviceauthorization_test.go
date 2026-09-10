@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/require"
@@ -44,9 +45,15 @@ func TestSchema(t *testing.T) {
 
 	permission, ok := resp.Schema.Attributes["permission"].(resourceschema.StringAttribute)
 	require.True(t, ok)
-	require.True(t, permission.Required)
+	require.True(t, permission.Optional)
+	require.True(t, permission.Computed)
 	require.NotEmpty(t, permission.Validators)
 	require.Empty(t, permission.PlanModifiers, "permission is updatable in place")
+
+	require.NotNil(t, permission.Default)
+	var defaultResp defaults.StringResponse
+	permission.Default.DefaultString(context.Background(), defaults.StringRequest{}, &defaultResp)
+	require.Equal(t, DefaultPermission, defaultResp.PlanValue.ValueString())
 }
 
 func TestPermissionValidator(t *testing.T) {

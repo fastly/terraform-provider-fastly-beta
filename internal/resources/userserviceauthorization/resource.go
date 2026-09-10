@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/fastly/go-fastly/v17/fastly"
@@ -112,7 +113,12 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	newState := flattenToModel(sa)
+	// Unlike GET/POST, the PATCH response only includes attributes, not the service/user
+	// relationships - service_id and user_id are RequiresReplace, so carry them over from the
+	// plan instead of reading them off the (nil) response relationships.
+	newState := plan
+	newState.ID = types.StringValue(sa.ID)
+	newState.Permission = types.StringValue(sa.Permission)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
 }
 

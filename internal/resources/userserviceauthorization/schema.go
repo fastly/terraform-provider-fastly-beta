@@ -4,6 +4,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -11,6 +12,10 @@ import (
 
 // permissions are not exported by go-fastly for this resource, unlike e.g. accesskeys.PERMISSIONS.
 var permissions = []string{"full", "read_only", "purge_select", "purge_all"}
+
+// DefaultPermission matches the Fastly API's own server-side default when permission is
+// omitted from CreateServiceAuthorization.
+const DefaultPermission = "full"
 
 type Model struct {
 	ID         types.String `tfsdk:"id"`
@@ -37,14 +42,16 @@ func ResourceAttributes() map[string]schema.Attribute {
 		},
 		"user_id": schema.StringAttribute{
 			Required:    true,
-			Description: "The ID of the user which will receive the granted permissions.",
+			Description: "The ID of the user being given access to the service.",
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
 			},
 		},
 		"permission": schema.StringAttribute{
-			Required:    true,
-			Description: "The permissions to grant the user. Can be `full`, `read_only`, `purge_select` or `purge_all`.",
+			Optional:    true,
+			Computed:    true,
+			Default:     stringdefault.StaticString(DefaultPermission),
+			Description: "The permissions to grant the user. Can be `full`, `read_only`, `purge_select` or `purge_all`. Default: `full`.",
 			Validators: []validator.String{
 				stringvalidator.OneOf(permissions...),
 			},
