@@ -4321,6 +4321,241 @@ func ConfigComputeAutoWithLoggingCloudfiles(serviceName, domainName, loggerName 
 	)
 }
 
+func ConfigLoggingDigitalOceanBasic(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           "1",
+			"LOGGING_DIGITALOCEAN_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_digitalocean_basic.tf",
+	)
+}
+
+func ConfigLoggingDigitalOceanUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           "1",
+			"LOGGING_DIGITALOCEAN_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_digitalocean_updated.tf",
+	)
+}
+
+// ConfigLoggingDigitalOceanEmptyFormat sets format = "" - see
+// TestAccFastlyServiceLoggingDigitalOcean_emptyFormat.
+func ConfigLoggingDigitalOceanEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           "1",
+			"LOGGING_DIGITALOCEAN_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_digitalocean_empty_format.tf",
+	)
+}
+
+// ConfigLoggingDigitalOceanEmptyTimestampFormat sets timestamp_format = "" -
+// see TestAccFastlyServiceLoggingDigitalOcean_emptyTimestampFormat.
+func ConfigLoggingDigitalOceanEmptyTimestampFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           "1",
+			"LOGGING_DIGITALOCEAN_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_digitalocean_empty_timestamp_format.tf",
+	)
+}
+
+func ConfigLoggingDigitalOceanAtVersion(serviceName, domainName, loggerName string, version int) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           fmt.Sprintf("%d", version),
+			"LOGGING_DIGITALOCEAN_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_digitalocean_basic.tf",
+	)
+}
+
+func ConfigLoggingDigitalOceanForImport(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           "1",
+			"LOGGING_DIGITALOCEAN_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_digitalocean_basic.tf",
+	)
+}
+
+// ConfigLoggingDigitalOceanComputeFormat returns a config attaching
+// fastly_service_logging_digitalocean to an explicit Compute service with
+// format set, a VCL-only attribute. The standalone resource's schema is
+// shared by both service types, so this is expected to fail at apply time via
+// ValidateNoVCLOnlyAttributesForCompute rather than at Terraform's own
+// schema-validation stage.
+func ConfigLoggingDigitalOceanComputeFormat(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"SERVICE_VERSION":           "1",
+			"LOGGING_DIGITALOCEAN_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_digitalocean_compute_format.tf",
+	)
+}
+
+// ConfigLoggingDigitalOceanCompute returns a config attaching
+// fastly_service_logging_digitalocean to an explicit Compute service with no
+// VCL-only attributes set. ClearVCLOnlyCreateFields strips format from the
+// create request, so the endpoint ends up with whatever format the Fastly API
+// defaults to - see TestAccFastlyServiceLoggingDigitalOcean_formatDefault.
+func ConfigLoggingDigitalOceanCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"SERVICE_VERSION":           "1",
+			"LOGGING_DIGITALOCEAN_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_digitalocean_compute.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingDigitalOcean(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"DOMAIN_NAME":               domainName,
+			"LOGGING_DIGITALOCEAN_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_digitalocean_nested.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingDigitalOceanPlacementNone(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"DOMAIN_NAME":               domainName,
+			"LOGGING_DIGITALOCEAN_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_digitalocean_nested_placement_none.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingDigitalOceanUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"DOMAIN_NAME":               domainName,
+			"LOGGING_DIGITALOCEAN_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_digitalocean_nested_updated.tf",
+	)
+}
+
+func ConfigCDNAutoWithMultipleLoggingDigitalOcean(serviceName, domainName, loggerName1, loggerName2 string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":                serviceName,
+			"DOMAIN_NAME":                 domainName,
+			"LOGGING_DIGITALOCEAN_NAME_1": loggerName1,
+			"LOGGING_DIGITALOCEAN_NAME_2": loggerName2,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_digitalocean_nested_multi.tf",
+	)
+}
+
+func ConfigCDNAutoWithBackendAndLoggingDigitalOcean(serviceName, domainName, backendName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"DOMAIN_NAME":               domainName,
+			"BACKEND_NAME":              backendName,
+			"LOGGING_DIGITALOCEAN_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/backend_single.tf",
+		"internal/acceptance_tests/blocks/logging_digitalocean_nested.tf",
+	)
+}
+
+func ConfigComputeAutoWithLoggingDigitalOcean(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"DOMAIN_NAME":               domainName,
+			"LOGGING_DIGITALOCEAN_NAME": loggerName,
+			"PACKAGE_PATH":              GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_digitalocean_nested.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigComputeAutoWithLoggingDigitalOceanFormat returns a Compute auto
+// service config whose nested logging_digitalocean block sets format, a
+// VCL-only attribute. service_compute_auto's logging_digitalocean schema
+// (ComputeNestedBlockSchema) omits format/format_version/placement/
+// response_condition entirely, so this is expected to fail Terraform's own
+// schema validation ("Unsupported argument") rather than reach the Fastly API.
+func ConfigComputeAutoWithLoggingDigitalOceanFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"DOMAIN_NAME":               domainName,
+			"LOGGING_DIGITALOCEAN_NAME": loggerName,
+			"PACKAGE_PATH":              GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_digitalocean_nested_compute_format.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
 func ConfigLoggingGrafanaCloudLogsBasic(serviceName, domainName, loggerName string) string {
 	return BuildConfig(
 		ServiceCDN,
