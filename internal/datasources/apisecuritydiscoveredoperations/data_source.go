@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -82,6 +83,21 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 				Optional:    true,
 				ElementType: types.StringType,
 				Description: "Filter by one or more HTTP methods.",
+				Validators: []validator.Set{
+					setvalidator.ValueStringsAre(
+						stringvalidator.OneOf(
+							"GET",
+							"POST",
+							"PUT",
+							"PATCH",
+							"DELETE",
+							"HEAD",
+							"OPTIONS",
+							"CONNECT",
+							"TRACE",
+						),
+					),
+				},
 			},
 			"path": schema.StringAttribute{
 				Optional:    true,
