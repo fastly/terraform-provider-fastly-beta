@@ -10,7 +10,7 @@ description: |-
 Use this data source to retrieve a list of Fastly Next-Gen WAF templated
 signal rules scoped to a single workspace.
 
-This data source returns each rule's associated tempalted `signal`.
+This data source returns each rule's associated templated `signal`.
 
 ## Example Usage
 
