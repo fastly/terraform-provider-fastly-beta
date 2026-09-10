@@ -1,0 +1,27 @@
+---
+page_title: "fastly_ngwaf_workspace_templated_signal_rules Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to retrieve a list of Fastly Next-Gen WAF templated signal rules scoped to a single workspace.
+---
+
+# fastly_ngwaf_workspace_templated_signal_rules (Data Source)
+
+Use this data source to retrieve a list of Fastly Next-Gen WAF templated
+signal rules scoped to a single workspace.
+
+This data source returns each rule's associated tempalted `signal`.
+
+## Example Usage
+
+```terraform
+data "fastly_ngwaf_workspace_templated_signal_rules" "example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+}
+
+output "fastly_ngwaf_workspace_templated_signal_rules_all" {
+  value = data.fastly_ngwaf_workspace_templated_signal_rules.example.rules
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

@@ -41,6 +41,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacerules"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspaces"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacesignals"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacetemplatedsignalrules"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacethresholds"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacevirtualpatches"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/secretstores"
@@ -323,6 +324,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		ngwafworkspacerules.NewDataSource,
 		ngwafworkspaces.NewDataSource,
 		ngwafworkspacesignals.NewDataSource,
+		ngwafworkspacetemplatedsignalrules.NewDataSource,
 		ngwafworkspacethresholds.NewDataSource,
 		ngwafworkspacevirtualpatches.NewDataSource,
 		secretstores.NewDataSource,
