@@ -16,6 +16,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingcloudfiles"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdatadog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
@@ -54,31 +55,32 @@ func NewResource() resource.Resource {
 }
 
 type Model struct {
-	ID                  types.String                             `tfsdk:"id"`
-	Name                types.String                             `tfsdk:"name"`
-	Comment             types.String                             `tfsdk:"comment"`
-	ForceDestroy        types.Bool                               `tfsdk:"force_destroy"`
-	Reuse               types.Bool                               `tfsdk:"reuse"`
-	ActiveVersion       types.Int64                              `tfsdk:"active_version"`
-	ManagedVersion      types.Int64                              `tfsdk:"managed_version"`
-	Domain              []domain.NestedModel                     `tfsdk:"domain"`
-	HealthCheck         []healthcheck.NestedModel                `tfsdk:"healthcheck"`
-	Backend             []backend.NestedModel                    `tfsdk:"backend"`
-	Dictionary          []dictionary.NestedModel                 `tfsdk:"dictionary"`
-	ResourceLink        []resourcelink.NestedModel               `tfsdk:"resource_link"`
-	Package             []computepackage.Model                   `tfsdk:"package"`
-	LoggingBlobStorage  []loggingblobstorage.ComputeNestedModel  `tfsdk:"logging_blobstorage"`
-	LoggingCloudfiles   []loggingcloudfiles.ComputeNestedModel   `tfsdk:"logging_cloudfiles"`
-	LoggingS3           []loggings3.ComputeNestedModel           `tfsdk:"logging_s3"`
-	LoggingNewRelicOTLP []loggingnewrelicotlp.ComputeNestedModel `tfsdk:"logging_newrelicotlp"`
-	LoggingNewRelic     []loggingnewrelic.ComputeNestedModel     `tfsdk:"logging_newrelic"`
-	LoggingDatadog      []loggingdatadog.ComputeNestedModel      `tfsdk:"logging_datadog"`
-	LoggingBigQuery     []loggingbigquery.ComputeNestedModel     `tfsdk:"logging_bigquery"`
-	LoggingGCS          []logginggcs.ComputeNestedModel          `tfsdk:"logging_gcs"`
-	LoggingSplunk       []loggingsplunk.ComputeNestedModel       `tfsdk:"logging_splunk"`
-	LoggingHTTPS        []logginghttps.ComputeNestedModel        `tfsdk:"logging_https"`
-	LoggingSumologic    []loggingsumologic.ComputeNestedModel    `tfsdk:"logging_sumologic"`
-	LoggingSyslog       []loggingsyslog.ComputeNestedModel       `tfsdk:"logging_syslog"`
+	ID                      types.String                                 `tfsdk:"id"`
+	Name                    types.String                                 `tfsdk:"name"`
+	Comment                 types.String                                 `tfsdk:"comment"`
+	ForceDestroy            types.Bool                                   `tfsdk:"force_destroy"`
+	Reuse                   types.Bool                                   `tfsdk:"reuse"`
+	ActiveVersion           types.Int64                                  `tfsdk:"active_version"`
+	ManagedVersion          types.Int64                                  `tfsdk:"managed_version"`
+	Domain                  []domain.NestedModel                         `tfsdk:"domain"`
+	HealthCheck             []healthcheck.NestedModel                    `tfsdk:"healthcheck"`
+	Backend                 []backend.NestedModel                        `tfsdk:"backend"`
+	Dictionary              []dictionary.NestedModel                     `tfsdk:"dictionary"`
+	ResourceLink            []resourcelink.NestedModel                   `tfsdk:"resource_link"`
+	Package                 []computepackage.Model                       `tfsdk:"package"`
+	LoggingBlobStorage      []loggingblobstorage.ComputeNestedModel      `tfsdk:"logging_blobstorage"`
+	LoggingCloudfiles       []loggingcloudfiles.ComputeNestedModel       `tfsdk:"logging_cloudfiles"`
+	LoggingS3               []loggings3.ComputeNestedModel               `tfsdk:"logging_s3"`
+	LoggingNewRelicOTLP     []loggingnewrelicotlp.ComputeNestedModel     `tfsdk:"logging_newrelicotlp"`
+	LoggingNewRelic         []loggingnewrelic.ComputeNestedModel         `tfsdk:"logging_newrelic"`
+	LoggingDatadog          []loggingdatadog.ComputeNestedModel          `tfsdk:"logging_datadog"`
+	LoggingBigQuery         []loggingbigquery.ComputeNestedModel         `tfsdk:"logging_bigquery"`
+	LoggingGCS              []logginggcs.ComputeNestedModel              `tfsdk:"logging_gcs"`
+	LoggingGrafanaCloudLogs []logginggrafanacloudlogs.ComputeNestedModel `tfsdk:"logging_grafanacloudlogs"`
+	LoggingSplunk           []loggingsplunk.ComputeNestedModel           `tfsdk:"logging_splunk"`
+	LoggingHTTPS            []logginghttps.ComputeNestedModel            `tfsdk:"logging_https"`
+	LoggingSumologic        []loggingsumologic.ComputeNestedModel        `tfsdk:"logging_sumologic"`
+	LoggingSyslog           []loggingsyslog.ComputeNestedModel           `tfsdk:"logging_syslog"`
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -128,24 +130,25 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			},
 		},
 		Blocks: map[string]schema.Block{
-			"domain":               domain.NestedBlockSchema(),
-			"healthcheck":          healthcheck.NestedBlockSchema(),
-			"backend":              backend.NestedBlockSchema(),
-			"dictionary":           dictionary.NestedBlockSchema(),
-			"resource_link":        resourcelink.NestedBlockSchema(),
-			"package":              computepackage.NestedBlockSchema(),
-			"logging_blobstorage":  loggingblobstorage.ComputeNestedBlockSchema(),
-			"logging_cloudfiles":   loggingcloudfiles.ComputeNestedBlockSchema(),
-			"logging_s3":           loggings3.ComputeNestedBlockSchema(),
-			"logging_newrelicotlp": loggingnewrelicotlp.ComputeNestedBlockSchema(),
-			"logging_newrelic":     loggingnewrelic.ComputeNestedBlockSchema(),
-			"logging_datadog":      loggingdatadog.ComputeNestedBlockSchema(),
-			"logging_bigquery":     loggingbigquery.ComputeNestedBlockSchema(),
-			"logging_gcs":          logginggcs.ComputeNestedBlockSchema(),
-			"logging_splunk":       loggingsplunk.ComputeNestedBlockSchema(),
-			"logging_https":        logginghttps.ComputeNestedBlockSchema(),
-			"logging_sumologic":    loggingsumologic.ComputeNestedBlockSchema(),
-			"logging_syslog":       loggingsyslog.ComputeNestedBlockSchema(),
+			"domain":                   domain.NestedBlockSchema(),
+			"healthcheck":              healthcheck.NestedBlockSchema(),
+			"backend":                  backend.NestedBlockSchema(),
+			"dictionary":               dictionary.NestedBlockSchema(),
+			"resource_link":            resourcelink.NestedBlockSchema(),
+			"package":                  computepackage.NestedBlockSchema(),
+			"logging_blobstorage":      loggingblobstorage.ComputeNestedBlockSchema(),
+			"logging_cloudfiles":       loggingcloudfiles.ComputeNestedBlockSchema(),
+			"logging_s3":               loggings3.ComputeNestedBlockSchema(),
+			"logging_newrelicotlp":     loggingnewrelicotlp.ComputeNestedBlockSchema(),
+			"logging_newrelic":         loggingnewrelic.ComputeNestedBlockSchema(),
+			"logging_datadog":          loggingdatadog.ComputeNestedBlockSchema(),
+			"logging_bigquery":         loggingbigquery.ComputeNestedBlockSchema(),
+			"logging_gcs":              logginggcs.ComputeNestedBlockSchema(),
+			"logging_grafanacloudlogs": logginggrafanacloudlogs.ComputeNestedBlockSchema(),
+			"logging_splunk":           loggingsplunk.ComputeNestedBlockSchema(),
+			"logging_https":            logginghttps.ComputeNestedBlockSchema(),
+			"logging_sumologic":        loggingsumologic.ComputeNestedBlockSchema(),
+			"logging_syslog":           loggingsyslog.ComputeNestedBlockSchema(),
 		},
 	}
 }
@@ -405,6 +408,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	plan.LoggingGCS = logginggcs.ComputeMatchOrder(loggingGCSs, plan.LoggingGCS)
 
+	if err := logginggrafanacloudlogs.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingGrafanaCloudLogs); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling GrafanaCloudLogs logging endpoints", err.Error())
+		return
+	}
+
+	loggingGrafanaCloudLogss, err := logginggrafanacloudlogs.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading GrafanaCloudLogs logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingGrafanaCloudLogs = logginggrafanacloudlogs.ComputeMatchOrder(loggingGrafanaCloudLogss, plan.LoggingGrafanaCloudLogs)
+
 	if err := loggingsplunk.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingSplunk); err != nil {
 		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling Splunk logging endpoints", err.Error())
@@ -605,6 +622,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading GCS logging endpoints", err.Error())
 		return
 	}
+	loggingGrafanaCloudLogss, err := logginggrafanacloudlogs.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading GrafanaCloudLogs logging endpoints", err.Error())
+		return
+	}
 	loggingSplunks, err := loggingsplunk.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading Splunk logging endpoints", err.Error())
@@ -637,6 +659,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.LoggingDatadog = loggingdatadog.ComputeMatchOrder(loggingDatadogs, state.LoggingDatadog)
 	state.LoggingBigQuery = loggingbigquery.ComputeMatchOrder(loggingBigQueries, state.LoggingBigQuery)
 	state.LoggingGCS = logginggcs.ComputeMatchOrder(loggingGCSs, state.LoggingGCS)
+	state.LoggingGrafanaCloudLogs = logginggrafanacloudlogs.ComputeMatchOrder(loggingGrafanaCloudLogss, state.LoggingGrafanaCloudLogs)
 	state.LoggingSplunk = loggingsplunk.ComputeMatchOrder(loggingSplunks, state.LoggingSplunk)
 	state.LoggingHTTPS = logginghttps.ComputeMatchOrder(loggingHTTPS, state.LoggingHTTPS)
 	state.LoggingSumologic = loggingsumologic.ComputeMatchOrder(loggingSumologics, state.LoggingSumologic)
@@ -698,6 +721,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!loggingdatadog.ComputeEqual(plan.LoggingDatadog, state.LoggingDatadog) ||
 		!loggingbigquery.ComputeEqual(plan.LoggingBigQuery, state.LoggingBigQuery) ||
 		!logginggcs.ComputeEqual(plan.LoggingGCS, state.LoggingGCS) ||
+		!logginggrafanacloudlogs.ComputeEqual(plan.LoggingGrafanaCloudLogs, state.LoggingGrafanaCloudLogs) ||
 		!loggingsplunk.ComputeEqual(plan.LoggingSplunk, state.LoggingSplunk) ||
 		!logginghttps.ComputeEqual(plan.LoggingHTTPS, state.LoggingHTTPS) ||
 		!loggingsumologic.ComputeEqual(plan.LoggingSumologic, state.LoggingSumologic) ||
@@ -895,6 +919,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 		plan.LoggingGCS = logginggcs.ComputeMatchOrder(loggingGCSs, plan.LoggingGCS)
 
+		if err := logginggrafanacloudlogs.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingGrafanaCloudLogs); err != nil {
+			resp.Diagnostics.AddError("Error reconciling GrafanaCloudLogs logging endpoints", err.Error())
+			return
+		}
+
+		loggingGrafanaCloudLogss, err := logginggrafanacloudlogs.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading GrafanaCloudLogs logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingGrafanaCloudLogs = logginggrafanacloudlogs.ComputeMatchOrder(loggingGrafanaCloudLogss, plan.LoggingGrafanaCloudLogs)
+
 		if err := loggingsplunk.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingSplunk); err != nil {
 			resp.Diagnostics.AddError("Error reconciling Splunk logging endpoints", err.Error())
 			return
@@ -996,6 +1032,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.LoggingDatadog = loggingdatadog.ComputeMatchOrder(state.LoggingDatadog, plan.LoggingDatadog)
 		plan.LoggingBigQuery = loggingbigquery.ComputeMatchOrder(state.LoggingBigQuery, plan.LoggingBigQuery)
 		plan.LoggingGCS = logginggcs.ComputeMatchOrder(state.LoggingGCS, plan.LoggingGCS)
+		plan.LoggingGrafanaCloudLogs = logginggrafanacloudlogs.ComputeMatchOrder(state.LoggingGrafanaCloudLogs, plan.LoggingGrafanaCloudLogs)
 		plan.LoggingSplunk = loggingsplunk.ComputeMatchOrder(state.LoggingSplunk, plan.LoggingSplunk)
 		plan.LoggingHTTPS = logginghttps.ComputeMatchOrder(state.LoggingHTTPS, plan.LoggingHTTPS)
 		plan.LoggingSumologic = loggingsumologic.ComputeMatchOrder(state.LoggingSumologic, plan.LoggingSumologic)
