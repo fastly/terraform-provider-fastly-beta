@@ -1,4 +1,4 @@
-package serviceauthorization
+package userserviceauthorization
 
 import (
 	"context"
@@ -21,7 +21,7 @@ func TestMetadata(t *testing.T) {
 		ProviderTypeName: "fastly",
 	}, &resp)
 
-	require.Equal(t, "fastly_service_authorization", resp.TypeName)
+	require.Equal(t, "fastly_user_service_authorization", resp.TypeName)
 }
 
 func TestSchema(t *testing.T) {

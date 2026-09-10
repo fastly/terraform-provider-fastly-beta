@@ -1,13 +1,13 @@
 ---
-page_title: "fastly_service_authorization Resource - fastly"
+page_title: "fastly_user_service_authorization Resource - fastly"
 subcategory: ""
 description: |-
-  Grants a user permissions on a service. Service authorizations are versionless and independent of any service-version lifecycle.
+  Grants a user permissions on a service. User service authorizations are versionless and independent of any service-version lifecycle.
 ---
 
-# fastly_service_authorization (Resource)
+# fastly_user_service_authorization (Resource)
 
-Grants a user permissions on a service. Service authorizations are versionless and independent of any service-version lifecycle.
+Grants a user permissions on a service. User service authorizations are versionless and independent of any service-version lifecycle.
 
 `user_id` must be an existing Fastly user account ID; there is no Terraform resource for managing users, so it must come from another source (e.g. the Fastly control panel or API).
 
@@ -21,7 +21,7 @@ resource "fastly_service_cdn" "example" {
   force_destroy = true
 }
 
-resource "fastly_service_authorization" "example" {
+resource "fastly_user_service_authorization" "example" {
   service_id = fastly_service_cdn.example.id
   user_id    = "4whrmweg9bskt3knuqk4bs"
   permission = "purge_all"
@@ -38,12 +38,12 @@ resource "fastly_service_authorization" "example" {
 
 ### Read-Only
 
-- `id` (String) The ID of this service authorization.
+- `id` (String) The ID of this user service authorization.
 
 ## Import
 
-A Fastly Service Authorization can be imported using its ID, e.g.
+A Fastly User Service Authorization can be imported using its ID, e.g.
 
 ```shell
-terraform import fastly_service_authorization.example xxxxxxxxxxxxxxxxxxxx
+terraform import fastly_user_service_authorization.example xxxxxxxxxxxxxxxxxxxx
 ```

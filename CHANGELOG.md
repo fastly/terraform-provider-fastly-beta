@@ -5,7 +5,7 @@
 ### ENHANCEMENTS:
 
 - feat(ngwaf_workspace_templated_signal_rules): moved Templated Signal Rules to the dedicated `fastly_ngwaf_workspace_templated_signal_rules` data source ([#90](https://github.com/fastly/terraform-provider-fastly-beta/pull/90))
-- feat(service_authorization): add `fastly_service_authorization` resource for granting user permissions on a service ([#94](https://github.com/fastly/terraform-provider-fastly-beta/pull/94))
+- feat(user_service_authorization): add `fastly_user_service_authorization` resource for granting user permissions on a service ([#94](https://github.com/fastly/terraform-provider-fastly-beta/pull/94))
 
 ### BUG FIXES:
 

@@ -1,4 +1,4 @@
-package serviceauthorization
+package userserviceauthorization
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -23,7 +23,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"id": schema.StringAttribute{
 			Computed:    true,
-			Description: "The ID of this service authorization.",
+			Description: "The ID of this user service authorization.",
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.UseStateForUnknown(),
 			},

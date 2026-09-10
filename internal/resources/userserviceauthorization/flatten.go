@@ -1,4 +1,4 @@
-package serviceauthorization
+package userserviceauthorization
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/types"

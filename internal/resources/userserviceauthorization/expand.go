@@ -1,4 +1,4 @@
-package serviceauthorization
+package userserviceauthorization
 
 import (
 	"github.com/fastly/go-fastly/v17/fastly"

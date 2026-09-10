@@ -51,7 +51,7 @@ func createTestUser(t *testing.T) string {
 	return *user.UserID
 }
 
-func TestAccFastlyServiceAuthorization_basic(t *testing.T) {
+func TestAccFastlyUserServiceAuthorization_basic(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("TF_ACC") == "" {
 		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
@@ -59,17 +59,17 @@ func TestAccFastlyServiceAuthorization_basic(t *testing.T) {
 
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	userID := createTestUser(t)
-	resourceName := "fastly_service_authorization.test"
+	resourceName := "fastly_user_service_authorization.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { PreCheck(t) },
 		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
-		CheckDestroy:             CheckServiceAuthorizationDestroy,
+		CheckDestroy:             CheckUserServiceAuthorizationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigServiceAuthorization(serviceName, userID, "purge_select"),
+				Config: ConfigUserServiceAuthorization(serviceName, userID, "purge_select"),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckServiceAuthorizationExists(),
+					testAccCheckUserServiceAuthorizationExists(),
 					resource.TestCheckResourceAttr(resourceName, "permission", "purge_select"),
 					resource.TestCheckResourceAttr(resourceName, "user_id", userID),
 					resource.TestCheckResourceAttrPair(resourceName, "service_id", "fastly_service_cdn.test", "id"),
@@ -77,9 +77,9 @@ func TestAccFastlyServiceAuthorization_basic(t *testing.T) {
 			},
 			{
 				// permission is updatable in place; service_id and user_id stay fixed.
-				Config: ConfigServiceAuthorization(serviceName, userID, "purge_all"),
+				Config: ConfigUserServiceAuthorization(serviceName, userID, "purge_all"),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckServiceAuthorizationExists(),
+					testAccCheckUserServiceAuthorizationExists(),
 					resource.TestCheckResourceAttr(resourceName, "permission", "purge_all"),
 				),
 			},
@@ -92,7 +92,7 @@ func TestAccFastlyServiceAuthorization_basic(t *testing.T) {
 	})
 }
 
-func TestAccFastlyServiceAuthorization_invalidPermission(t *testing.T) {
+func TestAccFastlyUserServiceAuthorization_invalidPermission(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("TF_ACC") == "" {
 		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
@@ -106,21 +106,21 @@ func TestAccFastlyServiceAuthorization_invalidPermission(t *testing.T) {
 		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config:      ConfigServiceAuthorization(serviceName, userID, "not-a-real-permission"),
+				Config:      ConfigUserServiceAuthorization(serviceName, userID, "not-a-real-permission"),
 				ExpectError: regexp.MustCompile(`Attribute permission value must be one of`),
 			},
 		},
 	})
 }
 
-func testAccCheckServiceAuthorizationExists() resource.TestCheckFunc {
+func testAccCheckUserServiceAuthorizationExists() resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client, err := NewFastlyClient()
 		if err != nil {
 			return err
 		}
 
-		resourceName := "fastly_service_authorization.test"
+		resourceName := "fastly_user_service_authorization.test"
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
 			return fmt.Errorf("not found: %s", resourceName)
@@ -131,14 +131,14 @@ func testAccCheckServiceAuthorizationExists() resource.TestCheckFunc {
 	}
 }
 
-func CheckServiceAuthorizationDestroy(s *terraform.State) error {
+func CheckUserServiceAuthorizationDestroy(s *terraform.State) error {
 	client, err := NewFastlyClient()
 	if err != nil {
 		return fmt.Errorf("error creating Fastly client: %w", err)
 	}
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "fastly_service_authorization" {
+		if rs.Type != "fastly_user_service_authorization" {
 			continue
 		}
 
@@ -147,10 +147,10 @@ func CheckServiceAuthorizationDestroy(s *terraform.State) error {
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("error checking if Service Authorization was destroyed: %w", err)
+			return fmt.Errorf("error checking if User Service Authorization was destroyed: %w", err)
 		}
 
-		return fmt.Errorf("Service Authorization %s still exists", rs.Primary.ID)
+		return fmt.Errorf("User Service Authorization %s still exists", rs.Primary.ID)
 	}
 
 	return nil

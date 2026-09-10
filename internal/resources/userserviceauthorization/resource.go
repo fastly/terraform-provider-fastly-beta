@@ -1,4 +1,4 @@
-package serviceauthorization
+package userserviceauthorization
 
 import (
 	"context"
@@ -29,12 +29,12 @@ func NewResource() resource.Resource {
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_service_authorization"
+	resp.TypeName = req.ProviderTypeName + "_user_service_authorization"
 }
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Grants a user permissions on a service. Service authorizations are versionless and independent of any service-version lifecycle.",
+		Description: "Grants a user permissions on a service. User service authorizations are versionless and independent of any service-version lifecycle.",
 		Attributes:  ResourceAttributes(),
 	}
 }
@@ -55,14 +55,14 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	tflog.Debug(ctx, "Creating Fastly Service Authorization", map[string]any{
+	tflog.Debug(ctx, "Creating Fastly User Service Authorization", map[string]any{
 		"service_id": plan.ServiceID.ValueString(),
 		"user_id":    plan.UserID.ValueString(),
 	})
 
 	sa, err := r.client.CreateServiceAuthorization(ctx, buildCreateInput(plan))
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating Service Authorization", err.Error())
+		resp.Diagnostics.AddError("Error creating User Service Authorization", err.Error())
 		return
 	}
 
@@ -78,16 +78,16 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 
 	id := state.ID.ValueString()
-	tflog.Debug(ctx, "Reading Fastly Service Authorization", map[string]any{"id": id})
+	tflog.Debug(ctx, "Reading Fastly User Service Authorization", map[string]any{"id": id})
 
 	sa, err := r.client.GetServiceAuthorization(ctx, &fastly.GetServiceAuthorizationInput{ID: id})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			tflog.Warn(ctx, "Service Authorization not found, removing from state", map[string]any{"id": id})
+			tflog.Warn(ctx, "User Service Authorization not found, removing from state", map[string]any{"id": id})
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError("Error reading Service Authorization", err.Error())
+		resp.Diagnostics.AddError("Error reading User Service Authorization", err.Error())
 		return
 	}
 
@@ -104,11 +104,11 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	id := state.ID.ValueString()
-	tflog.Debug(ctx, "Updating Fastly Service Authorization", map[string]any{"id": id})
+	tflog.Debug(ctx, "Updating Fastly User Service Authorization", map[string]any{"id": id})
 
 	sa, err := r.client.UpdateServiceAuthorization(ctx, buildUpdateInput(id, plan))
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating Service Authorization", err.Error())
+		resp.Diagnostics.AddError("Error updating User Service Authorization", err.Error())
 		return
 	}
 
@@ -124,11 +124,11 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 	}
 
 	id := state.ID.ValueString()
-	tflog.Debug(ctx, "Deleting Fastly Service Authorization", map[string]any{"id": id})
+	tflog.Debug(ctx, "Deleting Fastly User Service Authorization", map[string]any{"id": id})
 
 	err := r.client.DeleteServiceAuthorization(ctx, &fastly.DeleteServiceAuthorizationInput{ID: id})
 	if err != nil && !errors.IsNotFound(err) {
-		resp.Diagnostics.AddError("Error deleting Service Authorization", err.Error())
+		resp.Diagnostics.AddError("Error deleting User Service Authorization", err.Error())
 	}
 }
 
