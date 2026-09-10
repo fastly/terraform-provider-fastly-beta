@@ -20,6 +20,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingcloudfiles"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdatadog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
@@ -351,6 +352,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 					return err
 				}
 				plan.LoggingGCS = logginggcs.MatchOrder(items, plan.LoggingGCS)
+				return nil
+			},
+		},
+		{
+			label: "GrafanaCloudLogs logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return logginggrafanacloudlogs.Reconcile(ctx, client, serviceID, version, plan.LoggingGrafanaCloudLogs)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := logginggrafanacloudlogs.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingGrafanaCloudLogs = logginggrafanacloudlogs.MatchOrder(items, plan.LoggingGrafanaCloudLogs)
 				return nil
 			},
 		},
@@ -716,6 +731,17 @@ func readSteps(state *Model, imported bool) []readStep {
 			},
 		},
 		{
+			label: "GrafanaCloudLogs logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := logginggrafanacloudlogs.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingGrafanaCloudLogs = logginggrafanacloudlogs.MatchOrder(items, state.LoggingGrafanaCloudLogs)
+				return nil
+			},
+		},
+		{
 			label: "Splunk logging endpoints",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				items, err := loggingsplunk.ReadForVersion(ctx, client, serviceID, version)
@@ -903,6 +929,14 @@ func planSteps(plan, state *Model) []planStep {
 		{
 			equal:     func() bool { return logginggcs.Equal(plan.LoggingGCS, state.LoggingGCS) },
 			matchOnly: func() { plan.LoggingGCS = logginggcs.MatchOrder(state.LoggingGCS, plan.LoggingGCS) },
+		},
+		{
+			equal: func() bool {
+				return logginggrafanacloudlogs.Equal(plan.LoggingGrafanaCloudLogs, state.LoggingGrafanaCloudLogs)
+			},
+			matchOnly: func() {
+				plan.LoggingGrafanaCloudLogs = logginggrafanacloudlogs.MatchOrder(state.LoggingGrafanaCloudLogs, plan.LoggingGrafanaCloudLogs)
+			},
 		},
 		{
 			equal:     func() bool { return loggingsplunk.Equal(plan.LoggingSplunk, state.LoggingSplunk) },

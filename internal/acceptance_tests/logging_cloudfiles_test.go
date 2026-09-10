@@ -52,6 +52,46 @@ func TestAccFastlyServiceLoggingCloudfiles_basic(t *testing.T) {
 	})
 }
 
+// TestAccFastlyServiceLoggingCloudfiles_emptyFormat verifies an explicit
+// format = "" is rejected at validate time rather than failing apply.
+func TestAccFastlyServiceLoggingCloudfiles_emptyFormat(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("cloudfiles-logger-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigLoggingCloudfilesEmptyFormat(serviceName, domainName, loggerName),
+				ExpectError: regexp.MustCompile("`format` cannot be explicitly set to an empty string"),
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceLoggingCloudfiles_emptyTimestampFormat verifies an
+// explicit timestamp_format = "" is rejected at validate time.
+func TestAccFastlyServiceLoggingCloudfiles_emptyTimestampFormat(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("cloudfiles-logger-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigLoggingCloudfilesEmptyTimestampFormat(serviceName, domainName, loggerName),
+				ExpectError: regexp.MustCompile("`timestamp_format` cannot be explicitly set to an empty string"),
+			},
+		},
+	})
+}
+
 func TestAccFastlyServiceLoggingCloudfiles_update(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
