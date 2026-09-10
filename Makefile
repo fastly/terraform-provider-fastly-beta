@@ -7,7 +7,7 @@ VERSION := $(shell git describe --tags --always)
 VERSION_SHORT := $(shell git describe --tags --always --abbrev=0 2>/dev/null || echo v0.0.0)
 DOCS_PROVIDER_VERSION := $(subst v,,$(VERSION_SHORT))
 BIN_DIR := $(CURDIR)/bin
-BINARY := $(BIN_DIR)/terraform-provider-$(PKG_NAME)_$(VERSION)
+BINARY := $(BIN_DIR)/terraform-provider-$(PKG_NAME)-beta_$(VERSION)
 OVERRIDES_FILE := $(BIN_DIR)/developer_overrides.tfrc
 
 GOLANGCI_LINT_VERSION := v2.12.2
