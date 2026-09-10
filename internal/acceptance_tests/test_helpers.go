@@ -7182,6 +7182,21 @@ func ConfigAPISecurityOperationTag(serviceName, tagName, description string) str
 	)
 }
 
+// ConfigAPISecurityDiscoveredOperationsDataSource returns a CDN service plus a
+// fastly_api_security_discovered_operations data source. Discovered operations depend
+// on observed traffic, so this only exercises that the endpoint and pagination metadata
+// can be read, not that any specific operation shows up.
+func ConfigAPISecurityDiscoveredOperationsDataSource(serviceName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+		},
+		"internal/acceptance_tests/blocks/api_security_discovered_operations_datasource.tf",
+	)
+}
+
 // ConfigAlertStatsAccountWide returns a standalone account-wide fastly_alert (source "stats", no service_id).
 func ConfigAlertStatsAccountWide(alertName, description, metric, evalType, evalPeriod string, threshold float64) string {
 	return RenderBlock("internal/acceptance_tests/blocks/alert_stats_account_wide.tf", map[string]string{
