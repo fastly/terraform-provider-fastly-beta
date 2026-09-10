@@ -460,7 +460,7 @@ Required:
 - `index` (String) The Stream Labels, a JSON string used to identify the stream.
 - `name` (String) The name for the real-time logging configuration. Must be unique within the service.
 - `url` (String) The URL of the Loki instance in your Grafana stack.
-- `user` (String) The Grafana Cloud Logs Dataset you want to log to.
+- `user` (String) The Grafana User ID.
 
 Optional:
 

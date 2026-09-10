@@ -142,7 +142,7 @@ resource "fastly_service_compute_auto" "example" {
 - `name` (String) The name for the real-time logging configuration. Must be unique within the service.
 - `service_id` (String) Fastly service ID.
 - `url` (String) The URL of the Loki instance in your Grafana stack.
-- `user` (String) The Grafana Cloud Logs Dataset you want to log to.
+- `user` (String) The Grafana User ID.
 - `version` (Number) Writable Fastly service version to modify.
 
 ### Optional
@@ -192,9 +192,8 @@ service version.
   endpoints group credentials. It is required — there is no
   `FASTLY_GRAFANACLOUDLOGS_*` environment variable to default from. `token` is
   sensitive and never appears in plan output.
-- `user` is the Grafana Cloud Logs Dataset to log to, and `index` is the Loki
-  Stream Labels JSON string used to identify the stream — despite the field
-  name, `user` is not a Grafana user ID.
+- `user` is your Grafana User ID, and `index` is the Loki Stream Labels JSON
+  string used to identify the stream.
 - Leaving `placement` unset is not the same as setting it to `none`: unset lets
   Fastly place the logging call automatically (`vcl_log` for `format_version` 2,
   `vcl_deliver` for `format_version` 1), while `none` suppresses the generated

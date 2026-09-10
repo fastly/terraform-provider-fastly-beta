@@ -158,7 +158,7 @@ func sharedAttributes() map[string]schema.Attribute {
 		},
 		"user": schema.StringAttribute{
 			Required:    true,
-			Description: "The Grafana Cloud Logs Dataset you want to log to.",
+			Description: "The Grafana User ID.",
 		},
 		"index": schema.StringAttribute{
 			Required:    true,
