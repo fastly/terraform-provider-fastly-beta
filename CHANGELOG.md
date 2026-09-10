@@ -5,6 +5,7 @@
 ### ENHANCEMENTS:
 
 - feat(grafana_cloud_logs): add support for Grafana Cloud Logs ([#92](https://github.com/fastly/terraform-provider-fastly-beta/pull/91))
+- feat(ngwaf_workspace_templated_signal_rules): moved Templated Signal Rules to the dedicated `fastly_ngwaf_workspace_templated_signal_rules` data source ([#90](https://github.com/fastly/terraform-provider-fastly-beta/pull/90))
 
 ### BUG FIXES:
 

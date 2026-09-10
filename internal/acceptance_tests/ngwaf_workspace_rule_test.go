@@ -50,6 +50,33 @@ func TestAccFastlyNGWAFWorkspaceRules_dataSource(t *testing.T) {
 	})
 }
 
+func TestAccFastlyNGWAFWorkspaceTemplatedSignalRules_dataSource(t *testing.T) {
+	t.Parallel()
+
+	name := fmt.Sprintf("tf-test-ws-tsr-ds-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckNGWAFWorkspaceRuleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigNGWAFWorkspaceRule("ngwaf_workspace_templated_signal_rules_data_source.tf", name),
+				Check: resource.ComposeTestCheckFunc(
+					// The generic rules data source excludes templated_signal rules.
+					resource.TestCheckResourceAttr("data.fastly_ngwaf_workspace_rules.test", "rules.#", "1"),
+					resource.TestCheckResourceAttr("data.fastly_ngwaf_workspace_rules.test", "rules.0.type", "request"),
+
+					resource.TestCheckResourceAttrSet("data.fastly_ngwaf_workspace_templated_signal_rules.test", "id"),
+					resource.TestCheckResourceAttr("data.fastly_ngwaf_workspace_templated_signal_rules.test", "rules.#", "1"),
+					resource.TestCheckResourceAttr("data.fastly_ngwaf_workspace_templated_signal_rules.test", "rules.0.signal", "LOGINATTEMPT"),
+					resource.TestCheckResourceAttrSet("data.fastly_ngwaf_workspace_templated_signal_rules.test", "rules.0.id"),
+				),
+			},
+		},
+	})
+}
+
 func importStateIDFunc(resourceName string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {
 		rs, ok := s.RootModule().Resources[resourceName]
