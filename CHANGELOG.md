@@ -4,6 +4,8 @@
 
 ### ENHANCEMENTS:
 
+- feat(grafana_cloud_logs): add support for Grafana Cloud Logs ([#92](https://github.com/fastly/terraform-provider-fastly-beta/pull/91))
+
 ### BUG FIXES:
 
 ### Dependencies:
