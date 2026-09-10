@@ -9,8 +9,9 @@ description: |-
 
 Use this data source to retrieve a list of Fastly Next-Gen WAF rules scoped to a single workspace.
 
-Rules of every type are returned; `type` on each entry says which of the
-`fastly_ngwaf_workspace_*_rule` resources manages it.
+`type` on each entry says which of the `fastly_ngwaf_workspace_*_rule`
+resources manages it. For `templated_signal` rules use
+`fastly_ngwaf_workspace_templated_signal_rules` instead.
 
 ## Example Usage
 

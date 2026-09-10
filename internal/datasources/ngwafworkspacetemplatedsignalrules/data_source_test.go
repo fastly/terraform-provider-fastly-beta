@@ -1,4 +1,4 @@
-package ngwafworkspacerules
+package ngwafworkspacetemplatedsignalrules
 
 import (
 	"context"
@@ -14,10 +14,6 @@ import (
 	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/rules"
 )
 
-func TestListedTypesExcludesTemplatedSignal(t *testing.T) {
-	require.Equal(t, "request,signal,rate_limit", listedTypes)
-}
-
 func TestMetadata(t *testing.T) {
 	d := NewDataSource()
 
@@ -26,7 +22,7 @@ func TestMetadata(t *testing.T) {
 		ProviderTypeName: "fastly",
 	}, &resp)
 
-	require.Equal(t, "fastly_ngwaf_workspace_rules", resp.TypeName)
+	require.Equal(t, "fastly_ngwaf_workspace_templated_signal_rules", resp.TypeName)
 }
 
 func TestSchema(t *testing.T) {
@@ -48,7 +44,7 @@ func TestSchema(t *testing.T) {
 	rulesAttr, ok := resp.Schema.Attributes["rules"].(datasourceschema.ListNestedAttribute)
 	require.True(t, ok)
 	require.True(t, rulesAttr.Computed)
-	require.Len(t, rulesAttr.NestedObject.Attributes, 6)
+	require.Len(t, rulesAttr.NestedObject.Attributes, 5)
 }
 
 func TestFlattenRules(t *testing.T) {
@@ -57,20 +53,18 @@ func TestFlattenRules(t *testing.T) {
 
 	remote := []rules.Rule{
 		{
-			RuleID:      "rule-b",
-			Type:        "request",
-			Description: "beta",
-			Enabled:     true,
-			CreatedAt:   created,
-			UpdatedAt:   updated,
+			RuleID:    "rule-b",
+			Enabled:   true,
+			Actions:   []rules.Action{{Type: "templated_signal", Signal: "LOGINATTEMPT"}},
+			CreatedAt: created,
+			UpdatedAt: updated,
 		},
 		{
-			RuleID:      "rule-a",
-			Type:        "signal",
-			Description: "alpha",
-			Enabled:     false,
-			CreatedAt:   created,
-			UpdatedAt:   updated,
+			RuleID:    "rule-a",
+			Enabled:   false,
+			Actions:   []rules.Action{{Type: "templated_signal", Signal: "INVITE-FAILURE"}},
+			CreatedAt: created,
+			UpdatedAt: updated,
 		},
 	}
 
@@ -78,12 +72,6 @@ func TestFlattenRules(t *testing.T) {
 	require.False(t, diags.HasError(), diags)
 	require.Equal(t, []string{"rule-a", "rule-b"}, ids)
 	require.Len(t, listValue.Elements(), 2)
-
-	first, ok := listValue.Elements()[0].(types.Object)
-	require.True(t, ok)
-	firstID, ok := first.Attributes()["id"].(types.String)
-	require.True(t, ok)
-	require.Equal(t, "rule-a", firstID.ValueString())
 
 	got := make(map[string]map[string]string, len(listValue.Elements()))
 	for _, element := range listValue.Elements() {
@@ -94,9 +82,7 @@ func TestFlattenRules(t *testing.T) {
 
 		id, ok := attributes["id"].(types.String)
 		require.True(t, ok)
-		ruleType, ok := attributes["type"].(types.String)
-		require.True(t, ok)
-		description, ok := attributes["description"].(types.String)
+		signal, ok := attributes["signal"].(types.String)
 		require.True(t, ok)
 		enabled, ok := attributes["enabled"].(types.Bool)
 		require.True(t, ok)
@@ -106,30 +92,43 @@ func TestFlattenRules(t *testing.T) {
 		require.True(t, ok)
 
 		got[id.ValueString()] = map[string]string{
-			"type":        ruleType.ValueString(),
-			"description": description.ValueString(),
-			"enabled":     strconv.FormatBool(enabled.ValueBool()),
-			"created_at":  createdAt.ValueString(),
-			"updated_at":  updatedAt.ValueString(),
+			"signal":     signal.ValueString(),
+			"enabled":    strconv.FormatBool(enabled.ValueBool()),
+			"created_at": createdAt.ValueString(),
+			"updated_at": updatedAt.ValueString(),
 		}
 	}
 
 	require.Equal(t, map[string]map[string]string{
 		"rule-a": {
-			"type":        "signal",
-			"description": "alpha",
-			"enabled":     "false",
-			"created_at":  "2026-01-02T03:04:05Z",
-			"updated_at":  "2026-01-03T04:05:06Z",
+			"signal":     "INVITE-FAILURE",
+			"enabled":    "false",
+			"created_at": "2026-01-02T03:04:05Z",
+			"updated_at": "2026-01-03T04:05:06Z",
 		},
 		"rule-b": {
-			"type":        "request",
-			"description": "beta",
-			"enabled":     "true",
-			"created_at":  "2026-01-02T03:04:05Z",
-			"updated_at":  "2026-01-03T04:05:06Z",
+			"signal":     "LOGINATTEMPT",
+			"enabled":    "true",
+			"created_at": "2026-01-02T03:04:05Z",
+			"updated_at": "2026-01-03T04:05:06Z",
 		},
 	}, got)
+}
+
+func TestFlattenRulesNoActions(t *testing.T) {
+	created := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+
+	listValue, _, diags := flattenRules([]rules.Rule{
+		{RuleID: "rule-a", Enabled: true, CreatedAt: created, UpdatedAt: created},
+	})
+	require.False(t, diags.HasError(), diags)
+	require.Len(t, listValue.Elements(), 1)
+
+	object, ok := listValue.Elements()[0].(types.Object)
+	require.True(t, ok)
+	signal, ok := object.Attributes()["signal"].(types.String)
+	require.True(t, ok)
+	require.Equal(t, "", signal.ValueString())
 }
 
 func TestFlattenRulesEmpty(t *testing.T) {

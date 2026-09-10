@@ -189,3 +189,13 @@ data "fastly_ngwaf_workspace_rules" "example" {
 output "ngwaf_workspace_rules" {
   value = data.fastly_ngwaf_workspace_rules.example.rules
 }
+
+# templated_signal rules are excluded from the data source above. 
+# This data source surfaces the signal each one adds.
+data "fastly_ngwaf_workspace_templated_signal_rules" "example" {
+  workspace_id = fastly_ngwaf_workspace.example.id
+}
+
+output "ngwaf_workspace_templated_signal_rules" {
+  value = data.fastly_ngwaf_workspace_templated_signal_rules.example.rules
+}
