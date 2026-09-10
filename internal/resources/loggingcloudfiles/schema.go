@@ -279,9 +279,12 @@ func sharedAttributes() map[string]schema.Attribute {
 			Description: "The region to stream logs to. One of: `DFW` (Dallas), `ORD` (Chicago), `IAD` (Northern Virginia), `LON` (London), `SYD` (Sydney), `HKG` (Hong Kong).",
 		},
 		"timestamp_format": schema.StringAttribute{
-			Optional:    true,
-			Computed:    true,
-			Default:     stringdefault.StaticString(DefaultTimestampFormat),
+			Optional: true,
+			Computed: true,
+			Default:  stringdefault.StaticString(DefaultTimestampFormat),
+			Validators: []validator.String{
+				validation.NotBlank("timestamp_format"),
+			},
 			Description: "strftime-specified timestamp format for log filename.",
 		},
 	}
@@ -297,6 +300,7 @@ func vclOnlyAttributes() map[string]schema.Attribute {
 			Default:  stringdefault.StaticString(constants.LoggingCloudfilesDefaultFormat),
 			Validators: []validator.String{
 				stringvalidator.LengthAtMost(maximumFormatLength),
+				validation.NotBlank("format"),
 			},
 			Description: "A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/).",
 		},

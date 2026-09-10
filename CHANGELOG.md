@@ -9,6 +9,8 @@
 
 ### BUG FIXES:
 
+- fix(cloudfiles_logging): ensure that the `format` attribute can't be set to null ([#93](https://github.com/fastly/terraform-provider-fastly-beta/pull/93))
+
 ### Dependencies:
 
 ## 0.1.3 (September 8, 2026)
