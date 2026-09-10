@@ -7066,6 +7066,19 @@ func ConfigFastlyDomainWithServiceLink(serviceName, fqdn string) string {
 	return joinBlocks(service, link)
 }
 
+// ConfigServiceAuthorization returns a CDN service plus a fastly_service_authorization granting
+// userID permission on it. There is no fastly_user resource in this provider, so userID must be
+// obtained separately (e.g. from GetCurrentUser) and passed in as a literal.
+func ConfigServiceAuthorization(serviceName, userID, permission string) string {
+	service := ConfigServiceCDNBasic(serviceName)
+	auth := RenderBlock("internal/acceptance_tests/blocks/fastly_service_authorization.tf", map[string]string{
+		"SERVICE_ID_REF": "fastly_service_cdn.test.id",
+		"USER_ID":        userID,
+		"PERMISSION":     permission,
+	})
+	return joinBlocks(service, auth)
+}
+
 // ConfigFastlyDomainsDataSource returns three fastly_domain resources plus a fastly_domains data source.
 func ConfigFastlyDomainsDataSource(fqdn1, fqdn2, fqdn3 string) string {
 	return RenderBlock("internal/acceptance_tests/blocks/fastly_domain_three_with_datasource.tf", map[string]string{

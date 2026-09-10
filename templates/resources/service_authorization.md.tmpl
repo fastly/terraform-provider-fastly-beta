@@ -1,0 +1,39 @@
+---
+page_title: "fastly_service_authorization Resource - fastly"
+subcategory: ""
+description: |-
+  Grants a user permissions on a service. Service authorizations are versionless and independent of any service-version lifecycle.
+---
+
+# fastly_service_authorization (Resource)
+
+Grants a user permissions on a service. Service authorizations are versionless and independent of any service-version lifecycle.
+
+`user_id` must be an existing Fastly user account ID; there is no Terraform resource for managing users, so it must come from another source (e.g. the Fastly control panel or API).
+
+## Example Usage
+
+```terraform
+resource "fastly_service_cdn" "example" {
+  name    = "my_vcl_service"
+  version = 1
+
+  force_destroy = true
+}
+
+resource "fastly_service_authorization" "example" {
+  service_id = fastly_service_cdn.example.id
+  user_id    = "4whrmweg9bskt3knuqk4bs"
+  permission = "purge_all"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A Fastly Service Authorization can be imported using its ID, e.g.
+
+```shell
+terraform import fastly_service_authorization.example xxxxxxxxxxxxxxxxxxxx
+```

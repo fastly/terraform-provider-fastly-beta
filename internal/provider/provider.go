@@ -126,6 +126,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/productenablement"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/resourcelink"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/secretstore"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/serviceauthorization"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecdn"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecdnauto"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecompute"
@@ -285,6 +286,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		productenablement.NewNGWAFResource,
 		resourcelink.NewResource,
 		secretstore.NewResource,
+		serviceauthorization.NewResource,
 		servicecdn.NewResource,
 		servicecdnauto.NewResource,
 		servicecompute.NewResource,
