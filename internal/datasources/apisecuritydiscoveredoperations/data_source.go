@@ -2,6 +2,7 @@ package apisecuritydiscoveredoperations
 
 import (
 	"context"
+	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -168,6 +169,16 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		return
 	}
 
+	// The first page carries meta.total, which the API may compute from a
+	// different (e.g. cached or eventually-consistent) count than the number of
+	// items ListDiscoveredAll ends up actually returning; fall back to that
+	// count only if the API doesn't report one.
+	first, err := operations.ListDiscovered(ctx, d.client, in)
+	if err != nil {
+		resp.Diagnostics.AddError("Error listing API Security discovered operations", err.Error())
+		return
+	}
+
 	all, err := operations.ListDiscoveredAll(ctx, d.client, in)
 	if err != nil {
 		resp.Diagnostics.AddError("Error listing API Security discovered operations", err.Error())
@@ -180,9 +191,14 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		return
 	}
 
+	total := first.Meta.Total
+	if total == 0 {
+		total = len(all)
+	}
+
 	state.ID = types.StringValue(idhash.HashIDs(append([]string{serviceID}, idsOf(all)...)))
 	state.Operations = listVal
-	state.Total = types.Int64Value(int64(len(all)))
+	state.Total = types.Int64Value(int64(total))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -222,8 +238,16 @@ func buildListInput(ctx context.Context, serviceID string, state DataSourceModel
 func flattenDiscoveredOperations(items []operations.DiscoveredOperation) (types.List, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	elements := make([]attr.Value, 0, len(items))
-	for _, op := range items {
+	// Discovered operations are derived from observed traffic, and the API
+	// doesn't promise stable ordering across requests. Sort a copy so the
+	// visible list and idhash identifier are deterministic across runs.
+	sorted := append([]operations.DiscoveredOperation(nil), items...)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		return sorted[i].ID < sorted[j].ID
+	})
+
+	elements := make([]attr.Value, 0, len(sorted))
+	for _, op := range sorted {
 		obj, objDiags := types.ObjectValue(operationAttrTypes, map[string]attr.Value{
 			"domain":       types.StringValue(op.Domain),
 			"id":           types.StringValue(op.ID),

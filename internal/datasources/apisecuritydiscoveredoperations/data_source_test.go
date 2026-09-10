@@ -65,23 +65,26 @@ func TestFlattenDiscoveredOperations(t *testing.T) {
 	require.False(t, diags.HasError(), diags)
 	require.Len(t, listValue.Elements(), 2)
 
+	// remote is deliberately given out of ID order; flattenDiscoveredOperations
+	// must sort by ID regardless of API-returned order.
 	first, ok := listValue.Elements()[0].(types.Object)
 	require.True(t, ok)
 	attributes := first.Attributes()
+
+	require.Equal(t, "op-a", attributes["id"].(types.String).ValueString())
+	require.True(t, attributes["status"].(types.String).IsNull())
+	require.Equal(t, "2026-01-02T03:04:05Z", attributes["updated_at"].(types.String).ValueString())
+	require.Equal(t, "2026-01-02T03:04:05Z", attributes["last_seen_at"].(types.String).ValueString())
+
+	second, ok := listValue.Elements()[1].(types.Object)
+	require.True(t, ok)
+	attributes = second.Attributes()
 
 	require.Equal(t, "op-b", attributes["id"].(types.String).ValueString())
 	require.Equal(t, "GET", attributes["method"].(types.String).ValueString())
 	require.Equal(t, 1.5, attributes["rps"].(types.Float64).ValueFloat64())
 	require.Equal(t, "DISCOVERED", attributes["status"].(types.String).ValueString())
 	require.True(t, attributes["updated_at"].(types.String).IsNull())
-
-	second, ok := listValue.Elements()[1].(types.Object)
-	require.True(t, ok)
-	attributes = second.Attributes()
-
-	require.True(t, attributes["status"].(types.String).IsNull())
-	require.Equal(t, "2026-01-02T03:04:05Z", attributes["updated_at"].(types.String).ValueString())
-	require.Equal(t, "2026-01-02T03:04:05Z", attributes["last_seen_at"].(types.String).ValueString())
 }
 
 func TestFlattenDiscoveredOperationsEmpty(t *testing.T) {
