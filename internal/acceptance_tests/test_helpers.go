@@ -7457,6 +7457,37 @@ func ConfigAPISecurityDiscoveredOperationsDataSource(serviceName string) string 
 	)
 }
 
+// ConfigAPISecurityOperationsDataSource returns a CDN service, a fastly_api_security_operation
+// resource, and a fastly_api_security_operations data source that reads it back.
+func ConfigAPISecurityOperationsDataSource(serviceName, method, domain, path string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"METHOD":          method,
+			"DOMAIN":          domain,
+			"PATH":            path,
+		},
+		"internal/acceptance_tests/blocks/api_security_operations_datasource.tf",
+	)
+}
+
+// ConfigAPISecurityOperationTagsDataSource returns a CDN service, a
+// fastly_api_security_operation_tag resource, and a fastly_api_security_operation_tags data
+// source that reads it back.
+func ConfigAPISecurityOperationTagsDataSource(serviceName, tagName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"TAG_NAME":        tagName,
+		},
+		"internal/acceptance_tests/blocks/api_security_operation_tags_datasource.tf",
+	)
+}
+
 // ConfigAlertStatsAccountWide returns a standalone account-wide fastly_alert (source "stats", no service_id).
 func ConfigAlertStatsAccountWide(alertName, description, metric, evalType, evalPeriod string, threshold float64) string {
 	return RenderBlock("internal/acceptance_tests/blocks/alert_stats_account_wide.tf", map[string]string{

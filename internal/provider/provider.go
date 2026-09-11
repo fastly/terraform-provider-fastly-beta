@@ -22,6 +22,8 @@ import (
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/acls"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/apisecuritydiscoveredoperations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/apisecurityoperations"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/apisecurityoperationtags"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/configstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/datacenters"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/dnszones"
@@ -313,6 +315,8 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 	return []func() datasource.DataSource{
 		acls.NewDataSource,
 		apisecuritydiscoveredoperations.NewDataSource,
+		apisecurityoperations.NewDataSource,
+		apisecurityoperationtags.NewDataSource,
 		configstores.NewDataSource,
 		datacenters.NewDataSource,
 		dnszones.NewDataSource,

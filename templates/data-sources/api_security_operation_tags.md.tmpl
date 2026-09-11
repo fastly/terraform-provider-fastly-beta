@@ -1,0 +1,24 @@
+---
+page_title: "fastly_api_security_operation_tags Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to list API Security operation tags for a service.
+---
+
+# fastly_api_security_operation_tags (Data Source)
+
+Use this data source to list API Security operation tags for a service.
+
+## Example Usage
+
+```terraform
+data "fastly_api_security_operation_tags" "example" {
+  service_id = fastly_service_cdn.example.id
+}
+
+output "fastly_api_security_operation_tags_all" {
+  value = data.fastly_api_security_operation_tags.example.tags
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
