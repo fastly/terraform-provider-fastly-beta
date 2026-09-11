@@ -12,6 +12,7 @@
 - feat(staging_ips): add `fastly_staging_ips` data source ([#99](https://github.com/fastly/terraform-provider-fastly-beta/pull/99))
 - feat(tls_domain): add `fastly_tls_domain` data source ([#100](https://github.com/fastly/terraform-provider-fastly-beta/pull/100))
 - feat(api_security_operations): add `fastly_api_security_operations` and `fastly_api_security_operation_tags` data sources ([#101](https://github.com/fastly/terraform-provider-fastly-beta/pull/101))
+- feat(services): add `fastly_services` data source ([#102](https://github.com/fastly/terraform-provider-fastly-beta/pull/102))
 
 ### BUG FIXES:
 
