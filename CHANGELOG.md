@@ -9,6 +9,7 @@
 - feat(digitalocean_logging): add support for Digital Ocean Logging ([#95](https://github.com/fastly/terraform-provider-fastly-beta/pull/95))
 - feat(api_security_discovered_operations): add `fastly_api_security_discovered_operations` data source ([#96](https://github.com/fastly/terraform-provider-fastly-beta/pull/96))
 - feat(datacenters): add `fastly_datacenters` data source ([#98](https://github.com/fastly/terraform-provider-fastly-beta/pull/98))
+- feat(staging_ips): add `fastly_staging_ips` data source ([#99](https://github.com/fastly/terraform-provider-fastly-beta/pull/99))
 
 ### BUG FIXES:
 
