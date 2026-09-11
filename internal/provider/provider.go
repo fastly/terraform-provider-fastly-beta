@@ -144,7 +144,6 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlssubscription"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlssubscriptionvalidation"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tsigkey"
-	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/userserviceauthorization"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/vcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/version"
 )
@@ -305,7 +304,6 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		tlssubscription.NewResource,
 		tlssubscriptionvalidation.NewResource,
 		tsigkey.NewResource,
-		userserviceauthorization.NewResource,
 	}
 }
 
