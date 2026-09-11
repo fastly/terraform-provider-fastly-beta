@@ -2,6 +2,7 @@ package datacenters
 
 import (
 	"context"
+	"fmt"
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/idhash"
@@ -156,7 +157,7 @@ func flattenDatacenters(datacenters []fastly.Datacenter) (types.Set, []string, d
 	elements := make([]attr.Value, 0, len(datacenters))
 
 	for _, dc := range datacenters {
-		ids = append(ids, fastly.ToValue(dc.Code))
+		ids = append(ids, fingerprint(dc))
 
 		coordinates, coordinatesDiags := flattenCoordinates(dc.Coordinates)
 		diags.Append(coordinatesDiags...)
@@ -179,6 +180,26 @@ func flattenDatacenters(datacenters []fastly.Datacenter) (types.Set, []string, d
 	diags.Append(setDiags...)
 
 	return setValue, ids, diags
+}
+
+// fingerprint builds a string covering every field of dc, so that the
+// data source's id changes if any of them change, not just the code.
+func fingerprint(dc fastly.Datacenter) string {
+	lat, lon, x, y := 0.0, 0.0, 0.0, 0.0
+	if dc.Coordinates != nil {
+		lat = fastly.ToValue(dc.Coordinates.Latitude)
+		lon = fastly.ToValue(dc.Coordinates.Longitude)
+		x = fastly.ToValue(dc.Coordinates.X)
+		y = fastly.ToValue(dc.Coordinates.Y)
+	}
+
+	return fmt.Sprintf("%s/%s/%s/%s/%g/%g/%g/%g",
+		fastly.ToValue(dc.Code),
+		fastly.ToValue(dc.Group),
+		fastly.ToValue(dc.Name),
+		fastly.ToValue(dc.Shield),
+		lat, lon, x, y,
+	)
 }
 
 func flattenCoordinates(c *fastly.Coordinates) (types.Object, diag.Diagnostics) {

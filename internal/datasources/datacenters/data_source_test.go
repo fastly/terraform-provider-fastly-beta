@@ -74,7 +74,10 @@ func TestFlattenDatacenters(t *testing.T) {
 
 	setValue, ids, diags := flattenDatacenters(datacenters)
 	require.False(t, diags.HasError(), diags)
-	require.ElementsMatch(t, []string{"SEA", "LHR"}, ids)
+	require.ElementsMatch(t, []string{
+		"SEA/US/Seattle/seattle-va-us/47.6062/-122.3321/100/200",
+		"LHR/EU/London//0/0/0/0",
+	}, ids)
 	require.Len(t, setValue.Elements(), 2)
 
 	got := make(map[string]string, len(setValue.Elements()))
@@ -110,6 +113,13 @@ func TestFlattenDatacenters(t *testing.T) {
 		"SEA": "Seattle",
 		"LHR": "London",
 	}, got)
+}
+
+func TestFingerprintChangesWithNonCodeFields(t *testing.T) {
+	base := fastly.Datacenter{Code: fastly.ToPointer("SEA"), Group: fastly.ToPointer("US"), Name: fastly.ToPointer("Seattle"), Shield: fastly.ToPointer("seattle-va-us")}
+	changedShield := fastly.Datacenter{Code: fastly.ToPointer("SEA"), Group: fastly.ToPointer("US"), Name: fastly.ToPointer("Seattle"), Shield: fastly.ToPointer("seattle-wa-us")}
+
+	require.NotEqual(t, fingerprint(base), fingerprint(changedShield))
 }
 
 func TestFlattenDatacentersEmpty(t *testing.T) {

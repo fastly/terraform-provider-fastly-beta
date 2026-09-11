@@ -1,0 +1,30 @@
+---
+page_title: "fastly_datacenters Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to retrieve a list of Fastly POPs (Points of Presence).
+---
+
+# fastly_datacenters (Data Source)
+
+Use this data source to retrieve a list of [Fastly POPs (Points of Presence)](https://developer.fastly.com/reference/api/utils/pops/).
+
+## Example Usage
+
+```terraform
+data "fastly_datacenters" "example" {}
+
+output "fastly_datacenters_all" {
+  value = data.fastly_datacenters.example.pops
+}
+
+output "fastly_datacenters_filtered" {
+  # Example: get the shield code of the POP with code "TYO"
+  value = one([
+    for pop in data.fastly_datacenters.example.pops :
+    pop.shield if pop.code == "TYO"
+  ])
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
