@@ -48,6 +48,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafworkspacevirtualpatches"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/secretstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/serviceversion"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/stagingips"
 	tlsactivationdatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsactivation"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsactivationids"
 	tlscertificatedatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlscertificate"
@@ -337,6 +338,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		ngwafworkspacevirtualpatches.NewDataSource,
 		secretstores.NewDataSource,
 		serviceversion.NewDataSource,
+		stagingips.NewDataSource,
 		tlsactivationdatasource.NewDataSource,
 		tlsactivationids.NewDataSource,
 		tlscertificatedatasource.NewDataSource,

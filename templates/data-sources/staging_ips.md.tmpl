@@ -1,0 +1,25 @@
+---
+page_title: "fastly_staging_ips Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to retrieve the staging IP addresses assigned to a Fastly service version's domains.
+---
+
+# fastly_staging_ips (Data Source)
+
+Use this data source to retrieve the staging IP addresses assigned to a Fastly service version's domains.
+
+## Example Usage
+
+```terraform
+data "fastly_staging_ips" "example" {
+  service_id      = fastly_service_cdn_auto.example.id
+  service_version = fastly_service_cdn_auto.example.active_version
+}
+
+output "staging_ips" {
+  value = data.fastly_staging_ips.example.domains
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

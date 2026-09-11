@@ -7241,6 +7241,31 @@ data "fastly_vcl_snippets" "example" {
 	return joinBlocks(serviceConfig, dataSource)
 }
 
+// ConfigDataSourceStagingIPs returns a CDN auto service with a domain plus a
+// fastly_staging_ips data source that reads the active version.
+func ConfigDataSourceStagingIPs(serviceName, domainName, backendName string) string {
+	serviceConfig := BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME": serviceName,
+			"DOMAIN_NAME":  domainName,
+			"BACKEND_NAME": backendName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/backend_single.tf",
+	)
+
+	dataSource := `
+data "fastly_staging_ips" "example" {
+  depends_on      = [fastly_service_cdn_auto.test]
+  service_id      = fastly_service_cdn_auto.test.id
+  service_version = fastly_service_cdn_auto.test.active_version
+}
+`
+
+	return joinBlocks(serviceConfig, dataSource)
+}
+
 func renderFixtureBlock(path string, values map[string]string) string {
 	data, err := os.ReadFile(path)
 	if err != nil {
