@@ -1,0 +1,26 @@
+---
+page_title: "fastly_tls_domain Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to look up activations, certificates, and subscriptions associated with a TLS domain.
+---
+
+# fastly_tls_domain (Data Source)
+
+Use this data source to look up activations, certificates, and subscriptions associated with a TLS domain.
+
+If more or less than a single domain matches the search, the read fails. Ensure that your search is specific enough to return a single result.
+
+## Example Usage
+
+```terraform
+data "fastly_tls_domain" "example" {
+  domain = "example.com"
+}
+
+output "certificate_ids" {
+  value = data.fastly_tls_domain.example.tls_certificate_ids
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
