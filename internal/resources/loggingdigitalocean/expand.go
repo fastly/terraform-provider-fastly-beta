@@ -89,11 +89,7 @@ func buildCommonUpdateInput(serviceID string, version int, m commonModel) *fastl
 		SecretKey:      new(service.StringValue(m.SecretKey())),
 	}
 
-	// Domain defaults to a real value and can be cleared back to it, so it must
-	// always be sent as a concrete value — fastly.NullString maps "" to nil,
-	// which omits the field (domain,omitempty) and leaves a previously-set
-	// domain in place.
-	input.Domain = new(service.StringValue(m.Domain))
+	input.Domain = fastly.NullString(service.StringValue(m.Domain))
 	input.Path = new(service.StringValue(m.Path))
 	input.Period = fastly.NullInt(int(service.Int64Value(m.Period)))
 	input.CompressionCodec = new(service.StringValue(m.CompressionCodec))
