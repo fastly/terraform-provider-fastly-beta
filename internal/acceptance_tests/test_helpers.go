@@ -7584,26 +7584,6 @@ func ConfigFastlyDomainWithServiceLink(serviceName, fqdn string) string {
 	return joinBlocks(service, link)
 }
 
-// ConfigUserServiceAuthorization returns a CDN service plus a fastly_user_service_authorization
-// granting userID permission on it. There is no fastly_user resource in this provider, so userID
-// must be obtained separately (e.g. from a throwaway user created via go-fastly directly) and
-// passed in as a literal. An empty permission omits the attribute entirely, exercising its
-// schema default.
-func ConfigUserServiceAuthorization(serviceName, userID, permission string) string {
-	permissionBlock := ""
-	if permission != "" {
-		permissionBlock = fmt.Sprintf(`permission = "%s"`, permission)
-	}
-
-	service := ConfigServiceCDNBasic(serviceName)
-	auth := RenderBlock("internal/acceptance_tests/blocks/fastly_user_service_authorization.tf", map[string]string{
-		"SERVICE_ID_REF":   "fastly_service_cdn.test.id",
-		"USER_ID":          userID,
-		"PERMISSION_BLOCK": permissionBlock,
-	})
-	return joinBlocks(service, auth)
-}
-
 // ConfigFastlyDomainsDataSource returns three fastly_domain resources plus a fastly_domains data source.
 func ConfigFastlyDomainsDataSource(fqdn1, fqdn2, fqdn3 string) string {
 	return RenderBlock("internal/acceptance_tests/blocks/fastly_domain_three_with_datasource.tf", map[string]string{
