@@ -1,0 +1,25 @@
+---
+page_title: "fastly_api_security_operations Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to list API Security operations for a service, optionally filtered by domain, method, path, or tag.
+---
+
+# fastly_api_security_operations (Data Source)
+
+Use this data source to list API Security operations for a service, optionally filtered by domain, method, path, or tag.
+
+## Example Usage
+
+```terraform
+data "fastly_api_security_operations" "example" {
+  service_id = fastly_service_cdn.example.id
+  method     = ["GET"]
+}
+
+output "fastly_api_security_operations_all" {
+  value = data.fastly_api_security_operations.example.operations
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
