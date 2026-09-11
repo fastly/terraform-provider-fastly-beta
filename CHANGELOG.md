@@ -8,6 +8,7 @@
 - feat(ngwaf_workspace_templated_signal_rules): moved Templated Signal Rules to the dedicated `fastly_ngwaf_workspace_templated_signal_rules` data source ([#90](https://github.com/fastly/terraform-provider-fastly-beta/pull/90))
 - feat(digitalocean_logging): add support for Digital Ocean Logging ([#95](https://github.com/fastly/terraform-provider-fastly-beta/pull/95))
 - feat(api_security_discovered_operations): add `fastly_api_security_discovered_operations` data source ([#96](https://github.com/fastly/terraform-provider-fastly-beta/pull/96))
+- feat(datacenters): add `fastly_datacenters` data source ([#98](https://github.com/fastly/terraform-provider-fastly-beta/pull/98))
 
 ### BUG FIXES:
 

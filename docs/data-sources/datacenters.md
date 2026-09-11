@@ -1,0 +1,56 @@
+---
+page_title: "fastly_datacenters Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to retrieve a list of Fastly POPs (Points of Presence).
+---
+
+# fastly_datacenters (Data Source)
+
+Use this data source to retrieve a list of [Fastly POPs (Points of Presence)](https://developer.fastly.com/reference/api/utils/pops/).
+
+## Example Usage
+
+```terraform
+data "fastly_datacenters" "example" {}
+
+output "fastly_datacenters_all" {
+  value = data.fastly_datacenters.example.pops
+}
+
+output "fastly_datacenters_filtered" {
+  # Example: get the shield code of the POP with code "TYO"
+  value = one([
+    for pop in data.fastly_datacenters.example.pops :
+    pop.shield if pop.code == "TYO"
+  ])
+}
+```
+
+## Schema
+
+### Read-Only
+
+- `id` (String) Stable Terraform data source identifier derived from the returned POP codes.
+- `pops` (Attributes Set) A list of all Fastly POPs. Set semantics are used because POPs are not returned in a guaranteed order. (see [below for nested schema](#nestedatt--pops))
+
+<a id="nestedatt--pops"></a>
+### Nested Schema for `pops`
+
+Read-Only:
+
+- `code` (String) A code representing the POP location.
+- `coordinates` (Attributes) The geographic coordinates of the POP. (see [below for nested schema](#nestedatt--pops--coordinates))
+- `group` (String) A code representing the general region of the world in which the POP location resides.
+- `name` (String) The name of the POP.
+- `shield` (String) A code representing the shielding name of the POP. The value may be empty if the POP is not available for shielding.
+
+<a id="nestedatt--pops--coordinates"></a>
+### Nested Schema for `pops.coordinates`
+
+Read-Only:
+
+- `latitude` (Number) The latitude of the POP.
+- `longitude` (Number) The longitude of the POP.
+- `x` (Number) The x coordinate of the POP, used for visualizing relative geographic distance.
+- `y` (Number) The y coordinate of the POP, used for visualizing relative geographic distance.
