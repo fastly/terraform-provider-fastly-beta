@@ -30,6 +30,7 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `logging_blobstorage` (Block List) Blob Storage logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_blobstorage))
 - `logging_cloudfiles` (Block List) Cloud Files logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_cloudfiles))
 - `logging_datadog` (Block List) Datadog logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_datadog))
+- `logging_digitalocean` (Block List) DigitalOcean Spaces logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_digitalocean))
 - `logging_gcs` (Block List) GCS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_gcs))
 - `logging_grafanacloudlogs` (Block List) Grafana Cloud Logs logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_grafanacloudlogs))
 - `logging_https` (Block List) HTTPS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_https))
@@ -255,6 +256,37 @@ Optional:
 Required:
 
 - `token` (String, Sensitive) The API key from your Datadog account.
+
+
+
+<a id="nestedblock--logging_digitalocean"></a>
+### Nested Schema for `logging_digitalocean`
+
+Required:
+
+- `authentication` (Attributes) Authentication credentials for your DigitalOcean Spaces account. (see [below for nested schema](#nestedatt--logging_digitalocean--authentication))
+- `bucket_name` (String) The name of the DigitalOcean Space.
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+
+Optional:
+
+- `compression_codec` (String) The codec used for compressing your logs. Valid values are `zstd`, `snappy`, and `gzip`. If the codec is `gzip`, `gzip_level` defaults to `3`; to use a different level, leave `compression_codec` unset and set `gzip_level` instead. Conflicts with `gzip_level`: setting both in the same request will result in an error.
+- `domain` (String) The domain of the DigitalOcean Spaces endpoint. Default `nyc3.digitaloceanspaces.com`.
+- `gzip_level` (Number) The level of gzip encoding when sending logs. Valid values are `0` (no compression) through `9`. To compress at a specific gzip level, leave `compression_codec` unset and set this. Conflicts with `compression_codec`: setting both in the same request will result in an error.
+- `message_type` (String) How the message should be formatted. Valid values are `classic`, `loggly`, `logplex`, and `blank`. Default `classic`.
+- `path` (String) The path to upload logs to.
+- `period` (Number) How frequently log files are finalized so they can be available for reading in seconds. Default `3600`.
+- `processing_region` (String) Region where logs will be processed before streaming to the destination. Valid values are `none`, `us` and `eu`.
+- `public_key` (String) PGP public key that Fastly will use to encrypt your log files before writing them to disk.
+- `timestamp_format` (String) strftime-specified timestamp format for log filename.
+
+<a id="nestedatt--logging_digitalocean--authentication"></a>
+### Nested Schema for `logging_digitalocean.authentication`
+
+Required:
+
+- `access_key` (String, Sensitive) Your DigitalOcean Spaces account access key.
+- `secret_key` (String, Sensitive) Your DigitalOcean Spaces account secret key.
 
 
 
