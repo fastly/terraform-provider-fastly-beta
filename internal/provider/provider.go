@@ -55,6 +55,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlscertificateids"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsconfiguration"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsconfigurationids"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsdomain"
 	tlsplatformcertificatedatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsplatformcertificate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsplatformcertificateids"
 	tlsprivatekeydatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/tlsprivatekey"
@@ -345,6 +346,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		tlscertificateids.NewDataSource,
 		tlsconfiguration.NewDataSource,
 		tlsconfigurationids.NewDataSource,
+		tlsdomain.NewDataSource,
 		tlsplatformcertificatedatasource.NewDataSource,
 		tlsplatformcertificateids.NewDataSource,
 		tlsprivatekeydatasource.NewDataSource,
