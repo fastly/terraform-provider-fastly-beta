@@ -1,0 +1,25 @@
+---
+page_title: "fastly_api_security_discovered_operations Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to list API Security discovered operations for a service, optionally filtered by domain, method, path, or status.
+---
+
+# fastly_api_security_discovered_operations (Data Source)
+
+Use this data source to list API Security discovered operations for a service, optionally filtered by domain, method, path, or status.
+
+## Example Usage
+
+```terraform
+data "fastly_api_security_discovered_operations" "example" {
+  service_id = fastly_service_cdn.example.id
+  status     = "DISCOVERED"
+}
+
+output "fastly_api_security_discovered_operations_all" {
+  value = data.fastly_api_security_discovered_operations.example.operations
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

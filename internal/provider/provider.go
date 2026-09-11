@@ -21,6 +21,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/versionstage"
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/acls"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/apisecuritydiscoveredoperations"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/configstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/dnszones"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/domains"
@@ -142,6 +143,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlssubscription"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlssubscriptionvalidation"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tsigkey"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/userserviceauthorization"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/vcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/version"
 )
@@ -302,12 +304,14 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		tlssubscription.NewResource,
 		tlssubscriptionvalidation.NewResource,
 		tsigkey.NewResource,
+		userserviceauthorization.NewResource,
 	}
 }
 
 func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		acls.NewDataSource,
+		apisecuritydiscoveredoperations.NewDataSource,
 		configstores.NewDataSource,
 		dnszones.NewDataSource,
 		domains.NewDataSource,

@@ -7417,6 +7417,21 @@ func ConfigAPISecurityOperationTag(serviceName, tagName, description string) str
 	)
 }
 
+// ConfigAPISecurityDiscoveredOperationsDataSource returns a CDN service plus a
+// fastly_api_security_discovered_operations data source. Discovered operations depend
+// on observed traffic, so this only exercises that the endpoint and pagination metadata
+// can be read, not that any specific operation shows up.
+func ConfigAPISecurityDiscoveredOperationsDataSource(serviceName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+		},
+		"internal/acceptance_tests/blocks/api_security_discovered_operations_datasource.tf",
+	)
+}
+
 // ConfigAlertStatsAccountWide returns a standalone account-wide fastly_alert (source "stats", no service_id).
 func ConfigAlertStatsAccountWide(alertName, description, metric, evalType, evalPeriod string, threshold float64) string {
 	return RenderBlock("internal/acceptance_tests/blocks/alert_stats_account_wide.tf", map[string]string{
@@ -7567,6 +7582,26 @@ func ConfigFastlyDomainWithServiceLink(serviceName, fqdn string) string {
 		"SERVICE_ID_REF": "fastly_service_cdn.test.id",
 	})
 	return joinBlocks(service, link)
+}
+
+// ConfigUserServiceAuthorization returns a CDN service plus a fastly_user_service_authorization
+// granting userID permission on it. There is no fastly_user resource in this provider, so userID
+// must be obtained separately (e.g. from a throwaway user created via go-fastly directly) and
+// passed in as a literal. An empty permission omits the attribute entirely, exercising its
+// schema default.
+func ConfigUserServiceAuthorization(serviceName, userID, permission string) string {
+	permissionBlock := ""
+	if permission != "" {
+		permissionBlock = fmt.Sprintf(`permission = "%s"`, permission)
+	}
+
+	service := ConfigServiceCDNBasic(serviceName)
+	auth := RenderBlock("internal/acceptance_tests/blocks/fastly_user_service_authorization.tf", map[string]string{
+		"SERVICE_ID_REF":   "fastly_service_cdn.test.id",
+		"USER_ID":          userID,
+		"PERMISSION_BLOCK": permissionBlock,
+	})
+	return joinBlocks(service, auth)
 }
 
 // ConfigFastlyDomainsDataSource returns three fastly_domain resources plus a fastly_domains data source.
