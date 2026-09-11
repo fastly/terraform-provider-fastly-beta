@@ -23,6 +23,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/acls"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/apisecuritydiscoveredoperations"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/configstores"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/datacenters"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/dnszones"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/domains"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/kvstores"
@@ -313,6 +314,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		acls.NewDataSource,
 		apisecuritydiscoveredoperations.NewDataSource,
 		configstores.NewDataSource,
+		datacenters.NewDataSource,
 		dnszones.NewDataSource,
 		domains.NewDataSource,
 		kvstores.NewDataSource,

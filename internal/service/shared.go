@@ -155,6 +155,13 @@ func StringPointerOrNull(v *string) types.String {
 	return types.StringValue(*v)
 }
 
+func Float64PointerOrNull(v *float64) types.Float64 {
+	if v == nil {
+		return types.Float64Null()
+	}
+	return types.Float64Value(*v)
+}
+
 func BoolPointerOrDefault(v *bool, defaultValue bool) types.Bool {
 	if v == nil {
 		return types.BoolValue(defaultValue)
