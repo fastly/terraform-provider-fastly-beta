@@ -9,6 +9,31 @@ import (
 	"github.com/fastly/go-fastly/v17/fastly"
 )
 
+func testDomains() []*fastly.TLSDomain {
+	return []*fastly.TLSDomain{
+		{ID: "one.example.com"},
+		{ID: "two.example.com"},
+	}
+}
+
+func TestMatchDomains_match(t *testing.T) {
+	matches := matchDomains(testDomains(), "one.example.com")
+	if assert.Len(t, matches, 1) {
+		assert.Equal(t, "one.example.com", matches[0].ID)
+	}
+}
+
+func TestMatchDomains_noMatch(t *testing.T) {
+	matches := matchDomains(testDomains(), "does-not-exist.example.com")
+	assert.Empty(t, matches)
+}
+
+func TestMatchDomains_multipleMatches(t *testing.T) {
+	domains := append(testDomains(), &fastly.TLSDomain{ID: "one.example.com"})
+	matches := matchDomains(domains, "one.example.com")
+	assert.Len(t, matches, 2)
+}
+
 func TestFlattenToModel(t *testing.T) {
 	domain := &fastly.TLSDomain{
 		ID: "example.com",

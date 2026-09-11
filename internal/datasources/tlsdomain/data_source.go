@@ -94,12 +94,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		return
 	}
 
-	var matches []*fastly.TLSDomain
-	for _, dom := range domains {
-		if dom.ID == domainName {
-			matches = append(matches, dom)
-		}
-	}
+	matches := matchDomains(domains, domainName)
 
 	var domain *fastly.TLSDomain
 	switch len(matches) {
@@ -120,6 +115,16 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func matchDomains(domains []*fastly.TLSDomain, domainName string) []*fastly.TLSDomain {
+	var matches []*fastly.TLSDomain
+	for _, dom := range domains {
+		if dom.ID == domainName {
+			matches = append(matches, dom)
+		}
+	}
+	return matches
 }
 
 func listDomains(ctx context.Context, client *fastly.Client) ([]*fastly.TLSDomain, error) {
