@@ -1,0 +1,30 @@
+---
+page_title: "fastly_package_hash Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to generate a SHA512 hash of all files (in sorted order) within a Wasm deployment package.
+---
+
+# fastly_package_hash (Data Source)
+
+Use this data source to generate a SHA512 hash of all files (in sorted order) within a Wasm deployment package.
+
+## Example Usage
+
+```terraform
+data "fastly_package_hash" "example" {
+  filename = "./path/to/package.tar.gz"
+}
+
+resource "fastly_service_compute_auto" "example" {
+  name          = "example"
+  force_destroy = true
+
+  package {
+    filename         = "./path/to/package.tar.gz"
+    source_code_hash = data.fastly_package_hash.example.hash
+  }
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
