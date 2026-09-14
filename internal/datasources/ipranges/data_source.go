@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -46,12 +47,12 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 			"cidr_blocks": schema.ListAttribute{
 				Computed:    true,
 				ElementType: types.StringType,
-				Description: "The lexically ordered list of ipv4 CIDR blocks.",
+				Description: "The lexically ordered list of IPv4 CIDR blocks.",
 			},
 			"ipv6_cidr_blocks": schema.ListAttribute{
 				Computed:    true,
 				ElementType: types.StringType,
-				Description: "The lexically ordered list of ipv6 CIDR blocks.",
+				Description: "The lexically ordered list of IPv6 CIDR blocks.",
 			},
 		},
 	}
@@ -67,6 +68,11 @@ func (d *DataSource) Configure(_ context.Context, req datasource.ConfigureReques
 }
 
 func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	if d.client == nil {
+		resp.Diagnostics.AddError("Provider not configured", "Expected a configured Fastly API client. Please report this issue to the provider developers.")
+		return
+	}
+
 	var state DataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -81,22 +87,37 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		return
 	}
 
+	diags := flattenIPRanges(ctx, ipv4, ipv6, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+// flattenIPRanges sorts ipv4 and ipv6 (independently, in place on copies) and populates
+// state's CIDRBlocks, IPv6CIDRBlocks, and ID (a hash of the combined, sorted addresses,
+// stable regardless of the order the API returns them in).
+func flattenIPRanges(ctx context.Context, ipv4, ipv6 []string, state *DataSourceModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+
 	cidrBlocks := append([]string(nil), ipv4...)
 	ipv6CIDRBlocks := append([]string(nil), ipv6...)
 	sort.Strings(cidrBlocks)
 	sort.Strings(ipv6CIDRBlocks)
 
-	cidrBlocksList, diags := types.ListValueFrom(ctx, types.StringType, cidrBlocks)
-	resp.Diagnostics.Append(diags...)
-	ipv6CIDRBlocksList, diags := types.ListValueFrom(ctx, types.StringType, ipv6CIDRBlocks)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	cidrBlocksList, listDiags := types.ListValueFrom(ctx, types.StringType, cidrBlocks)
+	diags.Append(listDiags...)
+	ipv6CIDRBlocksList, listDiags := types.ListValueFrom(ctx, types.StringType, ipv6CIDRBlocks)
+	diags.Append(listDiags...)
+	if diags.HasError() {
+		return diags
 	}
 
 	state.ID = types.StringValue(idhash.HashIDs(append(cidrBlocks, ipv6CIDRBlocks...)))
 	state.CIDRBlocks = cidrBlocksList
 	state.IPv6CIDRBlocks = ipv6CIDRBlocksList
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	return diags
 }

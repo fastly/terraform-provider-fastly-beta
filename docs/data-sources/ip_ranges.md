@@ -31,6 +31,6 @@ resource "aws_security_group" "from_fastly" {
 
 ### Read-Only
 
-- `cidr_blocks` (List of String) The lexically ordered list of ipv4 CIDR blocks.
+- `cidr_blocks` (List of String) The lexically ordered list of IPv4 CIDR blocks.
 - `id` (String) Terraform data source identifier.
-- `ipv6_cidr_blocks` (List of String) The lexically ordered list of ipv6 CIDR blocks.
+- `ipv6_cidr_blocks` (List of String) The lexically ordered list of IPv6 CIDR blocks.
