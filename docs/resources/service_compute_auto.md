@@ -34,6 +34,7 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `logging_elasticsearch` (Block List) Elasticsearch logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_elasticsearch))
 - `logging_ftp` (Block List) FTP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_ftp))
 - `logging_gcs` (Block List) GCS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_gcs))
+- `logging_googlepubsub` (Block List) Google Cloud Pub/Sub logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_googlepubsub))
 - `logging_grafanacloudlogs` (Block List) Grafana Cloud Logs logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_grafanacloudlogs))
 - `logging_https` (Block List) HTTPS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_https))
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
@@ -390,6 +391,31 @@ Optional:
 - `account_name` (String) The name of the Google Cloud Platform service account associated with the target log collection service. Not required if `email` and `secret_key` are provided. Can be set via the `FASTLY_GOOGLE_SERVICE_ACCOUNT_NAME` environment variable (shared with Fastly's BigQuery and Pub/Sub logging endpoints), falling back to `FASTLY_GCS_ACCOUNT_NAME`.
 - `email` (String, Sensitive) The `client_email` field in your service account authentication JSON. Not required if `account_name` is provided. Can be set via the `FASTLY_GCS_EMAIL` environment variable.
 - `secret_key` (String, Sensitive) The `private_key` field in your service account authentication JSON. Not required if `account_name` is provided. Can be set via the `FASTLY_GCS_SECRET_KEY` environment variable.
+
+
+
+<a id="nestedblock--logging_googlepubsub"></a>
+### Nested Schema for `logging_googlepubsub`
+
+Required:
+
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+- `project_id` (String) The ID of your Google Cloud Platform project.
+- `topic` (String) The Google Cloud Pub/Sub topic to which logs will be published.
+
+Optional:
+
+- `authentication` (Attributes) Google Cloud Platform authentication credentials for Pub/Sub access. Provide either `account_name`, or `email` and `secret_key`. When this block is omitted entirely, defaults to the `FASTLY_GOOGLE_SERVICE_ACCOUNT_NAME` (or `FASTLY_GCS_ACCOUNT_NAME`), `FASTLY_GOOGLE_PUBSUB_EMAIL`, and `FASTLY_GOOGLE_PUBSUB_SECRET_KEY` environment variables. (see [below for nested schema](#nestedatt--logging_googlepubsub--authentication))
+- `processing_region` (String) The geographic region where the logs will be processed before streaming to Google Cloud Pub/Sub. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+
+<a id="nestedatt--logging_googlepubsub--authentication"></a>
+### Nested Schema for `logging_googlepubsub.authentication`
+
+Optional:
+
+- `account_name` (String) The name of the Google Cloud Platform service account associated with the target log collection service. Not required if `email` and `secret_key` are provided. Can be set via the `FASTLY_GOOGLE_SERVICE_ACCOUNT_NAME` environment variable (shared with Fastly's GCS and BigQuery logging endpoints), falling back to `FASTLY_GCS_ACCOUNT_NAME`.
+- `email` (String, Sensitive) The `client_email` field in your service account authentication JSON. Not required if `account_name` is provided. Can be set via the `FASTLY_GOOGLE_PUBSUB_EMAIL` environment variable.
+- `secret_key` (String, Sensitive) The `private_key` field in your service account authentication JSON. Not required if `account_name` is provided. Can be set via the `FASTLY_GOOGLE_PUBSUB_SECRET_KEY` environment variable.
 
 
 

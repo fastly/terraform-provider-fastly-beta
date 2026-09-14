@@ -19,6 +19,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingelasticsearch"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingftp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggooglepubsub"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
@@ -82,6 +83,7 @@ type Model struct {
 	LoggingDatadog          []loggingdatadog.ComputeNestedModel          `tfsdk:"logging_datadog"`
 	LoggingBigQuery         []loggingbigquery.ComputeNestedModel         `tfsdk:"logging_bigquery"`
 	LoggingGCS              []logginggcs.ComputeNestedModel              `tfsdk:"logging_gcs"`
+	LoggingGooglePubSub     []logginggooglepubsub.ComputeNestedModel     `tfsdk:"logging_googlepubsub"`
 	LoggingGrafanaCloudLogs []logginggrafanacloudlogs.ComputeNestedModel `tfsdk:"logging_grafanacloudlogs"`
 	LoggingSplunk           []loggingsplunk.ComputeNestedModel           `tfsdk:"logging_splunk"`
 	LoggingHTTPS            []logginghttps.ComputeNestedModel            `tfsdk:"logging_https"`
@@ -153,6 +155,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_datadog":          loggingdatadog.ComputeNestedBlockSchema(),
 			"logging_bigquery":         loggingbigquery.ComputeNestedBlockSchema(),
 			"logging_gcs":              logginggcs.ComputeNestedBlockSchema(),
+			"logging_googlepubsub":     logginggooglepubsub.ComputeNestedBlockSchema(),
 			"logging_grafanacloudlogs": logginggrafanacloudlogs.ComputeNestedBlockSchema(),
 			"logging_splunk":           loggingsplunk.ComputeNestedBlockSchema(),
 			"logging_https":            logginghttps.ComputeNestedBlockSchema(),
@@ -459,6 +462,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	plan.LoggingGCS = logginggcs.ComputeMatchOrder(loggingGCSs, plan.LoggingGCS)
 
+	if err := logginggooglepubsub.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingGooglePubSub); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling Pub/Sub logging endpoints", err.Error())
+		return
+	}
+
+	loggingGooglePubSubs, err := logginggooglepubsub.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading Pub/Sub logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingGooglePubSub = logginggooglepubsub.ComputeMatchOrder(loggingGooglePubSubs, plan.LoggingGooglePubSub)
+
 	if err := logginggrafanacloudlogs.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingGrafanaCloudLogs); err != nil {
 		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling GrafanaCloudLogs logging endpoints", err.Error())
@@ -688,6 +705,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading GCS logging endpoints", err.Error())
 		return
 	}
+	loggingGooglePubSubs, err := logginggooglepubsub.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Pub/Sub logging endpoints", err.Error())
+		return
+	}
 	loggingGrafanaCloudLogss, err := logginggrafanacloudlogs.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading GrafanaCloudLogs logging endpoints", err.Error())
@@ -728,6 +750,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.LoggingDatadog = loggingdatadog.ComputeMatchOrder(loggingDatadogs, state.LoggingDatadog)
 	state.LoggingBigQuery = loggingbigquery.ComputeMatchOrder(loggingBigQueries, state.LoggingBigQuery)
 	state.LoggingGCS = logginggcs.ComputeMatchOrder(loggingGCSs, state.LoggingGCS)
+	state.LoggingGooglePubSub = logginggooglepubsub.ComputeMatchOrder(loggingGooglePubSubs, state.LoggingGooglePubSub)
 	state.LoggingGrafanaCloudLogs = logginggrafanacloudlogs.ComputeMatchOrder(loggingGrafanaCloudLogss, state.LoggingGrafanaCloudLogs)
 	state.LoggingSplunk = loggingsplunk.ComputeMatchOrder(loggingSplunks, state.LoggingSplunk)
 	state.LoggingHTTPS = logginghttps.ComputeMatchOrder(loggingHTTPS, state.LoggingHTTPS)
@@ -793,6 +816,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!loggingdatadog.ComputeEqual(plan.LoggingDatadog, state.LoggingDatadog) ||
 		!loggingbigquery.ComputeEqual(plan.LoggingBigQuery, state.LoggingBigQuery) ||
 		!logginggcs.ComputeEqual(plan.LoggingGCS, state.LoggingGCS) ||
+		!logginggooglepubsub.ComputeEqual(plan.LoggingGooglePubSub, state.LoggingGooglePubSub) ||
 		!logginggrafanacloudlogs.ComputeEqual(plan.LoggingGrafanaCloudLogs, state.LoggingGrafanaCloudLogs) ||
 		!loggingsplunk.ComputeEqual(plan.LoggingSplunk, state.LoggingSplunk) ||
 		!logginghttps.ComputeEqual(plan.LoggingHTTPS, state.LoggingHTTPS) ||
@@ -1027,6 +1051,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 		plan.LoggingGCS = logginggcs.ComputeMatchOrder(loggingGCSs, plan.LoggingGCS)
 
+		if err := logginggooglepubsub.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingGooglePubSub); err != nil {
+			resp.Diagnostics.AddError("Error reconciling Pub/Sub logging endpoints", err.Error())
+			return
+		}
+
+		loggingGooglePubSubs, err := logginggooglepubsub.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading Pub/Sub logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingGooglePubSub = logginggooglepubsub.ComputeMatchOrder(loggingGooglePubSubs, plan.LoggingGooglePubSub)
+
 		if err := logginggrafanacloudlogs.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingGrafanaCloudLogs); err != nil {
 			resp.Diagnostics.AddError("Error reconciling GrafanaCloudLogs logging endpoints", err.Error())
 			return
@@ -1143,6 +1179,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.LoggingDatadog = loggingdatadog.ComputeMatchOrder(state.LoggingDatadog, plan.LoggingDatadog)
 		plan.LoggingBigQuery = loggingbigquery.ComputeMatchOrder(state.LoggingBigQuery, plan.LoggingBigQuery)
 		plan.LoggingGCS = logginggcs.ComputeMatchOrder(state.LoggingGCS, plan.LoggingGCS)
+		plan.LoggingGooglePubSub = logginggooglepubsub.ComputeMatchOrder(state.LoggingGooglePubSub, plan.LoggingGooglePubSub)
 		plan.LoggingGrafanaCloudLogs = logginggrafanacloudlogs.ComputeMatchOrder(state.LoggingGrafanaCloudLogs, plan.LoggingGrafanaCloudLogs)
 		plan.LoggingSplunk = loggingsplunk.ComputeMatchOrder(state.LoggingSplunk, plan.LoggingSplunk)
 		plan.LoggingHTTPS = logginghttps.ComputeMatchOrder(state.LoggingHTTPS, plan.LoggingHTTPS)

@@ -5699,6 +5699,134 @@ func ConfigLoggingGCSAccountName(serviceName, domainName, loggerName string) str
 	)
 }
 
+func ConfigLoggingGooglePubSubBasic(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           "1",
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_googlepubsub_basic.tf",
+	)
+}
+
+func ConfigLoggingGooglePubSubUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           "1",
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_googlepubsub_updated.tf",
+	)
+}
+
+func ConfigLoggingGooglePubSubForImport(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           "1",
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_googlepubsub_basic.tf",
+	)
+}
+
+// ConfigLoggingGooglePubSubComputeFormat returns a config attaching
+// fastly_service_logging_googlepubsub to an explicit Compute service with
+// format set, a VCL-only attribute. The standalone resource's schema is
+// shared by both service types, so this is expected to fail at apply time via
+// ValidateNoVCLOnlyAttributesForCompute rather than at Terraform's own
+// schema-validation stage.
+func ConfigLoggingGooglePubSubComputeFormat(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"SERVICE_VERSION":           "1",
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_googlepubsub_compute_format.tf",
+	)
+}
+
+// ConfigLoggingGooglePubSubCompute returns a config attaching
+// fastly_service_logging_googlepubsub to an explicit Compute service with no
+// VCL-only attributes set. ClearVCLOnlyCreateFields strips format from the
+// create request, so the endpoint ends up with whatever format the Fastly API
+// defaults to.
+func ConfigLoggingGooglePubSubCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"SERVICE_VERSION":           "1",
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_googlepubsub_compute.tf",
+	)
+}
+
+func ConfigLoggingGooglePubSubNoAuth(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           "1",
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_googlepubsub_no_auth.tf",
+	)
+}
+
+// ConfigLoggingGooglePubSubAccountName returns a config authenticating with
+// authentication.account_name rather than email/secret_key. Paired with
+// ConfigLoggingGooglePubSubBasic to exercise clearing account_name on update.
+func ConfigLoggingGooglePubSubAccountName(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           "1",
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_googlepubsub_account_name.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingGooglePubSub(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"DOMAIN_NAME":               domainName,
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_googlepubsub_nested.tf",
+	)
+}
+
 func ConfigCDNAutoWithLoggingGCS(serviceName, domainName, loggerName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
