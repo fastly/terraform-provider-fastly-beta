@@ -13,6 +13,7 @@
 - feat(tls_domain): add `fastly_tls_domain` data source ([#100](https://github.com/fastly/terraform-provider-fastly-beta/pull/100))
 - feat(api_security_operations): add `fastly_api_security_operations` and `fastly_api_security_operation_tags` data sources ([#101](https://github.com/fastly/terraform-provider-fastly-beta/pull/101))
 - feat(package_hash): add `fastly_package_hash` data source ([#103](https://github.com/fastly/terraform-provider-fastly-beta/pull/103))
+- feat(services): add `fastly_services` data source ([#102](https://github.com/fastly/terraform-provider-fastly-beta/pull/102))
 
 ### BUG FIXES:
 
