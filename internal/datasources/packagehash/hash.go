@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/sha512"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -29,10 +28,15 @@ func hashPackage(path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to create a gzip reader: %w", err)
 	}
+	defer zr.Close()
 
 	files, err := readPackageFiles(tar.NewReader(zr), maxPackageSize)
 	if err != nil {
 		return "", fmt.Errorf("failed to read files within the package: %w", err)
+	}
+
+	if err := zr.Close(); err != nil {
+		return "", fmt.Errorf("failed to finish reading gzip package: %w", err)
 	}
 
 	return hashFiles(files), nil
@@ -55,11 +59,15 @@ func readPackageFiles(tr *tar.Reader, maxSize int64) (map[string]*bytes.Buffer, 
 		// rather than trusting the archive up front.
 		pkgSize += hdr.Size
 		if pkgSize > maxSize {
-			return nil, errors.New("package size exceeded 100MB limit")
+			return nil, fmt.Errorf("package size exceeded %d byte limit", maxSize)
 		}
 
 		if hdr.Typeflag != tar.TypeReg {
 			continue
+		}
+
+		if _, exists := contents[hdr.Name]; exists {
+			return nil, fmt.Errorf("package contains duplicate file %q", hdr.Name)
 		}
 
 		contents[hdr.Name] = &bytes.Buffer{}

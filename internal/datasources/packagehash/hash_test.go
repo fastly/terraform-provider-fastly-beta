@@ -108,7 +108,26 @@ func TestReadPackageFiles_sizeLimitExceeded(t *testing.T) {
 	require.NoError(t, tw.Close())
 
 	_, err = readPackageFiles(tar.NewReader(&buf), 10)
-	assert.ErrorContains(t, err, "100MB limit")
+	assert.ErrorContains(t, err, "exceeded 10 byte limit")
+}
+
+func TestReadPackageFiles_duplicateFile(t *testing.T) {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+
+	for range 2 {
+		require.NoError(t, tw.WriteHeader(&tar.Header{
+			Name: "file.txt",
+			Mode: 0o600,
+			Size: int64(len("content")),
+		}))
+		_, err := tw.Write([]byte("content"))
+		require.NoError(t, err)
+	}
+	require.NoError(t, tw.Close())
+
+	_, err := readPackageFiles(tar.NewReader(&buf), maxPackageSize)
+	assert.ErrorContains(t, err, `duplicate file "file.txt"`)
 }
 
 func TestHashPackage_invalidGzip(t *testing.T) {
