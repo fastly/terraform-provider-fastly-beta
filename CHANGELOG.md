@@ -15,6 +15,7 @@
 - feat(package_hash): add `fastly_package_hash` data source ([#103](https://github.com/fastly/terraform-provider-fastly-beta/pull/103))
 - feat(services): add `fastly_services` data source ([#102](https://github.com/fastly/terraform-provider-fastly-beta/pull/102))
 - feat(ip_ranges): add `fastly_ip_ranges` data source ([#104](https://github.com/fastly/terraform-provider-fastly-beta/pull/104))
+- feat(elasticsearch_logging): add support for Elasticsearch Logging ([#105](https://github.com/fastly/terraform-provider-fastly-beta/pull/105))
 
 ### BUG FIXES:
 
