@@ -31,6 +31,7 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `logging_cloudfiles` (Block List) Cloud Files logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_cloudfiles))
 - `logging_datadog` (Block List) Datadog logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_datadog))
 - `logging_digitalocean` (Block List) DigitalOcean Spaces logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_digitalocean))
+- `logging_elasticsearch` (Block List) Elasticsearch logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_elasticsearch))
 - `logging_gcs` (Block List) GCS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_gcs))
 - `logging_grafanacloudlogs` (Block List) Grafana Cloud Logs logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_grafanacloudlogs))
 - `logging_https` (Block List) HTTPS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_https))
@@ -287,6 +288,45 @@ Required:
 
 - `access_key` (String, Sensitive) Your DigitalOcean Spaces account access key.
 - `secret_key` (String, Sensitive) Your DigitalOcean Spaces account secret key.
+
+
+
+<a id="nestedblock--logging_elasticsearch"></a>
+### Nested Schema for `logging_elasticsearch`
+
+Required:
+
+- `index` (String) The name of the Elasticsearch index to send documents (logs) to.
+- `name` (String) The unique name of the Elasticsearch logging endpoint.
+- `url` (String) The Elasticsearch URL to stream logs to. Must use HTTPS.
+
+Optional:
+
+- `authentication` (Attributes) BasicAuth credentials for Elasticsearch. (see [below for nested schema](#nestedatt--logging_elasticsearch--authentication))
+- `pipeline` (String) The ID of the Elasticsearch ingest pipeline to apply pre-process transformations to before indexing.
+- `processing_region` (String) The geographic region where the logs will be processed before streaming. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+- `request_max_bytes` (Number) The maximum number of bytes sent in one request. Default `0` for unbounded.
+- `request_max_entries` (Number) The maximum number of logs sent in one request. Default `0` for unbounded.
+- `tls` (Attributes) TLS configuration for the Elasticsearch endpoint. (see [below for nested schema](#nestedatt--logging_elasticsearch--tls))
+
+<a id="nestedatt--logging_elasticsearch--authentication"></a>
+### Nested Schema for `logging_elasticsearch.authentication`
+
+Optional:
+
+- `password` (String, Sensitive) BasicAuth password for Elasticsearch.
+- `user` (String) BasicAuth username for Elasticsearch.
+
+
+<a id="nestedatt--logging_elasticsearch--tls"></a>
+### Nested Schema for `logging_elasticsearch.tls`
+
+Optional:
+
+- `ca_cert` (String) A secure certificate to authenticate the server with. Must be in PEM format.
+- `client_cert` (String) The client certificate used to make authenticated requests. Must be in PEM format.
+- `client_key` (String, Sensitive) The client private key used to make authenticated requests. Must be in PEM format.
+- `hostname` (String) The hostname used to verify the server's certificate. This should be one of the Subject Alternative Name (SAN) fields for the certificate. Common Names (CN) are not supported.
 
 
 
