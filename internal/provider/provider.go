@@ -28,6 +28,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/datacenters"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/dnszones"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/domains"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ipranges"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/kvstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwafaccountrules"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwaflists"
@@ -325,6 +326,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		datacenters.NewDataSource,
 		dnszones.NewDataSource,
 		domains.NewDataSource,
+		ipranges.NewDataSource,
 		kvstores.NewDataSource,
 		ngwafaccountrules.NewDataSource,
 		ngwaflists.NewDataSource,
