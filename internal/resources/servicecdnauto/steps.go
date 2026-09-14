@@ -20,6 +20,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingcloudfiles"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdatadog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdigitalocean"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingelasticsearch"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
@@ -283,6 +284,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 					return err
 				}
 				plan.LoggingDigitalOcean = loggingdigitalocean.MatchOrder(items, plan.LoggingDigitalOcean)
+				return nil
+			},
+		},
+		{
+			label: "Elasticsearch logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return loggingelasticsearch.Reconcile(ctx, client, serviceID, version, plan.LoggingElasticsearch)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingelasticsearch.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingElasticsearch = loggingelasticsearch.MatchOrder(items, plan.LoggingElasticsearch)
 				return nil
 			},
 		},
@@ -691,6 +706,17 @@ func readSteps(state *Model, imported bool) []readStep {
 			},
 		},
 		{
+			label: "Elasticsearch logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingelasticsearch.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingElasticsearch = loggingelasticsearch.MatchOrder(items, state.LoggingElasticsearch)
+				return nil
+			},
+		},
+		{
 			label: "S3 logging endpoints",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				items, err := loggings3.ReadForVersion(ctx, client, serviceID, version)
@@ -934,6 +960,14 @@ func planSteps(plan, state *Model) []planStep {
 			equal: func() bool { return loggingdigitalocean.Equal(plan.LoggingDigitalOcean, state.LoggingDigitalOcean) },
 			matchOnly: func() {
 				plan.LoggingDigitalOcean = loggingdigitalocean.MatchOrder(state.LoggingDigitalOcean, plan.LoggingDigitalOcean)
+			},
+		},
+		{
+			equal: func() bool {
+				return loggingelasticsearch.Equal(plan.LoggingElasticsearch, state.LoggingElasticsearch)
+			},
+			matchOnly: func() {
+				plan.LoggingElasticsearch = loggingelasticsearch.MatchOrder(state.LoggingElasticsearch, plan.LoggingElasticsearch)
 			},
 		},
 		{

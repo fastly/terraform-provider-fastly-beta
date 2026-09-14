@@ -24,6 +24,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingcloudfiles"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdatadog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdigitalocean"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingelasticsearch"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
@@ -101,6 +102,7 @@ type Model struct {
 	LoggingBlobStorage            []loggingblobstorage.NestedModel            `tfsdk:"logging_blobstorage"`
 	LoggingCloudfiles             []loggingcloudfiles.NestedModel             `tfsdk:"logging_cloudfiles"`
 	LoggingDigitalOcean           []loggingdigitalocean.NestedModel           `tfsdk:"logging_digitalocean"`
+	LoggingElasticsearch          []loggingelasticsearch.NestedModel          `tfsdk:"logging_elasticsearch"`
 	LoggingS3                     []loggings3.NestedModel                     `tfsdk:"logging_s3"`
 	LoggingNewRelicOTLP           []loggingnewrelicotlp.NestedModel           `tfsdk:"logging_newrelicotlp"`
 	LoggingNewRelic               []loggingnewrelic.NestedModel               `tfsdk:"logging_newrelic"`
@@ -182,6 +184,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_blobstorage":              loggingblobstorage.NestedBlockSchema(),
 			"logging_cloudfiles":               loggingcloudfiles.NestedBlockSchema(),
 			"logging_digitalocean":             loggingdigitalocean.NestedBlockSchema(),
+			"logging_elasticsearch":            loggingelasticsearch.NestedBlockSchema(),
 			"logging_s3":                       loggings3.NestedBlockSchema(),
 			"logging_newrelicotlp":             loggingnewrelicotlp.NestedBlockSchema(),
 			"logging_newrelic":                 loggingnewrelic.NestedBlockSchema(),
@@ -384,6 +387,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		resp.Diagnostics.AddAttributeError(
 			path.Root("logging_digitalocean"),
 			"Invalid DigitalOcean logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingelasticsearch.ValidateConditionReferences(config.LoggingElasticsearch, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_elasticsearch"),
+			"Invalid Elasticsearch logging configuration",
 			err.Error(),
 		)
 	}

@@ -7909,3 +7909,129 @@ func ConfigObjectStorageAccessKey(description, permission string, buckets []stri
 		"BUCKETS":     bucketsHCL,
 	})
 }
+
+func ConfigLoggingElasticsearchBasic(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":               serviceName,
+			"SERVICE_COMMENT":            "",
+			"DOMAIN_NAME":                domainName,
+			"SERVICE_VERSION":            "1",
+			"LOGGING_ELASTICSEARCH_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_elasticsearch_basic.tf",
+	)
+}
+
+// ConfigLoggingElasticsearchEmptyFormat sets format = "" - see TestAccFastlyServiceLoggingElasticsearch_emptyFormat.
+func ConfigLoggingElasticsearchEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":               serviceName,
+			"SERVICE_COMMENT":            "",
+			"DOMAIN_NAME":                domainName,
+			"SERVICE_VERSION":            "1",
+			"LOGGING_ELASTICSEARCH_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_elasticsearch_empty_format.tf",
+	)
+}
+
+func ConfigLoggingElasticsearchUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":               serviceName,
+			"SERVICE_COMMENT":            "",
+			"DOMAIN_NAME":                domainName,
+			"SERVICE_VERSION":            "1",
+			"LOGGING_ELASTICSEARCH_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_elasticsearch_updated.tf",
+	)
+}
+
+func ConfigLoggingElasticsearchAtVersion(serviceName, domainName, loggerName string, version int) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":               serviceName,
+			"SERVICE_COMMENT":            "",
+			"DOMAIN_NAME":                domainName,
+			"SERVICE_VERSION":            fmt.Sprintf("%d", version),
+			"LOGGING_ELASTICSEARCH_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_elasticsearch_basic.tf",
+	)
+}
+
+func ConfigLoggingElasticsearchForImport(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":               serviceName,
+			"SERVICE_COMMENT":            "",
+			"DOMAIN_NAME":                domainName,
+			"SERVICE_VERSION":            "1",
+			"LOGGING_ELASTICSEARCH_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_elasticsearch_basic.tf",
+	)
+}
+
+// ConfigLoggingElasticsearchComputeFormat returns a config attaching
+// fastly_service_logging_elasticsearch to an explicit Compute service with
+// format set, a VCL-only attribute. The standalone resource's schema is
+// shared by both service types, so this is expected to fail at apply time via
+// ValidateNoVCLOnlyAttributesForCompute rather than at Terraform's own
+// schema-validation stage.
+func ConfigLoggingElasticsearchComputeFormat(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":               serviceName,
+			"SERVICE_COMMENT":            "",
+			"SERVICE_VERSION":            "1",
+			"LOGGING_ELASTICSEARCH_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_elasticsearch_compute_format.tf",
+	)
+}
+
+// ConfigLoggingElasticsearchCompute returns a config attaching
+// fastly_service_logging_elasticsearch to an explicit Compute service with no
+// VCL-only attributes set. ClearVCLOnlyCreateFields strips format from the
+// create request, so the endpoint ends up with whatever format the Fastly API
+// defaults to - see TestAccFastlyServiceLoggingElasticsearch_formatDefault.
+func ConfigLoggingElasticsearchCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":               serviceName,
+			"SERVICE_COMMENT":            "",
+			"SERVICE_VERSION":            "1",
+			"LOGGING_ELASTICSEARCH_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_elasticsearch_compute.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingElasticsearch(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":               serviceName,
+			"DOMAIN_NAME":                domainName,
+			"LOGGING_ELASTICSEARCH_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_elasticsearch_nested.tf",
+	)
+}
