@@ -52,6 +52,54 @@ func TestAccFastlyServiceLoggingGooglePubSub_basic(t *testing.T) {
 	})
 }
 
+// TestAccFastlyServiceLoggingGooglePubSub_placementUnsetVsNone verifies unset
+// placement and explicit "none" round-trip as distinct states across updates
+// in both directions. Mirrors TestAccFastlyServiceLoggingBigQuery_placementUnsetVsNone.
+func TestAccFastlyServiceLoggingGooglePubSub_placementUnsetVsNone(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	loggerName := fmt.Sprintf("pubsub-logger-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
+		Steps: []resource.TestStep{
+			{
+				// Start unset.
+				Config: ConfigLoggingGooglePubSubBasic(serviceName, domainName, loggerName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn.test"),
+					resource.TestCheckNoResourceAttr("fastly_service_logging_googlepubsub.test", "placement"),
+				),
+			},
+			{
+				// Update to explicit "none".
+				Config: ConfigLoggingGooglePubSubUpdated(serviceName, domainName, loggerName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn.test"),
+					resource.TestCheckResourceAttr("fastly_service_logging_googlepubsub.test", "placement", "none"),
+				),
+			},
+			{
+				// Update back to unset.
+				Config: ConfigLoggingGooglePubSubBasic(serviceName, domainName, loggerName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn.test"),
+					resource.TestCheckNoResourceAttr("fastly_service_logging_googlepubsub.test", "placement"),
+				),
+			},
+			{
+				// The API's null response must leave no residual diff against the
+				// same, still-unset config.
+				Config:   ConfigLoggingGooglePubSubBasic(serviceName, domainName, loggerName),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
 // TestAccFastlyServiceLoggingGooglePubSub_authEnvDefaults verifies that
 // account_name, email, and secret_key still pick up FASTLY_GOOGLE_SERVICE_ACCOUNT_NAME /
 // FASTLY_GOOGLE_PUBSUB_EMAIL / FASTLY_GOOGLE_PUBSUB_SECRET_KEY when the entire
