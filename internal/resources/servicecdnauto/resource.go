@@ -31,6 +31,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingheroku"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingkafka"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
@@ -120,6 +121,7 @@ type Model struct {
 	LoggingHTTPS                  []logginghttps.NestedModel                  `tfsdk:"logging_https"`
 	LoggingSumologic              []loggingsumologic.NestedModel              `tfsdk:"logging_sumologic"`
 	LoggingSyslog                 []loggingsyslog.NestedModel                 `tfsdk:"logging_syslog"`
+	LoggingKafka                  []loggingkafka.NestedModel                  `tfsdk:"logging_kafka"`
 	ImageOptimizerDefaultSettings []imageoptimizerdefaultsettings.NestedModel `tfsdk:"image_optimizer_default_settings"`
 	Snippet                       []snippet.NestedModel                       `tfsdk:"snippet"`
 	DynamicSnippet                []dynamicsnippet.NestedModel                `tfsdk:"dynamic_snippet"`
@@ -205,6 +207,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_https":                    logginghttps.NestedBlockSchema(),
 			"logging_sumologic":                loggingsumologic.NestedBlockSchema(),
 			"logging_syslog":                   loggingsyslog.NestedBlockSchema(),
+			"logging_kafka":                    loggingkafka.NestedBlockSchema(),
 			"image_optimizer_default_settings": imageoptimizerdefaultsettings.NestedBlockSchema(),
 			"snippet":                          snippet.NestedBlockSchema(),
 			"dynamic_snippet":                  dynamicsnippet.NestedBlockSchema(),
@@ -500,6 +503,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		resp.Diagnostics.AddAttributeError(
 			path.Root("logging_syslog"),
 			"Invalid Syslog logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingkafka.ValidateConditionReferences(config.LoggingKafka, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_kafka"),
+			"Invalid Kafka logging configuration",
 			err.Error(),
 		)
 	}

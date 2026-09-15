@@ -23,6 +23,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingheroku"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingkafka"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
@@ -91,6 +92,7 @@ type Model struct {
 	LoggingHTTPS            []logginghttps.ComputeNestedModel            `tfsdk:"logging_https"`
 	LoggingSumologic        []loggingsumologic.ComputeNestedModel        `tfsdk:"logging_sumologic"`
 	LoggingSyslog           []loggingsyslog.ComputeNestedModel           `tfsdk:"logging_syslog"`
+	LoggingKafka            []loggingkafka.ComputeNestedModel            `tfsdk:"logging_kafka"`
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -164,6 +166,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_https":            logginghttps.ComputeNestedBlockSchema(),
 			"logging_sumologic":        loggingsumologic.ComputeNestedBlockSchema(),
 			"logging_syslog":           loggingsyslog.ComputeNestedBlockSchema(),
+			"logging_kafka":            loggingkafka.ComputeNestedBlockSchema(),
 		},
 	}
 }
@@ -563,6 +566,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	plan.LoggingSyslog = loggingsyslog.ComputeMatchOrder(loggingSyslogs, plan.LoggingSyslog)
 
+	if err := loggingkafka.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingKafka); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling Kafka logging endpoints", err.Error())
+		return
+	}
+
+	loggingKafkas, err := loggingkafka.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading Kafka logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingKafka = loggingkafka.ComputeMatchOrder(loggingKafkas, plan.LoggingKafka)
+
 	if err := computepackage.Update(ctx, r.providerData.AutoClient(), serviceID, version, plan.Package); err != nil {
 		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error updating Compute package", err.Error())
@@ -757,6 +774,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading Syslog logging endpoints", err.Error())
 		return
 	}
+	loggingKafkas, err := loggingkafka.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Kafka logging endpoints", err.Error())
+		return
+	}
 	state.Domain = domain.MatchOrder(domains, state.Domain)
 	state.HealthCheck = healthcheck.MatchOrder(healthChecks, state.HealthCheck)
 	state.Backend = backend.MatchOrder(backends, state.Backend)
@@ -779,6 +801,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.LoggingHTTPS = logginghttps.ComputeMatchOrder(loggingHTTPS, state.LoggingHTTPS)
 	state.LoggingSumologic = loggingsumologic.ComputeMatchOrder(loggingSumologics, state.LoggingSumologic)
 	state.LoggingSyslog = loggingsyslog.ComputeMatchOrder(loggingSyslogs, state.LoggingSyslog)
+	state.LoggingKafka = loggingkafka.ComputeMatchOrder(loggingKafkas, state.LoggingKafka)
 
 	resourceLinks, err := resourcelink.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
@@ -846,6 +869,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!logginghttps.ComputeEqual(plan.LoggingHTTPS, state.LoggingHTTPS) ||
 		!loggingsumologic.ComputeEqual(plan.LoggingSumologic, state.LoggingSumologic) ||
 		!loggingsyslog.ComputeEqual(plan.LoggingSyslog, state.LoggingSyslog) ||
+		!loggingkafka.ComputeEqual(plan.LoggingKafka, state.LoggingKafka) ||
 		false
 	needsVersionChange := nestedChanged
 
@@ -1159,6 +1183,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 		plan.LoggingSyslog = loggingsyslog.ComputeMatchOrder(loggingSyslogs, plan.LoggingSyslog)
 
+		if err := loggingkafka.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingKafka); err != nil {
+			resp.Diagnostics.AddError("Error reconciling Kafka logging endpoints", err.Error())
+			return
+		}
+
+		loggingKafkas, err := loggingkafka.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading Kafka logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingKafka = loggingkafka.ComputeMatchOrder(loggingKafkas, plan.LoggingKafka)
+
 		if len(state.Package) > 0 && len(plan.Package) == 0 {
 			resp.Diagnostics.AddError(
 				"Removing Compute packages is not supported",
@@ -1222,6 +1258,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.LoggingHTTPS = logginghttps.ComputeMatchOrder(state.LoggingHTTPS, plan.LoggingHTTPS)
 		plan.LoggingSumologic = loggingsumologic.ComputeMatchOrder(state.LoggingSumologic, plan.LoggingSumologic)
 		plan.LoggingSyslog = loggingsyslog.ComputeMatchOrder(state.LoggingSyslog, plan.LoggingSyslog)
+		plan.LoggingKafka = loggingkafka.ComputeMatchOrder(state.LoggingKafka, plan.LoggingKafka)
 	}
 
 	plan.ID = state.ID
