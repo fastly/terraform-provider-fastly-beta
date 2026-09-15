@@ -42,6 +42,7 @@ Automatic-lifecycle Fastly CDN service resource with nested versioned configurat
 - `logging_elasticsearch` (Block List) Elasticsearch logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_elasticsearch))
 - `logging_gcs` (Block List) GCS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_gcs))
 - `logging_grafanacloudlogs` (Block List) Grafana Cloud Logs logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_grafanacloudlogs))
+- `logging_honeycomb` (Block List) Honeycomb logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_honeycomb))
 - `logging_https` (Block List) HTTPS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_https))
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
@@ -556,6 +557,32 @@ Optional:
 Required:
 
 - `token` (String, Sensitive) The Grafana Access Policy token with `logs:write` access scoped to your Loki instance.
+
+
+
+<a id="nestedblock--logging_honeycomb"></a>
+### Nested Schema for `logging_honeycomb`
+
+Required:
+
+- `authentication` (Attributes) Honeycomb authentication credentials. (see [below for nested schema](#nestedatt--logging_honeycomb--authentication))
+- `dataset` (String) The Honeycomb Dataset you want to log to.
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+
+Optional:
+
+- `format` (String) A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/). Must produce valid JSON that Honeycomb can ingest.
+- `format_version` (Number) The version of the custom logging format used for the configured endpoint. The logging call gets placed by default in `vcl_log` if format_version is set to `2` and in `vcl_deliver` if `format_version` is set to `1`.
+- `placement` (String) Where in the generated VCL the logging call should be placed. If not set, endpoints with format_version of 2 are placed in vcl_log and those with format_version of 1 are placed in vcl_deliver. Valid value is `none`.
+- `processing_region` (String) The geographic region where the logs will be processed before streaming. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+- `response_condition` (String) The name of an existing condition in the configured endpoint, or leave blank to always execute.
+
+<a id="nestedatt--logging_honeycomb--authentication"></a>
+### Nested Schema for `logging_honeycomb.authentication`
+
+Required:
+
+- `token` (String, Sensitive) The Write Key from the Account page of your Honeycomb account.
 
 
 

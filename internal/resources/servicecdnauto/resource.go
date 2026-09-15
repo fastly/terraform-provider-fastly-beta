@@ -27,6 +27,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingelasticsearch"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghoneycomb"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
@@ -107,6 +108,7 @@ type Model struct {
 	LoggingNewRelicOTLP           []loggingnewrelicotlp.NestedModel           `tfsdk:"logging_newrelicotlp"`
 	LoggingNewRelic               []loggingnewrelic.NestedModel               `tfsdk:"logging_newrelic"`
 	LoggingDatadog                []loggingdatadog.NestedModel                `tfsdk:"logging_datadog"`
+	LoggingHoneycomb              []logginghoneycomb.NestedModel              `tfsdk:"logging_honeycomb"`
 	LoggingBigQuery               []loggingbigquery.NestedModel               `tfsdk:"logging_bigquery"`
 	LoggingGCS                    []logginggcs.NestedModel                    `tfsdk:"logging_gcs"`
 	LoggingGrafanaCloudLogs       []logginggrafanacloudlogs.NestedModel       `tfsdk:"logging_grafanacloudlogs"`
@@ -189,6 +191,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_newrelicotlp":             loggingnewrelicotlp.NestedBlockSchema(),
 			"logging_newrelic":                 loggingnewrelic.NestedBlockSchema(),
 			"logging_datadog":                  loggingdatadog.NestedBlockSchema(),
+			"logging_honeycomb":                logginghoneycomb.NestedBlockSchema(),
 			"logging_bigquery":                 loggingbigquery.NestedBlockSchema(),
 			"logging_gcs":                      logginggcs.NestedBlockSchema(),
 			"logging_grafanacloudlogs":         logginggrafanacloudlogs.NestedBlockSchema(),
@@ -371,6 +374,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		resp.Diagnostics.AddAttributeError(
 			path.Root("logging_datadog"),
 			"Invalid Datadog logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := logginghoneycomb.ValidateConditionReferences(config.LoggingHoneycomb, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_honeycomb"),
+			"Invalid Honeycomb logging configuration",
 			err.Error(),
 		)
 	}

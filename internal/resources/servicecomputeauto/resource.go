@@ -19,6 +19,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingelasticsearch"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghoneycomb"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
@@ -78,6 +79,7 @@ type Model struct {
 	LoggingNewRelicOTLP     []loggingnewrelicotlp.ComputeNestedModel     `tfsdk:"logging_newrelicotlp"`
 	LoggingNewRelic         []loggingnewrelic.ComputeNestedModel         `tfsdk:"logging_newrelic"`
 	LoggingDatadog          []loggingdatadog.ComputeNestedModel          `tfsdk:"logging_datadog"`
+	LoggingHoneycomb        []logginghoneycomb.ComputeNestedModel        `tfsdk:"logging_honeycomb"`
 	LoggingBigQuery         []loggingbigquery.ComputeNestedModel         `tfsdk:"logging_bigquery"`
 	LoggingGCS              []logginggcs.ComputeNestedModel              `tfsdk:"logging_gcs"`
 	LoggingGrafanaCloudLogs []logginggrafanacloudlogs.ComputeNestedModel `tfsdk:"logging_grafanacloudlogs"`
@@ -148,6 +150,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_newrelicotlp":     loggingnewrelicotlp.ComputeNestedBlockSchema(),
 			"logging_newrelic":         loggingnewrelic.ComputeNestedBlockSchema(),
 			"logging_datadog":          loggingdatadog.ComputeNestedBlockSchema(),
+			"logging_honeycomb":        logginghoneycomb.ComputeNestedBlockSchema(),
 			"logging_bigquery":         loggingbigquery.ComputeNestedBlockSchema(),
 			"logging_gcs":              logginggcs.ComputeNestedBlockSchema(),
 			"logging_grafanacloudlogs": logginggrafanacloudlogs.ComputeNestedBlockSchema(),
@@ -414,6 +417,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	plan.LoggingDatadog = loggingdatadog.ComputeMatchOrder(loggingDatadogs, plan.LoggingDatadog)
 
+	if err := logginghoneycomb.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingHoneycomb); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling Honeycomb logging endpoints", err.Error())
+		return
+	}
+
+	loggingHoneycombs, err := logginghoneycomb.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading Honeycomb logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingHoneycomb = logginghoneycomb.ComputeMatchOrder(loggingHoneycombs, plan.LoggingHoneycomb)
+
 	if err := loggingbigquery.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingBigQuery); err != nil {
 		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling BigQuery logging endpoints", err.Error())
@@ -656,6 +673,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading Datadog logging endpoints", err.Error())
 		return
 	}
+	loggingHoneycombs, err := logginghoneycomb.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Honeycomb logging endpoints", err.Error())
+		return
+	}
 	loggingBigQueries, err := loggingbigquery.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading BigQuery logging endpoints", err.Error())
@@ -703,6 +725,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.LoggingNewRelicOTLP = loggingnewrelicotlp.ComputeMatchOrder(loggingNewRelicOTLPs, state.LoggingNewRelicOTLP)
 	state.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(loggingNewRelics, state.LoggingNewRelic)
 	state.LoggingDatadog = loggingdatadog.ComputeMatchOrder(loggingDatadogs, state.LoggingDatadog)
+	state.LoggingHoneycomb = logginghoneycomb.ComputeMatchOrder(loggingHoneycombs, state.LoggingHoneycomb)
 	state.LoggingBigQuery = loggingbigquery.ComputeMatchOrder(loggingBigQueries, state.LoggingBigQuery)
 	state.LoggingGCS = logginggcs.ComputeMatchOrder(loggingGCSs, state.LoggingGCS)
 	state.LoggingGrafanaCloudLogs = logginggrafanacloudlogs.ComputeMatchOrder(loggingGrafanaCloudLogss, state.LoggingGrafanaCloudLogs)
@@ -767,6 +790,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!loggingnewrelicotlp.ComputeEqual(plan.LoggingNewRelicOTLP, state.LoggingNewRelicOTLP) ||
 		!loggingnewrelic.ComputeEqual(plan.LoggingNewRelic, state.LoggingNewRelic) ||
 		!loggingdatadog.ComputeEqual(plan.LoggingDatadog, state.LoggingDatadog) ||
+		!logginghoneycomb.ComputeEqual(plan.LoggingHoneycomb, state.LoggingHoneycomb) ||
 		!loggingbigquery.ComputeEqual(plan.LoggingBigQuery, state.LoggingBigQuery) ||
 		!logginggcs.ComputeEqual(plan.LoggingGCS, state.LoggingGCS) ||
 		!logginggrafanacloudlogs.ComputeEqual(plan.LoggingGrafanaCloudLogs, state.LoggingGrafanaCloudLogs) ||
@@ -967,6 +991,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 		plan.LoggingDatadog = loggingdatadog.ComputeMatchOrder(loggingDatadogs, plan.LoggingDatadog)
 
+		if err := logginghoneycomb.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingHoneycomb); err != nil {
+			resp.Diagnostics.AddError("Error reconciling Honeycomb logging endpoints", err.Error())
+			return
+		}
+
+		loggingHoneycombs, err := logginghoneycomb.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading Honeycomb logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingHoneycomb = logginghoneycomb.ComputeMatchOrder(loggingHoneycombs, plan.LoggingHoneycomb)
+
 		if err := loggingbigquery.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingBigQuery); err != nil {
 			resp.Diagnostics.AddError("Error reconciling BigQuery logging endpoints", err.Error())
 			return
@@ -1104,6 +1140,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.LoggingNewRelicOTLP = loggingnewrelicotlp.ComputeMatchOrder(state.LoggingNewRelicOTLP, plan.LoggingNewRelicOTLP)
 		plan.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(state.LoggingNewRelic, plan.LoggingNewRelic)
 		plan.LoggingDatadog = loggingdatadog.ComputeMatchOrder(state.LoggingDatadog, plan.LoggingDatadog)
+		plan.LoggingHoneycomb = logginghoneycomb.ComputeMatchOrder(state.LoggingHoneycomb, plan.LoggingHoneycomb)
 		plan.LoggingBigQuery = loggingbigquery.ComputeMatchOrder(state.LoggingBigQuery, plan.LoggingBigQuery)
 		plan.LoggingGCS = logginggcs.ComputeMatchOrder(state.LoggingGCS, plan.LoggingGCS)
 		plan.LoggingGrafanaCloudLogs = logginggrafanacloudlogs.ComputeMatchOrder(state.LoggingGrafanaCloudLogs, plan.LoggingGrafanaCloudLogs)

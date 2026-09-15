@@ -34,6 +34,7 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `logging_elasticsearch` (Block List) Elasticsearch logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_elasticsearch))
 - `logging_gcs` (Block List) GCS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_gcs))
 - `logging_grafanacloudlogs` (Block List) Grafana Cloud Logs logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_grafanacloudlogs))
+- `logging_honeycomb` (Block List) Honeycomb logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_honeycomb))
 - `logging_https` (Block List) HTTPS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_https))
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
@@ -382,6 +383,28 @@ Optional:
 Required:
 
 - `token` (String, Sensitive) The Grafana Access Policy token with `logs:write` access scoped to your Loki instance.
+
+
+
+<a id="nestedblock--logging_honeycomb"></a>
+### Nested Schema for `logging_honeycomb`
+
+Required:
+
+- `authentication` (Attributes) Honeycomb authentication credentials. (see [below for nested schema](#nestedatt--logging_honeycomb--authentication))
+- `dataset` (String) The Honeycomb Dataset you want to log to.
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+
+Optional:
+
+- `processing_region` (String) The geographic region where the logs will be processed before streaming. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+
+<a id="nestedatt--logging_honeycomb--authentication"></a>
+### Nested Schema for `logging_honeycomb.authentication`
+
+Required:
+
+- `token` (String, Sensitive) The Write Key from the Account page of your Honeycomb account.
 
 
 
