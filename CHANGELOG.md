@@ -16,6 +16,7 @@
 - feat(services): add `fastly_services` data source ([#102](https://github.com/fastly/terraform-provider-fastly-beta/pull/102))
 - feat(ip_ranges): add `fastly_ip_ranges` data source ([#104](https://github.com/fastly/terraform-provider-fastly-beta/pull/104))
 - feat(elasticsearch_logging): add support for Elasticsearch Logging ([#105](https://github.com/fastly/terraform-provider-fastly-beta/pull/105))
+- feat(ftp_logging): add support for FTP Logging ([#107](https://github.com/fastly/terraform-provider-fastly-beta/pull/107))
 
 ### BUG FIXES:
 
