@@ -24,7 +24,7 @@ resource "fastly_service_logging_heroku" "example" {
   service_id = fastly_service_cdn.example.id
   version    = 1
   name       = "heroku-endpoint"
-  url        = "https://token:${var.heroku_token}@1.us.logs.example.com"
+  url        = "https://1.us.logs.example.com"
 
   authentication = {
     token = var.heroku_token
@@ -41,7 +41,7 @@ resource "fastly_service_logging_heroku" "eu" {
   service_id = fastly_service_cdn.example.id
   version    = 1
   name       = "heroku-eu"
-  url        = "https://token:${var.heroku_token}@1.eu.logs.example.com"
+  url        = "https://1.eu.logs.example.com"
 
   authentication = {
     token = var.heroku_token
@@ -62,7 +62,7 @@ resource "fastly_service_logging_heroku" "compute" {
   service_id = fastly_service_compute.example.id
   version    = 1
   name       = "heroku-compute"
-  url        = "https://token:${var.heroku_token}@1.us.logs.example.com"
+  url        = "https://1.us.logs.example.com"
 
   authentication = {
     token = var.heroku_token
@@ -87,7 +87,7 @@ resource "fastly_service_cdn_auto" "example" {
 
   logging_heroku {
     name = "heroku-endpoint"
-    url  = "https://token:${var.heroku_token}@1.us.logs.example.com"
+    url  = "https://1.us.logs.example.com"
     authentication = {
       token = var.heroku_token
     }
@@ -113,7 +113,7 @@ resource "fastly_service_compute_auto" "example" {
 
   logging_heroku {
     name = "heroku-compute"
-    url  = "https://token:${var.heroku_token}@1.us.logs.example.com"
+    url  = "https://1.us.logs.example.com"
     authentication = {
       token = var.heroku_token
     }
