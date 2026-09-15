@@ -4321,6 +4321,241 @@ func ConfigComputeAutoWithLoggingCloudfiles(serviceName, domainName, loggerName 
 	)
 }
 
+func ConfigLoggingFTPBasic(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_basic.tf",
+	)
+}
+
+func ConfigLoggingFTPUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_updated.tf",
+	)
+}
+
+// ConfigLoggingFTPEmptyFormat sets format = "" - see
+// TestAccFastlyServiceLoggingFTP_emptyFormat.
+func ConfigLoggingFTPEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_empty_format.tf",
+	)
+}
+
+// ConfigLoggingFTPEmptyTimestampFormat sets timestamp_format = "" - see
+// TestAccFastlyServiceLoggingFTP_emptyTimestampFormat.
+func ConfigLoggingFTPEmptyTimestampFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_empty_timestamp_format.tf",
+	)
+}
+
+func ConfigLoggingFTPAtVersion(serviceName, domainName, loggerName string, version int) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  fmt.Sprintf("%d", version),
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_basic.tf",
+	)
+}
+
+func ConfigLoggingFTPForImport(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_basic.tf",
+	)
+}
+
+// ConfigLoggingFTPComputeFormat returns a config attaching
+// fastly_service_logging_ftp to an explicit Compute service with format set, a
+// VCL-only attribute. The standalone resource's schema is shared by both
+// service types, so this is expected to fail at apply time via
+// ValidateNoVCLOnlyAttributesForCompute rather than at Terraform's own
+// schema-validation stage.
+func ConfigLoggingFTPComputeFormat(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_ftp_compute_format.tf",
+	)
+}
+
+// ConfigLoggingFTPCompute returns a config attaching fastly_service_logging_ftp
+// to an explicit Compute service with no VCL-only attributes set.
+// ClearVCLOnlyCreateFields strips format from the create request, so the
+// endpoint ends up with whatever format the Fastly API defaults to - see
+// TestAccFastlyServiceLoggingFTP_formatDefault.
+func ConfigLoggingFTPCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_ftp_compute.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingFTP(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_nested.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingFTPPlacementNone(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_nested_placement_none.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingFTPUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_nested_updated.tf",
+	)
+}
+
+func ConfigCDNAutoWithMultipleLoggingFTP(serviceName, domainName, loggerName1, loggerName2 string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":       serviceName,
+			"DOMAIN_NAME":        domainName,
+			"LOGGING_FTP_NAME_1": loggerName1,
+			"LOGGING_FTP_NAME_2": loggerName2,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_nested_multi.tf",
+	)
+}
+
+func ConfigCDNAutoWithBackendAndLoggingFTP(serviceName, domainName, backendName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"BACKEND_NAME":     backendName,
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/backend_single.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_nested.tf",
+	)
+}
+
+func ConfigComputeAutoWithLoggingFTP(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"LOGGING_FTP_NAME": loggerName,
+			"PACKAGE_PATH":     GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_nested.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigComputeAutoWithLoggingFTPFormat returns a Compute auto service config
+// whose nested logging_ftp block sets format, a VCL-only attribute.
+// service_compute_auto's logging_ftp schema (ComputeNestedBlockSchema) omits
+// format/format_version/placement/response_condition entirely, so this is
+// expected to fail Terraform's own schema validation ("Unsupported argument")
+// rather than reach the Fastly API.
+func ConfigComputeAutoWithLoggingFTPFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"LOGGING_FTP_NAME": loggerName,
+			"PACKAGE_PATH":     GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_nested_compute_format.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
 func ConfigLoggingDigitalOceanBasic(serviceName, domainName, loggerName string) string {
 	return BuildConfig(
 		ServiceCDN,
