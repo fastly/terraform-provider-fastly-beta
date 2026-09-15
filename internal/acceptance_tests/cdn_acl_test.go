@@ -254,8 +254,9 @@ func TestAccFastlyServiceCDNACL_import(t *testing.T) {
 				ImportStateIdFunc: func(_ *terraform.State) (string, error) {
 					return fmt.Sprintf("%s/%s/%s", serviceID, versionNumber, aclName), nil
 				},
-				ImportState:       true,
-				ImportStateVerify: true,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"force_destroy"},
 			},
 		},
 	})
@@ -390,8 +391,9 @@ func TestAccFastlyServiceCDNACL_importWithUnderscores(t *testing.T) {
 				ImportStateIdFunc: func(_ *terraform.State) (string, error) {
 					return fmt.Sprintf("%s/%s/%s", serviceID, versionNumber, aclName), nil
 				},
-				ImportState:       true,
-				ImportStateVerify: true,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"force_destroy"},
 			},
 		},
 	})
