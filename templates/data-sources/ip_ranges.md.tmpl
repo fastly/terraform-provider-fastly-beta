@@ -1,0 +1,30 @@
+---
+page_title: "fastly_ip_ranges Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to get the list of Fastly IP ranges.
+---
+
+# fastly_ip_ranges (Data Source)
+
+Use this data source to get the [IP ranges](https://docs.fastly.com/guides/securing-communications/accessing-fastlys-ip-ranges) of Fastly edge nodes.
+
+## Example Usage
+
+```terraform
+data "fastly_ip_ranges" "fastly" {}
+
+resource "aws_security_group" "from_fastly" {
+  name = "from_fastly"
+
+  ingress {
+    from_port        = 443
+    to_port          = 443
+    protocol         = "tcp"
+    cidr_blocks      = data.fastly_ip_ranges.fastly.cidr_blocks
+    ipv6_cidr_blocks = data.fastly_ip_ranges.fastly.ipv6_cidr_blocks
+  }
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
