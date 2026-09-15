@@ -27,6 +27,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingelasticsearch"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingftp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggooglepubsub"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
@@ -111,6 +112,7 @@ type Model struct {
 	LoggingDatadog                []loggingdatadog.NestedModel                `tfsdk:"logging_datadog"`
 	LoggingBigQuery               []loggingbigquery.NestedModel               `tfsdk:"logging_bigquery"`
 	LoggingGCS                    []logginggcs.NestedModel                    `tfsdk:"logging_gcs"`
+	LoggingGooglePubSub           []logginggooglepubsub.NestedModel           `tfsdk:"logging_googlepubsub"`
 	LoggingGrafanaCloudLogs       []logginggrafanacloudlogs.NestedModel       `tfsdk:"logging_grafanacloudlogs"`
 	LoggingSplunk                 []loggingsplunk.NestedModel                 `tfsdk:"logging_splunk"`
 	LoggingHTTPS                  []logginghttps.NestedModel                  `tfsdk:"logging_https"`
@@ -194,6 +196,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_datadog":                  loggingdatadog.NestedBlockSchema(),
 			"logging_bigquery":                 loggingbigquery.NestedBlockSchema(),
 			"logging_gcs":                      logginggcs.NestedBlockSchema(),
+			"logging_googlepubsub":             logginggooglepubsub.NestedBlockSchema(),
 			"logging_grafanacloudlogs":         logginggrafanacloudlogs.NestedBlockSchema(),
 			"logging_splunk":                   loggingsplunk.NestedBlockSchema(),
 			"logging_https":                    logginghttps.NestedBlockSchema(),
@@ -414,6 +417,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		resp.Diagnostics.AddAttributeError(
 			path.Root("logging_gcs"),
 			"Invalid GCS logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := logginggooglepubsub.ValidateConditionReferences(config.LoggingGooglePubSub, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_googlepubsub"),
+			"Invalid Pub/Sub logging configuration",
 			err.Error(),
 		)
 	}
