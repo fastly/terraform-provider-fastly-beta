@@ -38,6 +38,7 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `logging_grafanacloudlogs` (Block List) Grafana Cloud Logs logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_grafanacloudlogs))
 - `logging_heroku` (Block List) Heroku logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_heroku))
 - `logging_https` (Block List) HTTPS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_https))
+- `logging_kafka` (Block List) Kafka logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_kafka))
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
 - `logging_s3` (Block List) S3 logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_s3))
@@ -492,6 +493,48 @@ Optional:
 
 <a id="nestedatt--logging_https--tls"></a>
 ### Nested Schema for `logging_https.tls`
+
+Optional:
+
+- `ca_cert` (String) A secure certificate to authenticate the server with. Must be in PEM format.
+- `client_cert` (String) The client certificate used to make authenticated requests. Must be in PEM format.
+- `client_key` (String, Sensitive) The client private key used to make authenticated requests. Must be in PEM format.
+- `hostname` (String) The hostname used to verify the server's certificate. This should be one of the Subject Alternative Name (SAN) fields for the certificate. Common Names (CN) are not supported.
+
+
+
+<a id="nestedblock--logging_kafka"></a>
+### Nested Schema for `logging_kafka`
+
+Required:
+
+- `brokers` (String) A comma-separated list of IP addresses or hostnames of Kafka brokers.
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+- `topic` (String) The Kafka topic to send logs to.
+
+Optional:
+
+- `auth_method` (String) SASL authentication method. Valid values are `plain`, `scram-sha-256`, and `scram-sha-512`.
+- `authentication` (Attributes) SASL authentication credentials. (see [below for nested schema](#nestedatt--logging_kafka--authentication))
+- `compression_codec` (String) The codec used for compression of your logs. Valid values are `gzip`, `snappy`, and `lz4`.
+- `parse_log_keyvals` (Boolean) Enables parsing of key=value tuples from the beginning of a logline, turning them into [record headers](https://cwiki.apache.org/confluence/display/KAFKA/KIP-82+-+Add+Record+Headers). Default `false`.
+- `processing_region` (String) The geographic region where the logs will be processed before streaming. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+- `request_max_bytes` (Number) The maximum number of bytes sent in one request. Default `0` for no limit.
+- `required_acks` (String) The number of acknowledgements a leader must receive before a write is considered successful. Valid values are `1` (one server needs to respond), `0` (no servers need to respond), and `-1` (wait for all in-sync replicas to respond). Default `1`.
+- `tls` (Attributes) TLS configuration used when `use_tls` is enabled. (see [below for nested schema](#nestedatt--logging_kafka--tls))
+- `use_tls` (Boolean) Whether to use TLS for secure logging. Default: `false`.
+
+<a id="nestedatt--logging_kafka--authentication"></a>
+### Nested Schema for `logging_kafka.authentication`
+
+Optional:
+
+- `password` (String, Sensitive) SASL password.
+- `user` (String) SASL user.
+
+
+<a id="nestedatt--logging_kafka--tls"></a>
+### Nested Schema for `logging_kafka.tls`
 
 Optional:
 
