@@ -209,5 +209,3 @@ service version.
   blocks to keep credential material out of top-level attributes. Unlike some
   other logging endpoints, Kafka's credentials have no environment variable
   fallback.
-- `compression_codec` and `gzip_level` are not both supported for this
-  endpoint; only `compression_codec` (`gzip`, `snappy`, or `lz4`) is available.
