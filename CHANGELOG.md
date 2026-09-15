@@ -21,8 +21,9 @@
 - feat(service_product_ddos_protection): Add support for 'client_challenge' mode. ([#110](https://github.com/fastly/terraform-provider-fastly-beta/pull/110))
 - feat(heroku_logging): add support for Heroku Logging ([#108](https://github.com/fastly/terraform-provider-fastly-beta/pull/108))
 - feat(kafka_logging): add support for Kafka Logging ([#111](https://github.com/fastly/terraform-provider-fastly-beta/pull/111))
-- feat(loggly_logging): add support for Loggly Logging ([#113](https://github.com/fastly/terraform-provider-fastly-beta/pull/113))
 - feat(honeycomb_logging): add support for Honeycomb Logging ([#112](https://github.com/fastly/terraform-provider-fastly-beta/pull/112))
+- feat(loggly_logging): add support for Loggly Logging ([#113](https://github.com/fastly/terraform-provider-fastly-beta/pull/113))
+- feat(kinesis_logging): add support for Kinesis Logging ([#116](https://github.com/fastly/terraform-provider-fastly-beta/pull/116))
 
 ### BUG FIXES:
 

@@ -29,6 +29,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghoneycomb"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingkafka"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingkinesis"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingloggly"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
@@ -532,6 +533,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 			},
 		},
 		{
+			label: "Kinesis logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return loggingkinesis.Reconcile(ctx, client, serviceID, version, plan.LoggingKinesis)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingkinesis.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingKinesis = loggingkinesis.MatchOrder(items, plan.LoggingKinesis)
+				return nil
+			},
+		},
+		{
 			label: "Loggly logging endpoints",
 			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				return loggingloggly.Reconcile(ctx, client, serviceID, version, plan.LoggingLoggly)
@@ -983,6 +998,17 @@ func readSteps(state *Model, imported bool) []readStep {
 			},
 		},
 		{
+			label: "Kinesis logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingkinesis.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingKinesis = loggingkinesis.MatchOrder(items, state.LoggingKinesis)
+				return nil
+			},
+		},
+		{
 			label: "Loggly logging endpoints",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				items, err := loggingloggly.ReadForVersion(ctx, client, serviceID, version)
@@ -1203,6 +1229,10 @@ func planSteps(plan, state *Model) []planStep {
 		{
 			equal:     func() bool { return loggingkafka.Equal(plan.LoggingKafka, state.LoggingKafka) },
 			matchOnly: func() { plan.LoggingKafka = loggingkafka.MatchOrder(state.LoggingKafka, plan.LoggingKafka) },
+		},
+		{
+			equal:     func() bool { return loggingkinesis.Equal(plan.LoggingKinesis, state.LoggingKinesis) },
+			matchOnly: func() { plan.LoggingKinesis = loggingkinesis.MatchOrder(state.LoggingKinesis, plan.LoggingKinesis) },
 		},
 		{
 			equal:     func() bool { return loggingloggly.Equal(plan.LoggingLoggly, state.LoggingLoggly) },
