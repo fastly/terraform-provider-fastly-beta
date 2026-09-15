@@ -5263,6 +5263,223 @@ func ConfigComputeAutoWithLoggingNewRelicFormat(serviceName, domainName, loggerN
 	)
 }
 
+func ConfigLoggingHerokuBasic(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     "1",
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_basic.tf",
+	)
+}
+
+// ConfigLoggingHerokuEmptyFormat sets format = "" - see TestAccFastlyServiceLoggingHeroku_emptyFormat.
+func ConfigLoggingHerokuEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     "1",
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_empty_format.tf",
+	)
+}
+
+func ConfigLoggingHerokuUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     "1",
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_updated.tf",
+	)
+}
+
+func ConfigLoggingHerokuAtVersion(serviceName, domainName, loggerName string, version int) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     fmt.Sprintf("%d", version),
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_basic.tf",
+	)
+}
+
+func ConfigLoggingHerokuForImport(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     "1",
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_basic.tf",
+	)
+}
+
+// ConfigLoggingHerokuComputeFormat returns a config attaching
+// fastly_service_logging_heroku to an explicit Compute service with format
+// set, a VCL-only attribute. The standalone resource's schema is shared by both
+// service types, so this is expected to fail at apply time via
+// ValidateNoVCLOnlyAttributesForCompute rather than at Terraform's own
+// schema-validation stage.
+func ConfigLoggingHerokuComputeFormat(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"SERVICE_VERSION":     "1",
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_heroku_compute_format.tf",
+	)
+}
+
+// ConfigLoggingHerokuCompute returns a config attaching
+// fastly_service_logging_heroku to an explicit Compute service with no
+// VCL-only attributes set. ClearVCLOnlyCreateFields strips format from the
+// create request, so the endpoint ends up with whatever format the Fastly API
+// defaults to - see TestAccFastlyServiceLoggingHeroku_formatDefault.
+func ConfigLoggingHerokuCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"SERVICE_VERSION":     "1",
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_heroku_compute.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingHeroku(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_nested.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingHerokuPlacementNone(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_nested_placement_none.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingHerokuUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_nested_updated.tf",
+	)
+}
+
+func ConfigCDNAutoWithMultipleLoggingHeroku(serviceName, domainName, loggerName1, loggerName2 string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":          serviceName,
+			"DOMAIN_NAME":           domainName,
+			"LOGGING_HEROKU_NAME_1": loggerName1,
+			"LOGGING_HEROKU_NAME_2": loggerName2,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_nested_multi.tf",
+	)
+}
+
+func ConfigCDNAutoWithBackendAndLoggingHeroku(serviceName, domainName, backendName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"BACKEND_NAME":        backendName,
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/backend_single.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_nested.tf",
+	)
+}
+
+func ConfigComputeAutoWithLoggingHeroku(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_HEROKU_NAME": loggerName,
+			"PACKAGE_PATH":        GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_nested.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigComputeAutoWithLoggingHerokuFormat returns a Compute auto service
+// config whose nested logging_heroku block sets format, a VCL-only
+// attribute. service_compute_auto's logging_heroku schema
+// (ComputeNestedBlockSchema) omits format/format_version/placement/
+// response_condition entirely, so this is expected to fail Terraform's own
+// schema validation ("Unsupported argument") rather than reach the Fastly API.
+func ConfigComputeAutoWithLoggingHerokuFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_HEROKU_NAME": loggerName,
+			"PACKAGE_PATH":        GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_nested_compute_format.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
 func ConfigLoggingBigQueryBasic(serviceName, domainName, loggerName string) string {
 	return BuildConfig(
 		ServiceCDN,

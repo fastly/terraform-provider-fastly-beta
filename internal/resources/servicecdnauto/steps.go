@@ -25,6 +25,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggooglepubsub"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingheroku"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
@@ -356,6 +357,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 					return err
 				}
 				plan.LoggingNewRelic = loggingnewrelic.MatchOrder(items, plan.LoggingNewRelic)
+				return nil
+			},
+		},
+		{
+			label: "Heroku logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return loggingheroku.Reconcile(ctx, client, serviceID, version, plan.LoggingHeroku)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingheroku.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingHeroku = loggingheroku.MatchOrder(items, plan.LoggingHeroku)
 				return nil
 			},
 		},
@@ -791,6 +806,17 @@ func readSteps(state *Model, imported bool) []readStep {
 			},
 		},
 		{
+			label: "Heroku logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingheroku.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingHeroku = loggingheroku.MatchOrder(items, state.LoggingHeroku)
+				return nil
+			},
+		},
+		{
 			label: "Datadog logging endpoints",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				items, err := loggingdatadog.ReadForVersion(ctx, client, serviceID, version)
@@ -1039,6 +1065,10 @@ func planSteps(plan, state *Model) []planStep {
 		{
 			equal:     func() bool { return loggingnewrelic.Equal(plan.LoggingNewRelic, state.LoggingNewRelic) },
 			matchOnly: func() { plan.LoggingNewRelic = loggingnewrelic.MatchOrder(state.LoggingNewRelic, plan.LoggingNewRelic) },
+		},
+		{
+			equal:     func() bool { return loggingheroku.Equal(plan.LoggingHeroku, state.LoggingHeroku) },
+			matchOnly: func() { plan.LoggingHeroku = loggingheroku.MatchOrder(state.LoggingHeroku, plan.LoggingHeroku) },
 		},
 		{
 			equal:     func() bool { return loggingdatadog.Equal(plan.LoggingDatadog, state.LoggingDatadog) },

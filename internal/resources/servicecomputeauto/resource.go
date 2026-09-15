@@ -21,6 +21,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggooglepubsub"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingheroku"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
@@ -80,6 +81,7 @@ type Model struct {
 	LoggingS3               []loggings3.ComputeNestedModel               `tfsdk:"logging_s3"`
 	LoggingNewRelicOTLP     []loggingnewrelicotlp.ComputeNestedModel     `tfsdk:"logging_newrelicotlp"`
 	LoggingNewRelic         []loggingnewrelic.ComputeNestedModel         `tfsdk:"logging_newrelic"`
+	LoggingHeroku           []loggingheroku.ComputeNestedModel           `tfsdk:"logging_heroku"`
 	LoggingDatadog          []loggingdatadog.ComputeNestedModel          `tfsdk:"logging_datadog"`
 	LoggingBigQuery         []loggingbigquery.ComputeNestedModel         `tfsdk:"logging_bigquery"`
 	LoggingGCS              []logginggcs.ComputeNestedModel              `tfsdk:"logging_gcs"`
@@ -152,6 +154,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_s3":               loggings3.ComputeNestedBlockSchema(),
 			"logging_newrelicotlp":     loggingnewrelicotlp.ComputeNestedBlockSchema(),
 			"logging_newrelic":         loggingnewrelic.ComputeNestedBlockSchema(),
+			"logging_heroku":           loggingheroku.ComputeNestedBlockSchema(),
 			"logging_datadog":          loggingdatadog.ComputeNestedBlockSchema(),
 			"logging_bigquery":         loggingbigquery.ComputeNestedBlockSchema(),
 			"logging_gcs":              logginggcs.ComputeNestedBlockSchema(),
@@ -419,6 +422,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 	plan.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(loggingNewRelics, plan.LoggingNewRelic)
+
+	if err := loggingheroku.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingHeroku); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling Heroku logging endpoints", err.Error())
+		return
+	}
+
+	loggingHerokus, err := loggingheroku.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading Heroku logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingHeroku = loggingheroku.ComputeMatchOrder(loggingHerokus, plan.LoggingHeroku)
 
 	if err := loggingdatadog.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingDatadog); err != nil {
 		recordOrphanSafeState()
@@ -690,6 +707,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading New Relic logging endpoints", err.Error())
 		return
 	}
+	loggingHerokus, err := loggingheroku.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Heroku logging endpoints", err.Error())
+		return
+	}
 	loggingDatadogs, err := loggingdatadog.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading Datadog logging endpoints", err.Error())
@@ -747,6 +769,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.LoggingS3 = loggings3.ComputeMatchOrder(loggingS3s, state.LoggingS3)
 	state.LoggingNewRelicOTLP = loggingnewrelicotlp.ComputeMatchOrder(loggingNewRelicOTLPs, state.LoggingNewRelicOTLP)
 	state.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(loggingNewRelics, state.LoggingNewRelic)
+	state.LoggingHeroku = loggingheroku.ComputeMatchOrder(loggingHerokus, state.LoggingHeroku)
 	state.LoggingDatadog = loggingdatadog.ComputeMatchOrder(loggingDatadogs, state.LoggingDatadog)
 	state.LoggingBigQuery = loggingbigquery.ComputeMatchOrder(loggingBigQueries, state.LoggingBigQuery)
 	state.LoggingGCS = logginggcs.ComputeMatchOrder(loggingGCSs, state.LoggingGCS)
@@ -813,6 +836,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!loggings3.ComputeEqual(plan.LoggingS3, state.LoggingS3) ||
 		!loggingnewrelicotlp.ComputeEqual(plan.LoggingNewRelicOTLP, state.LoggingNewRelicOTLP) ||
 		!loggingnewrelic.ComputeEqual(plan.LoggingNewRelic, state.LoggingNewRelic) ||
+		!loggingheroku.ComputeEqual(plan.LoggingHeroku, state.LoggingHeroku) ||
 		!loggingdatadog.ComputeEqual(plan.LoggingDatadog, state.LoggingDatadog) ||
 		!loggingbigquery.ComputeEqual(plan.LoggingBigQuery, state.LoggingBigQuery) ||
 		!logginggcs.ComputeEqual(plan.LoggingGCS, state.LoggingGCS) ||
@@ -1015,6 +1039,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 		plan.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(loggingNewRelics, plan.LoggingNewRelic)
 
+		if err := loggingheroku.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingHeroku); err != nil {
+			resp.Diagnostics.AddError("Error reconciling Heroku logging endpoints", err.Error())
+			return
+		}
+
+		loggingHerokus, err := loggingheroku.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading Heroku logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingHeroku = loggingheroku.ComputeMatchOrder(loggingHerokus, plan.LoggingHeroku)
+
 		if err := loggingdatadog.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingDatadog); err != nil {
 			resp.Diagnostics.AddError("Error reconciling Datadog logging endpoints", err.Error())
 			return
@@ -1176,6 +1212,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.LoggingS3 = loggings3.ComputeMatchOrder(state.LoggingS3, plan.LoggingS3)
 		plan.LoggingNewRelicOTLP = loggingnewrelicotlp.ComputeMatchOrder(state.LoggingNewRelicOTLP, plan.LoggingNewRelicOTLP)
 		plan.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(state.LoggingNewRelic, plan.LoggingNewRelic)
+		plan.LoggingHeroku = loggingheroku.ComputeMatchOrder(state.LoggingHeroku, plan.LoggingHeroku)
 		plan.LoggingDatadog = loggingdatadog.ComputeMatchOrder(state.LoggingDatadog, plan.LoggingDatadog)
 		plan.LoggingBigQuery = loggingbigquery.ComputeMatchOrder(state.LoggingBigQuery, plan.LoggingBigQuery)
 		plan.LoggingGCS = logginggcs.ComputeMatchOrder(state.LoggingGCS, plan.LoggingGCS)
