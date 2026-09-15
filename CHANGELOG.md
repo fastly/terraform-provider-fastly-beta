@@ -18,6 +18,7 @@
 - feat(elasticsearch_logging): add support for Elasticsearch Logging ([#105](https://github.com/fastly/terraform-provider-fastly-beta/pull/105))
 - feat(ftp_logging): add support for FTP Logging ([#107](https://github.com/fastly/terraform-provider-fastly-beta/pull/107))
 - feat(googlepubsub_logging): add support for Google Cloud Pub/Sub Logging ([#106](https://github.com/fastly/terraform-provider-fastly-beta/pull/106))
+- feat(service_product_ddos_protection): Add support for 'client_challenge' mode. ([#110](https://github.com/fastly/terraform-provider-fastly-beta/pull/110))
 
 ### BUG FIXES:
 
