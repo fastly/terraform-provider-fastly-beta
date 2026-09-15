@@ -20,6 +20,7 @@
 - feat(googlepubsub_logging): add support for Google Cloud Pub/Sub Logging ([#106](https://github.com/fastly/terraform-provider-fastly-beta/pull/106))
 - feat(service_product_ddos_protection): Add support for 'client_challenge' mode. ([#110](https://github.com/fastly/terraform-provider-fastly-beta/pull/110))
 - feat(heroku_logging): add support for Heroku Logging ([#108](https://github.com/fastly/terraform-provider-fastly-beta/pull/108))
+- feat(kafka_logging): add support for Kafka Logging ([#111](https://github.com/fastly/terraform-provider-fastly-beta/pull/111))
 
 ### BUG FIXES:
 

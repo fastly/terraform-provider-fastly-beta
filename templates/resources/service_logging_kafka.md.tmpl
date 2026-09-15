@@ -1,0 +1,164 @@
+---
+page_title: "fastly_service_logging_kafka Resource - fastly"
+subcategory: ""
+description: |-
+  Fastly service Kafka logging endpoint resource. Writes directly to the specified writable service version.
+---
+
+# fastly_service_logging_kafka (Resource)
+
+Fastly service Kafka logging endpoint resource. Writes directly to the specified writable service version.
+
+This resource is part of the explicit/default first-class resource family. It
+manages a Kafka real-time logging endpoint on the configured service
+version. It does not clone, activate, or stage service versions.
+
+To have the provider manage the version lifecycle for you instead, use the
+nested `logging_kafka` block on `fastly_service_cdn_auto` or
+`fastly_service_compute_auto` — see "Automatic-lifecycle usage" below.
+
+## Example Usage
+
+```terraform
+resource "fastly_service_logging_kafka" "example" {
+  service_id = fastly_service_cdn.example.id
+  version    = 1
+  name       = "kafka-example"
+
+  brokers = "kafka-1.example.com:9092,kafka-2.example.com:9092"
+  topic   = "logs"
+}
+```
+
+A fully configured endpoint using SASL authentication and TLS. `format`,
+`format_version`, `placement`, and `response_condition` only affect generated
+VCL, so they are valid when `service_id` refers to a CDN (VCL) service and
+rejected for a Compute service:
+
+```terraform
+resource "fastly_service_logging_kafka" "authenticated" {
+  service_id = fastly_service_cdn.example.id
+  version    = 1
+  name       = "kafka-authenticated"
+
+  brokers           = "kafka-1.example.com:9092,kafka-2.example.com:9092"
+  topic             = "logs"
+  auth_method       = "scram-sha-512"
+  compression_codec = "snappy"
+  use_tls           = true
+
+  authentication = {
+    user     = "kafka-user"
+    password = "a-strong-password"
+  }
+
+  tls = {
+    ca_cert  = file("ca-cert.pem")
+    hostname = "kafka-1.example.com"
+  }
+
+  format             = "%h %l %u %t \"%r\" %>s %b"
+  format_version     = 2
+  placement          = "none"
+  response_condition = fastly_service_condition.errors_only.name
+}
+```
+
+Attaching to a Compute service — the VCL-only attributes must be omitted:
+
+```terraform
+resource "fastly_service_logging_kafka" "compute" {
+  service_id = fastly_service_compute.example.id
+  version    = 1
+  name       = "kafka-compute"
+
+  brokers = "kafka-1.example.com:9092"
+  topic   = "logs"
+}
+```
+
+## Automatic-lifecycle usage
+
+Inside the `_auto` service resources, Kafka logging is a nested block and
+the provider clones, validates, and activates a new service version whenever
+the block changes. The nested block takes the same arguments as this resource,
+minus `service_id` and `version`, which the parent service owns.
+
+```terraform
+resource "fastly_service_cdn_auto" "example" {
+  name = "my-service"
+
+  domain {
+    name = "www.example.com"
+  }
+
+  logging_kafka {
+    name    = "kafka-example"
+    brokers = "kafka-1.example.com:9092,kafka-2.example.com:9092"
+    topic   = "logs"
+  }
+}
+```
+
+`fastly_service_compute_auto` supports the same block, without the VCL-only
+arguments (`format`, `format_version`, `placement`, `response_condition`):
+
+```terraform
+resource "fastly_service_compute_auto" "example" {
+  name = "my-compute-service"
+
+  domain {
+    name = "www.example.com"
+  }
+
+  package {
+    filename         = "package.tar.gz"
+    source_code_hash = filesha512("package.tar.gz")
+  }
+
+  logging_kafka {
+    name    = "kafka-compute"
+    brokers = "kafka-1.example.com:9092"
+    topic   = "logs"
+  }
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+For import-from-scratch with the Terraform CLI, include the service version in
+the import ID so the provider can read the endpoint and
+populate full state:
+
+```shell
+terraform import fastly_service_logging_kafka.example SERVICE_ID/VERSION/ENDPOINT_NAME
+```
+
+Example:
+
+```shell
+terraform import fastly_service_logging_kafka.example SU1Z0isxPaozGVKXdv0eY/3/kafka-example
+```
+
+## Version lifecycle
+
+This resource does not clone, activate, or stage service versions. Use explicit
+service-version lifecycle actions to clone, validate, stage, or activate a
+service version.
+
+## Notes
+
+- Leaving `placement` unset is not the same as setting it to `none`: unset lets
+  Fastly place the logging call automatically (`vcl_log` for `format_version` 2,
+  `vcl_deliver` for `format_version` 1), while `none` suppresses the generated
+  log statement entirely so you can write it yourself.
+- `auth_method` selects the SASL mechanism used with `authentication.user` and
+  `authentication.password`. Leave it unset to connect without SASL
+  authentication.
+- `authentication.user`/`authentication.password` and
+  `tls.ca_cert`/`tls.client_cert`/`tls.client_key` are grouped into nested
+  blocks to keep credential material out of top-level attributes. Unlike some
+  other logging endpoints, Kafka's credentials have no environment variable
+  fallback.
