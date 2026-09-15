@@ -32,8 +32,11 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `logging_datadog` (Block List) Datadog logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_datadog))
 - `logging_digitalocean` (Block List) DigitalOcean Spaces logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_digitalocean))
 - `logging_elasticsearch` (Block List) Elasticsearch logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_elasticsearch))
+- `logging_ftp` (Block List) FTP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_ftp))
 - `logging_gcs` (Block List) GCS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_gcs))
+- `logging_googlepubsub` (Block List) Google Cloud Pub/Sub logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_googlepubsub))
 - `logging_grafanacloudlogs` (Block List) Grafana Cloud Logs logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_grafanacloudlogs))
+- `logging_heroku` (Block List) Heroku logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_heroku))
 - `logging_honeycomb` (Block List) Honeycomb logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_honeycomb))
 - `logging_https` (Block List) HTTPS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_https))
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
@@ -331,6 +334,37 @@ Optional:
 
 
 
+<a id="nestedblock--logging_ftp"></a>
+### Nested Schema for `logging_ftp`
+
+Required:
+
+- `address` (String) A hostname or IPv4 address of the FTP server.
+- `authentication` (Attributes) Authentication credentials for the FTP server. (see [below for nested schema](#nestedatt--logging_ftp--authentication))
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+- `path` (String) The path to upload log files to. If the path ends in `/` then it is treated as a directory.
+
+Optional:
+
+- `compression_codec` (String) The codec used for compressing your logs. Valid values are `zstd`, `snappy`, and `gzip`. If the codec is `gzip`, `gzip_level` defaults to `3`; to use a different level, leave `compression_codec` unset and set `gzip_level` instead. Conflicts with `gzip_level`: setting both in the same request will result in an error.
+- `gzip_level` (Number) The level of gzip encoding when sending logs. Valid values are `0` (no compression) through `9`. To compress at a specific gzip level, leave `compression_codec` unset and set this. Conflicts with `compression_codec`: setting both in the same request will result in an error.
+- `message_type` (String) How the message should be formatted. Valid values are `classic`, `loggly`, `logplex`, and `blank`. Default `classic`.
+- `period` (Number) How frequently log files are finalized so they can be available for reading, in seconds. Default `3600`.
+- `port` (Number) The port number. Default `21`.
+- `processing_region` (String) The geographic region where the logs will be processed before streaming. Valid values are `none`, `us` and `eu`.
+- `public_key` (String) PGP public key that Fastly will use to encrypt your log files before writing them to disk.
+- `timestamp_format` (String) A strftime-specified timestamp format for log filenames.
+
+<a id="nestedatt--logging_ftp--authentication"></a>
+### Nested Schema for `logging_ftp.authentication`
+
+Required:
+
+- `password` (String, Sensitive) The password for the server. For anonymous use an email address.
+- `user` (String) The username for the server. Can be `anonymous`.
+
+
+
 <a id="nestedblock--logging_gcs"></a>
 ### Nested Schema for `logging_gcs`
 
@@ -362,6 +396,31 @@ Optional:
 
 
 
+<a id="nestedblock--logging_googlepubsub"></a>
+### Nested Schema for `logging_googlepubsub`
+
+Required:
+
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+- `project_id` (String) The ID of your Google Cloud Platform project.
+- `topic` (String) The Google Cloud Pub/Sub topic to which logs will be published.
+
+Optional:
+
+- `authentication` (Attributes) Google Cloud Platform authentication credentials for Pub/Sub access. Provide either `account_name`, or `email` and `secret_key`. When this block is omitted entirely, defaults to the `FASTLY_GOOGLE_SERVICE_ACCOUNT_NAME` (or `FASTLY_GCS_ACCOUNT_NAME`), `FASTLY_GOOGLE_PUBSUB_EMAIL`, and `FASTLY_GOOGLE_PUBSUB_SECRET_KEY` environment variables. (see [below for nested schema](#nestedatt--logging_googlepubsub--authentication))
+- `processing_region` (String) The geographic region where the logs will be processed before streaming to Google Cloud Pub/Sub. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+
+<a id="nestedatt--logging_googlepubsub--authentication"></a>
+### Nested Schema for `logging_googlepubsub.authentication`
+
+Optional:
+
+- `account_name` (String) The name of the Google Cloud Platform service account associated with the target log collection service. Not required if `email` and `secret_key` are provided. Can be set via the `FASTLY_GOOGLE_SERVICE_ACCOUNT_NAME` environment variable (shared with Fastly's GCS and BigQuery logging endpoints), falling back to `FASTLY_GCS_ACCOUNT_NAME`.
+- `email` (String, Sensitive) The `client_email` field in your service account authentication JSON. Not required if `account_name` is provided. Can be set via the `FASTLY_GOOGLE_PUBSUB_EMAIL` environment variable.
+- `secret_key` (String, Sensitive) The `private_key` field in your service account authentication JSON. Not required if `account_name` is provided. Can be set via the `FASTLY_GOOGLE_PUBSUB_SECRET_KEY` environment variable.
+
+
+
 <a id="nestedblock--logging_grafanacloudlogs"></a>
 ### Nested Schema for `logging_grafanacloudlogs`
 
@@ -383,6 +442,28 @@ Optional:
 Required:
 
 - `token` (String, Sensitive) The Grafana Access Policy token with `logs:write` access scoped to your Loki instance.
+
+
+
+<a id="nestedblock--logging_heroku"></a>
+### Nested Schema for `logging_heroku`
+
+Required:
+
+- `authentication` (Attributes) Heroku authentication credentials. (see [below for nested schema](#nestedatt--logging_heroku--authentication))
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+- `url` (String) The URL to stream logs to.
+
+Optional:
+
+- `processing_region` (String) The geographic region where the logs will be processed before streaming to Heroku. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+
+<a id="nestedatt--logging_heroku--authentication"></a>
+### Nested Schema for `logging_heroku.authentication`
+
+Required:
+
+- `token` (String, Sensitive) The token to use for authentication. See [Heroku's log integration documentation](https://devcenter.heroku.com/articles/add-on-partner-log-integration).
 
 
 

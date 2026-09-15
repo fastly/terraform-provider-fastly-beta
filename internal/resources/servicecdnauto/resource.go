@@ -25,8 +25,11 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdatadog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdigitalocean"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingelasticsearch"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingftp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggooglepubsub"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingheroku"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghoneycomb"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
@@ -104,13 +107,16 @@ type Model struct {
 	LoggingCloudfiles             []loggingcloudfiles.NestedModel             `tfsdk:"logging_cloudfiles"`
 	LoggingDigitalOcean           []loggingdigitalocean.NestedModel           `tfsdk:"logging_digitalocean"`
 	LoggingElasticsearch          []loggingelasticsearch.NestedModel          `tfsdk:"logging_elasticsearch"`
+	LoggingFTP                    []loggingftp.NestedModel                    `tfsdk:"logging_ftp"`
 	LoggingS3                     []loggings3.NestedModel                     `tfsdk:"logging_s3"`
 	LoggingNewRelicOTLP           []loggingnewrelicotlp.NestedModel           `tfsdk:"logging_newrelicotlp"`
 	LoggingNewRelic               []loggingnewrelic.NestedModel               `tfsdk:"logging_newrelic"`
+	LoggingHeroku                 []loggingheroku.NestedModel                 `tfsdk:"logging_heroku"`
 	LoggingDatadog                []loggingdatadog.NestedModel                `tfsdk:"logging_datadog"`
 	LoggingHoneycomb              []logginghoneycomb.NestedModel              `tfsdk:"logging_honeycomb"`
 	LoggingBigQuery               []loggingbigquery.NestedModel               `tfsdk:"logging_bigquery"`
 	LoggingGCS                    []logginggcs.NestedModel                    `tfsdk:"logging_gcs"`
+	LoggingGooglePubSub           []logginggooglepubsub.NestedModel           `tfsdk:"logging_googlepubsub"`
 	LoggingGrafanaCloudLogs       []logginggrafanacloudlogs.NestedModel       `tfsdk:"logging_grafanacloudlogs"`
 	LoggingSplunk                 []loggingsplunk.NestedModel                 `tfsdk:"logging_splunk"`
 	LoggingHTTPS                  []logginghttps.NestedModel                  `tfsdk:"logging_https"`
@@ -187,13 +193,16 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_cloudfiles":               loggingcloudfiles.NestedBlockSchema(),
 			"logging_digitalocean":             loggingdigitalocean.NestedBlockSchema(),
 			"logging_elasticsearch":            loggingelasticsearch.NestedBlockSchema(),
+			"logging_ftp":                      loggingftp.NestedBlockSchema(),
 			"logging_s3":                       loggings3.NestedBlockSchema(),
 			"logging_newrelicotlp":             loggingnewrelicotlp.NestedBlockSchema(),
 			"logging_newrelic":                 loggingnewrelic.NestedBlockSchema(),
+			"logging_heroku":                   loggingheroku.NestedBlockSchema(),
 			"logging_datadog":                  loggingdatadog.NestedBlockSchema(),
 			"logging_honeycomb":                logginghoneycomb.NestedBlockSchema(),
 			"logging_bigquery":                 loggingbigquery.NestedBlockSchema(),
 			"logging_gcs":                      logginggcs.NestedBlockSchema(),
+			"logging_googlepubsub":             logginggooglepubsub.NestedBlockSchema(),
 			"logging_grafanacloudlogs":         logginggrafanacloudlogs.NestedBlockSchema(),
 			"logging_splunk":                   loggingsplunk.NestedBlockSchema(),
 			"logging_https":                    logginghttps.NestedBlockSchema(),
@@ -410,10 +419,26 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		)
 	}
 
+	if err := loggingftp.ValidateConditionReferences(config.LoggingFTP, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_ftp"),
+			"Invalid FTP logging configuration",
+			err.Error(),
+		)
+	}
+
 	if err := logginggcs.ValidateConditionReferences(config.LoggingGCS, conditionNames); err != nil {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("logging_gcs"),
 			"Invalid GCS logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := logginggooglepubsub.ValidateConditionReferences(config.LoggingGooglePubSub, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_googlepubsub"),
+			"Invalid Pub/Sub logging configuration",
 			err.Error(),
 		)
 	}
@@ -446,6 +471,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		resp.Diagnostics.AddAttributeError(
 			path.Root("logging_newrelicotlp"),
 			"Invalid New Relic OTLP logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingheroku.ValidateConditionReferences(config.LoggingHeroku, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_heroku"),
+			"Invalid Heroku logging configuration",
 			err.Error(),
 		)
 	}

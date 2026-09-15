@@ -4496,6 +4496,241 @@ func ConfigComputeAutoWithLoggingCloudfiles(serviceName, domainName, loggerName 
 	)
 }
 
+func ConfigLoggingFTPBasic(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_basic.tf",
+	)
+}
+
+func ConfigLoggingFTPUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_updated.tf",
+	)
+}
+
+// ConfigLoggingFTPEmptyFormat sets format = "" - see
+// TestAccFastlyServiceLoggingFTP_emptyFormat.
+func ConfigLoggingFTPEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_empty_format.tf",
+	)
+}
+
+// ConfigLoggingFTPEmptyTimestampFormat sets timestamp_format = "" - see
+// TestAccFastlyServiceLoggingFTP_emptyTimestampFormat.
+func ConfigLoggingFTPEmptyTimestampFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_empty_timestamp_format.tf",
+	)
+}
+
+func ConfigLoggingFTPAtVersion(serviceName, domainName, loggerName string, version int) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  fmt.Sprintf("%d", version),
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_basic.tf",
+	)
+}
+
+func ConfigLoggingFTPForImport(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_basic.tf",
+	)
+}
+
+// ConfigLoggingFTPComputeFormat returns a config attaching
+// fastly_service_logging_ftp to an explicit Compute service with format set, a
+// VCL-only attribute. The standalone resource's schema is shared by both
+// service types, so this is expected to fail at apply time via
+// ValidateNoVCLOnlyAttributesForCompute rather than at Terraform's own
+// schema-validation stage.
+func ConfigLoggingFTPComputeFormat(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_ftp_compute_format.tf",
+	)
+}
+
+// ConfigLoggingFTPCompute returns a config attaching fastly_service_logging_ftp
+// to an explicit Compute service with no VCL-only attributes set.
+// ClearVCLOnlyCreateFields strips format from the create request, so the
+// endpoint ends up with whatever format the Fastly API defaults to - see
+// TestAccFastlyServiceLoggingFTP_formatDefault.
+func ConfigLoggingFTPCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_ftp_compute.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingFTP(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_nested.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingFTPPlacementNone(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_nested_placement_none.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingFTPUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_nested_updated.tf",
+	)
+}
+
+func ConfigCDNAutoWithMultipleLoggingFTP(serviceName, domainName, loggerName1, loggerName2 string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":       serviceName,
+			"DOMAIN_NAME":        domainName,
+			"LOGGING_FTP_NAME_1": loggerName1,
+			"LOGGING_FTP_NAME_2": loggerName2,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_nested_multi.tf",
+	)
+}
+
+func ConfigCDNAutoWithBackendAndLoggingFTP(serviceName, domainName, backendName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"BACKEND_NAME":     backendName,
+			"LOGGING_FTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/backend_single.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_nested.tf",
+	)
+}
+
+func ConfigComputeAutoWithLoggingFTP(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"LOGGING_FTP_NAME": loggerName,
+			"PACKAGE_PATH":     GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_nested.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigComputeAutoWithLoggingFTPFormat returns a Compute auto service config
+// whose nested logging_ftp block sets format, a VCL-only attribute.
+// service_compute_auto's logging_ftp schema (ComputeNestedBlockSchema) omits
+// format/format_version/placement/response_condition entirely, so this is
+// expected to fail Terraform's own schema validation ("Unsupported argument")
+// rather than reach the Fastly API.
+func ConfigComputeAutoWithLoggingFTPFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"LOGGING_FTP_NAME": loggerName,
+			"PACKAGE_PATH":     GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_ftp_nested_compute_format.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
 func ConfigLoggingDigitalOceanBasic(serviceName, domainName, loggerName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -5203,6 +5438,223 @@ func ConfigComputeAutoWithLoggingNewRelicFormat(serviceName, domainName, loggerN
 	)
 }
 
+func ConfigLoggingHerokuBasic(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     "1",
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_basic.tf",
+	)
+}
+
+// ConfigLoggingHerokuEmptyFormat sets format = "" - see TestAccFastlyServiceLoggingHeroku_emptyFormat.
+func ConfigLoggingHerokuEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     "1",
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_empty_format.tf",
+	)
+}
+
+func ConfigLoggingHerokuUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     "1",
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_updated.tf",
+	)
+}
+
+func ConfigLoggingHerokuAtVersion(serviceName, domainName, loggerName string, version int) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     fmt.Sprintf("%d", version),
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_basic.tf",
+	)
+}
+
+func ConfigLoggingHerokuForImport(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"DOMAIN_NAME":         domainName,
+			"SERVICE_VERSION":     "1",
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_basic.tf",
+	)
+}
+
+// ConfigLoggingHerokuComputeFormat returns a config attaching
+// fastly_service_logging_heroku to an explicit Compute service with format
+// set, a VCL-only attribute. The standalone resource's schema is shared by both
+// service types, so this is expected to fail at apply time via
+// ValidateNoVCLOnlyAttributesForCompute rather than at Terraform's own
+// schema-validation stage.
+func ConfigLoggingHerokuComputeFormat(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"SERVICE_VERSION":     "1",
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_heroku_compute_format.tf",
+	)
+}
+
+// ConfigLoggingHerokuCompute returns a config attaching
+// fastly_service_logging_heroku to an explicit Compute service with no
+// VCL-only attributes set. ClearVCLOnlyCreateFields strips format from the
+// create request, so the endpoint ends up with whatever format the Fastly API
+// defaults to - see TestAccFastlyServiceLoggingHeroku_formatDefault.
+func ConfigLoggingHerokuCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"SERVICE_COMMENT":     "",
+			"SERVICE_VERSION":     "1",
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_heroku_compute.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingHeroku(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_nested.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingHerokuPlacementNone(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_nested_placement_none.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingHerokuUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_nested_updated.tf",
+	)
+}
+
+func ConfigCDNAutoWithMultipleLoggingHeroku(serviceName, domainName, loggerName1, loggerName2 string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":          serviceName,
+			"DOMAIN_NAME":           domainName,
+			"LOGGING_HEROKU_NAME_1": loggerName1,
+			"LOGGING_HEROKU_NAME_2": loggerName2,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_nested_multi.tf",
+	)
+}
+
+func ConfigCDNAutoWithBackendAndLoggingHeroku(serviceName, domainName, backendName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"BACKEND_NAME":        backendName,
+			"LOGGING_HEROKU_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/backend_single.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_nested.tf",
+	)
+}
+
+func ConfigComputeAutoWithLoggingHeroku(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_HEROKU_NAME": loggerName,
+			"PACKAGE_PATH":        GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_nested.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigComputeAutoWithLoggingHerokuFormat returns a Compute auto service
+// config whose nested logging_heroku block sets format, a VCL-only
+// attribute. service_compute_auto's logging_heroku schema
+// (ComputeNestedBlockSchema) omits format/format_version/placement/
+// response_condition entirely, so this is expected to fail Terraform's own
+// schema validation ("Unsupported argument") rather than reach the Fastly API.
+func ConfigComputeAutoWithLoggingHerokuFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_HEROKU_NAME": loggerName,
+			"PACKAGE_PATH":        GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_heroku_nested_compute_format.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
 func ConfigLoggingBigQueryBasic(serviceName, domainName, loggerName string) string {
 	return BuildConfig(
 		ServiceCDN,
@@ -5636,6 +6088,134 @@ func ConfigLoggingGCSAccountName(serviceName, domainName, loggerName string) str
 		},
 		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
 		"internal/acceptance_tests/blocks/logging_gcs_account_name.tf",
+	)
+}
+
+func ConfigLoggingGooglePubSubBasic(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           "1",
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_googlepubsub_basic.tf",
+	)
+}
+
+func ConfigLoggingGooglePubSubUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           "1",
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_googlepubsub_updated.tf",
+	)
+}
+
+func ConfigLoggingGooglePubSubForImport(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           "1",
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_googlepubsub_basic.tf",
+	)
+}
+
+// ConfigLoggingGooglePubSubComputeFormat returns a config attaching
+// fastly_service_logging_googlepubsub to an explicit Compute service with
+// format set, a VCL-only attribute. The standalone resource's schema is
+// shared by both service types, so this is expected to fail at apply time via
+// ValidateNoVCLOnlyAttributesForCompute rather than at Terraform's own
+// schema-validation stage.
+func ConfigLoggingGooglePubSubComputeFormat(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"SERVICE_VERSION":           "1",
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_googlepubsub_compute_format.tf",
+	)
+}
+
+// ConfigLoggingGooglePubSubCompute returns a config attaching
+// fastly_service_logging_googlepubsub to an explicit Compute service with no
+// VCL-only attributes set. ClearVCLOnlyCreateFields strips format from the
+// create request, so the endpoint ends up with whatever format the Fastly API
+// defaults to.
+func ConfigLoggingGooglePubSubCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"SERVICE_VERSION":           "1",
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_googlepubsub_compute.tf",
+	)
+}
+
+func ConfigLoggingGooglePubSubNoAuth(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           "1",
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_googlepubsub_no_auth.tf",
+	)
+}
+
+// ConfigLoggingGooglePubSubAccountName returns a config authenticating with
+// authentication.account_name rather than email/secret_key. Paired with
+// ConfigLoggingGooglePubSubBasic to exercise clearing account_name on update.
+func ConfigLoggingGooglePubSubAccountName(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"SERVICE_COMMENT":           "",
+			"DOMAIN_NAME":               domainName,
+			"SERVICE_VERSION":           "1",
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_googlepubsub_account_name.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingGooglePubSub(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"DOMAIN_NAME":               domainName,
+			"LOGGING_GOOGLEPUBSUB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_googlepubsub_nested.tf",
 	)
 }
 

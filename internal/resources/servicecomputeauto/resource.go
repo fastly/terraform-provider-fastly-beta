@@ -17,8 +17,11 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdatadog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdigitalocean"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingelasticsearch"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingftp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggooglepubsub"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingheroku"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghoneycomb"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
@@ -75,13 +78,16 @@ type Model struct {
 	LoggingCloudfiles       []loggingcloudfiles.ComputeNestedModel       `tfsdk:"logging_cloudfiles"`
 	LoggingDigitalOcean     []loggingdigitalocean.ComputeNestedModel     `tfsdk:"logging_digitalocean"`
 	LoggingElasticsearch    []loggingelasticsearch.ComputeNestedModel    `tfsdk:"logging_elasticsearch"`
+	LoggingFTP              []loggingftp.ComputeNestedModel              `tfsdk:"logging_ftp"`
 	LoggingS3               []loggings3.ComputeNestedModel               `tfsdk:"logging_s3"`
 	LoggingNewRelicOTLP     []loggingnewrelicotlp.ComputeNestedModel     `tfsdk:"logging_newrelicotlp"`
 	LoggingNewRelic         []loggingnewrelic.ComputeNestedModel         `tfsdk:"logging_newrelic"`
+	LoggingHeroku           []loggingheroku.ComputeNestedModel           `tfsdk:"logging_heroku"`
 	LoggingDatadog          []loggingdatadog.ComputeNestedModel          `tfsdk:"logging_datadog"`
 	LoggingHoneycomb        []logginghoneycomb.ComputeNestedModel        `tfsdk:"logging_honeycomb"`
 	LoggingBigQuery         []loggingbigquery.ComputeNestedModel         `tfsdk:"logging_bigquery"`
 	LoggingGCS              []logginggcs.ComputeNestedModel              `tfsdk:"logging_gcs"`
+	LoggingGooglePubSub     []logginggooglepubsub.ComputeNestedModel     `tfsdk:"logging_googlepubsub"`
 	LoggingGrafanaCloudLogs []logginggrafanacloudlogs.ComputeNestedModel `tfsdk:"logging_grafanacloudlogs"`
 	LoggingSplunk           []loggingsplunk.ComputeNestedModel           `tfsdk:"logging_splunk"`
 	LoggingHTTPS            []logginghttps.ComputeNestedModel            `tfsdk:"logging_https"`
@@ -146,13 +152,16 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_cloudfiles":       loggingcloudfiles.ComputeNestedBlockSchema(),
 			"logging_digitalocean":     loggingdigitalocean.ComputeNestedBlockSchema(),
 			"logging_elasticsearch":    loggingelasticsearch.ComputeNestedBlockSchema(),
+			"logging_ftp":              loggingftp.ComputeNestedBlockSchema(),
 			"logging_s3":               loggings3.ComputeNestedBlockSchema(),
 			"logging_newrelicotlp":     loggingnewrelicotlp.ComputeNestedBlockSchema(),
 			"logging_newrelic":         loggingnewrelic.ComputeNestedBlockSchema(),
+			"logging_heroku":           loggingheroku.ComputeNestedBlockSchema(),
 			"logging_datadog":          loggingdatadog.ComputeNestedBlockSchema(),
 			"logging_honeycomb":        logginghoneycomb.ComputeNestedBlockSchema(),
 			"logging_bigquery":         loggingbigquery.ComputeNestedBlockSchema(),
 			"logging_gcs":              logginggcs.ComputeNestedBlockSchema(),
+			"logging_googlepubsub":     logginggooglepubsub.ComputeNestedBlockSchema(),
 			"logging_grafanacloudlogs": logginggrafanacloudlogs.ComputeNestedBlockSchema(),
 			"logging_splunk":           loggingsplunk.ComputeNestedBlockSchema(),
 			"logging_https":            logginghttps.ComputeNestedBlockSchema(),
@@ -361,6 +370,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	plan.LoggingElasticsearch = loggingelasticsearch.ComputeMatchOrder(loggingElasticsearches, plan.LoggingElasticsearch)
 
+	if err := loggingftp.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingFTP); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling FTP logging endpoints", err.Error())
+		return
+	}
+
+	loggingFTPs, err := loggingftp.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading FTP logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingFTP = loggingftp.ComputeMatchOrder(loggingFTPs, plan.LoggingFTP)
+
 	if err := loggings3.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingS3); err != nil {
 		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling S3 logging endpoints", err.Error())
@@ -402,6 +425,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 	plan.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(loggingNewRelics, plan.LoggingNewRelic)
+
+	if err := loggingheroku.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingHeroku); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling Heroku logging endpoints", err.Error())
+		return
+	}
+
+	loggingHerokus, err := loggingheroku.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading Heroku logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingHeroku = loggingheroku.ComputeMatchOrder(loggingHerokus, plan.LoggingHeroku)
 
 	if err := loggingdatadog.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingDatadog); err != nil {
 		recordOrphanSafeState()
@@ -458,6 +495,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 	plan.LoggingGCS = logginggcs.ComputeMatchOrder(loggingGCSs, plan.LoggingGCS)
+
+	if err := logginggooglepubsub.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingGooglePubSub); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling Pub/Sub logging endpoints", err.Error())
+		return
+	}
+
+	loggingGooglePubSubs, err := logginggooglepubsub.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading Pub/Sub logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingGooglePubSub = logginggooglepubsub.ComputeMatchOrder(loggingGooglePubSubs, plan.LoggingGooglePubSub)
 
 	if err := logginggrafanacloudlogs.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingGrafanaCloudLogs); err != nil {
 		recordOrphanSafeState()
@@ -653,6 +704,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading Elasticsearch logging endpoints", err.Error())
 		return
 	}
+	loggingFTPs, err := loggingftp.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading FTP logging endpoints", err.Error())
+		return
+	}
 	loggingS3s, err := loggings3.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading S3 logging endpoints", err.Error())
@@ -666,6 +722,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	loggingNewRelics, err := loggingnewrelic.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading New Relic logging endpoints", err.Error())
+		return
+	}
+	loggingHerokus, err := loggingheroku.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Heroku logging endpoints", err.Error())
 		return
 	}
 	loggingDatadogs, err := loggingdatadog.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
@@ -686,6 +747,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	loggingGCSs, err := logginggcs.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading GCS logging endpoints", err.Error())
+		return
+	}
+	loggingGooglePubSubs, err := logginggooglepubsub.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Pub/Sub logging endpoints", err.Error())
 		return
 	}
 	loggingGrafanaCloudLogss, err := logginggrafanacloudlogs.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
@@ -721,13 +787,16 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.LoggingCloudfiles = loggingcloudfiles.ComputeMatchOrder(loggingCloudfiless, state.LoggingCloudfiles)
 	state.LoggingDigitalOcean = loggingdigitalocean.ComputeMatchOrder(loggingDigitalOceans, state.LoggingDigitalOcean)
 	state.LoggingElasticsearch = loggingelasticsearch.ComputeMatchOrder(loggingElasticsearches, state.LoggingElasticsearch)
+	state.LoggingFTP = loggingftp.ComputeMatchOrder(loggingFTPs, state.LoggingFTP)
 	state.LoggingS3 = loggings3.ComputeMatchOrder(loggingS3s, state.LoggingS3)
 	state.LoggingNewRelicOTLP = loggingnewrelicotlp.ComputeMatchOrder(loggingNewRelicOTLPs, state.LoggingNewRelicOTLP)
 	state.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(loggingNewRelics, state.LoggingNewRelic)
+	state.LoggingHeroku = loggingheroku.ComputeMatchOrder(loggingHerokus, state.LoggingHeroku)
 	state.LoggingDatadog = loggingdatadog.ComputeMatchOrder(loggingDatadogs, state.LoggingDatadog)
 	state.LoggingHoneycomb = logginghoneycomb.ComputeMatchOrder(loggingHoneycombs, state.LoggingHoneycomb)
 	state.LoggingBigQuery = loggingbigquery.ComputeMatchOrder(loggingBigQueries, state.LoggingBigQuery)
 	state.LoggingGCS = logginggcs.ComputeMatchOrder(loggingGCSs, state.LoggingGCS)
+	state.LoggingGooglePubSub = logginggooglepubsub.ComputeMatchOrder(loggingGooglePubSubs, state.LoggingGooglePubSub)
 	state.LoggingGrafanaCloudLogs = logginggrafanacloudlogs.ComputeMatchOrder(loggingGrafanaCloudLogss, state.LoggingGrafanaCloudLogs)
 	state.LoggingSplunk = loggingsplunk.ComputeMatchOrder(loggingSplunks, state.LoggingSplunk)
 	state.LoggingHTTPS = logginghttps.ComputeMatchOrder(loggingHTTPS, state.LoggingHTTPS)
@@ -786,13 +855,16 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!loggingcloudfiles.ComputeEqual(plan.LoggingCloudfiles, state.LoggingCloudfiles) ||
 		!loggingdigitalocean.ComputeEqual(plan.LoggingDigitalOcean, state.LoggingDigitalOcean) ||
 		!loggingelasticsearch.ComputeEqual(plan.LoggingElasticsearch, state.LoggingElasticsearch) ||
+		!loggingftp.ComputeEqual(plan.LoggingFTP, state.LoggingFTP) ||
 		!loggings3.ComputeEqual(plan.LoggingS3, state.LoggingS3) ||
 		!loggingnewrelicotlp.ComputeEqual(plan.LoggingNewRelicOTLP, state.LoggingNewRelicOTLP) ||
 		!loggingnewrelic.ComputeEqual(plan.LoggingNewRelic, state.LoggingNewRelic) ||
+		!loggingheroku.ComputeEqual(plan.LoggingHeroku, state.LoggingHeroku) ||
 		!loggingdatadog.ComputeEqual(plan.LoggingDatadog, state.LoggingDatadog) ||
 		!logginghoneycomb.ComputeEqual(plan.LoggingHoneycomb, state.LoggingHoneycomb) ||
 		!loggingbigquery.ComputeEqual(plan.LoggingBigQuery, state.LoggingBigQuery) ||
 		!logginggcs.ComputeEqual(plan.LoggingGCS, state.LoggingGCS) ||
+		!logginggooglepubsub.ComputeEqual(plan.LoggingGooglePubSub, state.LoggingGooglePubSub) ||
 		!logginggrafanacloudlogs.ComputeEqual(plan.LoggingGrafanaCloudLogs, state.LoggingGrafanaCloudLogs) ||
 		!loggingsplunk.ComputeEqual(plan.LoggingSplunk, state.LoggingSplunk) ||
 		!logginghttps.ComputeEqual(plan.LoggingHTTPS, state.LoggingHTTPS) ||
@@ -943,6 +1015,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 		plan.LoggingElasticsearch = loggingelasticsearch.ComputeMatchOrder(loggingElasticsearches, plan.LoggingElasticsearch)
 
+		if err := loggingftp.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingFTP); err != nil {
+			resp.Diagnostics.AddError("Error reconciling FTP logging endpoints", err.Error())
+			return
+		}
+
+		loggingFTPs, err := loggingftp.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading FTP logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingFTP = loggingftp.ComputeMatchOrder(loggingFTPs, plan.LoggingFTP)
+
 		if err := loggings3.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingS3); err != nil {
 			resp.Diagnostics.AddError("Error reconciling S3 logging endpoints", err.Error())
 			return
@@ -978,6 +1062,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 			return
 		}
 		plan.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(loggingNewRelics, plan.LoggingNewRelic)
+
+		if err := loggingheroku.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingHeroku); err != nil {
+			resp.Diagnostics.AddError("Error reconciling Heroku logging endpoints", err.Error())
+			return
+		}
+
+		loggingHerokus, err := loggingheroku.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading Heroku logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingHeroku = loggingheroku.ComputeMatchOrder(loggingHerokus, plan.LoggingHeroku)
 
 		if err := loggingdatadog.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingDatadog); err != nil {
 			resp.Diagnostics.AddError("Error reconciling Datadog logging endpoints", err.Error())
@@ -1026,6 +1122,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 			return
 		}
 		plan.LoggingGCS = logginggcs.ComputeMatchOrder(loggingGCSs, plan.LoggingGCS)
+
+		if err := logginggooglepubsub.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingGooglePubSub); err != nil {
+			resp.Diagnostics.AddError("Error reconciling Pub/Sub logging endpoints", err.Error())
+			return
+		}
+
+		loggingGooglePubSubs, err := logginggooglepubsub.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading Pub/Sub logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingGooglePubSub = logginggooglepubsub.ComputeMatchOrder(loggingGooglePubSubs, plan.LoggingGooglePubSub)
 
 		if err := logginggrafanacloudlogs.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingGrafanaCloudLogs); err != nil {
 			resp.Diagnostics.AddError("Error reconciling GrafanaCloudLogs logging endpoints", err.Error())
@@ -1136,13 +1244,16 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.LoggingCloudfiles = loggingcloudfiles.ComputeMatchOrder(state.LoggingCloudfiles, plan.LoggingCloudfiles)
 		plan.LoggingDigitalOcean = loggingdigitalocean.ComputeMatchOrder(state.LoggingDigitalOcean, plan.LoggingDigitalOcean)
 		plan.LoggingElasticsearch = loggingelasticsearch.ComputeMatchOrder(state.LoggingElasticsearch, plan.LoggingElasticsearch)
+		plan.LoggingFTP = loggingftp.ComputeMatchOrder(state.LoggingFTP, plan.LoggingFTP)
 		plan.LoggingS3 = loggings3.ComputeMatchOrder(state.LoggingS3, plan.LoggingS3)
 		plan.LoggingNewRelicOTLP = loggingnewrelicotlp.ComputeMatchOrder(state.LoggingNewRelicOTLP, plan.LoggingNewRelicOTLP)
 		plan.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(state.LoggingNewRelic, plan.LoggingNewRelic)
+		plan.LoggingHeroku = loggingheroku.ComputeMatchOrder(state.LoggingHeroku, plan.LoggingHeroku)
 		plan.LoggingDatadog = loggingdatadog.ComputeMatchOrder(state.LoggingDatadog, plan.LoggingDatadog)
 		plan.LoggingHoneycomb = logginghoneycomb.ComputeMatchOrder(state.LoggingHoneycomb, plan.LoggingHoneycomb)
 		plan.LoggingBigQuery = loggingbigquery.ComputeMatchOrder(state.LoggingBigQuery, plan.LoggingBigQuery)
 		plan.LoggingGCS = logginggcs.ComputeMatchOrder(state.LoggingGCS, plan.LoggingGCS)
+		plan.LoggingGooglePubSub = logginggooglepubsub.ComputeMatchOrder(state.LoggingGooglePubSub, plan.LoggingGooglePubSub)
 		plan.LoggingGrafanaCloudLogs = logginggrafanacloudlogs.ComputeMatchOrder(state.LoggingGrafanaCloudLogs, plan.LoggingGrafanaCloudLogs)
 		plan.LoggingSplunk = loggingsplunk.ComputeMatchOrder(state.LoggingSplunk, plan.LoggingSplunk)
 		plan.LoggingHTTPS = logginghttps.ComputeMatchOrder(state.LoggingHTTPS, plan.LoggingHTTPS)

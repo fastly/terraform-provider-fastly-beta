@@ -57,9 +57,9 @@ func (r *DDoSProtectionResource) Schema(_ context.Context, _ resource.SchemaRequ
 			},
 			"mode": schema.StringAttribute{
 				Required:    true,
-				Description: "Operation mode. Can be `off`, `log`, or `block`.",
+				Description: "Operation mode. Can be `off`, `log`, `block`, or `client_challenge`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf("off", "log", "block"),
+					stringvalidator.OneOf("off", "log", "block", "client_challenge"),
 				},
 			},
 		},

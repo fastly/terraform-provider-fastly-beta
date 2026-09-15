@@ -16,7 +16,7 @@ Enables DDoS Protection on a service. Product Enablement operates on the service
 
 ### Required
 
-- `mode` (String) Operation mode. Can be `off`, `log`, or `block`.
+- `mode` (String) Operation mode. Can be `off`, `log`, `block`, or `client_challenge`.
 - `service_id` (String) The ID of the service to enable DDoS Protection on. Changing this value will delete and recreate this resource against the new service.
 
 ### Optional

@@ -21,8 +21,11 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdatadog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdigitalocean"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingelasticsearch"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingftp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggooglepubsub"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingheroku"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghoneycomb"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
@@ -303,6 +306,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 			},
 		},
 		{
+			label: "FTP logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return loggingftp.Reconcile(ctx, client, serviceID, version, plan.LoggingFTP)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingftp.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingFTP = loggingftp.MatchOrder(items, plan.LoggingFTP)
+				return nil
+			},
+		},
+		{
 			label: "S3 logging endpoints",
 			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				return loggings3.Reconcile(ctx, client, serviceID, version, plan.LoggingS3)
@@ -341,6 +358,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 					return err
 				}
 				plan.LoggingNewRelic = loggingnewrelic.MatchOrder(items, plan.LoggingNewRelic)
+				return nil
+			},
+		},
+		{
+			label: "Heroku logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return loggingheroku.Reconcile(ctx, client, serviceID, version, plan.LoggingHeroku)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingheroku.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingHeroku = loggingheroku.MatchOrder(items, plan.LoggingHeroku)
 				return nil
 			},
 		},
@@ -397,6 +428,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 					return err
 				}
 				plan.LoggingGCS = logginggcs.MatchOrder(items, plan.LoggingGCS)
+				return nil
+			},
+		},
+		{
+			label: "Pub/Sub logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return logginggooglepubsub.Reconcile(ctx, client, serviceID, version, plan.LoggingGooglePubSub)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := logginggooglepubsub.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingGooglePubSub = logginggooglepubsub.MatchOrder(items, plan.LoggingGooglePubSub)
 				return nil
 			},
 		},
@@ -732,6 +777,17 @@ func readSteps(state *Model, imported bool) []readStep {
 			},
 		},
 		{
+			label: "FTP logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingftp.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingFTP = loggingftp.MatchOrder(items, state.LoggingFTP)
+				return nil
+			},
+		},
+		{
 			label: "S3 logging endpoints",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				items, err := loggings3.ReadForVersion(ctx, client, serviceID, version)
@@ -761,6 +817,17 @@ func readSteps(state *Model, imported bool) []readStep {
 					return err
 				}
 				state.LoggingNewRelic = loggingnewrelic.MatchOrder(items, state.LoggingNewRelic)
+				return nil
+			},
+		},
+		{
+			label: "Heroku logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingheroku.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingHeroku = loggingheroku.MatchOrder(items, state.LoggingHeroku)
 				return nil
 			},
 		},
@@ -805,6 +872,17 @@ func readSteps(state *Model, imported bool) []readStep {
 					return err
 				}
 				state.LoggingGCS = logginggcs.MatchOrder(items, state.LoggingGCS)
+				return nil
+			},
+		},
+		{
+			label: "Pub/Sub logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := logginggooglepubsub.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingGooglePubSub = logginggooglepubsub.MatchOrder(items, state.LoggingGooglePubSub)
 				return nil
 			},
 		},
@@ -997,6 +1075,10 @@ func planSteps(plan, state *Model) []planStep {
 			},
 		},
 		{
+			equal:     func() bool { return loggingftp.Equal(plan.LoggingFTP, state.LoggingFTP) },
+			matchOnly: func() { plan.LoggingFTP = loggingftp.MatchOrder(state.LoggingFTP, plan.LoggingFTP) },
+		},
+		{
 			equal:     func() bool { return loggings3.Equal(plan.LoggingS3, state.LoggingS3) },
 			matchOnly: func() { plan.LoggingS3 = loggings3.MatchOrder(state.LoggingS3, plan.LoggingS3) },
 		},
@@ -1009,6 +1091,10 @@ func planSteps(plan, state *Model) []planStep {
 		{
 			equal:     func() bool { return loggingnewrelic.Equal(plan.LoggingNewRelic, state.LoggingNewRelic) },
 			matchOnly: func() { plan.LoggingNewRelic = loggingnewrelic.MatchOrder(state.LoggingNewRelic, plan.LoggingNewRelic) },
+		},
+		{
+			equal:     func() bool { return loggingheroku.Equal(plan.LoggingHeroku, state.LoggingHeroku) },
+			matchOnly: func() { plan.LoggingHeroku = loggingheroku.MatchOrder(state.LoggingHeroku, plan.LoggingHeroku) },
 		},
 		{
 			equal:     func() bool { return loggingdatadog.Equal(plan.LoggingDatadog, state.LoggingDatadog) },
@@ -1027,6 +1113,14 @@ func planSteps(plan, state *Model) []planStep {
 		{
 			equal:     func() bool { return logginggcs.Equal(plan.LoggingGCS, state.LoggingGCS) },
 			matchOnly: func() { plan.LoggingGCS = logginggcs.MatchOrder(state.LoggingGCS, plan.LoggingGCS) },
+		},
+		{
+			equal: func() bool {
+				return logginggooglepubsub.Equal(plan.LoggingGooglePubSub, state.LoggingGooglePubSub)
+			},
+			matchOnly: func() {
+				plan.LoggingGooglePubSub = logginggooglepubsub.MatchOrder(state.LoggingGooglePubSub, plan.LoggingGooglePubSub)
+			},
 		},
 		{
 			equal: func() bool {

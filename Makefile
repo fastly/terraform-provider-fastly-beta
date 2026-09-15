@@ -21,6 +21,7 @@ help:
 	@echo "  make fmt                    - Format Go code"
 	@echo "  make lint                   - Run golangci-lint"
 	@echo "  make clean                  - Remove build artifacts"
+	@echo "  make docs                   - Generate and validate provider documentation from templates"
 	@echo "  make test-unit              - Run unit tests"
 	@echo "  make test-acc               - Run acceptance tests without Go test caching (requires FASTLY_API_TOKEN)"
 	@echo "                                Add KEYWORD=<word> to only run tests whose name matches <word>"

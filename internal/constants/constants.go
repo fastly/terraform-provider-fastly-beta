@@ -334,6 +334,30 @@ const LoggingGCSDefaultFormat = `{
 }
 `
 
+// LoggingGooglePubSubDefaultFormat is the default log format for Google Cloud
+// Pub/Sub logging. Content-identical to LoggingGCSDefaultFormat (both
+// endpoints share the same legacy default), kept as its own constant per this
+// package's one-constant-per-endpoint convention.
+const LoggingGooglePubSubDefaultFormat = `{
+  "timestamp":"%{strftime(\{"%Y-%m-%dT%H:%M:%S%z"\}, time.start)}V",
+  "client_ip":"%{req.http.Fastly-Client-IP}V",
+  "geo_country":"%{client.geo.country_name}V",
+  "geo_city":"%{client.geo.city}V",
+  "host":"%{if(req.http.Fastly-Orig-Host, req.http.Fastly-Orig-Host, req.http.Host)}V",
+  "url":"%{json.escape(req.url)}V",
+  "request_method":"%{json.escape(req.method)}V",
+  "request_protocol":"%{json.escape(req.proto)}V",
+  "request_referer":"%{json.escape(req.http.referer)}V",
+  "request_user_agent":"%{json.escape(req.http.User-Agent)}V",
+  "response_state":"%{json.escape(fastly_info.state)}V",
+  "response_status":%{resp.status}V,
+  "response_reason":%{if(resp.response, "%22"+json.escape(resp.response)+"%22", "null")}V,
+  "response_body_size":%{resp.body_bytes_written}V,
+  "fastly_server":"%{json.escape(server.identity)}V",
+  "fastly_is_edge":%{if(fastly.ff.visits_this_service == 0, "true", "false")}V
+}
+`
+
 // LoggingSumologicDefaultFormat is the default log format for Sumo Logic
 // logging.
 const LoggingSumologicDefaultFormat = `{
@@ -358,6 +382,27 @@ const LoggingSumologicDefaultFormat = `{
 
 // LoggingSyslogDefaultFormat is the default log format for Syslog logging.
 const LoggingSyslogDefaultFormat = `{
+  "timestamp":"%{strftime(\{"%Y-%m-%dT%H:%M:%S%z"\}, time.start)}V",
+  "client_ip":"%{req.http.Fastly-Client-IP}V",
+  "geo_country":"%{client.geo.country_name}V",
+  "geo_city":"%{client.geo.city}V",
+  "host":"%{if(req.http.Fastly-Orig-Host, req.http.Fastly-Orig-Host, req.http.Host)}V",
+  "url":"%{json.escape(req.url)}V",
+  "request_method":"%{json.escape(req.method)}V",
+  "request_protocol":"%{json.escape(req.proto)}V",
+  "request_referer":"%{json.escape(req.http.referer)}V",
+  "request_user_agent":"%{json.escape(req.http.User-Agent)}V",
+  "response_state":"%{json.escape(fastly_info.state)}V",
+  "response_status":%{resp.status}V,
+  "response_reason":%{if(resp.response, "%22"+json.escape(resp.response)+"%22", "null")}V,
+  "response_body_size":%{resp.body_bytes_written}V,
+  "fastly_server":"%{json.escape(server.identity)}V",
+  "fastly_is_edge":%{if(fastly.ff.visits_this_service == 0, "true", "false")}V
+}
+`
+
+// LoggingFTPDefaultFormat is the default log format for FTP logging.
+const LoggingFTPDefaultFormat = `{
   "timestamp":"%{strftime(\{"%Y-%m-%dT%H:%M:%S%z"\}, time.start)}V",
   "client_ip":"%{req.http.Fastly-Client-IP}V",
   "geo_country":"%{client.geo.country_name}V",
@@ -458,6 +503,27 @@ const LoggingHoneycombDefaultFormat = `{
 // LoggingNewRelicDefaultFormat is the default log format for New Relic
 // logging.
 const LoggingNewRelicDefaultFormat = `{
+  "timestamp":"%{strftime(\{"%Y-%m-%dT%H:%M:%S%z"\}, time.start)}V",
+  "client_ip":"%{req.http.Fastly-Client-IP}V",
+  "geo_country":"%{client.geo.country_name}V",
+  "geo_city":"%{client.geo.city}V",
+  "host":"%{if(req.http.Fastly-Orig-Host, req.http.Fastly-Orig-Host, req.http.Host)}V",
+  "url":"%{json.escape(req.url)}V",
+  "request_method":"%{json.escape(req.method)}V",
+  "request_protocol":"%{json.escape(req.proto)}V",
+  "request_referer":"%{json.escape(req.http.referer)}V",
+  "request_user_agent":"%{json.escape(req.http.User-Agent)}V",
+  "response_state":"%{json.escape(fastly_info.state)}V",
+  "response_status":%{resp.status}V,
+  "response_reason":%{if(resp.response, "%22"+json.escape(resp.response)+"%22", "null")}V,
+  "response_body_size":%{resp.body_bytes_written}V,
+  "fastly_server":"%{json.escape(server.identity)}V",
+  "fastly_is_edge":%{if(fastly.ff.visits_this_service == 0, "true", "false")}V
+}
+`
+
+// LoggingHerokuDefaultFormat is the default log format for Heroku logging.
+const LoggingHerokuDefaultFormat = `{
   "timestamp":"%{strftime(\{"%Y-%m-%dT%H:%M:%S%z"\}, time.start)}V",
   "client_ip":"%{req.http.Fastly-Client-IP}V",
   "geo_country":"%{client.geo.country_name}V",
