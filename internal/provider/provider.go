@@ -99,6 +99,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggooglepubsub"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingheroku"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
@@ -247,6 +248,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		logginggcs.NewResource,
 		logginggooglepubsub.NewResource,
 		logginggrafanacloudlogs.NewResource,
+		loggingheroku.NewResource,
 		logginghttps.NewResource,
 		loggingnewrelic.NewResource,
 		loggingnewrelicotlp.NewResource,
@@ -391,6 +393,7 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		logginggcs.NewListResource,
 		logginggooglepubsub.NewListResource,
 		logginggrafanacloudlogs.NewListResource,
+		loggingheroku.NewListResource,
 		logginghttps.NewListResource,
 		loggingnewrelic.NewListResource,
 		loggingnewrelicotlp.NewListResource,

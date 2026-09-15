@@ -29,6 +29,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggooglepubsub"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingheroku"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
@@ -109,6 +110,7 @@ type Model struct {
 	LoggingS3                     []loggings3.NestedModel                     `tfsdk:"logging_s3"`
 	LoggingNewRelicOTLP           []loggingnewrelicotlp.NestedModel           `tfsdk:"logging_newrelicotlp"`
 	LoggingNewRelic               []loggingnewrelic.NestedModel               `tfsdk:"logging_newrelic"`
+	LoggingHeroku                 []loggingheroku.NestedModel                 `tfsdk:"logging_heroku"`
 	LoggingDatadog                []loggingdatadog.NestedModel                `tfsdk:"logging_datadog"`
 	LoggingBigQuery               []loggingbigquery.NestedModel               `tfsdk:"logging_bigquery"`
 	LoggingGCS                    []logginggcs.NestedModel                    `tfsdk:"logging_gcs"`
@@ -193,6 +195,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_s3":                       loggings3.NestedBlockSchema(),
 			"logging_newrelicotlp":             loggingnewrelicotlp.NestedBlockSchema(),
 			"logging_newrelic":                 loggingnewrelic.NestedBlockSchema(),
+			"logging_heroku":                   loggingheroku.NestedBlockSchema(),
 			"logging_datadog":                  loggingdatadog.NestedBlockSchema(),
 			"logging_bigquery":                 loggingbigquery.NestedBlockSchema(),
 			"logging_gcs":                      logginggcs.NestedBlockSchema(),
@@ -457,6 +460,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		resp.Diagnostics.AddAttributeError(
 			path.Root("logging_newrelicotlp"),
 			"Invalid New Relic OTLP logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingheroku.ValidateConditionReferences(config.LoggingHeroku, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_heroku"),
+			"Invalid Heroku logging configuration",
 			err.Error(),
 		)
 	}

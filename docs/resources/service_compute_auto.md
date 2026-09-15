@@ -36,6 +36,7 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `logging_gcs` (Block List) GCS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_gcs))
 - `logging_googlepubsub` (Block List) Google Cloud Pub/Sub logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_googlepubsub))
 - `logging_grafanacloudlogs` (Block List) Grafana Cloud Logs logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_grafanacloudlogs))
+- `logging_heroku` (Block List) Heroku logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_heroku))
 - `logging_https` (Block List) HTTPS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_https))
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
@@ -440,6 +441,28 @@ Optional:
 Required:
 
 - `token` (String, Sensitive) The Grafana Access Policy token with `logs:write` access scoped to your Loki instance.
+
+
+
+<a id="nestedblock--logging_heroku"></a>
+### Nested Schema for `logging_heroku`
+
+Required:
+
+- `authentication` (Attributes) Heroku authentication credentials. (see [below for nested schema](#nestedatt--logging_heroku--authentication))
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+- `url` (String) The URL to stream logs to.
+
+Optional:
+
+- `processing_region` (String) The geographic region where the logs will be processed before streaming to Heroku. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+
+<a id="nestedatt--logging_heroku--authentication"></a>
+### Nested Schema for `logging_heroku.authentication`
+
+Required:
+
+- `token` (String, Sensitive) The token to use for authentication. See [Heroku's log integration documentation](https://devcenter.heroku.com/articles/add-on-partner-log-integration).
 
 
 
