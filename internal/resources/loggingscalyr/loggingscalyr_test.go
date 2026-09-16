@@ -688,6 +688,8 @@ func TestSchemaValidators(t *testing.T) {
 		value string
 		valid bool
 	}{
+		{"project_id accepts non-empty", "project_id", "my-project", true},
+		{"project_id rejects empty", "project_id", "", false},
 		{"region US", "region", "US", true},
 		{"region EU", "region", "EU", true},
 		{"region rejects wrong case", "region", "us", false},
@@ -732,10 +734,9 @@ func TestSchemaValidators(t *testing.T) {
 		})
 	}
 
-	// name, token, project_id and response_condition accept any string; assert
-	// that rather than leaving it implicit.
+	// name, token, and response_condition accept any string; assert that
+	// rather than leaving it implicit.
 	assert.Empty(t, attrs["name"].(schema.StringAttribute).Validators)
-	assert.Empty(t, attrs["project_id"].(schema.StringAttribute).Validators)
 	assert.Empty(t, attrs["response_condition"].(schema.StringAttribute).Validators)
 	auth := attrs["authentication"].(schema.SingleNestedAttribute)
 	assert.Empty(t, auth.Attributes["token"].(schema.StringAttribute).Validators)

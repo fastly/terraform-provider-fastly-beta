@@ -160,9 +160,12 @@ func sharedAttributes() map[string]schema.Attribute {
 		},
 		// Optional
 		"project_id": schema.StringAttribute{
-			Optional:    true,
-			Computed:    true,
-			Default:     stringdefault.StaticString(DefaultProjectID),
+			Optional: true,
+			Computed: true,
+			Default:  stringdefault.StaticString(DefaultProjectID),
+			Validators: []validator.String{
+				validation.NotBlank("project_id"),
+			},
 			Description: "The name of the logfile within Scalyr. Default: `logplex`.",
 		},
 		"region": schema.StringAttribute{
