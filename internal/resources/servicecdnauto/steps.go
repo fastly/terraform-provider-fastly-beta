@@ -26,8 +26,10 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggooglepubsub"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggrafanacloudlogs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingheroku"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghoneycomb"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingkafka"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingloggly"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
@@ -390,6 +392,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 			},
 		},
 		{
+			label: "Honeycomb logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return logginghoneycomb.Reconcile(ctx, client, serviceID, version, plan.LoggingHoneycomb)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := logginghoneycomb.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingHoneycomb = logginghoneycomb.MatchOrder(items, plan.LoggingHoneycomb)
+				return nil
+			},
+		},
+		{
 			label: "BigQuery logging endpoints",
 			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				return loggingbigquery.Reconcile(ctx, client, serviceID, version, plan.LoggingBigQuery)
@@ -512,6 +528,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 					return err
 				}
 				plan.LoggingKafka = loggingkafka.MatchOrder(items, plan.LoggingKafka)
+				return nil
+			},
+		},
+		{
+			label: "Loggly logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return loggingloggly.Reconcile(ctx, client, serviceID, version, plan.LoggingLoggly)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingloggly.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingLoggly = loggingloggly.MatchOrder(items, plan.LoggingLoggly)
 				return nil
 			},
 		},
@@ -843,6 +873,17 @@ func readSteps(state *Model, imported bool) []readStep {
 			},
 		},
 		{
+			label: "Honeycomb logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := logginghoneycomb.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingHoneycomb = logginghoneycomb.MatchOrder(items, state.LoggingHoneycomb)
+				return nil
+			},
+		},
+		{
 			label: "BigQuery logging endpoints",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				items, err := loggingbigquery.ReadForVersion(ctx, client, serviceID, version)
@@ -938,6 +979,17 @@ func readSteps(state *Model, imported bool) []readStep {
 					return err
 				}
 				state.LoggingKafka = loggingkafka.MatchOrder(items, state.LoggingKafka)
+				return nil
+			},
+		},
+		{
+			label: "Loggly logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingloggly.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingLoggly = loggingloggly.MatchOrder(items, state.LoggingLoggly)
 				return nil
 			},
 		},
@@ -1101,6 +1153,12 @@ func planSteps(plan, state *Model) []planStep {
 			matchOnly: func() { plan.LoggingDatadog = loggingdatadog.MatchOrder(state.LoggingDatadog, plan.LoggingDatadog) },
 		},
 		{
+			equal: func() bool { return logginghoneycomb.Equal(plan.LoggingHoneycomb, state.LoggingHoneycomb) },
+			matchOnly: func() {
+				plan.LoggingHoneycomb = logginghoneycomb.MatchOrder(state.LoggingHoneycomb, plan.LoggingHoneycomb)
+			},
+		},
+		{
 			equal:     func() bool { return loggingbigquery.Equal(plan.LoggingBigQuery, state.LoggingBigQuery) },
 			matchOnly: func() { plan.LoggingBigQuery = loggingbigquery.MatchOrder(state.LoggingBigQuery, plan.LoggingBigQuery) },
 		},
@@ -1145,6 +1203,10 @@ func planSteps(plan, state *Model) []planStep {
 		{
 			equal:     func() bool { return loggingkafka.Equal(plan.LoggingKafka, state.LoggingKafka) },
 			matchOnly: func() { plan.LoggingKafka = loggingkafka.MatchOrder(state.LoggingKafka, plan.LoggingKafka) },
+		},
+		{
+			equal:     func() bool { return loggingloggly.Equal(plan.LoggingLoggly, state.LoggingLoggly) },
+			matchOnly: func() { plan.LoggingLoggly = loggingloggly.MatchOrder(state.LoggingLoggly, plan.LoggingLoggly) },
 		},
 		{
 			equal: func() bool {
