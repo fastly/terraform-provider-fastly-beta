@@ -40,6 +40,7 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `logging_honeycomb` (Block List) Honeycomb logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_honeycomb))
 - `logging_https` (Block List) HTTPS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_https))
 - `logging_kafka` (Block List) Kafka logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_kafka))
+- `logging_kinesis` (Block List) Kinesis logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_kinesis))
 - `logging_loggly` (Block List) Loggly logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_loggly))
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
@@ -566,6 +567,31 @@ Optional:
 - `client_cert` (String) The client certificate used to make authenticated requests. Must be in PEM format.
 - `client_key` (String, Sensitive) The client private key used to make authenticated requests. Must be in PEM format.
 - `hostname` (String) The hostname used to verify the server's certificate. This should be one of the Subject Alternative Name (SAN) fields for the certificate. Common Names (CN) are not supported.
+
+
+
+<a id="nestedblock--logging_kinesis"></a>
+### Nested Schema for `logging_kinesis`
+
+Required:
+
+- `name` (String) The unique name of the Kinesis logging endpoint. It is important to note that changing this attribute will delete and recreate the resource.
+- `topic` (String) The Amazon Kinesis stream to send logs to.
+
+Optional:
+
+- `authentication` (Attributes) AWS authentication credentials for the Kinesis stream. Provide either `access_key` and `secret_key`, or `iam_role`. (see [below for nested schema](#nestedatt--logging_kinesis--authentication))
+- `processing_region` (String) Region where logs will be processed before streaming to the destination. Valid values are `none`, `us` and `eu`.
+- `region` (String) The AWS region the stream resides in. Default `us-east-1`.
+
+<a id="nestedatt--logging_kinesis--authentication"></a>
+### Nested Schema for `logging_kinesis.authentication`
+
+Optional:
+
+- `access_key` (String, Sensitive) The AWS access key to be used to write to the stream. Not required if `iam_role` is provided.
+- `iam_role` (String) The Amazon Resource Name (ARN) for the IAM role granting Fastly access to Kinesis. Not required if `access_key` and `secret_key` are provided.
+- `secret_key` (String, Sensitive) The secret key associated with the target Amazon Kinesis stream. Not required if `iam_role` is provided.
 
 
 

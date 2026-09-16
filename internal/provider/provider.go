@@ -103,6 +103,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghoneycomb"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingkafka"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingkinesis"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingloggly"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
@@ -255,6 +256,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		logginghoneycomb.NewResource,
 		logginghttps.NewResource,
 		loggingkafka.NewResource,
+		loggingkinesis.NewResource,
 		loggingloggly.NewResource,
 		loggingnewrelic.NewResource,
 		loggingnewrelicotlp.NewResource,
@@ -403,6 +405,7 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		logginghoneycomb.NewListResource,
 		logginghttps.NewListResource,
 		loggingkafka.NewListResource,
+		loggingkinesis.NewListResource,
 		loggingloggly.NewListResource,
 		loggingnewrelic.NewListResource,
 		loggingnewrelicotlp.NewListResource,
