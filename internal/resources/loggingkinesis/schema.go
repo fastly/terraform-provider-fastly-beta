@@ -172,7 +172,7 @@ func sharedAttributes() map[string]schema.Attribute {
 		},
 		"topic": schema.StringAttribute{
 			Required:    true,
-			Description: "The Kinesis stream name.",
+			Description: "The Amazon Kinesis stream to send logs to.",
 		},
 		// Optional
 		"authentication": schema.SingleNestedAttribute{
@@ -202,7 +202,7 @@ func sharedAttributes() map[string]schema.Attribute {
 					Computed:    true,
 					Sensitive:   true,
 					Default:     stringdefault.StaticString(DefaultSecretKey),
-					Description: "The AWS secret access key to authenticate with. Not required if `iam_role` is provided.",
+					Description: "The secret key associated with the target Amazon Kinesis stream. Not required if `iam_role` is provided.",
 				},
 			},
 		},

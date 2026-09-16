@@ -576,7 +576,7 @@ Optional:
 Required:
 
 - `name` (String) The unique name of the Kinesis logging endpoint. It is important to note that changing this attribute will delete and recreate the resource.
-- `topic` (String) The Kinesis stream name.
+- `topic` (String) The Amazon Kinesis stream to send logs to.
 
 Optional:
 
@@ -591,7 +591,7 @@ Optional:
 
 - `access_key` (String, Sensitive) The AWS access key to be used to write to the stream. Not required if `iam_role` is provided.
 - `iam_role` (String) The Amazon Resource Name (ARN) for the IAM role granting Fastly access to Kinesis. Not required if `access_key` and `secret_key` are provided.
-- `secret_key` (String, Sensitive) The AWS secret access key to authenticate with. Not required if `iam_role` is provided.
+- `secret_key` (String, Sensitive) The secret key associated with the target Amazon Kinesis stream. Not required if `iam_role` is provided.
 
 
 
