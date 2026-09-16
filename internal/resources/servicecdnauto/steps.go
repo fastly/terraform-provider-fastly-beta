@@ -29,6 +29,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghoneycomb"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingkafka"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingloggly"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
@@ -531,6 +532,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 			},
 		},
 		{
+			label: "Loggly logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return loggingloggly.Reconcile(ctx, client, serviceID, version, plan.LoggingLoggly)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingloggly.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingLoggly = loggingloggly.MatchOrder(items, plan.LoggingLoggly)
+				return nil
+			},
+		},
+		{
 			label: "Image Optimizer default settings",
 			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				return imageoptimizerdefaultsettings.Reconcile(ctx, client, serviceID, version, previous.ImageOptimizerDefaultSettings, plan.ImageOptimizerDefaultSettings)
@@ -968,6 +983,17 @@ func readSteps(state *Model, imported bool) []readStep {
 			},
 		},
 		{
+			label: "Loggly logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingloggly.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingLoggly = loggingloggly.MatchOrder(items, state.LoggingLoggly)
+				return nil
+			},
+		},
+		{
 			label: "Image Optimizer default settings",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				result, err := imageoptimizerdefaultsettings.ReadForVersion(ctx, client, serviceID, version, state.ImageOptimizerDefaultSettings, imported)
@@ -1177,6 +1203,10 @@ func planSteps(plan, state *Model) []planStep {
 		{
 			equal:     func() bool { return loggingkafka.Equal(plan.LoggingKafka, state.LoggingKafka) },
 			matchOnly: func() { plan.LoggingKafka = loggingkafka.MatchOrder(state.LoggingKafka, plan.LoggingKafka) },
+		},
+		{
+			equal:     func() bool { return loggingloggly.Equal(plan.LoggingLoggly, state.LoggingLoggly) },
+			matchOnly: func() { plan.LoggingLoggly = loggingloggly.MatchOrder(state.LoggingLoggly, plan.LoggingLoggly) },
 		},
 		{
 			equal: func() bool {

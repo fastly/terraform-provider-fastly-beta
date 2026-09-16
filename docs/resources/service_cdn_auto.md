@@ -48,6 +48,7 @@ Automatic-lifecycle Fastly CDN service resource with nested versioned configurat
 - `logging_honeycomb` (Block List) Honeycomb logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_honeycomb))
 - `logging_https` (Block List) HTTPS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_https))
 - `logging_kafka` (Block List) Kafka logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_kafka))
+- `logging_loggly` (Block List) Loggly logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_loggly))
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
 - `logging_s3` (Block List) S3 logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_s3))
@@ -763,6 +764,31 @@ Optional:
 - `client_cert` (String) The client certificate used to make authenticated requests. Must be in PEM format.
 - `client_key` (String, Sensitive) The client private key used to make authenticated requests. Must be in PEM format.
 - `hostname` (String) The hostname used to verify the server's certificate. This should be one of the Subject Alternative Name (SAN) fields for the certificate. Common Names (CN) are not supported.
+
+
+
+<a id="nestedblock--logging_loggly"></a>
+### Nested Schema for `logging_loggly`
+
+Required:
+
+- `authentication` (Attributes) Loggly authentication credentials. (see [below for nested schema](#nestedatt--logging_loggly--authentication))
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+
+Optional:
+
+- `format` (String) A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/).
+- `format_version` (Number) The version of the custom logging format used for the configured endpoint. The logging call gets placed by default in `vcl_log` if `format_version` is set to `2` and in `vcl_deliver` if `format_version` is set to `1`.
+- `placement` (String) Where in the generated VCL the logging call should be placed. If not set, endpoints with `format_version` of `2` are placed in `vcl_log` and those with `format_version` of `1` are placed in `vcl_deliver`. Valid value is `none`.
+- `processing_region` (String) The geographic region where the logs will be processed before streaming to Loggly. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+- `response_condition` (String) The name of an existing condition in the configured endpoint, or leave blank to always execute.
+
+<a id="nestedatt--logging_loggly--authentication"></a>
+### Nested Schema for `logging_loggly.authentication`
+
+Required:
+
+- `token` (String, Sensitive) The token to use for authentication. See [Loggly's customer token authentication documentation](https://www.loggly.com/docs/customer-token-authentication-token/).
 
 
 

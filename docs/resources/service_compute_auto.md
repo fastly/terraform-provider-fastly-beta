@@ -40,6 +40,7 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `logging_honeycomb` (Block List) Honeycomb logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_honeycomb))
 - `logging_https` (Block List) HTTPS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_https))
 - `logging_kafka` (Block List) Kafka logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_kafka))
+- `logging_loggly` (Block List) Loggly logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_loggly))
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
 - `logging_s3` (Block List) S3 logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_s3))
@@ -565,6 +566,27 @@ Optional:
 - `client_cert` (String) The client certificate used to make authenticated requests. Must be in PEM format.
 - `client_key` (String, Sensitive) The client private key used to make authenticated requests. Must be in PEM format.
 - `hostname` (String) The hostname used to verify the server's certificate. This should be one of the Subject Alternative Name (SAN) fields for the certificate. Common Names (CN) are not supported.
+
+
+
+<a id="nestedblock--logging_loggly"></a>
+### Nested Schema for `logging_loggly`
+
+Required:
+
+- `authentication` (Attributes) Loggly authentication credentials. (see [below for nested schema](#nestedatt--logging_loggly--authentication))
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+
+Optional:
+
+- `processing_region` (String) The geographic region where the logs will be processed before streaming to Loggly. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+
+<a id="nestedatt--logging_loggly--authentication"></a>
+### Nested Schema for `logging_loggly.authentication`
+
+Required:
+
+- `token` (String, Sensitive) The token to use for authentication. See [Loggly's customer token authentication documentation](https://www.loggly.com/docs/customer-token-authentication-token/).
 
 
 
