@@ -7878,6 +7878,240 @@ func ConfigComputeAutoWithLoggingKafkaFormat(serviceName, domainName, loggerName
 	)
 }
 
+func ConfigLoggingKinesisBasic(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"SERVICE_COMMENT":      "",
+			"DOMAIN_NAME":          domainName,
+			"SERVICE_VERSION":      "1",
+			"LOGGING_KINESIS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_kinesis_basic.tf",
+	)
+}
+
+// ConfigLoggingKinesisEmptyFormat sets format = "" - see TestAccFastlyServiceLoggingKinesis_emptyFormat.
+func ConfigLoggingKinesisEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"SERVICE_COMMENT":      "",
+			"DOMAIN_NAME":          domainName,
+			"SERVICE_VERSION":      "1",
+			"LOGGING_KINESIS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_kinesis_empty_format.tf",
+	)
+}
+
+func ConfigLoggingKinesisUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"SERVICE_COMMENT":      "",
+			"DOMAIN_NAME":          domainName,
+			"SERVICE_VERSION":      "1",
+			"LOGGING_KINESIS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_kinesis_updated.tf",
+	)
+}
+
+func ConfigLoggingKinesisAtVersion(serviceName, domainName, loggerName string, version int) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"SERVICE_COMMENT":      "",
+			"DOMAIN_NAME":          domainName,
+			"SERVICE_VERSION":      fmt.Sprintf("%d", version),
+			"LOGGING_KINESIS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_kinesis_basic.tf",
+	)
+}
+
+func ConfigLoggingKinesisForImport(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"SERVICE_COMMENT":      "",
+			"DOMAIN_NAME":          domainName,
+			"SERVICE_VERSION":      "1",
+			"LOGGING_KINESIS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_kinesis_basic.tf",
+	)
+}
+
+// ConfigLoggingKinesisMissingAuth returns a config with no authentication
+// block at all - see TestAccFastlyServiceLoggingKinesis_missingAuthentication.
+func ConfigLoggingKinesisMissingAuth(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"SERVICE_COMMENT":      "",
+			"DOMAIN_NAME":          domainName,
+			"SERVICE_VERSION":      "1",
+			"LOGGING_KINESIS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_kinesis_missing_auth.tf",
+	)
+}
+
+// ConfigLoggingKinesisComputeFormat returns a config attaching
+// fastly_service_logging_kinesis to an explicit Compute service with format
+// set, a VCL-only attribute. The standalone resource's schema is shared by both
+// service types, so this is expected to fail at apply time via
+// ValidateNoVCLOnlyAttributesForCompute rather than at Terraform's own
+// schema-validation stage.
+func ConfigLoggingKinesisComputeFormat(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"SERVICE_COMMENT":      "",
+			"SERVICE_VERSION":      "1",
+			"LOGGING_KINESIS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_kinesis_compute_format.tf",
+	)
+}
+
+// ConfigLoggingKinesisCompute returns a config attaching
+// fastly_service_logging_kinesis to an explicit Compute service with no
+// VCL-only attributes set. ClearVCLOnlyCreateFields strips format from the
+// create request, so the endpoint ends up with whatever format the Fastly API
+// defaults to - see TestAccFastlyServiceLoggingKinesis_formatDefault.
+func ConfigLoggingKinesisCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"SERVICE_COMMENT":      "",
+			"SERVICE_VERSION":      "1",
+			"LOGGING_KINESIS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_kinesis_compute.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingKinesis(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"DOMAIN_NAME":          domainName,
+			"LOGGING_KINESIS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_kinesis_nested.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingKinesisPlacementNone(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"DOMAIN_NAME":          domainName,
+			"LOGGING_KINESIS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_kinesis_nested_placement_none.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingKinesisUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"DOMAIN_NAME":          domainName,
+			"LOGGING_KINESIS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_kinesis_nested_updated.tf",
+	)
+}
+
+func ConfigCDNAutoWithMultipleLoggingKinesis(serviceName, domainName, loggerName1, loggerName2 string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"DOMAIN_NAME":            domainName,
+			"LOGGING_KINESIS_NAME_1": loggerName1,
+			"LOGGING_KINESIS_NAME_2": loggerName2,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_kinesis_nested_multi.tf",
+	)
+}
+
+func ConfigCDNAutoWithBackendAndLoggingKinesis(serviceName, domainName, backendName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"DOMAIN_NAME":          domainName,
+			"BACKEND_NAME":         backendName,
+			"LOGGING_KINESIS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/backend_single.tf",
+		"internal/acceptance_tests/blocks/logging_kinesis_nested.tf",
+	)
+}
+
+func ConfigComputeAutoWithLoggingKinesis(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"DOMAIN_NAME":          domainName,
+			"LOGGING_KINESIS_NAME": loggerName,
+			"PACKAGE_PATH":         GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_kinesis_nested.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigComputeAutoWithLoggingKinesisFormat returns a Compute auto service
+// config whose nested logging_kinesis block sets format, a VCL-only
+// attribute. service_compute_auto's logging_kinesis schema
+// (ComputeNestedBlockSchema) omits format/format_version/placement/response_condition
+// entirely, so this is expected to fail Terraform's own schema validation
+// ("Unsupported argument") rather than reach the Fastly API.
+func ConfigComputeAutoWithLoggingKinesisFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"DOMAIN_NAME":          domainName,
+			"LOGGING_KINESIS_NAME": loggerName,
+			"PACKAGE_PATH":         GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_kinesis_nested_compute_format.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
 // productEnablementBlock renders a single "internal/acceptance_tests/blocks/service_product_<product>.tf"
 // template, merging SERVICE_ID_REF (the Terraform expression for the owning
 // service's id, e.g. "fastly_service_cdn_auto.test.id") with any

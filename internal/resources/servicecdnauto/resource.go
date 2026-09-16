@@ -33,6 +33,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghoneycomb"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingkafka"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingkinesis"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingloggly"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginglogshuttle"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
@@ -126,6 +127,7 @@ type Model struct {
 	LoggingSumologic              []loggingsumologic.NestedModel              `tfsdk:"logging_sumologic"`
 	LoggingSyslog                 []loggingsyslog.NestedModel                 `tfsdk:"logging_syslog"`
 	LoggingKafka                  []loggingkafka.NestedModel                  `tfsdk:"logging_kafka"`
+	LoggingKinesis                []loggingkinesis.NestedModel                `tfsdk:"logging_kinesis"`
 	LoggingLoggly                 []loggingloggly.NestedModel                 `tfsdk:"logging_loggly"`
 	LoggingLogshuttle             []logginglogshuttle.NestedModel             `tfsdk:"logging_logshuttle"`
 	ImageOptimizerDefaultSettings []imageoptimizerdefaultsettings.NestedModel `tfsdk:"image_optimizer_default_settings"`
@@ -215,6 +217,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_sumologic":                loggingsumologic.NestedBlockSchema(),
 			"logging_syslog":                   loggingsyslog.NestedBlockSchema(),
 			"logging_kafka":                    loggingkafka.NestedBlockSchema(),
+			"logging_kinesis":                  loggingkinesis.NestedBlockSchema(),
 			"logging_loggly":                   loggingloggly.NestedBlockSchema(),
 			"logging_logshuttle":               logginglogshuttle.NestedBlockSchema(),
 			"image_optimizer_default_settings": imageoptimizerdefaultsettings.NestedBlockSchema(),
@@ -528,6 +531,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		resp.Diagnostics.AddAttributeError(
 			path.Root("logging_kafka"),
 			"Invalid Kafka logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingkinesis.ValidateConditionReferences(config.LoggingKinesis, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_kinesis"),
+			"Invalid Kinesis logging configuration",
 			err.Error(),
 		)
 	}

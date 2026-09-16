@@ -25,6 +25,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghoneycomb"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingkafka"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingkinesis"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingloggly"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginglogshuttle"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
@@ -97,6 +98,7 @@ type Model struct {
 	LoggingSumologic        []loggingsumologic.ComputeNestedModel        `tfsdk:"logging_sumologic"`
 	LoggingSyslog           []loggingsyslog.ComputeNestedModel           `tfsdk:"logging_syslog"`
 	LoggingKafka            []loggingkafka.ComputeNestedModel            `tfsdk:"logging_kafka"`
+	LoggingKinesis          []loggingkinesis.ComputeNestedModel          `tfsdk:"logging_kinesis"`
 	LoggingLoggly           []loggingloggly.ComputeNestedModel           `tfsdk:"logging_loggly"`
 	LoggingLogshuttle       []logginglogshuttle.ComputeNestedModel       `tfsdk:"logging_logshuttle"`
 }
@@ -174,6 +176,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_sumologic":        loggingsumologic.ComputeNestedBlockSchema(),
 			"logging_syslog":           loggingsyslog.ComputeNestedBlockSchema(),
 			"logging_kafka":            loggingkafka.ComputeNestedBlockSchema(),
+			"logging_kinesis":          loggingkinesis.ComputeNestedBlockSchema(),
 			"logging_loggly":           loggingloggly.ComputeNestedBlockSchema(),
 			"logging_logshuttle":       logginglogshuttle.ComputeNestedBlockSchema(),
 		},
@@ -603,6 +606,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	plan.LoggingKafka = loggingkafka.ComputeMatchOrder(loggingKafkas, plan.LoggingKafka)
 
+	if err := loggingkinesis.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingKinesis); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling Kinesis logging endpoints", err.Error())
+		return
+	}
+
+	loggingKineses, err := loggingkinesis.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading Kinesis logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingKinesis = loggingkinesis.ComputeMatchOrder(loggingKineses, plan.LoggingKinesis)
+
 	if err := loggingloggly.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingLoggly); err != nil {
 		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling Loggly logging endpoints", err.Error())
@@ -835,6 +852,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading Kafka logging endpoints", err.Error())
 		return
 	}
+	loggingKineses, err := loggingkinesis.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Kinesis logging endpoints", err.Error())
+		return
+	}
 	loggingLogglys, err := loggingloggly.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading Loggly logging endpoints", err.Error())
@@ -869,6 +891,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.LoggingSumologic = loggingsumologic.ComputeMatchOrder(loggingSumologics, state.LoggingSumologic)
 	state.LoggingSyslog = loggingsyslog.ComputeMatchOrder(loggingSyslogs, state.LoggingSyslog)
 	state.LoggingKafka = loggingkafka.ComputeMatchOrder(loggingKafkas, state.LoggingKafka)
+	state.LoggingKinesis = loggingkinesis.ComputeMatchOrder(loggingKineses, state.LoggingKinesis)
 	state.LoggingLoggly = loggingloggly.ComputeMatchOrder(loggingLogglys, state.LoggingLoggly)
 	state.LoggingLogshuttle = logginglogshuttle.ComputeMatchOrder(loggingLogshuttles, state.LoggingLogshuttle)
 
@@ -940,6 +963,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!loggingsumologic.ComputeEqual(plan.LoggingSumologic, state.LoggingSumologic) ||
 		!loggingsyslog.ComputeEqual(plan.LoggingSyslog, state.LoggingSyslog) ||
 		!loggingkafka.ComputeEqual(plan.LoggingKafka, state.LoggingKafka) ||
+		!loggingkinesis.ComputeEqual(plan.LoggingKinesis, state.LoggingKinesis) ||
 		!loggingloggly.ComputeEqual(plan.LoggingLoggly, state.LoggingLoggly) ||
 		!logginglogshuttle.ComputeEqual(plan.LoggingLogshuttle, state.LoggingLogshuttle) ||
 		false
@@ -1279,6 +1303,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 		plan.LoggingKafka = loggingkafka.ComputeMatchOrder(loggingKafkas, plan.LoggingKafka)
 
+		if err := loggingkinesis.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingKinesis); err != nil {
+			resp.Diagnostics.AddError("Error reconciling Kinesis logging endpoints", err.Error())
+			return
+		}
+
+		loggingKineses, err := loggingkinesis.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading Kinesis logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingKinesis = loggingkinesis.ComputeMatchOrder(loggingKineses, plan.LoggingKinesis)
+
 		if err := loggingloggly.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingLoggly); err != nil {
 			resp.Diagnostics.AddError("Error reconciling Loggly logging endpoints", err.Error())
 			return
@@ -1368,6 +1404,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.LoggingSumologic = loggingsumologic.ComputeMatchOrder(state.LoggingSumologic, plan.LoggingSumologic)
 		plan.LoggingSyslog = loggingsyslog.ComputeMatchOrder(state.LoggingSyslog, plan.LoggingSyslog)
 		plan.LoggingKafka = loggingkafka.ComputeMatchOrder(state.LoggingKafka, plan.LoggingKafka)
+		plan.LoggingKinesis = loggingkinesis.ComputeMatchOrder(state.LoggingKinesis, plan.LoggingKinesis)
 		plan.LoggingLoggly = loggingloggly.ComputeMatchOrder(state.LoggingLoggly, plan.LoggingLoggly)
 		plan.LoggingLogshuttle = logginglogshuttle.ComputeMatchOrder(state.LoggingLogshuttle, plan.LoggingLogshuttle)
 	}
