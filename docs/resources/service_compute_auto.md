@@ -46,6 +46,7 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
 - `logging_s3` (Block List) S3 logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_s3))
+- `logging_scalyr` (Block List) Scalyr logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_scalyr))
 - `logging_splunk` (Block List) Splunk logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_splunk))
 - `logging_sumologic` (Block List) Sumo Logic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_sumologic))
 - `logging_syslog` (Block List) Syslog logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_syslog))
@@ -718,6 +719,29 @@ Optional:
 - `access_key` (String, Sensitive) The access key for your S3 account. Not required if `iam_role` is provided. Can be set via the `FASTLY_S3_ACCESS_KEY` environment variable.
 - `iam_role` (String) The Amazon Resource Name (ARN) for the IAM role granting Fastly access to S3. Not required if `access_key` and `secret_key` are provided. Can be set via the `FASTLY_S3_IAM_ROLE` environment variable.
 - `secret_key` (String, Sensitive) The secret key for your S3 account. Not required if `iam_role` is provided. Can be set via the `FASTLY_S3_SECRET_KEY` environment variable.
+
+
+
+<a id="nestedblock--logging_scalyr"></a>
+### Nested Schema for `logging_scalyr`
+
+Required:
+
+- `authentication` (Attributes) Scalyr authentication credentials. (see [below for nested schema](#nestedatt--logging_scalyr--authentication))
+- `name` (String) The unique name of the Scalyr logging endpoint. It is important to note that changing this attribute will delete and recreate the resource.
+
+Optional:
+
+- `processing_region` (String) The geographic region where the logs will be processed before streaming to Scalyr. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+- `project_id` (String) The name of the logfile within Scalyr. Default: `logplex`.
+- `region` (String) The region that log data will be sent to. Valid values are `US` and `EU`. Default: `US`.
+
+<a id="nestedatt--logging_scalyr--authentication"></a>
+### Nested Schema for `logging_scalyr.authentication`
+
+Required:
+
+- `token` (String, Sensitive) The token to use for authentication. See [Scalyr's API key documentation](https://www.scalyr.com/keys).
 
 
 

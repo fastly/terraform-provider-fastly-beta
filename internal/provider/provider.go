@@ -109,6 +109,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingscalyr"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsplunk"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsyslog"
@@ -263,6 +264,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		loggingnewrelic.NewResource,
 		loggingnewrelicotlp.NewResource,
 		loggings3.NewResource,
+		loggingscalyr.NewResource,
 		loggingsplunk.NewResource,
 		loggingsumologic.NewResource,
 		loggingsyslog.NewResource,
@@ -414,6 +416,7 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		loggingnewrelicotlp.NewListResource,
 		vcl.NewListResource,
 		loggings3.NewListResource,
+		loggingscalyr.NewListResource,
 		loggingsplunk.NewListResource,
 		loggingsumologic.NewListResource,
 		loggingsyslog.NewListResource,

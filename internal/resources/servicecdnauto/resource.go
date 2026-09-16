@@ -39,6 +39,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingscalyr"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsplunk"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsyslog"
@@ -113,6 +114,7 @@ type Model struct {
 	LoggingElasticsearch          []loggingelasticsearch.NestedModel          `tfsdk:"logging_elasticsearch"`
 	LoggingFTP                    []loggingftp.NestedModel                    `tfsdk:"logging_ftp"`
 	LoggingS3                     []loggings3.NestedModel                     `tfsdk:"logging_s3"`
+	LoggingScalyr                 []loggingscalyr.NestedModel                 `tfsdk:"logging_scalyr"`
 	LoggingNewRelicOTLP           []loggingnewrelicotlp.NestedModel           `tfsdk:"logging_newrelicotlp"`
 	LoggingNewRelic               []loggingnewrelic.NestedModel               `tfsdk:"logging_newrelic"`
 	LoggingHeroku                 []loggingheroku.NestedModel                 `tfsdk:"logging_heroku"`
@@ -203,6 +205,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_elasticsearch":            loggingelasticsearch.NestedBlockSchema(),
 			"logging_ftp":                      loggingftp.NestedBlockSchema(),
 			"logging_s3":                       loggings3.NestedBlockSchema(),
+			"logging_scalyr":                   loggingscalyr.NestedBlockSchema(),
 			"logging_newrelicotlp":             loggingnewrelicotlp.NestedBlockSchema(),
 			"logging_newrelic":                 loggingnewrelic.NestedBlockSchema(),
 			"logging_heroku":                   loggingheroku.NestedBlockSchema(),
@@ -499,6 +502,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		resp.Diagnostics.AddAttributeError(
 			path.Root("logging_s3"),
 			"Invalid S3 logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingscalyr.ValidateConditionReferences(config.LoggingScalyr, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_scalyr"),
+			"Invalid Scalyr logging configuration",
 			err.Error(),
 		)
 	}

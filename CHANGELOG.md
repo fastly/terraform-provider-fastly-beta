@@ -25,6 +25,7 @@
 - feat(logshuttle_logging): add support for Log Shuttle Logging ([#117](https://github.com/fastly/terraform-provider-fastly-beta/pull/117))
 - feat(loggly_logging): add support for Loggly Logging ([#113](https://github.com/fastly/terraform-provider-fastly-beta/pull/113))
 - feat(kinesis_logging): add support for Kinesis Logging ([#116](https://github.com/fastly/terraform-provider-fastly-beta/pull/116))
+- feat(scalyr_logging): add support for Scalyr Logging ([#119](https://github.com/fastly/terraform-provider-fastly-beta/pull/119))
 
 ### BUG FIXES:
 
