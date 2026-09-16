@@ -5872,6 +5872,223 @@ func ConfigComputeAutoWithLoggingLogglyFormat(serviceName, domainName, loggerNam
 	)
 }
 
+func ConfigLoggingLogshuttleBasic(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"SERVICE_COMMENT":         "",
+			"DOMAIN_NAME":             domainName,
+			"SERVICE_VERSION":         "1",
+			"LOGGING_LOGSHUTTLE_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_logshuttle_basic.tf",
+	)
+}
+
+// ConfigLoggingLogshuttleEmptyFormat sets format = "" - see TestAccFastlyServiceLoggingLogshuttle_emptyFormat.
+func ConfigLoggingLogshuttleEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"SERVICE_COMMENT":         "",
+			"DOMAIN_NAME":             domainName,
+			"SERVICE_VERSION":         "1",
+			"LOGGING_LOGSHUTTLE_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_logshuttle_empty_format.tf",
+	)
+}
+
+func ConfigLoggingLogshuttleUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"SERVICE_COMMENT":         "",
+			"DOMAIN_NAME":             domainName,
+			"SERVICE_VERSION":         "1",
+			"LOGGING_LOGSHUTTLE_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_logshuttle_updated.tf",
+	)
+}
+
+func ConfigLoggingLogshuttleAtVersion(serviceName, domainName, loggerName string, version int) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"SERVICE_COMMENT":         "",
+			"DOMAIN_NAME":             domainName,
+			"SERVICE_VERSION":         fmt.Sprintf("%d", version),
+			"LOGGING_LOGSHUTTLE_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_logshuttle_basic.tf",
+	)
+}
+
+func ConfigLoggingLogshuttleForImport(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"SERVICE_COMMENT":         "",
+			"DOMAIN_NAME":             domainName,
+			"SERVICE_VERSION":         "1",
+			"LOGGING_LOGSHUTTLE_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_logshuttle_basic.tf",
+	)
+}
+
+// ConfigLoggingLogshuttleComputeFormat returns a config attaching
+// fastly_service_logging_logshuttle to an explicit Compute service with format
+// set, a VCL-only attribute. The standalone resource's schema is shared by both
+// service types, so this is expected to fail at apply time via
+// ValidateNoVCLOnlyAttributesForCompute rather than at Terraform's own
+// schema-validation stage.
+func ConfigLoggingLogshuttleComputeFormat(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"SERVICE_COMMENT":         "",
+			"SERVICE_VERSION":         "1",
+			"LOGGING_LOGSHUTTLE_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_logshuttle_compute_format.tf",
+	)
+}
+
+// ConfigLoggingLogshuttleCompute returns a config attaching
+// fastly_service_logging_logshuttle to an explicit Compute service with no
+// VCL-only attributes set. ClearVCLOnlyCreateFields strips format from the
+// create request, so the endpoint ends up with whatever format the Fastly API
+// defaults to - see TestAccFastlyServiceLoggingLogshuttle_formatDefault.
+func ConfigLoggingLogshuttleCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"SERVICE_COMMENT":         "",
+			"SERVICE_VERSION":         "1",
+			"LOGGING_LOGSHUTTLE_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_logshuttle_compute.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingLogshuttle(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"DOMAIN_NAME":             domainName,
+			"LOGGING_LOGSHUTTLE_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_logshuttle_nested.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingLogshuttlePlacementNone(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"DOMAIN_NAME":             domainName,
+			"LOGGING_LOGSHUTTLE_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_logshuttle_nested_placement_none.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingLogshuttleUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"DOMAIN_NAME":             domainName,
+			"LOGGING_LOGSHUTTLE_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_logshuttle_nested_updated.tf",
+	)
+}
+
+func ConfigCDNAutoWithMultipleLoggingLogshuttle(serviceName, domainName, loggerName1, loggerName2 string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":              serviceName,
+			"DOMAIN_NAME":               domainName,
+			"LOGGING_LOGSHUTTLE_NAME_1": loggerName1,
+			"LOGGING_LOGSHUTTLE_NAME_2": loggerName2,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_logshuttle_nested_multi.tf",
+	)
+}
+
+func ConfigCDNAutoWithBackendAndLoggingLogshuttle(serviceName, domainName, backendName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"DOMAIN_NAME":             domainName,
+			"BACKEND_NAME":            backendName,
+			"LOGGING_LOGSHUTTLE_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/backend_single.tf",
+		"internal/acceptance_tests/blocks/logging_logshuttle_nested.tf",
+	)
+}
+
+func ConfigComputeAutoWithLoggingLogshuttle(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"DOMAIN_NAME":             domainName,
+			"LOGGING_LOGSHUTTLE_NAME": loggerName,
+			"PACKAGE_PATH":            GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_logshuttle_nested.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigComputeAutoWithLoggingLogshuttleFormat returns a Compute auto service
+// config whose nested logging_logshuttle block sets format, a VCL-only
+// attribute. service_compute_auto's logging_logshuttle schema
+// (ComputeNestedBlockSchema) omits format/format_version/placement/
+// response_condition entirely, so this is expected to fail Terraform's own
+// schema validation ("Unsupported argument") rather than reach the Fastly API.
+func ConfigComputeAutoWithLoggingLogshuttleFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":            serviceName,
+			"DOMAIN_NAME":             domainName,
+			"LOGGING_LOGSHUTTLE_NAME": loggerName,
+			"PACKAGE_PATH":            GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_logshuttle_nested_compute_format.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
 func ConfigLoggingBigQueryBasic(serviceName, domainName, loggerName string) string {
 	return BuildConfig(
 		ServiceCDN,

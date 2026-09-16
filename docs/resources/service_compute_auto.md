@@ -41,6 +41,7 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `logging_https` (Block List) HTTPS logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_https))
 - `logging_kafka` (Block List) Kafka logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_kafka))
 - `logging_loggly` (Block List) Loggly logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_loggly))
+- `logging_logshuttle` (Block List) Log Shuttle logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_logshuttle))
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
 - `logging_s3` (Block List) S3 logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_s3))
@@ -587,6 +588,28 @@ Optional:
 Required:
 
 - `token` (String, Sensitive) The token to use for authentication. See [Loggly's customer token authentication documentation](https://www.loggly.com/docs/customer-token-authentication-token/).
+
+
+
+<a id="nestedblock--logging_logshuttle"></a>
+### Nested Schema for `logging_logshuttle`
+
+Required:
+
+- `authentication` (Attributes) Log Shuttle authentication credentials. (see [below for nested schema](#nestedatt--logging_logshuttle--authentication))
+- `name` (String) The unique name of the Log Shuttle logging endpoint. It is important to note that changing this attribute will delete and recreate the resource.
+- `url` (String) Your Log Shuttle endpoint URL.
+
+Optional:
+
+- `processing_region` (String) The geographic region where the logs will be processed before streaming to Log Shuttle. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+
+<a id="nestedatt--logging_logshuttle--authentication"></a>
+### Nested Schema for `logging_logshuttle.authentication`
+
+Required:
+
+- `token` (String, Sensitive) The data authentication token associated with this endpoint.
 
 
 

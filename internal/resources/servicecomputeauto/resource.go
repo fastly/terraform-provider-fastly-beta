@@ -26,6 +26,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingkafka"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingloggly"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginglogshuttle"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
@@ -97,6 +98,7 @@ type Model struct {
 	LoggingSyslog           []loggingsyslog.ComputeNestedModel           `tfsdk:"logging_syslog"`
 	LoggingKafka            []loggingkafka.ComputeNestedModel            `tfsdk:"logging_kafka"`
 	LoggingLoggly           []loggingloggly.ComputeNestedModel           `tfsdk:"logging_loggly"`
+	LoggingLogshuttle       []logginglogshuttle.ComputeNestedModel       `tfsdk:"logging_logshuttle"`
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -173,6 +175,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_syslog":           loggingsyslog.ComputeNestedBlockSchema(),
 			"logging_kafka":            loggingkafka.ComputeNestedBlockSchema(),
 			"logging_loggly":           loggingloggly.ComputeNestedBlockSchema(),
+			"logging_logshuttle":       logginglogshuttle.ComputeNestedBlockSchema(),
 		},
 	}
 }
@@ -614,6 +617,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	plan.LoggingLoggly = loggingloggly.ComputeMatchOrder(loggingLogglys, plan.LoggingLoggly)
 
+	if err := logginglogshuttle.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingLogshuttle); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling Log Shuttle logging endpoints", err.Error())
+		return
+	}
+
+	loggingLogshuttles, err := logginglogshuttle.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading Log Shuttle logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingLogshuttle = logginglogshuttle.ComputeMatchOrder(loggingLogshuttles, plan.LoggingLogshuttle)
+
 	if err := computepackage.Update(ctx, r.providerData.AutoClient(), serviceID, version, plan.Package); err != nil {
 		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error updating Compute package", err.Error())
@@ -823,6 +840,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading Loggly logging endpoints", err.Error())
 		return
 	}
+	loggingLogshuttles, err := logginglogshuttle.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Log Shuttle logging endpoints", err.Error())
+		return
+	}
 	state.Domain = domain.MatchOrder(domains, state.Domain)
 	state.HealthCheck = healthcheck.MatchOrder(healthChecks, state.HealthCheck)
 	state.Backend = backend.MatchOrder(backends, state.Backend)
@@ -848,6 +870,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.LoggingSyslog = loggingsyslog.ComputeMatchOrder(loggingSyslogs, state.LoggingSyslog)
 	state.LoggingKafka = loggingkafka.ComputeMatchOrder(loggingKafkas, state.LoggingKafka)
 	state.LoggingLoggly = loggingloggly.ComputeMatchOrder(loggingLogglys, state.LoggingLoggly)
+	state.LoggingLogshuttle = logginglogshuttle.ComputeMatchOrder(loggingLogshuttles, state.LoggingLogshuttle)
 
 	resourceLinks, err := resourcelink.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
@@ -918,6 +941,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!loggingsyslog.ComputeEqual(plan.LoggingSyslog, state.LoggingSyslog) ||
 		!loggingkafka.ComputeEqual(plan.LoggingKafka, state.LoggingKafka) ||
 		!loggingloggly.ComputeEqual(plan.LoggingLoggly, state.LoggingLoggly) ||
+		!logginglogshuttle.ComputeEqual(plan.LoggingLogshuttle, state.LoggingLogshuttle) ||
 		false
 	needsVersionChange := nestedChanged
 
@@ -1267,6 +1291,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 		plan.LoggingLoggly = loggingloggly.ComputeMatchOrder(loggingLogglys, plan.LoggingLoggly)
 
+		if err := logginglogshuttle.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingLogshuttle); err != nil {
+			resp.Diagnostics.AddError("Error reconciling Log Shuttle logging endpoints", err.Error())
+			return
+		}
+
+		loggingLogshuttles, err := logginglogshuttle.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading Log Shuttle logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingLogshuttle = logginglogshuttle.ComputeMatchOrder(loggingLogshuttles, plan.LoggingLogshuttle)
+
 		if len(state.Package) > 0 && len(plan.Package) == 0 {
 			resp.Diagnostics.AddError(
 				"Removing Compute packages is not supported",
@@ -1333,6 +1369,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.LoggingSyslog = loggingsyslog.ComputeMatchOrder(state.LoggingSyslog, plan.LoggingSyslog)
 		plan.LoggingKafka = loggingkafka.ComputeMatchOrder(state.LoggingKafka, plan.LoggingKafka)
 		plan.LoggingLoggly = loggingloggly.ComputeMatchOrder(state.LoggingLoggly, plan.LoggingLoggly)
+		plan.LoggingLogshuttle = logginglogshuttle.ComputeMatchOrder(state.LoggingLogshuttle, plan.LoggingLogshuttle)
 	}
 
 	plan.ID = state.ID
