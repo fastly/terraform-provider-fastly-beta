@@ -4003,6 +4003,181 @@ func ConfigLoggingDatadogCompute(serviceName, loggerName string) string {
 	)
 }
 
+func ConfigLoggingHoneycombBasic(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"DOMAIN_NAME":            domainName,
+			"SERVICE_VERSION":        "1",
+			"LOGGING_HONEYCOMB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_honeycomb_basic.tf",
+	)
+}
+
+// ConfigLoggingHoneycombEmptyFormat sets format = "" - see TestAccFastlyServiceLoggingHoneycomb_emptyFormat.
+func ConfigLoggingHoneycombEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"DOMAIN_NAME":            domainName,
+			"SERVICE_VERSION":        "1",
+			"LOGGING_HONEYCOMB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_honeycomb_empty_format.tf",
+	)
+}
+
+func ConfigLoggingHoneycombUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"DOMAIN_NAME":            domainName,
+			"SERVICE_VERSION":        "1",
+			"LOGGING_HONEYCOMB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_honeycomb_updated.tf",
+	)
+}
+
+func ConfigLoggingHoneycombAtVersion(serviceName, domainName, loggerName string, version int) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"DOMAIN_NAME":            domainName,
+			"SERVICE_VERSION":        fmt.Sprintf("%d", version),
+			"LOGGING_HONEYCOMB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_honeycomb_basic.tf",
+	)
+}
+
+func ConfigLoggingHoneycombForImport(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"DOMAIN_NAME":            domainName,
+			"SERVICE_VERSION":        "1",
+			"LOGGING_HONEYCOMB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_honeycomb_basic.tf",
+	)
+}
+
+// ConfigLoggingHoneycombComputeFormat returns a config attaching
+// fastly_service_logging_honeycomb to an explicit Compute service with format
+// set, a VCL-only attribute. The standalone resource's schema is shared by both
+// service types, so this is expected to fail at apply time via
+// ValidateNoVCLOnlyAttributesForCompute rather than at Terraform's own
+// schema-validation stage.
+func ConfigLoggingHoneycombComputeFormat(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"SERVICE_VERSION":        "1",
+			"LOGGING_HONEYCOMB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_honeycomb_compute_format.tf",
+	)
+}
+
+// ConfigLoggingHoneycombCompute returns a config attaching
+// fastly_service_logging_honeycomb to an explicit Compute service with no
+// VCL-only attributes set. ClearVCLOnlyCreateFields strips format from the
+// create request, so the endpoint ends up with whatever format the Fastly API
+// defaults to - see TestAccFastlyServiceLoggingHoneycomb_formatDefault.
+func ConfigLoggingHoneycombCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"SERVICE_VERSION":        "1",
+			"LOGGING_HONEYCOMB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_honeycomb_compute.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingHoneycomb(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"DOMAIN_NAME":            domainName,
+			"LOGGING_HONEYCOMB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_honeycomb_nested.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingHoneycombUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"DOMAIN_NAME":            domainName,
+			"LOGGING_HONEYCOMB_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_honeycomb_nested_updated.tf",
+	)
+}
+
+func ConfigComputeAutoWithLoggingHoneycomb(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"DOMAIN_NAME":            domainName,
+			"LOGGING_HONEYCOMB_NAME": loggerName,
+			"PACKAGE_PATH":           GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_honeycomb_nested.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigComputeAutoWithLoggingHoneycombFormat returns a Compute auto service
+// config whose nested logging_honeycomb block sets format, a VCL-only
+// attribute. service_compute_auto's logging_honeycomb schema
+// (ComputeNestedBlockSchema) omits format/format_version/placement/
+// response_condition entirely, so this is expected to fail Terraform's own
+// schema validation ("Unsupported argument") rather than reach the Fastly API.
+func ConfigComputeAutoWithLoggingHoneycombFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"DOMAIN_NAME":            domainName,
+			"LOGGING_HONEYCOMB_NAME": loggerName,
+			"PACKAGE_PATH":           GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_honeycomb_nested_compute_format.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
 func ConfigCDNAutoWithLoggingDatadog(serviceName, domainName, loggerName string) string {
 	return BuildConfig(
 		ServiceCDNAuto,

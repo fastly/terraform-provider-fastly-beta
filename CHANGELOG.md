@@ -22,6 +22,7 @@
 - feat(heroku_logging): add support for Heroku Logging ([#108](https://github.com/fastly/terraform-provider-fastly-beta/pull/108))
 - feat(kafka_logging): add support for Kafka Logging ([#111](https://github.com/fastly/terraform-provider-fastly-beta/pull/111))
 - feat(loggly_logging): add support for Loggly Logging ([#113](https://github.com/fastly/terraform-provider-fastly-beta/pull/113))
+- feat(honeycomb_logging): add support for Honeycomb Logging ([#112](https://github.com/fastly/terraform-provider-fastly-beta/pull/112))
 
 ### BUG FIXES:
 
