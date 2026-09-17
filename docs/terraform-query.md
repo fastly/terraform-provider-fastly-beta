@@ -60,10 +60,6 @@ Automatic compatibility resources use nested configuration:
 
 ```hcl
 resource "fastly_service_cdn_auto" "example" {
-  domain {
-    name = "www.example.com"
-  }
-
   backend {
     name    = "origin"
     address = "origin.example.com"
