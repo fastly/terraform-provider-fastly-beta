@@ -604,7 +604,7 @@ func TestComputeAttributesOmitsVCLOnly(t *testing.T) {
 // TestSchemaValidators pins the accepted values for the remaining validators, so
 // a change to an enum member or a bound is a test failure rather than a surprise
 // at plan time: processing_region none/us/eu, format_version 1-2, placement
-// "none" only, format capped at 12288.
+// "none" only, format capped at 12288, port at least 1.
 func TestSchemaValidators(t *testing.T) {
 	attrs := CommonAttributes()
 
@@ -653,12 +653,26 @@ func TestSchemaValidators(t *testing.T) {
 		})
 	}
 
-	// name, address, port, and response_condition accept any value; assert that
+	// name, address, and response_condition accept any value; assert that
 	// rather than leaving it implicit.
 	assert.Empty(t, attrs["name"].(schema.StringAttribute).Validators)
 	assert.Empty(t, attrs["address"].(schema.StringAttribute).Validators)
-	assert.Empty(t, attrs["port"].(schema.Int64Attribute).Validators)
 	assert.Empty(t, attrs["response_condition"].(schema.StringAttribute).Validators)
+
+	portCases := []struct {
+		value int64
+		valid bool
+	}{{-1, false}, {0, false}, {1, true}, {65536, true}}
+	for _, tt := range portCases {
+		t.Run(fmt.Sprintf("port %d", tt.value), func(t *testing.T) {
+			a := attrs["port"].(schema.Int64Attribute)
+			require.Len(t, a.Validators, 1)
+			resp := &validator.Int64Response{}
+			a.Validators[0].ValidateInt64(context.Background(),
+				validator.Int64Request{ConfigValue: types.Int64Value(tt.value)}, resp)
+			assert.Equal(t, tt.valid, !resp.Diagnostics.HasError())
+		})
+	}
 }
 
 func TestValidateConditionReferences(t *testing.T) {

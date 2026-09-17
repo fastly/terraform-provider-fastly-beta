@@ -120,6 +120,9 @@ func sharedAttributes() map[string]schema.Attribute {
 		"port": schema.Int64Attribute{
 			Required:    true,
 			Description: "The port associated with the address where the Papertrail endpoint can be accessed.",
+			Validators: []validator.Int64{
+				int64validator.AtLeast(1),
+			},
 		},
 		// Optional
 		"processing_region": schema.StringAttribute{
