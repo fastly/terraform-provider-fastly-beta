@@ -54,6 +54,7 @@ Automatic-lifecycle Fastly CDN service resource with nested versioned configurat
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
 - `logging_openstack` (Block List) OpenStack logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_openstack))
+- `logging_papertrail` (Block List) Papertrail logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_papertrail))
 - `logging_s3` (Block List) S3 logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_s3))
 - `logging_scalyr` (Block List) Scalyr logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_scalyr))
 - `logging_splunk` (Block List) Splunk logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_splunk))
@@ -937,6 +938,24 @@ Required:
 - `access_key` (String, Sensitive) Your OpenStack account access key.
 - `user` (String) The username for your OpenStack account.
 
+
+
+<a id="nestedblock--logging_papertrail"></a>
+### Nested Schema for `logging_papertrail`
+
+Required:
+
+- `address` (String) A hostname or IPv4 address of the Papertrail endpoint.
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+- `port` (Number) The port associated with the address where the Papertrail endpoint can be accessed.
+
+Optional:
+
+- `format` (String) A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/).
+- `format_version` (Number) The version of the custom logging format used for the configured endpoint. The logging call gets placed by default in `vcl_log` if format_version is set to `2` and in `vcl_deliver` if `format_version` is set to `1`.
+- `placement` (String) Where in the generated VCL the logging call should be placed. If not set, endpoints with `format_version` of `2` are placed in `vcl_log` and those with `format_version` of `1` are placed in `vcl_deliver`. Valid value is `none`.
+- `processing_region` (String) The geographic region where the logs will be processed before streaming. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+- `response_condition` (String) The name of an existing condition in the configured endpoint, or leave blank to always execute.
 
 
 <a id="nestedblock--logging_s3"></a>

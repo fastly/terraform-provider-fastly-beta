@@ -27,6 +27,7 @@
 - feat(kinesis_logging): add support for Kinesis Logging ([#116](https://github.com/fastly/terraform-provider-fastly-beta/pull/116))
 - feat(scalyr_logging): add support for Scalyr Logging ([#119](https://github.com/fastly/terraform-provider-fastly-beta/pull/119))
 - feat(openstack_logging): add support for OpenStack Logging ([#120](https://github.com/fastly/terraform-provider-fastly-beta/pull/120))
+- feat(papertrail_logging): add support for Papertrail Logging ([#123](https://github.com/fastly/terraform-provider-fastly-beta/pull/123))
 
 ### BUG FIXES:
 

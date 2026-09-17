@@ -39,6 +39,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingopenstack"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingpapertrail"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingscalyr"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsplunk"
@@ -134,6 +135,7 @@ type Model struct {
 	LoggingKinesis                []loggingkinesis.NestedModel                `tfsdk:"logging_kinesis"`
 	LoggingLoggly                 []loggingloggly.NestedModel                 `tfsdk:"logging_loggly"`
 	LoggingLogshuttle             []logginglogshuttle.NestedModel             `tfsdk:"logging_logshuttle"`
+	LoggingPapertrail             []loggingpapertrail.NestedModel             `tfsdk:"logging_papertrail"`
 	ImageOptimizerDefaultSettings []imageoptimizerdefaultsettings.NestedModel `tfsdk:"image_optimizer_default_settings"`
 	Snippet                       []snippet.NestedModel                       `tfsdk:"snippet"`
 	DynamicSnippet                []dynamicsnippet.NestedModel                `tfsdk:"dynamic_snippet"`
@@ -226,6 +228,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_kinesis":                  loggingkinesis.NestedBlockSchema(),
 			"logging_loggly":                   loggingloggly.NestedBlockSchema(),
 			"logging_logshuttle":               logginglogshuttle.NestedBlockSchema(),
+			"logging_papertrail":               loggingpapertrail.NestedBlockSchema(),
 			"image_optimizer_default_settings": imageoptimizerdefaultsettings.NestedBlockSchema(),
 			"snippet":                          snippet.NestedBlockSchema(),
 			"dynamic_snippet":                  dynamicsnippet.NestedBlockSchema(),
@@ -577,6 +580,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		resp.Diagnostics.AddAttributeError(
 			path.Root("logging_logshuttle"),
 			"Invalid Log Shuttle logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingpapertrail.ValidateConditionReferences(config.LoggingPapertrail, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_papertrail"),
+			"Invalid Papertrail logging configuration",
 			err.Error(),
 		)
 	}
