@@ -34,6 +34,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginglogshuttle"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingpapertrail"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsplunk"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsumologic"
@@ -576,6 +577,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 			},
 		},
 		{
+			label: "Papertrail logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return loggingpapertrail.Reconcile(ctx, client, serviceID, version, plan.LoggingPapertrail)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingpapertrail.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingPapertrail = loggingpapertrail.MatchOrder(items, plan.LoggingPapertrail)
+				return nil
+			},
+		},
+		{
 			label: "Image Optimizer default settings",
 			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				return imageoptimizerdefaultsettings.Reconcile(ctx, client, serviceID, version, previous.ImageOptimizerDefaultSettings, plan.ImageOptimizerDefaultSettings)
@@ -1046,6 +1061,17 @@ func readSteps(state *Model, imported bool) []readStep {
 			},
 		},
 		{
+			label: "Papertrail logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingpapertrail.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingPapertrail = loggingpapertrail.MatchOrder(items, state.LoggingPapertrail)
+				return nil
+			},
+		},
+		{
 			label: "Image Optimizer default settings",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				result, err := imageoptimizerdefaultsettings.ReadForVersion(ctx, client, serviceID, version, state.ImageOptimizerDefaultSettings, imported)
@@ -1268,6 +1294,12 @@ func planSteps(plan, state *Model) []planStep {
 			equal: func() bool { return logginglogshuttle.Equal(plan.LoggingLogshuttle, state.LoggingLogshuttle) },
 			matchOnly: func() {
 				plan.LoggingLogshuttle = logginglogshuttle.MatchOrder(state.LoggingLogshuttle, plan.LoggingLogshuttle)
+			},
+		},
+		{
+			equal: func() bool { return loggingpapertrail.Equal(plan.LoggingPapertrail, state.LoggingPapertrail) },
+			matchOnly: func() {
+				plan.LoggingPapertrail = loggingpapertrail.MatchOrder(state.LoggingPapertrail, plan.LoggingPapertrail)
 			},
 		},
 		{

@@ -30,6 +30,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginglogshuttle"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingpapertrail"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsplunk"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsumologic"
@@ -101,6 +102,7 @@ type Model struct {
 	LoggingKinesis          []loggingkinesis.ComputeNestedModel          `tfsdk:"logging_kinesis"`
 	LoggingLoggly           []loggingloggly.ComputeNestedModel           `tfsdk:"logging_loggly"`
 	LoggingLogshuttle       []logginglogshuttle.ComputeNestedModel       `tfsdk:"logging_logshuttle"`
+	LoggingPapertrail       []loggingpapertrail.ComputeNestedModel       `tfsdk:"logging_papertrail"`
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -179,6 +181,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_kinesis":          loggingkinesis.ComputeNestedBlockSchema(),
 			"logging_loggly":           loggingloggly.ComputeNestedBlockSchema(),
 			"logging_logshuttle":       logginglogshuttle.ComputeNestedBlockSchema(),
+			"logging_papertrail":       loggingpapertrail.ComputeNestedBlockSchema(),
 		},
 	}
 }
@@ -648,6 +651,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	plan.LoggingLogshuttle = logginglogshuttle.ComputeMatchOrder(loggingLogshuttles, plan.LoggingLogshuttle)
 
+	if err := loggingpapertrail.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingPapertrail); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling Papertrail logging endpoints", err.Error())
+		return
+	}
+
+	loggingPapertrails, err := loggingpapertrail.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading Papertrail logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingPapertrail = loggingpapertrail.ComputeMatchOrder(loggingPapertrails, plan.LoggingPapertrail)
+
 	if err := computepackage.Update(ctx, r.providerData.AutoClient(), serviceID, version, plan.Package); err != nil {
 		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error updating Compute package", err.Error())
@@ -867,6 +884,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading Log Shuttle logging endpoints", err.Error())
 		return
 	}
+	loggingPapertrails, err := loggingpapertrail.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Papertrail logging endpoints", err.Error())
+		return
+	}
 	state.Domain = domain.MatchOrder(domains, state.Domain)
 	state.HealthCheck = healthcheck.MatchOrder(healthChecks, state.HealthCheck)
 	state.Backend = backend.MatchOrder(backends, state.Backend)
@@ -894,6 +916,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.LoggingKinesis = loggingkinesis.ComputeMatchOrder(loggingKineses, state.LoggingKinesis)
 	state.LoggingLoggly = loggingloggly.ComputeMatchOrder(loggingLogglys, state.LoggingLoggly)
 	state.LoggingLogshuttle = logginglogshuttle.ComputeMatchOrder(loggingLogshuttles, state.LoggingLogshuttle)
+	state.LoggingPapertrail = loggingpapertrail.ComputeMatchOrder(loggingPapertrails, state.LoggingPapertrail)
 
 	resourceLinks, err := resourcelink.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
@@ -966,6 +989,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!loggingkinesis.ComputeEqual(plan.LoggingKinesis, state.LoggingKinesis) ||
 		!loggingloggly.ComputeEqual(plan.LoggingLoggly, state.LoggingLoggly) ||
 		!logginglogshuttle.ComputeEqual(plan.LoggingLogshuttle, state.LoggingLogshuttle) ||
+		!loggingpapertrail.ComputeEqual(plan.LoggingPapertrail, state.LoggingPapertrail) ||
 		false
 	needsVersionChange := nestedChanged
 
@@ -1339,6 +1363,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 		plan.LoggingLogshuttle = logginglogshuttle.ComputeMatchOrder(loggingLogshuttles, plan.LoggingLogshuttle)
 
+		if err := loggingpapertrail.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingPapertrail); err != nil {
+			resp.Diagnostics.AddError("Error reconciling Papertrail logging endpoints", err.Error())
+			return
+		}
+
+		loggingPapertrails, err := loggingpapertrail.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading Papertrail logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingPapertrail = loggingpapertrail.ComputeMatchOrder(loggingPapertrails, plan.LoggingPapertrail)
+
 		if len(state.Package) > 0 && len(plan.Package) == 0 {
 			resp.Diagnostics.AddError(
 				"Removing Compute packages is not supported",
@@ -1407,6 +1443,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.LoggingKinesis = loggingkinesis.ComputeMatchOrder(state.LoggingKinesis, plan.LoggingKinesis)
 		plan.LoggingLoggly = loggingloggly.ComputeMatchOrder(state.LoggingLoggly, plan.LoggingLoggly)
 		plan.LoggingLogshuttle = logginglogshuttle.ComputeMatchOrder(state.LoggingLogshuttle, plan.LoggingLogshuttle)
+		plan.LoggingPapertrail = loggingpapertrail.ComputeMatchOrder(state.LoggingPapertrail, plan.LoggingPapertrail)
 	}
 
 	plan.ID = state.ID

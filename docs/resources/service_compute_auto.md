@@ -45,6 +45,7 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `logging_logshuttle` (Block List) Log Shuttle logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_logshuttle))
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
+- `logging_papertrail` (Block List) Papertrail logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_papertrail))
 - `logging_s3` (Block List) S3 logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_s3))
 - `logging_splunk` (Block List) Splunk logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_splunk))
 - `logging_sumologic` (Block List) Sumo Logic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_sumologic))
@@ -682,6 +683,20 @@ Required:
 
 - `token` (String, Sensitive) The Insert API key from the Account page of your New Relic account.
 
+
+
+<a id="nestedblock--logging_papertrail"></a>
+### Nested Schema for `logging_papertrail`
+
+Required:
+
+- `address` (String) A hostname or IPv4 address of the Papertrail endpoint.
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+- `port` (Number) The port associated with the address where the Papertrail endpoint can be accessed.
+
+Optional:
+
+- `processing_region` (String) The geographic region where the logs will be processed before streaming. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
 
 
 <a id="nestedblock--logging_s3"></a>
