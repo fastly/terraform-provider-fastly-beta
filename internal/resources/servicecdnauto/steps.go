@@ -36,6 +36,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingscalyr"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsftp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsplunk"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsyslog"
@@ -349,6 +350,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 					return err
 				}
 				plan.LoggingScalyr = loggingscalyr.MatchOrder(items, plan.LoggingScalyr)
+				return nil
+			},
+		},
+		{
+			label: "SFTP logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return loggingsftp.Reconcile(ctx, client, serviceID, version, plan.LoggingSFTP)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingsftp.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingSFTP = loggingsftp.MatchOrder(items, plan.LoggingSFTP)
 				return nil
 			},
 		},
@@ -885,6 +900,17 @@ func readSteps(state *Model, imported bool) []readStep {
 			},
 		},
 		{
+			label: "SFTP logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingsftp.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingSFTP = loggingsftp.MatchOrder(items, state.LoggingSFTP)
+				return nil
+			},
+		},
+		{
 			label: "New Relic OTLP logging endpoints",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				items, err := loggingnewrelicotlp.ReadForVersion(ctx, client, serviceID, version)
@@ -1215,6 +1241,10 @@ func planSteps(plan, state *Model) []planStep {
 		{
 			equal:     func() bool { return loggingscalyr.Equal(plan.LoggingScalyr, state.LoggingScalyr) },
 			matchOnly: func() { plan.LoggingScalyr = loggingscalyr.MatchOrder(state.LoggingScalyr, plan.LoggingScalyr) },
+		},
+		{
+			equal:     func() bool { return loggingsftp.Equal(plan.LoggingSFTP, state.LoggingSFTP) },
+			matchOnly: func() { plan.LoggingSFTP = loggingsftp.MatchOrder(state.LoggingSFTP, plan.LoggingSFTP) },
 		},
 		{
 			equal: func() bool { return loggingnewrelicotlp.Equal(plan.LoggingNewRelicOTLP, state.LoggingNewRelicOTLP) },

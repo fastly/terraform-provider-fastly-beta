@@ -4731,6 +4731,275 @@ func ConfigComputeAutoWithLoggingFTPFormat(serviceName, domainName, loggerName s
 	)
 }
 
+func ConfigLoggingSFTPBasic(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"SERVICE_COMMENT":   "",
+			"DOMAIN_NAME":       domainName,
+			"SERVICE_VERSION":   "1",
+			"LOGGING_SFTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_sftp_basic.tf",
+	)
+}
+
+func ConfigLoggingSFTPUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"SERVICE_COMMENT":   "",
+			"DOMAIN_NAME":       domainName,
+			"SERVICE_VERSION":   "1",
+			"LOGGING_SFTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_sftp_updated.tf",
+	)
+}
+
+// ConfigLoggingSFTPEmptyFormat sets format = "" - see
+// TestAccFastlyServiceLoggingSFTP_emptyFormat.
+func ConfigLoggingSFTPEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"SERVICE_COMMENT":   "",
+			"DOMAIN_NAME":       domainName,
+			"SERVICE_VERSION":   "1",
+			"LOGGING_SFTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_sftp_empty_format.tf",
+	)
+}
+
+// ConfigLoggingSFTPEmptyTimestampFormat sets timestamp_format = "" - see
+// TestAccFastlyServiceLoggingSFTP_emptyTimestampFormat.
+func ConfigLoggingSFTPEmptyTimestampFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"SERVICE_COMMENT":   "",
+			"DOMAIN_NAME":       domainName,
+			"SERVICE_VERSION":   "1",
+			"LOGGING_SFTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_sftp_empty_timestamp_format.tf",
+	)
+}
+
+func ConfigLoggingSFTPAtVersion(serviceName, domainName, loggerName string, version int) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"SERVICE_COMMENT":   "",
+			"DOMAIN_NAME":       domainName,
+			"SERVICE_VERSION":   fmt.Sprintf("%d", version),
+			"LOGGING_SFTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_sftp_basic.tf",
+	)
+}
+
+func ConfigLoggingSFTPForImport(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"SERVICE_COMMENT":   "",
+			"DOMAIN_NAME":       domainName,
+			"SERVICE_VERSION":   "1",
+			"LOGGING_SFTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_sftp_basic.tf",
+	)
+}
+
+// ConfigLoggingSFTPSecretKey returns a config using secret_key instead of
+// password for authentication - see TestAccFastlyServiceLoggingSFTP_secretKey.
+func ConfigLoggingSFTPSecretKey(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"SERVICE_COMMENT":   "",
+			"DOMAIN_NAME":       domainName,
+			"SERVICE_VERSION":   "1",
+			"LOGGING_SFTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_sftp_secret_key.tf",
+	)
+}
+
+// ConfigLoggingSFTPMissingCredential returns a config with neither password
+// nor secret_key set - see TestAccFastlyServiceLoggingSFTP_missingCredential.
+func ConfigLoggingSFTPMissingCredential(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"SERVICE_COMMENT":   "",
+			"DOMAIN_NAME":       domainName,
+			"SERVICE_VERSION":   "1",
+			"LOGGING_SFTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_sftp_missing_credential.tf",
+	)
+}
+
+// ConfigLoggingSFTPComputeFormat returns a config attaching
+// fastly_service_logging_sftp to an explicit Compute service with format set, a
+// VCL-only attribute. The standalone resource's schema is shared by both
+// service types, so this is expected to fail at apply time via
+// ValidateNoVCLOnlyAttributesForCompute rather than at Terraform's own
+// schema-validation stage.
+func ConfigLoggingSFTPComputeFormat(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"SERVICE_COMMENT":   "",
+			"SERVICE_VERSION":   "1",
+			"LOGGING_SFTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_sftp_compute_format.tf",
+	)
+}
+
+// ConfigLoggingSFTPCompute returns a config attaching fastly_service_logging_sftp
+// to an explicit Compute service with no VCL-only attributes set.
+// ClearVCLOnlyCreateFields strips format from the create request, so the
+// endpoint ends up with whatever format the Fastly API defaults to - see
+// TestAccFastlyServiceLoggingSFTP_formatDefault.
+func ConfigLoggingSFTPCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"SERVICE_COMMENT":   "",
+			"SERVICE_VERSION":   "1",
+			"LOGGING_SFTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_sftp_compute.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingSFTP(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"DOMAIN_NAME":       domainName,
+			"LOGGING_SFTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_sftp_nested.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingSFTPPlacementNone(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"DOMAIN_NAME":       domainName,
+			"LOGGING_SFTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_sftp_nested_placement_none.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingSFTPUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"DOMAIN_NAME":       domainName,
+			"LOGGING_SFTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_sftp_nested_updated.tf",
+	)
+}
+
+func ConfigCDNAutoWithMultipleLoggingSFTP(serviceName, domainName, loggerName1, loggerName2 string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":        serviceName,
+			"DOMAIN_NAME":         domainName,
+			"LOGGING_SFTP_NAME_1": loggerName1,
+			"LOGGING_SFTP_NAME_2": loggerName2,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_sftp_nested_multi.tf",
+	)
+}
+
+func ConfigCDNAutoWithBackendAndLoggingSFTP(serviceName, domainName, backendName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"DOMAIN_NAME":       domainName,
+			"BACKEND_NAME":      backendName,
+			"LOGGING_SFTP_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/backend_single.tf",
+		"internal/acceptance_tests/blocks/logging_sftp_nested.tf",
+	)
+}
+
+func ConfigComputeAutoWithLoggingSFTP(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"DOMAIN_NAME":       domainName,
+			"LOGGING_SFTP_NAME": loggerName,
+			"PACKAGE_PATH":      GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_sftp_nested.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigComputeAutoWithLoggingSFTPFormat returns a Compute auto service config
+// whose nested logging_sftp block sets format, a VCL-only attribute.
+// service_compute_auto's logging_sftp schema (ComputeNestedBlockSchema) omits
+// format/format_version/placement/response_condition entirely, so this is
+// expected to fail Terraform's own schema validation ("Unsupported argument")
+// rather than reach the Fastly API.
+func ConfigComputeAutoWithLoggingSFTPFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"DOMAIN_NAME":       domainName,
+			"LOGGING_SFTP_NAME": loggerName,
+			"PACKAGE_PATH":      GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_sftp_nested_compute_format.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
 func ConfigLoggingDigitalOceanBasic(serviceName, domainName, loggerName string) string {
 	return BuildConfig(
 		ServiceCDN,

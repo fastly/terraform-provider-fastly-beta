@@ -47,6 +47,7 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
 - `logging_s3` (Block List) S3 logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_s3))
 - `logging_scalyr` (Block List) Scalyr logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_scalyr))
+- `logging_sftp` (Block List) SFTP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_sftp))
 - `logging_splunk` (Block List) Splunk logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_splunk))
 - `logging_sumologic` (Block List) Sumo Logic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_sumologic))
 - `logging_syslog` (Block List) Syslog logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_syslog))
@@ -742,6 +743,42 @@ Optional:
 Required:
 
 - `token` (String, Sensitive) The token to use for authentication. See [Scalyr's API key documentation](https://www.scalyr.com/keys).
+
+
+
+<a id="nestedblock--logging_sftp"></a>
+### Nested Schema for `logging_sftp`
+
+Required:
+
+- `address` (String) A hostname or IPv4 address of the SFTP server.
+- `authentication` (Attributes) Authentication credentials for the SFTP server. Exactly one of `password` or `secret_key` must be set; if both are set, `secret_key` is preferred by the API. (see [below for nested schema](#nestedatt--logging_sftp--authentication))
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+- `path` (String) The path to upload log files to. If the path ends in `/` then it is treated as a directory.
+- `ssh_known_hosts` (String) A list of host keys for all hosts we can connect to over SFTP.
+
+Optional:
+
+- `compression_codec` (String) The codec used for compressing your logs. Valid values are `zstd`, `snappy`, and `gzip`. If the codec is `gzip`, `gzip_level` defaults to `3`; to use a different level, leave `compression_codec` unset and set `gzip_level` instead. Conflicts with `gzip_level`: setting both in the same request will result in an error.
+- `gzip_level` (Number) The level of gzip encoding when sending logs. Valid values are `0` (no compression) through `9`. To compress at a specific gzip level, leave `compression_codec` unset and set this. Conflicts with `compression_codec`: setting both in the same request will result in an error.
+- `message_type` (String) How the message should be formatted. Valid values are `classic`, `loggly`, `logplex`, and `blank`. Default `classic`.
+- `period` (Number) How frequently log files are finalized so they can be available for reading, in seconds. Default `3600`.
+- `port` (Number) The port number. Default `22`.
+- `processing_region` (String) The geographic region where the logs will be processed before streaming. Valid values are `none`, `us` and `eu`.
+- `public_key` (String) PGP public key that Fastly will use to encrypt your log files before writing them to disk.
+- `timestamp_format` (String) A strftime-specified timestamp format for log filenames.
+
+<a id="nestedatt--logging_sftp--authentication"></a>
+### Nested Schema for `logging_sftp.authentication`
+
+Required:
+
+- `user` (String) The username for the server.
+
+Optional:
+
+- `password` (String, Sensitive) The password for the server. If both `password` and `secret_key` are set, `secret_key` is preferred.
+- `secret_key` (String, Sensitive) The SSH private key for the server. If both `password` and `secret_key` are set, `secret_key` is preferred.
 
 
 
