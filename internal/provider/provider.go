@@ -108,6 +108,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginglogshuttle"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingopenstack"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingscalyr"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsftp"
@@ -264,6 +265,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		logginglogshuttle.NewResource,
 		loggingnewrelic.NewResource,
 		loggingnewrelicotlp.NewResource,
+		loggingopenstack.NewResource,
 		loggings3.NewResource,
 		loggingscalyr.NewResource,
 		loggingsftp.NewResource,
@@ -417,6 +419,7 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		loggingnewrelic.NewListResource,
 		loggingnewrelicotlp.NewListResource,
 		vcl.NewListResource,
+		loggingopenstack.NewListResource,
 		loggings3.NewListResource,
 		loggingscalyr.NewListResource,
 		loggingsftp.NewListResource,

@@ -45,6 +45,7 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `logging_logshuttle` (Block List) Log Shuttle logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_logshuttle))
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
+- `logging_openstack` (Block List) OpenStack logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_openstack))
 - `logging_s3` (Block List) S3 logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_s3))
 - `logging_scalyr` (Block List) Scalyr logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_scalyr))
 - `logging_sftp` (Block List) SFTP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_sftp))
@@ -683,6 +684,37 @@ Optional:
 Required:
 
 - `token` (String, Sensitive) The Insert API key from the Account page of your New Relic account.
+
+
+
+<a id="nestedblock--logging_openstack"></a>
+### Nested Schema for `logging_openstack`
+
+Required:
+
+- `authentication` (Attributes) Authentication credentials for your OpenStack account. (see [below for nested schema](#nestedatt--logging_openstack--authentication))
+- `bucket_name` (String) The name of your OpenStack container.
+- `name` (String) The unique name of the OpenStack logging endpoint. It is important to note that changing this attribute will delete and recreate the resource.
+- `url` (String) Your OpenStack auth url.
+
+Optional:
+
+- `compression_codec` (String) The codec used for compressing your logs. Valid values are `zstd`, `snappy`, and `gzip`. If the codec is `gzip`, `gzip_level` defaults to `3`; to use a different level, leave `compression_codec` unset and set `gzip_level` instead. Conflicts with `gzip_level`: setting both in the same request will result in an error.
+- `gzip_level` (Number) The level of gzip encoding when sending logs. Valid values are `0` (no compression) through `9`. To compress at a specific gzip level, leave `compression_codec` unset and set this. Conflicts with `compression_codec`: setting both in the same request will result in an error.
+- `message_type` (String) How the message should be formatted. Valid values are `classic`, `loggly`, `logplex`, and `blank`. Default `classic`.
+- `path` (String) The path to upload logs to. Must end with a trailing slash. If this field is left empty, the files will be saved in the bucket's root path.
+- `period` (Number) How frequently log files are finalized so they can be available for reading in seconds. Default `3600`.
+- `processing_region` (String) Region where logs will be processed before streaming to OpenStack. Valid values are `none`, `us` and `eu`.
+- `public_key` (String) PGP public key that Fastly will use to encrypt your log files before writing them to disk.
+- `timestamp_format` (String) strftime-specified timestamp format for log filename.
+
+<a id="nestedatt--logging_openstack--authentication"></a>
+### Nested Schema for `logging_openstack.authentication`
+
+Required:
+
+- `access_key` (String, Sensitive) Your OpenStack account access key.
+- `user` (String) The username for your OpenStack account.
 
 
 
