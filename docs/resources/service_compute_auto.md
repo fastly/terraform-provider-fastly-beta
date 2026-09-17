@@ -23,7 +23,7 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `backend` (Block List) Backends attached to this service. (see [below for nested schema](#nestedblock--backend))
 - `comment` (String) Optional service comment.
 - `dictionary` (Block List) Edge dictionaries attached to this service. (see [below for nested schema](#nestedblock--dictionary))
-- `domain` (Block List) Domains attached to this service. (see [below for nested schema](#nestedblock--domain))
+- `domain` (Block List) Domains attached to this service. Configures classic domains, available only on accounts created before September 16, 2025; the versionless `fastly_domain` resource is recommended for all accounts. (see [below for nested schema](#nestedblock--domain))
 - `force_destroy` (Boolean) Deactivate the active version before deleting the service. Default `false`.
 - `healthcheck` (Block List) Health checks attached to this service. (see [below for nested schema](#nestedblock--healthcheck))
 - `logging_bigquery` (Block List) BigQuery logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_bigquery))

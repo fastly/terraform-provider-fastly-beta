@@ -24,10 +24,6 @@ validation, and activation, use the nested `vcl` block on
 resource "fastly_service_cdn" "example" {
   name = "example"
 
-  domain {
-    name = "www.example.com"
-  }
-
   backend {
     name    = "origin"
     address = "origin.example.com"

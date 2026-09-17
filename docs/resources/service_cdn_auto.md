@@ -27,7 +27,7 @@ Automatic-lifecycle Fastly CDN service resource with nested versioned configurat
 - `condition` (Block List) Conditions attached to this service. (see [below for nested schema](#nestedblock--condition))
 - `dictionary` (Block List) Edge dictionaries attached to this service. (see [below for nested schema](#nestedblock--dictionary))
 - `director` (Block List) Directors attached to this service. (see [below for nested schema](#nestedblock--director))
-- `domain` (Block List) Domains attached to this service. (see [below for nested schema](#nestedblock--domain))
+- `domain` (Block List) Domains attached to this service. Configures classic domains, available only on accounts created before September 16, 2025; the versionless `fastly_domain` resource is recommended for all accounts. (see [below for nested schema](#nestedblock--domain))
 - `dynamic_snippet` (Block List) Dynamic VCL snippet metadata attached to this service version. This block's own `content` attribute is optional: if set, it seeds the snippet's content on creation and keeps enforcing that same configured value on every subsequent apply; leave it unset to manage all content, including the initial value, externally and on an ongoing basis via `fastly_service_dynamic_snippet_content` instead. (see [below for nested schema](#nestedblock--dynamic_snippet))
 - `force_destroy` (Boolean) Deactivate the active version before deleting the service. Default `false`.
 - `gzip` (Block List) Gzip configurations attached to this service. (see [below for nested schema](#nestedblock--gzip))
