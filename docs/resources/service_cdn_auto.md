@@ -939,6 +939,7 @@ Required:
 - `user` (String) The username for your OpenStack account.
 
 
+
 <a id="nestedblock--logging_papertrail"></a>
 ### Nested Schema for `logging_papertrail`
 
