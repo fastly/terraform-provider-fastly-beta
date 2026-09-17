@@ -17,14 +17,15 @@ Mutual TLS can be added to an existing [`fastly_tls_activation`](tls_activation.
 resource "fastly_service_cdn_auto" "example" {
   name = "example-service"
 
-  domain {
-    name = "example.com"
-  }
-
   backend {
     address = "127.0.0.1"
     name    = "localhost"
   }
+}
+
+resource "fastly_domain" "example" {
+  fqdn       = "example.com"
+  service_id = fastly_service_cdn_auto.example.id
 }
 
 resource "fastly_tls_certificate" "example" {
@@ -34,8 +35,8 @@ resource "fastly_tls_certificate" "example" {
 
 resource "fastly_tls_activation" "example" {
   certificate_id = fastly_tls_certificate.example.id
-  domain         = "example.com"
-  depends_on     = [fastly_service_cdn_auto.example]
+  domain         = fastly_domain.example.fqdn
+  depends_on     = [fastly_domain.example]
 }
 
 resource "fastly_tls_mutual_authentication" "example" {

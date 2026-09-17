@@ -19,22 +19,23 @@ DNS records need to be added on the domains being secured, in order to respond t
 resource "fastly_service_cdn_auto" "example" {
   name = "example-service"
 
-  domain {
-    name = "example.com"
-  }
-
   backend {
     address = "127.0.0.1"
     name    = "localhost"
   }
 }
 
+resource "fastly_domain" "example" {
+  fqdn       = "example.com"
+  service_id = fastly_service_cdn_auto.example.id
+}
+
 resource "fastly_tls_subscription" "example" {
-  domains               = [for domain in fastly_service_cdn_auto.example.domain : domain.name]
+  domains               = [fastly_domain.example.fqdn]
   certificate_authority = "lets-encrypt"
   force_destroy         = true
 
-  depends_on = [fastly_service_cdn_auto.example]
+  depends_on = [fastly_domain.example]
 }
 ```
 
