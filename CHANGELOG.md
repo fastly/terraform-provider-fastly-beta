@@ -30,6 +30,7 @@
 ### BUG FIXES:
 
 - fix(cloudfiles_logging): ensure that the `format` attribute can't be set to null ([#93](https://github.com/fastly/terraform-provider-fastly-beta/pull/93))
+- fix(docs): stop using the nested `domain` block in examples, and note that classic domains are only available on accounts created before September 16, 2025 ([#121](https://github.com/fastly/terraform-provider-fastly-beta/pull/121))
 
 ### Dependencies:
 
