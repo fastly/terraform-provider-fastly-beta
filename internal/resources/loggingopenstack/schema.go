@@ -245,7 +245,7 @@ func sharedAttributes() map[string]schema.Attribute {
 			Optional:    true,
 			Computed:    true,
 			Default:     stringdefault.StaticString(DefaultPath),
-			Description: "Path to store the files. Must end with a trailing slash. If this field is left empty, the files will be saved in the bucket's root path.",
+			Description: "The path to upload logs to. Must end with a trailing slash. If this field is left empty, the files will be saved in the bucket's root path.",
 		},
 		"period": schema.Int64Attribute{
 			Optional:    true,

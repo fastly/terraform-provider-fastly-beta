@@ -152,7 +152,7 @@ resource "fastly_service_compute_auto" "example" {
 - `format_version` (Number) The version of the custom logging format used for the configured endpoint. The logging call gets placed by default in `vcl_log` if `format_version` is set to `2` and in `vcl_deliver` if `format_version` is set to `1`.
 - `gzip_level` (Number) The level of gzip encoding when sending logs. Valid values are `0` (no compression) through `9`. To compress at a specific gzip level, leave `compression_codec` unset and set this. Conflicts with `compression_codec`: setting both in the same request will result in an error.
 - `message_type` (String) How the message should be formatted. Valid values are `classic`, `loggly`, `logplex`, and `blank`. Default `classic`.
-- `path` (String) Path to store the files. Must end with a trailing slash. If this field is left empty, the files will be saved in the bucket's root path.
+- `path` (String) The path to upload logs to. Must end with a trailing slash. If this field is left empty, the files will be saved in the bucket's root path.
 - `period` (Number) How frequently log files are finalized so they can be available for reading in seconds. Default `3600`.
 - `placement` (String) Where in the generated VCL the logging call should be placed. If not set, endpoints with `format_version` of `2` are placed in `vcl_log` and those with `format_version` of `1` are placed in `vcl_deliver`. Valid value is `none`.
 - `processing_region` (String) Region where logs will be processed before streaming to OpenStack. Valid values are `none`, `us` and `eu`.
