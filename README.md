@@ -32,15 +32,16 @@ compatibility resource family uses the `_auto` suffix.
 
 ```hcl
 resource "fastly_service_cdn_auto" "example" {
-  domain {
-    name = "www.example.com"
-  }
-
   backend {
     name    = "origin"
     address = "origin.example.com"
     port    = 443
   }
+}
+
+resource "fastly_domain" "example" {
+  fqdn       = "www.example.com"
+  service_id = fastly_service_cdn_auto.example.id
 }
 ```
 
