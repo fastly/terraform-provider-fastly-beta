@@ -32,6 +32,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingpapertrail"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingscalyr"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsplunk"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsyslog"
@@ -85,6 +86,7 @@ type Model struct {
 	LoggingElasticsearch    []loggingelasticsearch.ComputeNestedModel    `tfsdk:"logging_elasticsearch"`
 	LoggingFTP              []loggingftp.ComputeNestedModel              `tfsdk:"logging_ftp"`
 	LoggingS3               []loggings3.ComputeNestedModel               `tfsdk:"logging_s3"`
+	LoggingScalyr           []loggingscalyr.ComputeNestedModel           `tfsdk:"logging_scalyr"`
 	LoggingNewRelicOTLP     []loggingnewrelicotlp.ComputeNestedModel     `tfsdk:"logging_newrelicotlp"`
 	LoggingNewRelic         []loggingnewrelic.ComputeNestedModel         `tfsdk:"logging_newrelic"`
 	LoggingHeroku           []loggingheroku.ComputeNestedModel           `tfsdk:"logging_heroku"`
@@ -164,6 +166,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_elasticsearch":    loggingelasticsearch.ComputeNestedBlockSchema(),
 			"logging_ftp":              loggingftp.ComputeNestedBlockSchema(),
 			"logging_s3":               loggings3.ComputeNestedBlockSchema(),
+			"logging_scalyr":           loggingscalyr.ComputeNestedBlockSchema(),
 			"logging_newrelicotlp":     loggingnewrelicotlp.ComputeNestedBlockSchema(),
 			"logging_newrelic":         loggingnewrelic.ComputeNestedBlockSchema(),
 			"logging_heroku":           loggingheroku.ComputeNestedBlockSchema(),
@@ -412,6 +415,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 	plan.LoggingS3 = loggings3.ComputeMatchOrder(loggingS3s, plan.LoggingS3)
+
+	if err := loggingscalyr.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingScalyr); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling Scalyr logging endpoints", err.Error())
+		return
+	}
+
+	loggingScalyrs, err := loggingscalyr.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading Scalyr logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingScalyr = loggingscalyr.ComputeMatchOrder(loggingScalyrs, plan.LoggingScalyr)
 
 	if err := loggingnewrelicotlp.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingNewRelicOTLP); err != nil {
 		recordOrphanSafeState()
@@ -799,6 +816,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading S3 logging endpoints", err.Error())
 		return
 	}
+	loggingScalyrs, err := loggingscalyr.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Scalyr logging endpoints", err.Error())
+		return
+	}
 	loggingNewRelicOTLPs, err := loggingnewrelicotlp.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading New Relic OTLP logging endpoints", err.Error())
@@ -899,6 +921,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.LoggingElasticsearch = loggingelasticsearch.ComputeMatchOrder(loggingElasticsearches, state.LoggingElasticsearch)
 	state.LoggingFTP = loggingftp.ComputeMatchOrder(loggingFTPs, state.LoggingFTP)
 	state.LoggingS3 = loggings3.ComputeMatchOrder(loggingS3s, state.LoggingS3)
+	state.LoggingScalyr = loggingscalyr.ComputeMatchOrder(loggingScalyrs, state.LoggingScalyr)
 	state.LoggingNewRelicOTLP = loggingnewrelicotlp.ComputeMatchOrder(loggingNewRelicOTLPs, state.LoggingNewRelicOTLP)
 	state.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(loggingNewRelics, state.LoggingNewRelic)
 	state.LoggingHeroku = loggingheroku.ComputeMatchOrder(loggingHerokus, state.LoggingHeroku)
@@ -972,6 +995,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!loggingelasticsearch.ComputeEqual(plan.LoggingElasticsearch, state.LoggingElasticsearch) ||
 		!loggingftp.ComputeEqual(plan.LoggingFTP, state.LoggingFTP) ||
 		!loggings3.ComputeEqual(plan.LoggingS3, state.LoggingS3) ||
+		!loggingscalyr.ComputeEqual(plan.LoggingScalyr, state.LoggingScalyr) ||
 		!loggingnewrelicotlp.ComputeEqual(plan.LoggingNewRelicOTLP, state.LoggingNewRelicOTLP) ||
 		!loggingnewrelic.ComputeEqual(plan.LoggingNewRelic, state.LoggingNewRelic) ||
 		!loggingheroku.ComputeEqual(plan.LoggingHeroku, state.LoggingHeroku) ||
@@ -1158,6 +1182,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 			return
 		}
 		plan.LoggingS3 = loggings3.ComputeMatchOrder(loggingS3s, plan.LoggingS3)
+
+		if err := loggingscalyr.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingScalyr); err != nil {
+			resp.Diagnostics.AddError("Error reconciling Scalyr logging endpoints", err.Error())
+			return
+		}
+
+		loggingScalyrs, err := loggingscalyr.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading Scalyr logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingScalyr = loggingscalyr.ComputeMatchOrder(loggingScalyrs, plan.LoggingScalyr)
 
 		if err := loggingnewrelicotlp.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingNewRelicOTLP); err != nil {
 			resp.Diagnostics.AddError("Error reconciling New Relic OTLP logging endpoints", err.Error())
@@ -1426,6 +1462,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.LoggingElasticsearch = loggingelasticsearch.ComputeMatchOrder(state.LoggingElasticsearch, plan.LoggingElasticsearch)
 		plan.LoggingFTP = loggingftp.ComputeMatchOrder(state.LoggingFTP, plan.LoggingFTP)
 		plan.LoggingS3 = loggings3.ComputeMatchOrder(state.LoggingS3, plan.LoggingS3)
+		plan.LoggingScalyr = loggingscalyr.ComputeMatchOrder(state.LoggingScalyr, plan.LoggingScalyr)
 		plan.LoggingNewRelicOTLP = loggingnewrelicotlp.ComputeMatchOrder(state.LoggingNewRelicOTLP, plan.LoggingNewRelicOTLP)
 		plan.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(state.LoggingNewRelic, plan.LoggingNewRelic)
 		plan.LoggingHeroku = loggingheroku.ComputeMatchOrder(state.LoggingHeroku, plan.LoggingHeroku)
