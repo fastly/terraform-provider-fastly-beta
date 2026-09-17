@@ -5200,6 +5200,241 @@ func ConfigComputeAutoWithLoggingCloudfilesFormat(serviceName, domainName, logge
 	)
 }
 
+func ConfigLoggingOpenStackBasic(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"DOMAIN_NAME":            domainName,
+			"SERVICE_VERSION":        "1",
+			"LOGGING_OPENSTACK_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_openstack_basic.tf",
+	)
+}
+
+func ConfigLoggingOpenStackUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"DOMAIN_NAME":            domainName,
+			"SERVICE_VERSION":        "1",
+			"LOGGING_OPENSTACK_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_openstack_updated.tf",
+	)
+}
+
+// ConfigLoggingOpenStackEmptyFormat sets format = "" - see
+// TestAccFastlyServiceLoggingOpenStack_emptyFormat.
+func ConfigLoggingOpenStackEmptyFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"DOMAIN_NAME":            domainName,
+			"SERVICE_VERSION":        "1",
+			"LOGGING_OPENSTACK_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_openstack_empty_format.tf",
+	)
+}
+
+// ConfigLoggingOpenStackEmptyTimestampFormat sets timestamp_format = "" -
+// see TestAccFastlyServiceLoggingOpenStack_emptyTimestampFormat.
+func ConfigLoggingOpenStackEmptyTimestampFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"DOMAIN_NAME":            domainName,
+			"SERVICE_VERSION":        "1",
+			"LOGGING_OPENSTACK_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_openstack_empty_timestamp_format.tf",
+	)
+}
+
+func ConfigLoggingOpenStackAtVersion(serviceName, domainName, loggerName string, version int) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"DOMAIN_NAME":            domainName,
+			"SERVICE_VERSION":        fmt.Sprintf("%d", version),
+			"LOGGING_OPENSTACK_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_openstack_basic.tf",
+	)
+}
+
+func ConfigLoggingOpenStackForImport(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"DOMAIN_NAME":            domainName,
+			"SERVICE_VERSION":        "1",
+			"LOGGING_OPENSTACK_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/logging_openstack_basic.tf",
+	)
+}
+
+// ConfigLoggingOpenStackComputeFormat returns a config attaching
+// fastly_service_logging_openstack to an explicit Compute service with format
+// set, a VCL-only attribute. The standalone resource's schema is shared by both
+// service types, so this is expected to fail at apply time via
+// ValidateNoVCLOnlyAttributesForCompute rather than at Terraform's own
+// schema-validation stage.
+func ConfigLoggingOpenStackComputeFormat(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"SERVICE_VERSION":        "1",
+			"LOGGING_OPENSTACK_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_openstack_compute_format.tf",
+	)
+}
+
+// ConfigLoggingOpenStackCompute returns a config attaching
+// fastly_service_logging_openstack to an explicit Compute service with no
+// VCL-only attributes set. ClearVCLOnlyCreateFields strips format from the
+// create request, so the endpoint ends up with whatever format the Fastly API
+// defaults to - see TestAccFastlyServiceLoggingOpenStack_formatDefault.
+func ConfigLoggingOpenStackCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"SERVICE_VERSION":        "1",
+			"LOGGING_OPENSTACK_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_openstack_compute.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingOpenStack(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"DOMAIN_NAME":            domainName,
+			"LOGGING_OPENSTACK_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_openstack_nested.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingOpenStackPlacementNone(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"DOMAIN_NAME":            domainName,
+			"LOGGING_OPENSTACK_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_openstack_nested_placement_none.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingOpenStackUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"DOMAIN_NAME":            domainName,
+			"LOGGING_OPENSTACK_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_openstack_nested_updated.tf",
+	)
+}
+
+func ConfigCDNAutoWithMultipleLoggingOpenStack(serviceName, domainName, loggerName1, loggerName2 string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":             serviceName,
+			"DOMAIN_NAME":              domainName,
+			"LOGGING_OPENSTACK_NAME_1": loggerName1,
+			"LOGGING_OPENSTACK_NAME_2": loggerName2,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_openstack_nested_multi.tf",
+	)
+}
+
+func ConfigCDNAutoWithBackendAndLoggingOpenStack(serviceName, domainName, backendName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"DOMAIN_NAME":            domainName,
+			"BACKEND_NAME":           backendName,
+			"LOGGING_OPENSTACK_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/backend_single.tf",
+		"internal/acceptance_tests/blocks/logging_openstack_nested.tf",
+	)
+}
+
+func ConfigComputeAutoWithLoggingOpenStack(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"DOMAIN_NAME":            domainName,
+			"LOGGING_OPENSTACK_NAME": loggerName,
+			"PACKAGE_PATH":           GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_openstack_nested.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigComputeAutoWithLoggingOpenStackFormat returns a Compute auto service
+// config whose nested logging_openstack block sets format, a VCL-only
+// attribute. service_compute_auto's logging_openstack schema
+// (ComputeNestedBlockSchema) omits format/format_version/placement/
+// response_condition entirely, so this is expected to fail Terraform's own
+// schema validation ("Unsupported argument") rather than reach the Fastly API.
+func ConfigComputeAutoWithLoggingOpenStackFormat(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"DOMAIN_NAME":            domainName,
+			"LOGGING_OPENSTACK_NAME": loggerName,
+			"PACKAGE_PATH":           GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_openstack_nested_compute_format.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
 // ConfigComputeAutoWithLoggingGrafanaCloudLogsFormat returns a Compute auto
 // service config whose nested logging_grafanacloudlogs block sets format, a
 // VCL-only attribute. service_compute_auto's logging_grafanacloudlogs schema

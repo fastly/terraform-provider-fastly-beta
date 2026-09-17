@@ -38,6 +38,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginglogshuttle"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingopenstack"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingpapertrail"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingscalyr"
@@ -111,6 +112,7 @@ type Model struct {
 	RateLimiter                   []ratelimiter.NestedModel                   `tfsdk:"rate_limiter"`
 	LoggingBlobStorage            []loggingblobstorage.NestedModel            `tfsdk:"logging_blobstorage"`
 	LoggingCloudfiles             []loggingcloudfiles.NestedModel             `tfsdk:"logging_cloudfiles"`
+	LoggingOpenStack              []loggingopenstack.NestedModel              `tfsdk:"logging_openstack"`
 	LoggingDigitalOcean           []loggingdigitalocean.NestedModel           `tfsdk:"logging_digitalocean"`
 	LoggingElasticsearch          []loggingelasticsearch.NestedModel          `tfsdk:"logging_elasticsearch"`
 	LoggingFTP                    []loggingftp.NestedModel                    `tfsdk:"logging_ftp"`
@@ -203,6 +205,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"rate_limiter":                     ratelimiter.NestedBlockSchema(),
 			"logging_blobstorage":              loggingblobstorage.NestedBlockSchema(),
 			"logging_cloudfiles":               loggingcloudfiles.NestedBlockSchema(),
+			"logging_openstack":                loggingopenstack.NestedBlockSchema(),
 			"logging_digitalocean":             loggingdigitalocean.NestedBlockSchema(),
 			"logging_elasticsearch":            loggingelasticsearch.NestedBlockSchema(),
 			"logging_ftp":                      loggingftp.NestedBlockSchema(),
@@ -417,6 +420,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		resp.Diagnostics.AddAttributeError(
 			path.Root("logging_cloudfiles"),
 			"Invalid Cloud Files logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingopenstack.ValidateConditionReferences(config.LoggingOpenStack, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_openstack"),
+			"Invalid OpenStack logging configuration",
 			err.Error(),
 		)
 	}
