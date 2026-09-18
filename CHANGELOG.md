@@ -2,7 +2,7 @@
 
 ### BREAKING:
 
-- resource/fastly_service_vcl, resource/fastly_service_cdn_auto: renamed `fastly_service_vcl` to `fastly_service_custom_vcl`, and its corresponding nested `vcl` block on `fastly_service_cdn_auto` to `custom_vcl`([#127](https://github.com/fastly/terraform-provider-fastly-beta/pull/127))
+- resource/fastly_service_vcl, resource/fastly_service_cdn_auto: renamed `fastly_service_vcl` to `fastly_service_custom_vcl`, and its corresponding nested `vcl` block on `fastly_service_cdn_auto` to `custom_vcl` ([#127](https://github.com/fastly/terraform-provider-fastly-beta/pull/127))
 
 ### ENHANCEMENTS:
 
