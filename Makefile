@@ -146,8 +146,40 @@ test-lifecycle-compute:
 	@echo "    Note: This requires FASTLY_API_TOKEN to be set"
 	@./scripts/test-lifecycle-compute/run.sh
 
-test-lifecycle: test-lifecycle-cdn test-lifecycle-compute
-	@echo "==> All lifecycle tests completed"
+test-lifecycle:
+	@echo "==> Running full lifecycle test suite (CDN + Compute)"
+	@echo "    Note: This requires FASTLY_API_TOKEN to be set"
+	@cdn_status=0; compute_status=0; \
+	cdn_start=$$(date +%s); \
+	./scripts/test-lifecycle-cdn/run.sh || cdn_status=$$?; \
+	cdn_end=$$(date +%s); \
+	compute_start=$$(date +%s); \
+	./scripts/test-lifecycle-compute/run.sh || compute_status=$$?; \
+	compute_end=$$(date +%s); \
+	echo ""; \
+	echo "==================================================================="; \
+	echo "  Lifecycle Test Summary"; \
+	echo "==================================================================="; \
+	if [ $$cdn_status -eq 0 ]; then \
+		printf "  %-28s %-6s (%ss)\n" "CDN service lifecycle" "PASS" "$$((cdn_end - cdn_start))"; \
+	else \
+		printf "  %-28s %-6s (%ss, exit %s)\n" "CDN service lifecycle" "FAIL" "$$((cdn_end - cdn_start))" "$$cdn_status"; \
+	fi; \
+	if [ $$compute_status -eq 0 ]; then \
+		printf "  %-28s %-6s (%ss)\n" "Compute service lifecycle" "PASS" "$$((compute_end - compute_start))"; \
+	else \
+		printf "  %-28s %-6s (%ss, exit %s)\n" "Compute service lifecycle" "FAIL" "$$((compute_end - compute_start))" "$$compute_status"; \
+	fi; \
+	echo "==================================================================="; \
+	if [ $$cdn_status -eq 0 ] && [ $$compute_status -eq 0 ]; then \
+		echo "  Result: ALL LIFECYCLE TESTS PASSED"; \
+		echo "==================================================================="; \
+		exit 0; \
+	else \
+		echo "  Result: LIFECYCLE TESTS FAILED"; \
+		echo "==================================================================="; \
+		exit 1; \
+	fi
 
 release-check: build lint test-baseline docs
 	@echo "==> Release check passed"
