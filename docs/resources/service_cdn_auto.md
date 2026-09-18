@@ -171,7 +171,7 @@ Optional:
 
 Required:
 
-- `content` (String) The custom VCL source code to upload. Can configured with file("${path.module}/main.vcl") or templatefile(...).
+- `content` (String) The custom VCL source code to upload. Can be configured with file("${path.module}/main.vcl") or templatefile(...).
 - `name` (String) A unique name for this custom VCL file. Included VCL files must be referenced by this exact name from the main VCL file.
 
 Optional:
