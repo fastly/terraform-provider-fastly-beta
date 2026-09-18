@@ -21,6 +21,7 @@ It is not used for the automatic compatibility resource family.
 - `fastly_service_compute`
 - `fastly_service_domain`
 - `fastly_service_backend`
+- `fastly_service_settings`
 
 These resources are first-class Terraform resources, so they can be discovered
 independently and generated as separate resource blocks.
@@ -157,6 +158,10 @@ list "fastly_service_domain" "all" {
 }
 
 list "fastly_service_backend" "all" {
+  provider = fastly
+}
+
+list "fastly_service_settings" "all" {
   provider = fastly
 }
 ```

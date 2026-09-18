@@ -36,3 +36,28 @@ func ParseCompositeID(id string) (serviceID string, version int, name string, er
 
 	return serviceID, version, name, nil
 }
+
+// ParseServiceVersionID parses a composite import ID in the format "service_id/version" for
+// resources with no name component, i.e. a singleton per service version.
+func ParseServiceVersionID(id string) (serviceID string, version int, err error) {
+	parts := strings.SplitN(id, "/", 2)
+	if len(parts) != 2 {
+		return "", 0, fmt.Errorf("invalid composite import ID format: expected service_id/version, got %q", id)
+	}
+
+	serviceID = parts[0]
+	if serviceID == "" {
+		return "", 0, fmt.Errorf("service_id cannot be empty in import ID %q", id)
+	}
+
+	version, err = strconv.Atoi(parts[1])
+	if err != nil {
+		return "", 0, fmt.Errorf("invalid version number in import ID %q: %w", id, err)
+	}
+
+	if version < 1 {
+		return "", 0, fmt.Errorf("version must be greater than 0 in import ID %q", id)
+	}
+
+	return serviceID, version, nil
+}
