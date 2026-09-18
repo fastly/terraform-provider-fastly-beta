@@ -17,12 +17,14 @@ provider "fastly" {
 resource "fastly_service_cdn_auto" "myservice" {
   name = "myawesometestservice"
 
-  domain {
-    name = "www.example.com"
-  }
-
   backend {
     name    = "backend"
     address = "backend.example.com"
   }
+}
+
+# Domains are versionless and attach to the service by ID
+resource "fastly_domain" "myservice" {
+  fqdn       = "www.example.com"
+  service_id = fastly_service_cdn_auto.myservice.id
 }

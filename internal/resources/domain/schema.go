@@ -51,7 +51,10 @@ func ResourceAttributes() map[string]schema.Attribute {
 
 func NestedBlockSchema() schema.ListNestedBlock {
 	return schema.ListNestedBlock{
-		Description: "Domains attached to this service.",
+		Description: "Domains attached to this service. Configures " +
+			"[classic domains](https://www.fastly.com/documentation/guides/getting-started/domains/about-domains/#working-with-classic-domains), " +
+			"available only on accounts created before September 16, 2025; the " +
+			"versionless [`fastly_domain`](domain.md) resource may be used instead.",
 		NestedObject: schema.NestedBlockObject{
 			Attributes: CommonAttributes(),
 		},

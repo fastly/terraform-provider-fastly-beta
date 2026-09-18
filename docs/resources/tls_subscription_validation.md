@@ -18,6 +18,52 @@ This resource implements a part of the validation workflow. It does not represen
 resource "fastly_service_cdn_auto" "example" {
   name = "example-service"
 
+  backend {
+    address = "127.0.0.1"
+    name    = "localhost"
+  }
+}
+
+resource "fastly_domain" "example" {
+  fqdn       = "example.com"
+  service_id = fastly_service_cdn_auto.example.id
+}
+
+resource "fastly_tls_subscription" "example" {
+  domains               = [fastly_domain.example.fqdn]
+  certificate_authority = "lets-encrypt"
+  force_destroy         = true
+
+  depends_on = [fastly_domain.example]
+}
+
+# Create the DNS record(s) required to respond to the ACME domain ownership
+# challenge with your DNS provider's own resources, fed from
+# fastly_tls_subscription.example.managed_dns_challenges (or
+# managed_http_challenges).
+
+resource "fastly_tls_subscription_validation" "example" {
+  subscription_id = fastly_tls_subscription.example.id
+
+  # depends_on should include the DNS validation record resource(s) above,
+  # so the challenge is in place before Fastly attempts to validate it.
+}
+
+# certificate_id is only populated once the subscription reaches the "issued"
+# state, so resources referencing it are guaranteed to run after the
+# certificate exists - unlike fastly_tls_subscription.example.certificate_id,
+# which is empty until the certificate is issued asynchronously.
+output "certificate_id" {
+  value = fastly_tls_subscription_validation.example.certificate_id
+}
+```
+
+For services using [classic domains](https://www.fastly.com/documentation/guides/getting-started/domains/about-domains/#working-with-classic-domains), the domain is declared inside the service:
+
+```terraform
+resource "fastly_service_cdn_auto" "example" {
+  name = "example-service"
+
   domain {
     name = "example.com"
   }

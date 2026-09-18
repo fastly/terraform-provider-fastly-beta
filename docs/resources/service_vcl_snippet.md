@@ -28,10 +28,6 @@ content is versionless and can be updated separately.
 resource "fastly_service_cdn" "example" {
   name = "example"
 
-  domain {
-    name = "www.example.com"
-  }
-
   backend {
     name    = "origin"
     address = "origin.example.com"

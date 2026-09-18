@@ -13,10 +13,6 @@ provider "fastly" {
 resource "fastly_service_cdn" "example" {
   name = "example-acl-entries"
 
-  domain {
-    name = "example.com"
-  }
-
   backend {
     address = "http-me.fastly.dev"
     name    = "backend"

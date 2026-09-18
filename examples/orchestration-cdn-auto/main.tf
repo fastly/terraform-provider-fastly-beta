@@ -27,9 +27,6 @@ locals {
 resource "fastly_service_cdn_auto" "service_1" {
   name    = var.service_1_name
   comment = "Managed by Terraform"
-  domain {
-    name = "www.service1.example.com"
-  }
 
   dynamic "backend" {
     for_each = local.service_1_backends
@@ -76,6 +73,11 @@ resource "fastly_service_cdn_auto" "service_1" {
   }
 }
 
+resource "fastly_domain" "service_1" {
+  fqdn       = "www.service1.example.com"
+  service_id = fastly_service_cdn_auto.service_1.id
+}
+
 # Image Optimizer must be enabled on service_1 before an
 # image_optimizer_default_settings block can be added to fastly_service_cdn_auto.service_1.
 # This resource can be applied together with the service's own creation, since it only
@@ -90,9 +92,6 @@ resource "fastly_service_product_image_optimizer" "service_1" {
 resource "fastly_service_cdn_auto" "service_2" {
   name    = var.service_2_name
   comment = "Managed by Terraform"
-  domain {
-    name = "www.service2.example.com"
-  }
 
   dynamic "backend" {
     for_each = local.service_2_backends
@@ -108,4 +107,9 @@ resource "fastly_service_cdn_auto" "service_2" {
     name          = "temporary_blocklist"
     force_destroy = true
   }
+}
+
+resource "fastly_domain" "service_2" {
+  fqdn       = "www.service2.example.com"
+  service_id = fastly_service_cdn_auto.service_2.id
 }

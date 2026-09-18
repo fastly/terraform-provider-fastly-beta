@@ -75,10 +75,6 @@ resource's `content` attribute at all.
 resource "fastly_service_cdn_auto" "example" {
   name = "example"
 
-  domain {
-    name = "www.example.com"
-  }
-
   backend {
     name    = "origin"
     address = "origin.example.com"
