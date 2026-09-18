@@ -33,6 +33,7 @@
 - feat(papertrail_logging): add support for Papertrail Logging ([#123](https://github.com/fastly/terraform-provider-fastly-beta/pull/123))
 - feat(tls_configuration): add `staging_ip` attribute to the `fastly_tls_configuration` data source ([#126](https://github.com/fastly/terraform-provider-fastly-beta/pull/126))
 - feat(service_settings): add `fastly_service_settings` resource for explicit/default service version management of general settings; CDN services only ([#128](https://github.com/fastly/terraform-provider-fastly-beta/pull/128))
+- feat(service_settings): add `terraform query` (list resource) support for `fastly_service_settings` ([#128](https://github.com/fastly/terraform-provider-fastly-beta/pull/128))
 
 ### BUG FIXES:
 

@@ -433,6 +433,7 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		loggingsyslog.NewListResource,
 		servicecdn.NewListResource,
 		servicecompute.NewListResource,
+		settings.NewListResource,
 	}
 }
 
