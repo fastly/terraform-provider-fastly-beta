@@ -412,9 +412,8 @@ test_acl_entries_update() {
     awk '
         /^resource "fastly_service_cdn_acl_entries" "service_1_acl_entries" \{$/ {
             print "resource \"fastly_service_cdn_acl_entries\" \"service_1_acl_entries\" {"
-            print "  service_id     = fastly_service_cdn.service_1.id"
-            print "  acl_id         = fastly_service_cdn_acl.service_1_acl.acl_id"
-            print "  manage_entries = true"
+            print "  service_id = fastly_service_cdn.service_1.id"
+            print "  acl_id     = fastly_service_cdn_acl.service_1_acl.acl_id"
             print ""
             print "  entry {"
             print "    ip      = \"192.168.1.0\""
