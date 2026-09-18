@@ -1,4 +1,4 @@
-package vcl
+package customvcl
 
 import (
 	"context"
@@ -38,7 +38,7 @@ type Model struct {
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_service_vcl"
+	resp.TypeName = req.ProviderTypeName + "_service_custom_vcl"
 }
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -65,7 +65,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_vcl", service.TypeVCL); err != nil {
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_custom_vcl", service.TypeVCL); err != nil {
 		resp.Diagnostics.AddError("Unsupported Fastly service type", err.Error())
 		return
 	}
@@ -142,7 +142,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_vcl", service.TypeVCL); err != nil {
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_custom_vcl", service.TypeVCL); err != nil {
 		resp.Diagnostics.AddError("Unsupported Fastly service type", err.Error())
 		return
 	}
@@ -185,7 +185,7 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 		"name":       state.Name.ValueString(),
 	})
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, state.Service.ValueString(), "fastly_service_vcl", service.TypeVCL); err != nil {
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, state.Service.ValueString(), "fastly_service_custom_vcl", service.TypeVCL); err != nil {
 		if errors.IsNotFound(err) {
 			return
 		}

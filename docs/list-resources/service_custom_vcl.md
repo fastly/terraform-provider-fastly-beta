@@ -1,13 +1,13 @@
 ---
-page_title: "fastly_service_vcl List Resource - fastly"
+page_title: "fastly_service_custom_vcl List Resource - fastly"
 subcategory: ""
 description: |-
   List all custom VCL files across all Fastly CDN services at their active version, or latest version when no active version exists.
 ---
 
-# fastly_service_vcl (List Resource)
+# fastly_service_custom_vcl (List Resource)
 
 List all custom VCL files across all Fastly CDN services at their active version,
 or latest version when no active version exists.
 
-{{ .SchemaMarkdown | trimspace }}
+## Schema

@@ -7,6 +7,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cachesetting"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cdnacl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/condition"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customvcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dictionary"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/director"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domain"
@@ -46,7 +47,6 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/responseobject"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/settings"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/snippet"
-	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/vcl"
 
 	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
@@ -665,14 +665,14 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 		{
 			label: "custom VCL files",
 			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
-				return vcl.Reconcile(ctx, client, serviceID, version, plan.VCL)
+				return customvcl.Reconcile(ctx, client, serviceID, version, plan.CustomVCL)
 			},
 			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
-				items, err := vcl.ReadForVersion(ctx, client, serviceID, version)
+				items, err := customvcl.ReadForVersion(ctx, client, serviceID, version)
 				if err != nil {
 					return err
 				}
-				plan.VCL = vcl.MatchOrderPreservePlanContent(items, plan.VCL)
+				plan.CustomVCL = customvcl.MatchOrderPreservePlanContent(items, plan.CustomVCL)
 				return nil
 			},
 		},
@@ -1159,11 +1159,11 @@ func readSteps(state *Model, imported bool) []readStep {
 		{
 			label: "custom VCL files",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
-				items, err := vcl.ReadForVersion(ctx, client, serviceID, version)
+				items, err := customvcl.ReadForVersion(ctx, client, serviceID, version)
 				if err != nil {
 					return err
 				}
-				state.VCL = vcl.MatchOrder(items, state.VCL)
+				state.CustomVCL = customvcl.MatchOrder(items, state.CustomVCL)
 				return nil
 			},
 		},
@@ -1381,8 +1381,8 @@ func planSteps(plan, state *Model) []planStep {
 			},
 		},
 		{
-			equal:     func() bool { return vcl.Equal(plan.VCL, state.VCL) },
-			matchOnly: func() { plan.VCL = vcl.MatchOrderPreservePlanContent(state.VCL, plan.VCL) },
+			equal:     func() bool { return customvcl.Equal(plan.CustomVCL, state.CustomVCL) },
+			matchOnly: func() { plan.CustomVCL = customvcl.MatchOrderPreservePlanContent(state.CustomVCL, plan.CustomVCL) },
 		},
 	}
 }

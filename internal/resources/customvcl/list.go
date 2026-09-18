@@ -1,4 +1,4 @@
-package vcl
+package customvcl
 
 import (
 	"context"
@@ -31,7 +31,7 @@ func NewListResource() list.ListResource {
 }
 
 func (l *ListResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_service_vcl"
+	resp.TypeName = req.ProviderTypeName + "_service_custom_vcl"
 }
 
 func (l *ListResource) ListResourceConfigSchema(_ context.Context, _ list.ListResourceSchemaRequest, resp *list.ListResourceSchemaResponse) {

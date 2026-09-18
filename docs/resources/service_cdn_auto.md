@@ -25,6 +25,7 @@ Automatic-lifecycle Fastly CDN service resource with nested versioned configurat
 - `cache_setting` (Block List) Cache settings attached to this service. (see [below for nested schema](#nestedblock--cache_setting))
 - `comment` (String) Optional service comment.
 - `condition` (Block List) Conditions attached to this service. (see [below for nested schema](#nestedblock--condition))
+- `custom_vcl` (Block List) Custom VCL files attached to this service. (see [below for nested schema](#nestedblock--custom_vcl))
 - `dictionary` (Block List) Edge dictionaries attached to this service. (see [below for nested schema](#nestedblock--dictionary))
 - `director` (Block List) Directors attached to this service. (see [below for nested schema](#nestedblock--director))
 - `domain` (Block List) Domains attached to this service. (see [below for nested schema](#nestedblock--domain))
@@ -66,7 +67,6 @@ Automatic-lifecycle Fastly CDN service resource with nested versioned configurat
 - `reuse` (Boolean) Deactivate the active version but do not delete the service, allowing it to be reused/imported elsewhere. Default `false`.
 - `settings` (Block List) General settings for this service version. At most one block is supported. Removing this block from configuration resets these settings back to their API defaults. (see [below for nested schema](#nestedblock--settings))
 - `snippet` (Block List) Regular VCL snippets attached to this service version. (see [below for nested schema](#nestedblock--snippet))
-- `vcl` (Block List) Custom VCL files attached to this service. (see [below for nested schema](#nestedblock--vcl))
 
 ### Read-Only
 
@@ -164,6 +164,19 @@ Required:
 Optional:
 
 - `priority` (Number) A number used to determine the order in which multiple conditions execute. Lower numbers execute first. Default `10`.
+
+
+<a id="nestedblock--custom_vcl"></a>
+### Nested Schema for `custom_vcl`
+
+Required:
+
+- `content` (String) The custom VCL source code to upload. Can configured with file("${path.module}/main.vcl") or templatefile(...).
+- `name` (String) A unique name for this custom VCL file. Included VCL files must be referenced by this exact name from the main VCL file.
+
+Optional:
+
+- `main` (Boolean) Whether this custom VCL file is the main configuration. Exactly one configured custom VCL file must be marked as main.
 
 
 <a id="nestedblock--dictionary"></a>
@@ -1224,16 +1237,3 @@ Required:
 Optional:
 
 - `priority` (Number) Priority determines execution order. Lower numbers execute first. Default `100`.
-
-
-<a id="nestedblock--vcl"></a>
-### Nested Schema for `vcl`
-
-Required:
-
-- `content` (String) The custom VCL source code to upload. Can configured with file("${path.module}/main.vcl") or templatefile(...).
-- `name` (String) A unique name for this custom VCL file. Included VCL files must be referenced by this exact name from the main VCL file.
-
-Optional:
-
-- `main` (Boolean) Whether this custom VCL file is the main configuration. Exactly one configured custom VCL file must be marked as main.
