@@ -72,11 +72,11 @@ The rest are configured on those two resources as nested blocks:
 | `fastly_service_backend` | `backend` block | both |
 | `fastly_service_cdn_acl` | `acl` block | CDN |
 | `fastly_service_condition` | `condition` block | CDN |
+| `fastly_service_custom_vcl` | `custom_vcl` block | CDN |
 | `fastly_service_domain` | `domain` block \* | both |
 | `fastly_service_dynamic_vcl_snippet` | `dynamic_snippet` block | CDN |
 | `fastly_service_logging_*` | `logging_*` blocks | both |
 | `fastly_service_resource_link` | `resource_link` block | Compute |
-| `fastly_service_vcl` | `vcl` block | CDN |
 | `fastly_service_vcl_snippet` | `snippet` block | CDN |
 
 \* Both `fastly_service_domain` and the `domain` block configure classic domains, which are only

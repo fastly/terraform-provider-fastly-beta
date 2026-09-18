@@ -1,4 +1,4 @@
-package vcl
+package customvcl
 
 import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"

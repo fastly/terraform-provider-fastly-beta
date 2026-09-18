@@ -2,6 +2,8 @@
 
 ### BREAKING:
 
+- resource/fastly_service_vcl, resource/fastly_service_cdn_auto: renamed `fastly_service_vcl` to `fastly_service_custom_vcl`, and its corresponding nested `vcl` block on `fastly_service_cdn_auto` to `custom_vcl`, to avoid confusion with the legacy provider's `fastly_service_vcl` (now `fastly_service_cdn_auto` in this provider) (CDTOOL-1754)
+
 ### ENHANCEMENTS:
 
 - feat(grafana_cloud_logs): add support for Grafana Cloud Logs ([#92](https://github.com/fastly/terraform-provider-fastly-beta/pull/92))

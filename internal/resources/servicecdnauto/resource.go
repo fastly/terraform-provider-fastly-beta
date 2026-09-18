@@ -11,6 +11,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cachesetting"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cdnacl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/condition"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customvcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dictionary"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/director"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domain"
@@ -50,7 +51,6 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/responseobject"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/settings"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/snippet"
-	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/vcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 
@@ -139,7 +139,7 @@ type Model struct {
 	ImageOptimizerDefaultSettings []imageoptimizerdefaultsettings.NestedModel `tfsdk:"image_optimizer_default_settings"`
 	Snippet                       []snippet.NestedModel                       `tfsdk:"snippet"`
 	DynamicSnippet                []dynamicsnippet.NestedModel                `tfsdk:"dynamic_snippet"`
-	VCL                           []vcl.NestedModel                           `tfsdk:"vcl"`
+	CustomVCL                     []customvcl.NestedModel                     `tfsdk:"custom_vcl"`
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -232,7 +232,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"image_optimizer_default_settings": imageoptimizerdefaultsettings.NestedBlockSchema(),
 			"snippet":                          snippet.NestedBlockSchema(),
 			"dynamic_snippet":                  dynamicsnippet.NestedBlockSchema(),
-			"vcl":                              vcl.NestedBlockSchema(),
+			"custom_vcl":                       customvcl.NestedBlockSchema(),
 		},
 	}
 }
@@ -278,9 +278,9 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		)
 	}
 
-	if err := vcl.ValidateConfig(config.VCL); err != nil {
+	if err := customvcl.ValidateConfig(config.CustomVCL); err != nil {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("vcl"),
+			path.Root("custom_vcl"),
 			"Invalid custom VCL configuration",
 			err.Error(),
 		)
@@ -643,9 +643,9 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	if err := vcl.Validate(plan.VCL); err != nil {
+	if err := customvcl.Validate(plan.CustomVCL); err != nil {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("vcl"),
+			path.Root("custom_vcl"),
 			"Invalid custom VCL configuration",
 			err.Error(),
 		)
@@ -882,9 +882,9 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	if err := vcl.Validate(plan.VCL); err != nil {
+	if err := customvcl.Validate(plan.CustomVCL); err != nil {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("vcl"),
+			path.Root("custom_vcl"),
 			"Invalid custom VCL configuration",
 			err.Error(),
 		)
