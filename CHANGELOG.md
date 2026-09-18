@@ -28,6 +28,7 @@
 - feat(scalyr_logging): add support for Scalyr Logging ([#119](https://github.com/fastly/terraform-provider-fastly-beta/pull/119))
 - feat(openstack_logging): add support for OpenStack Logging ([#120](https://github.com/fastly/terraform-provider-fastly-beta/pull/120))
 - feat(papertrail_logging): add support for Papertrail Logging ([#123](https://github.com/fastly/terraform-provider-fastly-beta/pull/123))
+- feat(tls_configuration): add `staging_ip` attribute to the `fastly_tls_configuration` data source ([#126](https://github.com/fastly/terraform-provider-fastly-beta/pull/126))
 
 ### BUG FIXES:
 
