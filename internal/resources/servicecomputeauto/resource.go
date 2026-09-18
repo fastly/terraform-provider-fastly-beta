@@ -30,8 +30,11 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginglogshuttle"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingopenstack"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingpapertrail"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingscalyr"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsftp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsplunk"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsyslog"
@@ -81,11 +84,13 @@ type Model struct {
 	Package                 []computepackage.Model                       `tfsdk:"package"`
 	LoggingBlobStorage      []loggingblobstorage.ComputeNestedModel      `tfsdk:"logging_blobstorage"`
 	LoggingCloudfiles       []loggingcloudfiles.ComputeNestedModel       `tfsdk:"logging_cloudfiles"`
+	LoggingOpenStack        []loggingopenstack.ComputeNestedModel        `tfsdk:"logging_openstack"`
 	LoggingDigitalOcean     []loggingdigitalocean.ComputeNestedModel     `tfsdk:"logging_digitalocean"`
 	LoggingElasticsearch    []loggingelasticsearch.ComputeNestedModel    `tfsdk:"logging_elasticsearch"`
 	LoggingFTP              []loggingftp.ComputeNestedModel              `tfsdk:"logging_ftp"`
 	LoggingS3               []loggings3.ComputeNestedModel               `tfsdk:"logging_s3"`
 	LoggingScalyr           []loggingscalyr.ComputeNestedModel           `tfsdk:"logging_scalyr"`
+	LoggingSFTP             []loggingsftp.ComputeNestedModel             `tfsdk:"logging_sftp"`
 	LoggingNewRelicOTLP     []loggingnewrelicotlp.ComputeNestedModel     `tfsdk:"logging_newrelicotlp"`
 	LoggingNewRelic         []loggingnewrelic.ComputeNestedModel         `tfsdk:"logging_newrelic"`
 	LoggingHeroku           []loggingheroku.ComputeNestedModel           `tfsdk:"logging_heroku"`
@@ -103,6 +108,7 @@ type Model struct {
 	LoggingKinesis          []loggingkinesis.ComputeNestedModel          `tfsdk:"logging_kinesis"`
 	LoggingLoggly           []loggingloggly.ComputeNestedModel           `tfsdk:"logging_loggly"`
 	LoggingLogshuttle       []logginglogshuttle.ComputeNestedModel       `tfsdk:"logging_logshuttle"`
+	LoggingPapertrail       []loggingpapertrail.ComputeNestedModel       `tfsdk:"logging_papertrail"`
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -160,11 +166,13 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"package":                  computepackage.NestedBlockSchema(),
 			"logging_blobstorage":      loggingblobstorage.ComputeNestedBlockSchema(),
 			"logging_cloudfiles":       loggingcloudfiles.ComputeNestedBlockSchema(),
+			"logging_openstack":        loggingopenstack.ComputeNestedBlockSchema(),
 			"logging_digitalocean":     loggingdigitalocean.ComputeNestedBlockSchema(),
 			"logging_elasticsearch":    loggingelasticsearch.ComputeNestedBlockSchema(),
 			"logging_ftp":              loggingftp.ComputeNestedBlockSchema(),
 			"logging_s3":               loggings3.ComputeNestedBlockSchema(),
 			"logging_scalyr":           loggingscalyr.ComputeNestedBlockSchema(),
+			"logging_sftp":             loggingsftp.ComputeNestedBlockSchema(),
 			"logging_newrelicotlp":     loggingnewrelicotlp.ComputeNestedBlockSchema(),
 			"logging_newrelic":         loggingnewrelic.ComputeNestedBlockSchema(),
 			"logging_heroku":           loggingheroku.ComputeNestedBlockSchema(),
@@ -182,6 +190,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_kinesis":          loggingkinesis.ComputeNestedBlockSchema(),
 			"logging_loggly":           loggingloggly.ComputeNestedBlockSchema(),
 			"logging_logshuttle":       logginglogshuttle.ComputeNestedBlockSchema(),
+			"logging_papertrail":       loggingpapertrail.ComputeNestedBlockSchema(),
 		},
 	}
 }
@@ -357,6 +366,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	plan.LoggingCloudfiles = loggingcloudfiles.ComputeMatchOrder(loggingCloudfiless, plan.LoggingCloudfiles)
 
+	if err := loggingopenstack.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingOpenStack); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling OpenStack logging endpoints", err.Error())
+		return
+	}
+
+	loggingOpenStacks, err := loggingopenstack.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading OpenStack logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingOpenStack = loggingopenstack.ComputeMatchOrder(loggingOpenStacks, plan.LoggingOpenStack)
+
 	if err := loggingdigitalocean.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingDigitalOcean); err != nil {
 		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reconciling DigitalOcean logging endpoints", err.Error())
@@ -426,6 +449,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 	plan.LoggingScalyr = loggingscalyr.ComputeMatchOrder(loggingScalyrs, plan.LoggingScalyr)
+
+	if err := loggingsftp.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingSFTP); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling SFTP logging endpoints", err.Error())
+		return
+	}
+
+	loggingSFTPs, err := loggingsftp.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading SFTP logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingSFTP = loggingsftp.ComputeMatchOrder(loggingSFTPs, plan.LoggingSFTP)
 
 	if err := loggingnewrelicotlp.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingNewRelicOTLP); err != nil {
 		recordOrphanSafeState()
@@ -665,6 +702,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	plan.LoggingLogshuttle = logginglogshuttle.ComputeMatchOrder(loggingLogshuttles, plan.LoggingLogshuttle)
 
+	if err := loggingpapertrail.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingPapertrail); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling Papertrail logging endpoints", err.Error())
+		return
+	}
+
+	loggingPapertrails, err := loggingpapertrail.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading Papertrail logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingPapertrail = loggingpapertrail.ComputeMatchOrder(loggingPapertrails, plan.LoggingPapertrail)
+
 	if err := computepackage.Update(ctx, r.providerData.AutoClient(), serviceID, version, plan.Package); err != nil {
 		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error updating Compute package", err.Error())
@@ -779,6 +830,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading Cloud Files logging endpoints", err.Error())
 		return
 	}
+	loggingOpenStacks, err := loggingopenstack.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading OpenStack logging endpoints", err.Error())
+		return
+	}
 	loggingDigitalOceans, err := loggingdigitalocean.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading DigitalOcean logging endpoints", err.Error())
@@ -802,6 +858,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	loggingScalyrs, err := loggingscalyr.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading Scalyr logging endpoints", err.Error())
+		return
+	}
+	loggingSFTPs, err := loggingsftp.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading SFTP logging endpoints", err.Error())
 		return
 	}
 	loggingNewRelicOTLPs, err := loggingnewrelicotlp.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
@@ -889,17 +950,24 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading Log Shuttle logging endpoints", err.Error())
 		return
 	}
+	loggingPapertrails, err := loggingpapertrail.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Papertrail logging endpoints", err.Error())
+		return
+	}
 	state.Domain = domain.MatchOrder(domains, state.Domain)
 	state.HealthCheck = healthcheck.MatchOrder(healthChecks, state.HealthCheck)
 	state.Backend = backend.MatchOrder(backends, state.Backend)
 	state.Dictionary = dictionary.MatchOrder(dictionaries, state.Dictionary)
 	state.LoggingBlobStorage = loggingblobstorage.ComputeMatchOrder(loggingBlobStorages, state.LoggingBlobStorage)
 	state.LoggingCloudfiles = loggingcloudfiles.ComputeMatchOrder(loggingCloudfiless, state.LoggingCloudfiles)
+	state.LoggingOpenStack = loggingopenstack.ComputeMatchOrder(loggingOpenStacks, state.LoggingOpenStack)
 	state.LoggingDigitalOcean = loggingdigitalocean.ComputeMatchOrder(loggingDigitalOceans, state.LoggingDigitalOcean)
 	state.LoggingElasticsearch = loggingelasticsearch.ComputeMatchOrder(loggingElasticsearches, state.LoggingElasticsearch)
 	state.LoggingFTP = loggingftp.ComputeMatchOrder(loggingFTPs, state.LoggingFTP)
 	state.LoggingS3 = loggings3.ComputeMatchOrder(loggingS3s, state.LoggingS3)
 	state.LoggingScalyr = loggingscalyr.ComputeMatchOrder(loggingScalyrs, state.LoggingScalyr)
+	state.LoggingSFTP = loggingsftp.ComputeMatchOrder(loggingSFTPs, state.LoggingSFTP)
 	state.LoggingNewRelicOTLP = loggingnewrelicotlp.ComputeMatchOrder(loggingNewRelicOTLPs, state.LoggingNewRelicOTLP)
 	state.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(loggingNewRelics, state.LoggingNewRelic)
 	state.LoggingHeroku = loggingheroku.ComputeMatchOrder(loggingHerokus, state.LoggingHeroku)
@@ -917,6 +985,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.LoggingKinesis = loggingkinesis.ComputeMatchOrder(loggingKineses, state.LoggingKinesis)
 	state.LoggingLoggly = loggingloggly.ComputeMatchOrder(loggingLogglys, state.LoggingLoggly)
 	state.LoggingLogshuttle = logginglogshuttle.ComputeMatchOrder(loggingLogshuttles, state.LoggingLogshuttle)
+	state.LoggingPapertrail = loggingpapertrail.ComputeMatchOrder(loggingPapertrails, state.LoggingPapertrail)
 
 	resourceLinks, err := resourcelink.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
@@ -968,11 +1037,13 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!computepackage.Equal(plan.Package, state.Package) ||
 		!loggingblobstorage.ComputeEqual(plan.LoggingBlobStorage, state.LoggingBlobStorage) ||
 		!loggingcloudfiles.ComputeEqual(plan.LoggingCloudfiles, state.LoggingCloudfiles) ||
+		!loggingopenstack.ComputeEqual(plan.LoggingOpenStack, state.LoggingOpenStack) ||
 		!loggingdigitalocean.ComputeEqual(plan.LoggingDigitalOcean, state.LoggingDigitalOcean) ||
 		!loggingelasticsearch.ComputeEqual(plan.LoggingElasticsearch, state.LoggingElasticsearch) ||
 		!loggingftp.ComputeEqual(plan.LoggingFTP, state.LoggingFTP) ||
 		!loggings3.ComputeEqual(plan.LoggingS3, state.LoggingS3) ||
 		!loggingscalyr.ComputeEqual(plan.LoggingScalyr, state.LoggingScalyr) ||
+		!loggingsftp.ComputeEqual(plan.LoggingSFTP, state.LoggingSFTP) ||
 		!loggingnewrelicotlp.ComputeEqual(plan.LoggingNewRelicOTLP, state.LoggingNewRelicOTLP) ||
 		!loggingnewrelic.ComputeEqual(plan.LoggingNewRelic, state.LoggingNewRelic) ||
 		!loggingheroku.ComputeEqual(plan.LoggingHeroku, state.LoggingHeroku) ||
@@ -990,6 +1061,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!loggingkinesis.ComputeEqual(plan.LoggingKinesis, state.LoggingKinesis) ||
 		!loggingloggly.ComputeEqual(plan.LoggingLoggly, state.LoggingLoggly) ||
 		!logginglogshuttle.ComputeEqual(plan.LoggingLogshuttle, state.LoggingLogshuttle) ||
+		!loggingpapertrail.ComputeEqual(plan.LoggingPapertrail, state.LoggingPapertrail) ||
 		false
 	needsVersionChange := nestedChanged
 
@@ -1111,6 +1183,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 		plan.LoggingCloudfiles = loggingcloudfiles.ComputeMatchOrder(loggingCloudfiless, plan.LoggingCloudfiles)
 
+		if err := loggingopenstack.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingOpenStack); err != nil {
+			resp.Diagnostics.AddError("Error reconciling OpenStack logging endpoints", err.Error())
+			return
+		}
+
+		loggingOpenStacks, err := loggingopenstack.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading OpenStack logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingOpenStack = loggingopenstack.ComputeMatchOrder(loggingOpenStacks, plan.LoggingOpenStack)
+
 		if err := loggingdigitalocean.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingDigitalOcean); err != nil {
 			resp.Diagnostics.AddError("Error reconciling DigitalOcean logging endpoints", err.Error())
 			return
@@ -1170,6 +1254,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 			return
 		}
 		plan.LoggingScalyr = loggingscalyr.ComputeMatchOrder(loggingScalyrs, plan.LoggingScalyr)
+
+		if err := loggingsftp.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingSFTP); err != nil {
+			resp.Diagnostics.AddError("Error reconciling SFTP logging endpoints", err.Error())
+			return
+		}
+
+		loggingSFTPs, err := loggingsftp.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading SFTP logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingSFTP = loggingsftp.ComputeMatchOrder(loggingSFTPs, plan.LoggingSFTP)
 
 		if err := loggingnewrelicotlp.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingNewRelicOTLP); err != nil {
 			resp.Diagnostics.AddError("Error reconciling New Relic OTLP logging endpoints", err.Error())
@@ -1375,6 +1471,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 		plan.LoggingLogshuttle = logginglogshuttle.ComputeMatchOrder(loggingLogshuttles, plan.LoggingLogshuttle)
 
+		if err := loggingpapertrail.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingPapertrail); err != nil {
+			resp.Diagnostics.AddError("Error reconciling Papertrail logging endpoints", err.Error())
+			return
+		}
+
+		loggingPapertrails, err := loggingpapertrail.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading Papertrail logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingPapertrail = loggingpapertrail.ComputeMatchOrder(loggingPapertrails, plan.LoggingPapertrail)
+
 		if len(state.Package) > 0 && len(plan.Package) == 0 {
 			resp.Diagnostics.AddError(
 				"Removing Compute packages is not supported",
@@ -1422,11 +1530,13 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.Package = state.Package
 		plan.LoggingBlobStorage = loggingblobstorage.ComputeMatchOrder(state.LoggingBlobStorage, plan.LoggingBlobStorage)
 		plan.LoggingCloudfiles = loggingcloudfiles.ComputeMatchOrder(state.LoggingCloudfiles, plan.LoggingCloudfiles)
+		plan.LoggingOpenStack = loggingopenstack.ComputeMatchOrder(state.LoggingOpenStack, plan.LoggingOpenStack)
 		plan.LoggingDigitalOcean = loggingdigitalocean.ComputeMatchOrder(state.LoggingDigitalOcean, plan.LoggingDigitalOcean)
 		plan.LoggingElasticsearch = loggingelasticsearch.ComputeMatchOrder(state.LoggingElasticsearch, plan.LoggingElasticsearch)
 		plan.LoggingFTP = loggingftp.ComputeMatchOrder(state.LoggingFTP, plan.LoggingFTP)
 		plan.LoggingS3 = loggings3.ComputeMatchOrder(state.LoggingS3, plan.LoggingS3)
 		plan.LoggingScalyr = loggingscalyr.ComputeMatchOrder(state.LoggingScalyr, plan.LoggingScalyr)
+		plan.LoggingSFTP = loggingsftp.ComputeMatchOrder(state.LoggingSFTP, plan.LoggingSFTP)
 		plan.LoggingNewRelicOTLP = loggingnewrelicotlp.ComputeMatchOrder(state.LoggingNewRelicOTLP, plan.LoggingNewRelicOTLP)
 		plan.LoggingNewRelic = loggingnewrelic.ComputeMatchOrder(state.LoggingNewRelic, plan.LoggingNewRelic)
 		plan.LoggingHeroku = loggingheroku.ComputeMatchOrder(state.LoggingHeroku, plan.LoggingHeroku)
@@ -1444,6 +1554,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.LoggingKinesis = loggingkinesis.ComputeMatchOrder(state.LoggingKinesis, plan.LoggingKinesis)
 		plan.LoggingLoggly = loggingloggly.ComputeMatchOrder(state.LoggingLoggly, plan.LoggingLoggly)
 		plan.LoggingLogshuttle = logginglogshuttle.ComputeMatchOrder(state.LoggingLogshuttle, plan.LoggingLogshuttle)
+		plan.LoggingPapertrail = loggingpapertrail.ComputeMatchOrder(state.LoggingPapertrail, plan.LoggingPapertrail)
 	}
 
 	plan.ID = state.ID

@@ -1,4 +1,4 @@
-resource "fastly_service_vcl" "main" {
+resource "fastly_service_custom_vcl" "main" {
   service_id = fastly_service_cdn.test.id
   version    = 1
   name       = "{{.VCL_NAME}}"

@@ -2,6 +2,8 @@
 
 ### BREAKING:
 
+- resource/fastly_service_vcl, resource/fastly_service_cdn_auto: renamed `fastly_service_vcl` to `fastly_service_custom_vcl`, and its corresponding nested `vcl` block on `fastly_service_cdn_auto` to `custom_vcl` ([#127](https://github.com/fastly/terraform-provider-fastly-beta/pull/127))
+
 ### ENHANCEMENTS:
 
 - feat(grafana_cloud_logs): add support for Grafana Cloud Logs ([#92](https://github.com/fastly/terraform-provider-fastly-beta/pull/92))
@@ -26,11 +28,17 @@
 - feat(loggly_logging): add support for Loggly Logging ([#113](https://github.com/fastly/terraform-provider-fastly-beta/pull/113))
 - feat(kinesis_logging): add support for Kinesis Logging ([#116](https://github.com/fastly/terraform-provider-fastly-beta/pull/116))
 - feat(scalyr_logging): add support for Scalyr Logging ([#119](https://github.com/fastly/terraform-provider-fastly-beta/pull/119))
+- feat(openstack_logging): add support for OpenStack Logging ([#120](https://github.com/fastly/terraform-provider-fastly-beta/pull/120))
+- feat(sftp_logging): add support for SFTP Logging ([#124](https://github.com/fastly/terraform-provider-fastly-beta/pull/124))
+- feat(papertrail_logging): add support for Papertrail Logging ([#123](https://github.com/fastly/terraform-provider-fastly-beta/pull/123))
+- feat(tls_configuration): add `staging_ip` attribute to the `fastly_tls_configuration` data source ([#126](https://github.com/fastly/terraform-provider-fastly-beta/pull/126))
+- feat(service_settings): add `fastly_service_settings` resource for explicit/default service version management of general settings; CDN services only ([#128](https://github.com/fastly/terraform-provider-fastly-beta/pull/128))
 
 ### BUG FIXES:
 
 - fix(cloudfiles_logging): ensure that the `format` attribute can't be set to null ([#93](https://github.com/fastly/terraform-provider-fastly-beta/pull/93))
 - fix(docs): stop using the nested `domain` block in examples, and note that classic domains are only available on accounts created before September 16, 2025 ([#121](https://github.com/fastly/terraform-provider-fastly-beta/pull/121))
+- fix(docs): correct the README list of explicit/default resources, and map each one to its automatic-family equivalent ([#122](https://github.com/fastly/terraform-provider-fastly-beta/pull/122))
 
 ### Dependencies:
 

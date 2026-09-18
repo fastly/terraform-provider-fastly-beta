@@ -86,7 +86,9 @@ resource "fastly_service_logging_newrelicotlp" "service_1_logging_newrelic" {
   service_id = fastly_service_cdn.service_1.id
   version    = var.service_1_version
   name       = "test-newrelic-logger"
-  token      = "test-insert-key"
+  authentication = {
+    token = "test-insert-key"
+  }
 }
 
 resource "fastly_service_logging_datadog" "service_1_logging_datadog" {

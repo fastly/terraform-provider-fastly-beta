@@ -40,6 +40,10 @@ func TestSchema(t *testing.T) {
 	require.True(t, ok)
 	require.True(t, dnsRecords.Computed)
 	require.Len(t, dnsRecords.NestedObject.Attributes, 3)
+
+	stagingIP, ok := resp.Schema.Attributes["staging_ip"].(datasourceschema.StringAttribute)
+	require.True(t, ok)
+	require.True(t, stagingIP.Computed)
 }
 
 func TestContainsAll(t *testing.T) {
@@ -144,6 +148,7 @@ func TestFilterConfigurationsByProtocols(t *testing.T) {
 func TestFlattenConfiguration(t *testing.T) {
 	createdAt := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	updatedAt := time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC)
+	stagingIP := "167.82.83.42"
 
 	configuration := &fastly.CustomTLSConfiguration{
 		ID:            "config-id",
@@ -154,6 +159,7 @@ func TestFlattenConfiguration(t *testing.T) {
 		HTTPProtocols: []string{"http/1.1", "h2"},
 		CreatedAt:     &createdAt,
 		UpdatedAt:     &updatedAt,
+		StagingIP:     &stagingIP,
 		DNSRecords: []*fastly.DNSRecord{
 			{ID: "203.0.113.1", RecordType: "A", Region: "global"},
 			nil,
@@ -170,6 +176,7 @@ func TestFlattenConfiguration(t *testing.T) {
 	require.True(t, state.Default.ValueBool())
 	require.Equal(t, createdAt.Format(time.RFC3339), state.CreatedAt.ValueString())
 	require.Equal(t, updatedAt.Format(time.RFC3339), state.UpdatedAt.ValueString())
+	require.Equal(t, stagingIP, state.StagingIP.ValueString())
 	require.Len(t, state.DNSRecords.Elements(), 1)
 
 	element := state.DNSRecords.Elements()[0]
@@ -178,4 +185,16 @@ func TestFlattenConfiguration(t *testing.T) {
 	require.Equal(t, "203.0.113.1", object.Attributes()["record_value"].(types.String).ValueString())
 	require.Equal(t, "A", object.Attributes()["record_type"].(types.String).ValueString())
 	require.Equal(t, "global", object.Attributes()["region"].(types.String).ValueString())
+}
+
+func TestFlattenConfigurationNoStagingIP(t *testing.T) {
+	configuration := &fastly.CustomTLSConfiguration{
+		ID:   "config-id",
+		Name: "my-config",
+	}
+
+	state := newState(t)
+	diags := flattenConfiguration(context.Background(), configuration, &state)
+	require.False(t, diags.HasError(), diags)
+	require.True(t, state.StagingIP.IsNull())
 }

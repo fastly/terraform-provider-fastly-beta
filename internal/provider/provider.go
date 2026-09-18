@@ -81,6 +81,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/configstore"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/configstoreitems"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customdashboard"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customvcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dnszone"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domain"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domainmanagement"
@@ -108,8 +109,11 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginglogshuttle"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingopenstack"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingpapertrail"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingscalyr"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsftp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsplunk"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsyslog"
@@ -152,6 +156,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecompute"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecomputeauto"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicedictionaryitems"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/settings"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/snippet"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsactivation"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlscertificate"
@@ -161,7 +166,6 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlssubscription"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlssubscriptionvalidation"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tsigkey"
-	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/vcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/version"
 )
 
@@ -263,14 +267,17 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		logginglogshuttle.NewResource,
 		loggingnewrelic.NewResource,
 		loggingnewrelicotlp.NewResource,
+		loggingopenstack.NewResource,
+		loggingpapertrail.NewResource,
 		loggings3.NewResource,
 		loggingscalyr.NewResource,
+		loggingsftp.NewResource,
 		loggingsplunk.NewResource,
 		loggingsumologic.NewResource,
 		loggingsyslog.NewResource,
 		integration.NewResource,
 		kvstore.NewResource,
-		vcl.NewResource,
+		customvcl.NewResource,
 		snippet.NewResource,
 		dynamicvclsnippet.NewResource,
 		dynamicsnippetcontent.NewResource,
@@ -323,6 +330,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		servicecompute.NewResource,
 		servicecomputeauto.NewResource,
 		servicedictionaryitems.NewResource,
+		settings.NewResource,
 		tlsactivation.NewResource,
 		tlscertificate.NewResource,
 		tlsmutualauthentication.NewResource,
@@ -414,14 +422,18 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		logginglogshuttle.NewListResource,
 		loggingnewrelic.NewListResource,
 		loggingnewrelicotlp.NewListResource,
-		vcl.NewListResource,
+		customvcl.NewListResource,
+		loggingopenstack.NewListResource,
+		loggingpapertrail.NewListResource,
 		loggings3.NewListResource,
 		loggingscalyr.NewListResource,
+		loggingsftp.NewListResource,
 		loggingsplunk.NewListResource,
 		loggingsumologic.NewListResource,
 		loggingsyslog.NewListResource,
 		servicecdn.NewListResource,
 		servicecompute.NewListResource,
+		settings.NewListResource,
 	}
 }
 

@@ -101,3 +101,75 @@ func TestParseCompositeID(t *testing.T) {
 		})
 	}
 }
+
+func TestParseServiceVersionID(t *testing.T) {
+	tests := []struct {
+		name          string
+		id            string
+		wantServiceID string
+		wantVersion   int
+		wantErr       bool
+	}{
+		{
+			name:          "valid settings import",
+			id:            "service123/3",
+			wantServiceID: "service123",
+			wantVersion:   3,
+			wantErr:       false,
+		},
+		{
+			name:    "version 0",
+			id:      "service123/0",
+			wantErr: true,
+		},
+		{
+			name:    "extra parts",
+			id:      "service123/3/extra",
+			wantErr: true,
+		},
+		{
+			name:    "missing version",
+			id:      "service123",
+			wantErr: true,
+		},
+		{
+			name:    "empty string",
+			id:      "",
+			wantErr: true,
+		},
+		{
+			name:    "invalid version",
+			id:      "service123/notanumber",
+			wantErr: true,
+		},
+		{
+			name:    "empty service_id",
+			id:      "/3",
+			wantErr: true,
+		},
+		{
+			name:    "negative version",
+			id:      "service123/-1",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			serviceID, version, err := ParseServiceVersionID(tt.id)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseServiceVersionID() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
+				return
+			}
+			if serviceID != tt.wantServiceID {
+				t.Errorf("ParseServiceVersionID() serviceID = %v, want %v", serviceID, tt.wantServiceID)
+			}
+			if version != tt.wantVersion {
+				t.Errorf("ParseServiceVersionID() version = %v, want %v", version, tt.wantVersion)
+			}
+		})
+	}
+}

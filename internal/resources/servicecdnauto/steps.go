@@ -7,6 +7,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cachesetting"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cdnacl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/condition"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customvcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dictionary"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/director"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domain"
@@ -34,8 +35,11 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginglogshuttle"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingopenstack"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingpapertrail"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingscalyr"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsftp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsplunk"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsyslog"
@@ -44,7 +48,6 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/responseobject"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/settings"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/snippet"
-	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/vcl"
 
 	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
@@ -283,6 +286,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 			},
 		},
 		{
+			label: "OpenStack logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return loggingopenstack.Reconcile(ctx, client, serviceID, version, plan.LoggingOpenStack)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingopenstack.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingOpenStack = loggingopenstack.MatchOrder(items, plan.LoggingOpenStack)
+				return nil
+			},
+		},
+		{
 			label: "DigitalOcean logging endpoints",
 			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				return loggingdigitalocean.Reconcile(ctx, client, serviceID, version, plan.LoggingDigitalOcean)
@@ -349,6 +366,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 					return err
 				}
 				plan.LoggingScalyr = loggingscalyr.MatchOrder(items, plan.LoggingScalyr)
+				return nil
+			},
+		},
+		{
+			label: "SFTP logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return loggingsftp.Reconcile(ctx, client, serviceID, version, plan.LoggingSFTP)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingsftp.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingSFTP = loggingsftp.MatchOrder(items, plan.LoggingSFTP)
 				return nil
 			},
 		},
@@ -591,6 +622,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 			},
 		},
 		{
+			label: "Papertrail logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return loggingpapertrail.Reconcile(ctx, client, serviceID, version, plan.LoggingPapertrail)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingpapertrail.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingPapertrail = loggingpapertrail.MatchOrder(items, plan.LoggingPapertrail)
+				return nil
+			},
+		},
+		{
 			label: "Image Optimizer default settings",
 			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				return imageoptimizerdefaultsettings.Reconcile(ctx, client, serviceID, version, previous.ImageOptimizerDefaultSettings, plan.ImageOptimizerDefaultSettings)
@@ -635,14 +680,14 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 		{
 			label: "custom VCL files",
 			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
-				return vcl.Reconcile(ctx, client, serviceID, version, plan.VCL)
+				return customvcl.Reconcile(ctx, client, serviceID, version, plan.CustomVCL)
 			},
 			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
-				items, err := vcl.ReadForVersion(ctx, client, serviceID, version)
+				items, err := customvcl.ReadForVersion(ctx, client, serviceID, version)
 				if err != nil {
 					return err
 				}
-				plan.VCL = vcl.MatchOrderPreservePlanContent(items, plan.VCL)
+				plan.CustomVCL = customvcl.MatchOrderPreservePlanContent(items, plan.CustomVCL)
 				return nil
 			},
 		},
@@ -830,6 +875,17 @@ func readSteps(state *Model, imported bool) []readStep {
 			},
 		},
 		{
+			label: "OpenStack logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingopenstack.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingOpenStack = loggingopenstack.MatchOrder(items, state.LoggingOpenStack)
+				return nil
+			},
+		},
+		{
 			label: "DigitalOcean logging endpoints",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				items, err := loggingdigitalocean.ReadForVersion(ctx, client, serviceID, version)
@@ -881,6 +937,17 @@ func readSteps(state *Model, imported bool) []readStep {
 					return err
 				}
 				state.LoggingScalyr = loggingscalyr.MatchOrder(items, state.LoggingScalyr)
+				return nil
+			},
+		},
+		{
+			label: "SFTP logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingsftp.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingSFTP = loggingsftp.MatchOrder(items, state.LoggingSFTP)
 				return nil
 			},
 		},
@@ -1072,6 +1139,17 @@ func readSteps(state *Model, imported bool) []readStep {
 			},
 		},
 		{
+			label: "Papertrail logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingpapertrail.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingPapertrail = loggingpapertrail.MatchOrder(items, state.LoggingPapertrail)
+				return nil
+			},
+		},
+		{
 			label: "Image Optimizer default settings",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				result, err := imageoptimizerdefaultsettings.ReadForVersion(ctx, client, serviceID, version, state.ImageOptimizerDefaultSettings, imported)
@@ -1107,11 +1185,11 @@ func readSteps(state *Model, imported bool) []readStep {
 		{
 			label: "custom VCL files",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
-				items, err := vcl.ReadForVersion(ctx, client, serviceID, version)
+				items, err := customvcl.ReadForVersion(ctx, client, serviceID, version)
 				if err != nil {
 					return err
 				}
-				state.VCL = vcl.MatchOrder(items, state.VCL)
+				state.CustomVCL = customvcl.MatchOrder(items, state.CustomVCL)
 				return nil
 			},
 		},
@@ -1191,6 +1269,12 @@ func planSteps(plan, state *Model) []planStep {
 			},
 		},
 		{
+			equal: func() bool { return loggingopenstack.Equal(plan.LoggingOpenStack, state.LoggingOpenStack) },
+			matchOnly: func() {
+				plan.LoggingOpenStack = loggingopenstack.MatchOrder(state.LoggingOpenStack, plan.LoggingOpenStack)
+			},
+		},
+		{
 			equal: func() bool { return loggingdigitalocean.Equal(plan.LoggingDigitalOcean, state.LoggingDigitalOcean) },
 			matchOnly: func() {
 				plan.LoggingDigitalOcean = loggingdigitalocean.MatchOrder(state.LoggingDigitalOcean, plan.LoggingDigitalOcean)
@@ -1215,6 +1299,10 @@ func planSteps(plan, state *Model) []planStep {
 		{
 			equal:     func() bool { return loggingscalyr.Equal(plan.LoggingScalyr, state.LoggingScalyr) },
 			matchOnly: func() { plan.LoggingScalyr = loggingscalyr.MatchOrder(state.LoggingScalyr, plan.LoggingScalyr) },
+		},
+		{
+			equal:     func() bool { return loggingsftp.Equal(plan.LoggingSFTP, state.LoggingSFTP) },
+			matchOnly: func() { plan.LoggingSFTP = loggingsftp.MatchOrder(state.LoggingSFTP, plan.LoggingSFTP) },
 		},
 		{
 			equal: func() bool { return loggingnewrelicotlp.Equal(plan.LoggingNewRelicOTLP, state.LoggingNewRelicOTLP) },
@@ -1301,6 +1389,12 @@ func planSteps(plan, state *Model) []planStep {
 			},
 		},
 		{
+			equal: func() bool { return loggingpapertrail.Equal(plan.LoggingPapertrail, state.LoggingPapertrail) },
+			matchOnly: func() {
+				plan.LoggingPapertrail = loggingpapertrail.MatchOrder(state.LoggingPapertrail, plan.LoggingPapertrail)
+			},
+		},
+		{
 			equal: func() bool {
 				return imageoptimizerdefaultsettings.Equal(plan.ImageOptimizerDefaultSettings, state.ImageOptimizerDefaultSettings)
 			},
@@ -1317,8 +1411,8 @@ func planSteps(plan, state *Model) []planStep {
 			},
 		},
 		{
-			equal:     func() bool { return vcl.Equal(plan.VCL, state.VCL) },
-			matchOnly: func() { plan.VCL = vcl.MatchOrderPreservePlanContent(state.VCL, plan.VCL) },
+			equal:     func() bool { return customvcl.Equal(plan.CustomVCL, state.CustomVCL) },
+			matchOnly: func() { plan.CustomVCL = customvcl.MatchOrderPreservePlanContent(state.CustomVCL, plan.CustomVCL) },
 		},
 	}
 }

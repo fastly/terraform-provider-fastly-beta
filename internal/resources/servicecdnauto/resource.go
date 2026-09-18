@@ -11,6 +11,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cachesetting"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cdnacl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/condition"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customvcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dictionary"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/director"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domain"
@@ -38,8 +39,11 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginglogshuttle"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingopenstack"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingpapertrail"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingscalyr"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsftp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsplunk"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsumologic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsyslog"
@@ -48,7 +52,6 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/responseobject"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/settings"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/snippet"
-	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/vcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 
@@ -110,11 +113,13 @@ type Model struct {
 	RateLimiter                   []ratelimiter.NestedModel                   `tfsdk:"rate_limiter"`
 	LoggingBlobStorage            []loggingblobstorage.NestedModel            `tfsdk:"logging_blobstorage"`
 	LoggingCloudfiles             []loggingcloudfiles.NestedModel             `tfsdk:"logging_cloudfiles"`
+	LoggingOpenStack              []loggingopenstack.NestedModel              `tfsdk:"logging_openstack"`
 	LoggingDigitalOcean           []loggingdigitalocean.NestedModel           `tfsdk:"logging_digitalocean"`
 	LoggingElasticsearch          []loggingelasticsearch.NestedModel          `tfsdk:"logging_elasticsearch"`
 	LoggingFTP                    []loggingftp.NestedModel                    `tfsdk:"logging_ftp"`
 	LoggingS3                     []loggings3.NestedModel                     `tfsdk:"logging_s3"`
 	LoggingScalyr                 []loggingscalyr.NestedModel                 `tfsdk:"logging_scalyr"`
+	LoggingSFTP                   []loggingsftp.NestedModel                   `tfsdk:"logging_sftp"`
 	LoggingNewRelicOTLP           []loggingnewrelicotlp.NestedModel           `tfsdk:"logging_newrelicotlp"`
 	LoggingNewRelic               []loggingnewrelic.NestedModel               `tfsdk:"logging_newrelic"`
 	LoggingHeroku                 []loggingheroku.NestedModel                 `tfsdk:"logging_heroku"`
@@ -132,10 +137,11 @@ type Model struct {
 	LoggingKinesis                []loggingkinesis.NestedModel                `tfsdk:"logging_kinesis"`
 	LoggingLoggly                 []loggingloggly.NestedModel                 `tfsdk:"logging_loggly"`
 	LoggingLogshuttle             []logginglogshuttle.NestedModel             `tfsdk:"logging_logshuttle"`
+	LoggingPapertrail             []loggingpapertrail.NestedModel             `tfsdk:"logging_papertrail"`
 	ImageOptimizerDefaultSettings []imageoptimizerdefaultsettings.NestedModel `tfsdk:"image_optimizer_default_settings"`
 	Snippet                       []snippet.NestedModel                       `tfsdk:"snippet"`
 	DynamicSnippet                []dynamicsnippet.NestedModel                `tfsdk:"dynamic_snippet"`
-	VCL                           []vcl.NestedModel                           `tfsdk:"vcl"`
+	CustomVCL                     []customvcl.NestedModel                     `tfsdk:"custom_vcl"`
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -201,11 +207,13 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"rate_limiter":                     ratelimiter.NestedBlockSchema(),
 			"logging_blobstorage":              loggingblobstorage.NestedBlockSchema(),
 			"logging_cloudfiles":               loggingcloudfiles.NestedBlockSchema(),
+			"logging_openstack":                loggingopenstack.NestedBlockSchema(),
 			"logging_digitalocean":             loggingdigitalocean.NestedBlockSchema(),
 			"logging_elasticsearch":            loggingelasticsearch.NestedBlockSchema(),
 			"logging_ftp":                      loggingftp.NestedBlockSchema(),
 			"logging_s3":                       loggings3.NestedBlockSchema(),
 			"logging_scalyr":                   loggingscalyr.NestedBlockSchema(),
+			"logging_sftp":                     loggingsftp.NestedBlockSchema(),
 			"logging_newrelicotlp":             loggingnewrelicotlp.NestedBlockSchema(),
 			"logging_newrelic":                 loggingnewrelic.NestedBlockSchema(),
 			"logging_heroku":                   loggingheroku.NestedBlockSchema(),
@@ -223,10 +231,11 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_kinesis":                  loggingkinesis.NestedBlockSchema(),
 			"logging_loggly":                   loggingloggly.NestedBlockSchema(),
 			"logging_logshuttle":               logginglogshuttle.NestedBlockSchema(),
+			"logging_papertrail":               loggingpapertrail.NestedBlockSchema(),
 			"image_optimizer_default_settings": imageoptimizerdefaultsettings.NestedBlockSchema(),
 			"snippet":                          snippet.NestedBlockSchema(),
 			"dynamic_snippet":                  dynamicsnippet.NestedBlockSchema(),
-			"vcl":                              vcl.NestedBlockSchema(),
+			"custom_vcl":                       customvcl.NestedBlockSchema(),
 		},
 	}
 }
@@ -272,9 +281,9 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		)
 	}
 
-	if err := vcl.ValidateConfig(config.VCL); err != nil {
+	if err := customvcl.ValidateConfig(config.CustomVCL); err != nil {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("vcl"),
+			path.Root("custom_vcl"),
 			"Invalid custom VCL configuration",
 			err.Error(),
 		)
@@ -418,6 +427,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		)
 	}
 
+	if err := loggingopenstack.ValidateConditionReferences(config.LoggingOpenStack, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_openstack"),
+			"Invalid OpenStack logging configuration",
+			err.Error(),
+		)
+	}
+
 	if err := loggingdigitalocean.ValidateConditionReferences(config.LoggingDigitalOcean, conditionNames); err != nil {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("logging_digitalocean"),
@@ -514,6 +531,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		)
 	}
 
+	if err := loggingsftp.ValidateConditionReferences(config.LoggingSFTP, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_sftp"),
+			"Invalid SFTP logging configuration",
+			err.Error(),
+		)
+	}
+
 	if err := loggingsplunk.ValidateConditionReferences(config.LoggingSplunk, conditionNames); err != nil {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("logging_splunk"),
@@ -569,6 +594,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 			err.Error(),
 		)
 	}
+
+	if err := loggingpapertrail.ValidateConditionReferences(config.LoggingPapertrail, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_papertrail"),
+			"Invalid Papertrail logging configuration",
+			err.Error(),
+		)
+	}
 }
 
 // partialCreateState is recorded once CreateService succeeds but before the remaining
@@ -621,9 +654,9 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	if err := vcl.Validate(plan.VCL); err != nil {
+	if err := customvcl.Validate(plan.CustomVCL); err != nil {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("vcl"),
+			path.Root("custom_vcl"),
 			"Invalid custom VCL configuration",
 			err.Error(),
 		)
@@ -860,9 +893,9 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	if err := vcl.Validate(plan.VCL); err != nil {
+	if err := customvcl.Validate(plan.CustomVCL); err != nil {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("vcl"),
+			path.Root("custom_vcl"),
 			"Invalid custom VCL configuration",
 			err.Error(),
 		)

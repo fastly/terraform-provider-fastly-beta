@@ -45,8 +45,11 @@ Automatic-lifecycle Fastly Compute service resource with nested versioned config
 - `logging_logshuttle` (Block List) Log Shuttle logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_logshuttle))
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
+- `logging_openstack` (Block List) OpenStack logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_openstack))
+- `logging_papertrail` (Block List) Papertrail logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_papertrail))
 - `logging_s3` (Block List) S3 logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_s3))
 - `logging_scalyr` (Block List) Scalyr logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_scalyr))
+- `logging_sftp` (Block List) SFTP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_sftp))
 - `logging_splunk` (Block List) Splunk logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_splunk))
 - `logging_sumologic` (Block List) Sumo Logic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_sumologic))
 - `logging_syslog` (Block List) Syslog logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_syslog))
@@ -685,6 +688,51 @@ Required:
 
 
 
+<a id="nestedblock--logging_openstack"></a>
+### Nested Schema for `logging_openstack`
+
+Required:
+
+- `authentication` (Attributes) Authentication credentials for your OpenStack account. (see [below for nested schema](#nestedatt--logging_openstack--authentication))
+- `bucket_name` (String) The name of your OpenStack container.
+- `name` (String) The unique name of the OpenStack logging endpoint. It is important to note that changing this attribute will delete and recreate the resource.
+- `url` (String) Your OpenStack auth url.
+
+Optional:
+
+- `compression_codec` (String) The codec used for compressing your logs. Valid values are `zstd`, `snappy`, and `gzip`. If the codec is `gzip`, `gzip_level` defaults to `3`; to use a different level, leave `compression_codec` unset and set `gzip_level` instead. Conflicts with `gzip_level`: setting both in the same request will result in an error.
+- `gzip_level` (Number) The level of gzip encoding when sending logs. Valid values are `0` (no compression) through `9`. To compress at a specific gzip level, leave `compression_codec` unset and set this. Conflicts with `compression_codec`: setting both in the same request will result in an error.
+- `message_type` (String) How the message should be formatted. Valid values are `classic`, `loggly`, `logplex`, and `blank`. Default `classic`.
+- `path` (String) The path to upload logs to. Must end with a trailing slash. If this field is left empty, the files will be saved in the bucket's root path.
+- `period` (Number) How frequently log files are finalized so they can be available for reading in seconds. Default `3600`.
+- `processing_region` (String) Region where logs will be processed before streaming to OpenStack. Valid values are `none`, `us` and `eu`.
+- `public_key` (String) PGP public key that Fastly will use to encrypt your log files before writing them to disk.
+- `timestamp_format` (String) strftime-specified timestamp format for log filename.
+
+<a id="nestedatt--logging_openstack--authentication"></a>
+### Nested Schema for `logging_openstack.authentication`
+
+Required:
+
+- `access_key` (String, Sensitive) Your OpenStack account access key.
+- `user` (String) The username for your OpenStack account.
+
+
+
+<a id="nestedblock--logging_papertrail"></a>
+### Nested Schema for `logging_papertrail`
+
+Required:
+
+- `address` (String) A hostname or IPv4 address of the Papertrail endpoint.
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+- `port` (Number) The port associated with the address where the Papertrail endpoint can be accessed.
+
+Optional:
+
+- `processing_region` (String) The geographic region where the logs will be processed before streaming. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+
+
 <a id="nestedblock--logging_s3"></a>
 ### Nested Schema for `logging_s3`
 
@@ -742,6 +790,42 @@ Optional:
 Required:
 
 - `token` (String, Sensitive) The token to use for authentication. See [Scalyr's API key documentation](https://www.scalyr.com/keys).
+
+
+
+<a id="nestedblock--logging_sftp"></a>
+### Nested Schema for `logging_sftp`
+
+Required:
+
+- `address` (String) A hostname or IPv4 address of the SFTP server.
+- `authentication` (Attributes) Authentication credentials for the SFTP server. Exactly one of `password` or `secret_key` must be set; if both are set, `secret_key` is preferred by the API. (see [below for nested schema](#nestedatt--logging_sftp--authentication))
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+- `path` (String) The path to upload log files to. If the path ends in `/` then it is treated as a directory.
+- `ssh_known_hosts` (String) A list of host keys for all hosts we can connect to over SFTP.
+
+Optional:
+
+- `compression_codec` (String) The codec used for compressing your logs. Valid values are `zstd`, `snappy`, and `gzip`. If the codec is `gzip`, `gzip_level` defaults to `3`; to use a different level, leave `compression_codec` unset and set `gzip_level` instead. Conflicts with `gzip_level`: setting both in the same request will result in an error.
+- `gzip_level` (Number) The level of gzip encoding when sending logs. Valid values are `0` (no compression) through `9`. To compress at a specific gzip level, leave `compression_codec` unset and set this. Conflicts with `compression_codec`: setting both in the same request will result in an error.
+- `message_type` (String) How the message should be formatted. Valid values are `classic`, `loggly`, `logplex`, and `blank`. Default `classic`.
+- `period` (Number) How frequently log files are finalized so they can be available for reading, in seconds. Default `3600`.
+- `port` (Number) The port number. Default `22`.
+- `processing_region` (String) The geographic region where the logs will be processed before streaming. Valid values are `none`, `us` and `eu`.
+- `public_key` (String) PGP public key that Fastly will use to encrypt your log files before writing them to disk.
+- `timestamp_format` (String) A strftime-specified timestamp format for log filenames.
+
+<a id="nestedatt--logging_sftp--authentication"></a>
+### Nested Schema for `logging_sftp.authentication`
+
+Required:
+
+- `user` (String) The username for the server.
+
+Optional:
+
+- `password` (String, Sensitive) The password for the server. If both `password` and `secret_key` are set, `secret_key` is preferred.
+- `secret_key` (String, Sensitive) The SSH private key for the server. If both `password` and `secret_key` are set, `secret_key` is preferred.
 
 
 

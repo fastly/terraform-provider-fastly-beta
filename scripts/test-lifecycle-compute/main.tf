@@ -60,7 +60,9 @@ resource "fastly_service_logging_newrelicotlp" "service_1_logging_newrelic" {
   service_id = fastly_service_compute.service_1.id
   version    = var.service_1_version
   name       = "test-newrelic-logger"
-  token      = "test-insert-key"
+  authentication = {
+    token = "test-insert-key"
+  }
 }
 
 resource "fastly_service_logging_datadog" "service_1_logging_datadog" {
@@ -196,8 +198,7 @@ resource "fastly_acl" "acl" {
 # Manages the ACL's entries via Terraform, exercising fastly_acl_entries against
 # the ACL created above.
 resource "fastly_acl_entries" "acl_entries" {
-  acl_id         = fastly_acl.acl.id
-  manage_entries = true
+  acl_id = fastly_acl.acl.id
 
   entries = {
     "192.0.2.0/24"    = "ALLOW"

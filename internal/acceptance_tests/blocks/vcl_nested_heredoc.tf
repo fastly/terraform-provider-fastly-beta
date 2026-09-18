@@ -1,4 +1,4 @@
-vcl {
+custom_vcl {
   name    = "{{.VCL_NAME}}"
   main    = true
   content = <<-VCL
