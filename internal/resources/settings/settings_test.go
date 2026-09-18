@@ -86,6 +86,26 @@ func TestEqual(t *testing.T) {
 	}
 }
 
+func TestFlattenModel(t *testing.T) {
+	var m Model
+	flattenModel(&m, fullNestedModel(), "svc-123", 5)
+
+	assert.Equal(t, types.StringValue("svc-123/5"), m.ID)
+	assert.Equal(t, types.StringValue("svc-123"), m.Service)
+	assert.Equal(t, types.Int64Value(5), m.Version)
+	assert.Equal(t, fullNestedModel(), m.NestedModel)
+}
+
+func TestResourceAttributes(t *testing.T) {
+	attrs := ResourceAttributes()
+
+	for _, key := range []string{"id", "service_id", "version", "default_host", "default_ttl", "http3", "stale_if_error", "stale_if_error_ttl"} {
+		if _, ok := attrs[key]; !ok {
+			t.Errorf("ResourceAttributes() missing %q", key)
+		}
+	}
+}
+
 func TestBuildUpdateInput(t *testing.T) {
 	input := BuildUpdateInput("svc-123", 5, fullNestedModel())
 

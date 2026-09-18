@@ -156,6 +156,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecompute"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecomputeauto"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicedictionaryitems"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/settings"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/snippet"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlsactivation"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/tlscertificate"
@@ -329,6 +330,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		servicecompute.NewResource,
 		servicecomputeauto.NewResource,
 		servicedictionaryitems.NewResource,
+		settings.NewResource,
 		tlsactivation.NewResource,
 		tlscertificate.NewResource,
 		tlsmutualauthentication.NewResource,

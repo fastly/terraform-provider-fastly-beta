@@ -3,6 +3,7 @@ package settings
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
@@ -17,6 +18,16 @@ const (
 	http3ConsistencyPollInterval = 500 * time.Millisecond
 	http3ConsistencyTimeout      = 30 * time.Second
 )
+
+// flattenModel populates the standalone resource's Model from a NestedModel plus the
+// service/version it belongs to. There is no name component, so the ID is just the
+// service/version pair.
+func flattenModel(m *Model, n NestedModel, serviceID string, version int) {
+	m.NestedModel = n
+	m.ID = types.StringValue(serviceID + "/" + strconv.Itoa(version))
+	m.Service = types.StringValue(serviceID)
+	m.Version = types.Int64Value(int64(version))
+}
 
 func FlattenToNestedModel(s *fastly.Settings, http3Enabled bool) NestedModel {
 	if s == nil {

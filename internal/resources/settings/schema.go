@@ -1,6 +1,8 @@
 package settings
 
 import (
+	"maps"
+
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -87,6 +89,26 @@ func CommonAttributes() map[string]schema.Attribute {
 			},
 		},
 	}
+}
+
+// ResourceAttributes returns the schema for the standalone fastly_service_settings resource.
+func ResourceAttributes() map[string]schema.Attribute {
+	attrs := map[string]schema.Attribute{
+		"id": schema.StringAttribute{
+			Computed:    true,
+			Description: "Terraform resource identifier.",
+		},
+		"service_id": schema.StringAttribute{
+			Required:    true,
+			Description: "Fastly service ID.",
+		},
+		"version": schema.Int64Attribute{
+			Required:    true,
+			Description: "Writable Fastly service version to modify.",
+		},
+	}
+	maps.Copy(attrs, CommonAttributes())
+	return attrs
 }
 
 // NestedBlockSchema returns the settings block for use inside _auto aggregate resources. At

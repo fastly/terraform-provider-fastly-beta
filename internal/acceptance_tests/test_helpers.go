@@ -2421,6 +2421,70 @@ func ConfigBackendWithRequestCondition(serviceName, domainName, backendName, con
 	)
 }
 
+// Configuration helpers for settings resources (explicit version management)
+
+// ConfigSettingsBasic returns an explicit fastly_service_settings resource config with
+// non-default values.
+func ConfigSettingsBasic(serviceName, domainName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/settings_explicit.tf",
+	)
+}
+
+// ConfigSettingsUpdated returns the same config with every attribute changed to a different
+// non-default value, to prove in-place update.
+func ConfigSettingsUpdated(serviceName, domainName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/settings_explicit_updated.tf",
+	)
+}
+
+// ConfigSettingsMinimal returns a fastly_service_settings resource config with every optional
+// attribute omitted, to prove they populate from documented defaults rather than drifting.
+func ConfigSettingsMinimal(serviceName, domainName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/settings_explicit_minimal.tf",
+	)
+}
+
+// ConfigSettingsOnComputeService returns a fastly_service_settings resource attached to a
+// Compute service, to prove the CDN-only service-kind restriction is enforced.
+func ConfigSettingsOnComputeService(serviceName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"SERVICE_VERSION": "1",
+		},
+		"internal/acceptance_tests/blocks/settings_explicit_on_compute.tf",
+	)
+}
+
 // Configuration helpers for condition resources (explicit version management)
 
 // ConfigConditionBasic returns a basic condition resource config.
