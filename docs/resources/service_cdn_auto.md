@@ -25,6 +25,7 @@ Automatic-lifecycle Fastly CDN service resource with nested versioned configurat
 - `cache_setting` (Block List) Cache settings attached to this service. (see [below for nested schema](#nestedblock--cache_setting))
 - `comment` (String) Optional service comment.
 - `condition` (Block List) Conditions attached to this service. (see [below for nested schema](#nestedblock--condition))
+- `custom_vcl` (Block List) Custom VCL files attached to this service. (see [below for nested schema](#nestedblock--custom_vcl))
 - `dictionary` (Block List) Edge dictionaries attached to this service. (see [below for nested schema](#nestedblock--dictionary))
 - `director` (Block List) Directors attached to this service. (see [below for nested schema](#nestedblock--director))
 - `domain` (Block List) Domains attached to this service. (see [below for nested schema](#nestedblock--domain))
@@ -54,6 +55,7 @@ Automatic-lifecycle Fastly CDN service resource with nested versioned configurat
 - `logging_newrelic` (Block List) New Relic logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelic))
 - `logging_newrelicotlp` (Block List) New Relic OTLP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_newrelicotlp))
 - `logging_openstack` (Block List) OpenStack logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_openstack))
+- `logging_papertrail` (Block List) Papertrail logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_papertrail))
 - `logging_s3` (Block List) S3 logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_s3))
 - `logging_scalyr` (Block List) Scalyr logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_scalyr))
 - `logging_sftp` (Block List) SFTP logging endpoints attached to this service. (see [below for nested schema](#nestedblock--logging_sftp))
@@ -66,7 +68,6 @@ Automatic-lifecycle Fastly CDN service resource with nested versioned configurat
 - `reuse` (Boolean) Deactivate the active version but do not delete the service, allowing it to be reused/imported elsewhere. Default `false`.
 - `settings` (Block List) General settings for this service version. At most one block is supported. Removing this block from configuration resets these settings back to their API defaults. (see [below for nested schema](#nestedblock--settings))
 - `snippet` (Block List) Regular VCL snippets attached to this service version. (see [below for nested schema](#nestedblock--snippet))
-- `vcl` (Block List) Custom VCL files attached to this service. (see [below for nested schema](#nestedblock--vcl))
 
 ### Read-Only
 
@@ -164,6 +165,19 @@ Required:
 Optional:
 
 - `priority` (Number) A number used to determine the order in which multiple conditions execute. Lower numbers execute first. Default `10`.
+
+
+<a id="nestedblock--custom_vcl"></a>
+### Nested Schema for `custom_vcl`
+
+Required:
+
+- `content` (String) The custom VCL source code to upload. Can be configured with file("${path.module}/main.vcl") or templatefile(...).
+- `name` (String) A unique name for this custom VCL file. Included VCL files must be referenced by this exact name from the main VCL file.
+
+Optional:
+
+- `main` (Boolean) Whether this custom VCL file is the main configuration. Exactly one configured custom VCL file must be marked as main.
 
 
 <a id="nestedblock--dictionary"></a>
@@ -940,6 +954,24 @@ Required:
 
 
 
+<a id="nestedblock--logging_papertrail"></a>
+### Nested Schema for `logging_papertrail`
+
+Required:
+
+- `address` (String) A hostname or IPv4 address of the Papertrail endpoint.
+- `name` (String) The name for the real-time logging configuration. Must be unique within the service.
+- `port` (Number) The port associated with the address where the Papertrail endpoint can be accessed.
+
+Optional:
+
+- `format` (String) A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/).
+- `format_version` (Number) The version of the custom logging format used for the configured endpoint. The logging call gets placed by default in `vcl_log` if format_version is set to `2` and in `vcl_deliver` if `format_version` is set to `1`.
+- `placement` (String) Where in the generated VCL the logging call should be placed. If not set, endpoints with `format_version` of `2` are placed in `vcl_log` and those with `format_version` of `1` are placed in `vcl_deliver`. Valid value is `none`.
+- `processing_region` (String) The geographic region where the logs will be processed before streaming. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
+- `response_condition` (String) The name of an existing condition in the configured endpoint, or leave blank to always execute.
+
+
 <a id="nestedblock--logging_s3"></a>
 ### Nested Schema for `logging_s3`
 
@@ -1246,16 +1278,3 @@ Required:
 Optional:
 
 - `priority` (Number) Priority determines execution order. Lower numbers execute first. Default `100`.
-
-
-<a id="nestedblock--vcl"></a>
-### Nested Schema for `vcl`
-
-Required:
-
-- `content` (String) The custom VCL source code to upload. Can configured with file("${path.module}/main.vcl") or templatefile(...).
-- `name` (String) A unique name for this custom VCL file. Included VCL files must be referenced by this exact name from the main VCL file.
-
-Optional:
-
-- `main` (Boolean) Whether this custom VCL file is the main configuration. Exactly one configured custom VCL file must be marked as main.

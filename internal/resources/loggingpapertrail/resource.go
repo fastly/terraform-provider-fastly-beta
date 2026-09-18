@@ -1,4 +1,4 @@
-package vcl
+package loggingpapertrail
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 var (
@@ -38,12 +38,12 @@ type Model struct {
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_service_vcl"
+	resp.TypeName = req.ProviderTypeName + "_service_logging_papertrail"
 }
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Fastly custom VCL file resource. Writes directly to the specified writable CDN service version.",
+		Description: "Fastly service Papertrail logging endpoint resource. Writes directly to the specified writable service version.",
 		Attributes:  ResourceAttributes(),
 	}
 }
@@ -65,9 +65,27 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_vcl", service.TypeVCL); err != nil {
-		resp.Diagnostics.AddError("Unsupported Fastly service type", err.Error())
+	tflog.Debug(ctx, "Creating Fastly Papertrail logging endpoint", map[string]any{
+		"service_id": plan.Service.ValueString(),
+		"version":    plan.Version.ValueInt64(),
+		"name":       service.StringValue(plan.Name),
+	})
+
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_logging_papertrail", service.TypeVCL, service.TypeCompute); err != nil {
+		resp.Diagnostics.AddError("Unsupported service type", err.Error())
 		return
+	}
+
+	serviceType, err := r.providerData.TypeChecker.GetType(ctx, plan.Service.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error determining service type", err.Error())
+		return
+	}
+	if serviceType == service.TypeCompute {
+		resp.Diagnostics.Append(ValidateNoVCLOnlyAttributesForCompute(ctx, req.Config)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	resp.Diagnostics.Append(r.providerData.VersionChecker.EnsureMutable(ctx, plan.Service.ValueString(), int(plan.Version.ValueInt64()))...)
@@ -75,60 +93,67 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	tflog.Debug(ctx, "Creating Fastly custom VCL", map[string]any{
-		"service_id": plan.Service.ValueString(),
-		"version":    plan.Version.ValueInt64(),
-		"name":       service.StringValue(plan.Name),
-		"main":       service.BoolValue(plan.Main),
-	})
+	input := BuildCreateInput(plan.Service.ValueString(), int(plan.Version.ValueInt64()), plan.NestedModel)
+	if serviceType == service.TypeCompute {
+		ClearVCLOnlyCreateFields(input)
+	}
 
-	v, err := r.providerData.Client.CreateVCL(ctx, BuildCreateInput(plan.Service.ValueString(), int(plan.Version.ValueInt64()), plan.NestedModel))
+	p, err := r.providerData.Client.CreatePapertrail(ctx, input)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating custom VCL", err.Error())
+		resp.Diagnostics.AddError("Error creating Papertrail logging endpoint", err.Error())
 		return
 	}
 
-	plannedContent := plan.Content
-	flatten(ctx, v, &plan)
-	plan.Content = plannedContent
-
+	flatten(ctx, p, &plan)
+	if serviceType == service.TypeCompute {
+		ResetVCLOnlyToDefaults(&plan.NestedModel)
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state Model
-
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	tflog.Debug(ctx, "Reading Fastly custom VCL from API", map[string]any{
+	tflog.Debug(ctx, "Reading Fastly Papertrail logging endpoint from API", map[string]any{
 		"service_id": state.Service.ValueString(),
 		"version":    state.Version.ValueInt64(),
 		"name":       state.Name.ValueString(),
 	})
 
-	v, err := r.providerData.Client.GetVCL(ctx, &fastly.GetVCLInput{
+	p, err := r.providerData.Client.GetPapertrail(ctx, &fastly.GetPapertrailInput{
 		ServiceID:      state.Service.ValueString(),
 		ServiceVersion: int(state.Version.ValueInt64()),
 		Name:           state.Name.ValueString(),
 	})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			tflog.Warn(ctx, "Custom VCL not found, removing from state", map[string]any{
+			tflog.Warn(ctx, "Papertrail logging endpoint not found, removing from state", map[string]any{
 				"service_id": state.Service.ValueString(),
-				"version":    state.Version.ValueInt64(),
 				"name":       state.Name.ValueString(),
 			})
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError("Error reading custom VCL", err.Error())
+		resp.Diagnostics.AddError("Error reading Papertrail logging endpoint", err.Error())
 		return
 	}
 
-	flatten(ctx, v, &state)
+	// The endpoint Get above succeeded, so the service exists and this is a cached
+	// lookup in all but the first call per service.
+	serviceType, err := r.providerData.TypeChecker.GetType(ctx, state.Service.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error determining service type", err.Error())
+		return
+	}
+
+	flatten(ctx, p, &state)
+	if serviceType == service.TypeCompute {
+		ResetVCLOnlyToDefaults(&state.NestedModel)
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -142,9 +167,21 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_vcl", service.TypeVCL); err != nil {
-		resp.Diagnostics.AddError("Unsupported Fastly service type", err.Error())
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_logging_papertrail", service.TypeVCL, service.TypeCompute); err != nil {
+		resp.Diagnostics.AddError("Unsupported service type", err.Error())
 		return
+	}
+
+	serviceType, err := r.providerData.TypeChecker.GetType(ctx, plan.Service.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error determining service type", err.Error())
+		return
+	}
+	if serviceType == service.TypeCompute {
+		resp.Diagnostics.Append(ValidateNoVCLOnlyAttributesForCompute(ctx, req.Config)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	resp.Diagnostics.Append(r.providerData.VersionChecker.EnsureMutable(ctx, plan.Service.ValueString(), int(plan.Version.ValueInt64()))...)
@@ -152,23 +189,27 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	tflog.Debug(ctx, "Updating Fastly custom VCL", map[string]any{
-		"service_id": plan.Service.ValueString(),
-		"version":    plan.Version.ValueInt64(),
-		"name":       service.StringValue(plan.Name),
+	opts := BuildUpdateInput(plan.Service.ValueString(), int(plan.Version.ValueInt64()), plan.NestedModel)
+	if serviceType == service.TypeCompute {
+		ClearVCLOnlyUpdateFields(opts)
+	}
+
+	tflog.Debug(ctx, "Updating Fastly Papertrail logging endpoint", map[string]any{
+		"service_id": opts.ServiceID,
+		"version":    opts.ServiceVersion,
+		"name":       opts.Name,
 	})
 
-	v, err := r.providerData.Client.UpdateVCL(ctx, BuildUpdateInput(plan.Service.ValueString(), int(plan.Version.ValueInt64()), plan.NestedModel))
+	p, err := r.providerData.Client.UpdatePapertrail(ctx, opts)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating custom VCL", err.Error())
+		resp.Diagnostics.AddError("Error updating Papertrail logging endpoint", err.Error())
 		return
 	}
 
-	plannedContent := plan.Content
-	flatten(ctx, v, &plan)
-	plan.ID = state.ID
-	plan.Content = plannedContent
-
+	flatten(ctx, p, &plan)
+	if serviceType == service.TypeCompute {
+		ResetVCLOnlyToDefaults(&plan.NestedModel)
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -179,17 +220,14 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 		return
 	}
 
-	tflog.Debug(ctx, "Deleting Fastly custom VCL", map[string]any{
+	tflog.Debug(ctx, "Deleting Fastly Papertrail logging endpoint", map[string]any{
 		"service_id": state.Service.ValueString(),
 		"version":    state.Version.ValueInt64(),
 		"name":       state.Name.ValueString(),
 	})
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, state.Service.ValueString(), "fastly_service_vcl", service.TypeVCL); err != nil {
-		if errors.IsNotFound(err) {
-			return
-		}
-		resp.Diagnostics.AddError("Unsupported Fastly service type", err.Error())
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, state.Service.ValueString(), "fastly_service_logging_papertrail", service.TypeVCL, service.TypeCompute); err != nil {
+		resp.Diagnostics.AddError("Unsupported service type", err.Error())
 		return
 	}
 
@@ -199,13 +237,16 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 		return
 	}
 
-	err := r.providerData.Client.DeleteVCL(ctx, &fastly.DeleteVCLInput{
+	err := r.providerData.Client.DeletePapertrail(ctx, &fastly.DeletePapertrailInput{
 		ServiceID:      state.Service.ValueString(),
 		ServiceVersion: int(state.Version.ValueInt64()),
 		Name:           state.Name.ValueString(),
 	})
-	if err != nil && !errors.IsNotFound(err) {
-		resp.Diagnostics.AddError("Error deleting custom VCL", err.Error())
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return
+		}
+		resp.Diagnostics.AddError("Error deleting Papertrail logging endpoint", err.Error())
 	}
 }
 
@@ -215,32 +256,41 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",
 			"Expected import ID in format: service_id/version/name\n"+
-				"For example: service123/3/main\n\n"+
+				"For example: service123/3/my-papertrail-logger\n\n"+
 				"Error: "+err.Error(),
 		)
 		return
 	}
 
-	tflog.Debug(ctx, "Importing custom VCL", map[string]any{
+	tflog.Debug(ctx, "Importing Papertrail logging endpoint", map[string]any{
 		"service_id": serviceID,
 		"version":    version,
 		"name":       name,
 	})
 
-	v, err := r.providerData.Client.GetVCL(ctx, &fastly.GetVCLInput{
+	p, err := r.providerData.Client.GetPapertrail(ctx, &fastly.GetPapertrailInput{
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 		Name:           name,
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("Error importing custom VCL", err.Error())
+		resp.Diagnostics.AddError("Error importing Papertrail logging endpoint", err.Error())
+		return
+	}
+
+	serviceType, err := r.providerData.TypeChecker.GetType(ctx, serviceID)
+	if err != nil {
+		resp.Diagnostics.AddError("Error determining service type", err.Error())
 		return
 	}
 
 	var state Model
 	state.Service = types.StringValue(serviceID)
 	state.Version = types.Int64Value(int64(version))
-	flatten(ctx, v, &state)
+	flatten(ctx, p, &state)
+	if serviceType == service.TypeCompute {
+		ResetVCLOnlyToDefaults(&state.NestedModel)
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }

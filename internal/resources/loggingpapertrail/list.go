@@ -1,20 +1,21 @@
-package vcl
+package loggingpapertrail
 
 import (
 	"context"
+	"fmt"
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/listidentity"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/list"
 	listschema "github.com/hashicorp/terraform-plugin-framework/list/schema"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 var (
@@ -31,12 +32,12 @@ func NewListResource() list.ListResource {
 }
 
 func (l *ListResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_service_vcl"
+	resp.TypeName = req.ProviderTypeName + "_service_logging_papertrail"
 }
 
 func (l *ListResource) ListResourceConfigSchema(_ context.Context, _ list.ListResourceSchemaRequest, resp *list.ListResourceSchemaResponse) {
 	resp.Schema = listschema.Schema{
-		Description: "List all custom VCL files across all Fastly CDN services at their active version, or latest version when no active version exists.",
+		Description: "List all Papertrail logging endpoints across all Fastly CDN and Compute services at their active version, or latest version when no active version exists.",
 		Attributes:  map[string]listschema.Attribute{},
 	}
 }
@@ -52,7 +53,7 @@ func (l *ListResource) Configure(_ context.Context, req resource.ConfigureReques
 }
 
 func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *list.ListResultsStream) {
-	tflog.Debug(ctx, "Listing Fastly custom VCL files")
+	tflog.Debug(ctx, "Listing Fastly Papertrail logging endpoints")
 
 	services, err := l.client.ListServices(ctx, &fastly.ListServicesInput{})
 	if err != nil {
@@ -65,7 +66,7 @@ func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *l
 	stream.Results = func(push func(list.ListResult) bool) {
 		var count int64
 		for _, svc := range services {
-			if svc == nil || svc.Type == nil || *svc.Type != service.TypeVCL {
+			if svc == nil || svc.Type == nil || !service.TypeSupported(*svc.Type, service.TypeVCL, service.TypeCompute) {
 				continue
 			}
 			serviceID := fastly.ToValue(svc.ServiceID)
@@ -82,20 +83,20 @@ func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *l
 				continue
 			}
 
-			vcls, err := l.client.ListVCLs(ctx, &fastly.ListVCLsInput{
+			loggers, err := l.client.ListPapertrails(ctx, &fastly.ListPapertrailsInput{
 				ServiceID:      serviceID,
 				ServiceVersion: version,
 			})
 			if err != nil {
-				tflog.Warn(ctx, "Error listing custom VCL files for service", map[string]any{
+				tflog.Warn(ctx, "Error listing Papertrail logging endpoints for service", map[string]any{
 					"service_id": serviceID,
 					"error":      err.Error(),
 				})
 				continue
 			}
 
-			for _, v := range vcls {
-				if v == nil || v.Name == nil {
+			for _, p := range loggers {
+				if p == nil || p.Name == nil {
 					continue
 				}
 				if req.Limit > 0 && count >= req.Limit {
@@ -103,15 +104,11 @@ func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *l
 				}
 				count++
 
-				result := req.NewListResult(ctx)
-				result.DisplayName = service.ToGeneratedResourceName(fastly.ToValue(svc.Name), serviceID, *v.Name)
-
-				result.Diagnostics.Append(result.Identity.SetAttribute(ctx, path.Root("service_id"), serviceID)...)
-				result.Diagnostics.Append(result.Identity.SetAttribute(ctx, path.Root("version"), int64(version))...)
-				result.Diagnostics.Append(result.Identity.SetAttribute(ctx, path.Root("name"), *v.Name)...)
+				result := listidentity.NewResult(ctx, req)
+				result.DisplayName = service.ToGeneratedResourceName(fastly.ToValue(svc.Name), serviceID, *p.Name)
 
 				if req.IncludeResource {
-					result.Diagnostics.Append(setResourceAttrs(ctx, &result, v, serviceID, version)...)
+					result.Diagnostics.Append(setResourceAttrs(ctx, &result, p, serviceID, version, fastly.ToValue(svc.Type))...)
 				}
 
 				if !push(result) {
@@ -122,14 +119,26 @@ func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *l
 	}
 }
 
-func setResourceAttrs(ctx context.Context, result *list.ListResult, v *fastly.VCL, serviceID string, version int) diag.Diagnostics {
+// setResourceAttrs sets the listed resource's attributes on result. serviceType
+// mirrors the Compute normalization applied by Create/Read/Import: the API
+// still returns its own values for the VCL-only fields on a Compute-attached
+// endpoint, but the standalone resource's schema rejects those fields being
+// configured on Compute, so they must be reset to their schema defaults here
+// too — otherwise this could emit resource data the resource itself can't
+// accept.
+func setResourceAttrs(ctx context.Context, result *list.ListResult, p *fastly.Papertrail, serviceID string, version int, serviceType string) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	id := serviceID + "-" + fmt.Sprintf("%d", version) + "-" + fastly.ToValue(p.Name)
+
 	model := Model{
-		NestedModel: FlattenToNestedModel(v),
-		ID:          types.StringValue(ID(serviceID, version, fastly.ToValue(v.Name))),
+		NestedModel: FlattenToNestedModel(p),
+		ID:          types.StringValue(id),
 		Service:     types.StringValue(serviceID),
 		Version:     types.Int64Value(int64(version)),
+	}
+	if serviceType == service.TypeCompute {
+		ResetVCLOnlyToDefaults(&model.NestedModel)
 	}
 	diags.Append(result.Resource.Set(ctx, &model)...)
 	return diags

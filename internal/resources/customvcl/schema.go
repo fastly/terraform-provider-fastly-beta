@@ -1,4 +1,4 @@
-package vcl
+package customvcl
 
 import (
 	"context"
@@ -38,7 +38,7 @@ func CommonAttributes() map[string]schema.Attribute {
 		},
 		"content": schema.StringAttribute{
 			Required:    true,
-			Description: "The custom VCL source code to upload. Can configured with file(\"${path.module}/main.vcl\") or templatefile(...).",
+			Description: "The custom VCL source code to upload. Can be configured with file(\"${path.module}/main.vcl\") or templatefile(...).",
 		},
 		"main": schema.BoolAttribute{
 			Optional:    true,

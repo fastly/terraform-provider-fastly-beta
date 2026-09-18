@@ -43,6 +43,7 @@ output "tls_configuration_id" {
 
 - `created_at` (String) Timestamp (GMT) when the configuration was created.
 - `dns_records` (Attributes Set) The available DNS addresses that can be used to enable TLS for a domain. DNS must be configured for a domain for TLS handshakes to succeed. If enabling TLS on an apex domain (e.g. `example.com`) you must create four A records (or four AAAA records for IPv6 support) using the displayed global A record's IP addresses with your DNS provider. For subdomains and wildcard domains (e.g. `www.example.com` or `*.example.com`) you will need to create a relevant CNAME record. (see [below for nested schema](#nestedatt--dns_records))
+- `staging_ip` (String) The staging IP address for this TLS configuration.
 - `updated_at` (String) Timestamp (GMT) when the configuration was last updated.
 
 <a id="nestedatt--dns_records"></a>

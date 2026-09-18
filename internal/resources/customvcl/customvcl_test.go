@@ -1,4 +1,4 @@
-package vcl
+package customvcl
 
 import (
 	"bytes"

@@ -54,34 +54,36 @@ Compatibility service resources:
 
 ### Explicit/default resources still under development
 
-All explicit/default resources are still under active development and are **not ready for
-use**. Use the automatic compatibility family (`fastly_service_cdn_auto` /
-`fastly_service_compute_auto`) instead until these reach parity:
+Some resources in this provider can't be used with the automatic compatibility family: they
+belong to the explicit/default family, which is still under development and **not ready for
+testing**. Use their automatic family equivalents instead.
 
-- `fastly_service_cdn`
-- `fastly_service_compute`
-- `fastly_service_domain`
-- `fastly_service_backend`
-- `fastly_service_vcl`
-- `fastly_service_vcl_snippet`
-- `fastly_service_dynamic_vcl_snippet`
-- `fastly_service_dynamic_snippet_content`
-- `fastly_service_condition`
-- `fastly_service_cdn_acl`
-- `fastly_service_cdn_acl_entries`
-- `fastly_service_resource_link`
-- `fastly_service_dictionary_items`
-- `fastly_service_logging_bigquery`
-- `fastly_service_logging_blobstorage`
-- `fastly_service_logging_datadog`
-- `fastly_service_logging_gcs`
-- `fastly_service_logging_https`
-- `fastly_service_logging_newrelic`
-- `fastly_service_logging_newrelicotlp`
-- `fastly_service_logging_s3`
-- `fastly_service_logging_splunk`
-- `fastly_service_logging_sumologic`
-- `fastly_service_logging_syslog`
+Two of them are service resources, replaced one for one:
+
+| Explicit/default resource | Use instead |
+| --- | --- |
+| `fastly_service_cdn` | `fastly_service_cdn_auto` |
+| `fastly_service_compute` | `fastly_service_compute_auto` |
+
+The rest are configured on those two resources as nested blocks:
+
+| Explicit/default resource | Use instead | Available on |
+| --- | --- | --- |
+| `fastly_service_backend` | `backend` block | both |
+| `fastly_service_cdn_acl` | `acl` block | CDN |
+| `fastly_service_condition` | `condition` block | CDN |
+| `fastly_service_custom_vcl` | `custom_vcl` block | CDN |
+| `fastly_service_domain` | `domain` block \* | both |
+| `fastly_service_dynamic_vcl_snippet` | `dynamic_snippet` block | CDN |
+| `fastly_service_logging_*` | `logging_*` blocks | both |
+| `fastly_service_resource_link` | `resource_link` block | Compute |
+| `fastly_service_vcl_snippet` | `snippet` block | CDN |
+
+\* Both `fastly_service_domain` and the `domain` block configure classic domains, which are only
+available on accounts created before September 16, 2025. The versionless `fastly_domain` resource
+is recommended for all accounts, and works with either service resource.
+
+Every other resource is available for testing today.
 
 ### Explicit/default family
 

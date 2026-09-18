@@ -44,6 +44,7 @@ type DataSourceModel struct {
 	CreatedAt     types.String `tfsdk:"created_at"`
 	UpdatedAt     types.String `tfsdk:"updated_at"`
 	DNSRecords    types.Set    `tfsdk:"dns_records"`
+	StagingIP     types.String `tfsdk:"staging_ip"`
 }
 
 var dnsRecordAttrTypes = map[string]attr.Type{
@@ -132,6 +133,10 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 			"updated_at": schema.StringAttribute{
 				Computed:    true,
 				Description: "Timestamp (GMT) when the configuration was last updated.",
+			},
+			"staging_ip": schema.StringAttribute{
+				Computed:    true,
+				Description: "The staging IP address for this TLS configuration.",
 			},
 			"dns_records": schema.SetNestedAttribute{
 				Computed: true,
@@ -359,6 +364,8 @@ func flattenConfiguration(ctx context.Context, configuration *fastly.CustomTLSCo
 	if configuration.UpdatedAt != nil {
 		state.UpdatedAt = types.StringValue(configuration.UpdatedAt.Format(time.RFC3339))
 	}
+
+	state.StagingIP = types.StringPointerValue(configuration.StagingIP)
 
 	return diags
 }

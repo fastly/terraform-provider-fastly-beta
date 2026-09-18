@@ -11,6 +11,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cachesetting"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cdnacl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/condition"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customvcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dictionary"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/director"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domain"
@@ -39,6 +40,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelic"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingnewrelicotlp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingopenstack"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingpapertrail"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggings3"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingscalyr"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingsftp"
@@ -50,7 +52,6 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/responseobject"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/settings"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/snippet"
-	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/vcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 
@@ -136,10 +137,11 @@ type Model struct {
 	LoggingKinesis                []loggingkinesis.NestedModel                `tfsdk:"logging_kinesis"`
 	LoggingLoggly                 []loggingloggly.NestedModel                 `tfsdk:"logging_loggly"`
 	LoggingLogshuttle             []logginglogshuttle.NestedModel             `tfsdk:"logging_logshuttle"`
+	LoggingPapertrail             []loggingpapertrail.NestedModel             `tfsdk:"logging_papertrail"`
 	ImageOptimizerDefaultSettings []imageoptimizerdefaultsettings.NestedModel `tfsdk:"image_optimizer_default_settings"`
 	Snippet                       []snippet.NestedModel                       `tfsdk:"snippet"`
 	DynamicSnippet                []dynamicsnippet.NestedModel                `tfsdk:"dynamic_snippet"`
-	VCL                           []vcl.NestedModel                           `tfsdk:"vcl"`
+	CustomVCL                     []customvcl.NestedModel                     `tfsdk:"custom_vcl"`
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -229,10 +231,11 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_kinesis":                  loggingkinesis.NestedBlockSchema(),
 			"logging_loggly":                   loggingloggly.NestedBlockSchema(),
 			"logging_logshuttle":               logginglogshuttle.NestedBlockSchema(),
+			"logging_papertrail":               loggingpapertrail.NestedBlockSchema(),
 			"image_optimizer_default_settings": imageoptimizerdefaultsettings.NestedBlockSchema(),
 			"snippet":                          snippet.NestedBlockSchema(),
 			"dynamic_snippet":                  dynamicsnippet.NestedBlockSchema(),
-			"vcl":                              vcl.NestedBlockSchema(),
+			"custom_vcl":                       customvcl.NestedBlockSchema(),
 		},
 	}
 }
@@ -278,9 +281,9 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		)
 	}
 
-	if err := vcl.ValidateConfig(config.VCL); err != nil {
+	if err := customvcl.ValidateConfig(config.CustomVCL); err != nil {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("vcl"),
+			path.Root("custom_vcl"),
 			"Invalid custom VCL configuration",
 			err.Error(),
 		)
@@ -591,6 +594,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 			err.Error(),
 		)
 	}
+
+	if err := loggingpapertrail.ValidateConditionReferences(config.LoggingPapertrail, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_papertrail"),
+			"Invalid Papertrail logging configuration",
+			err.Error(),
+		)
+	}
 }
 
 // partialCreateState is recorded once CreateService succeeds but before the remaining
@@ -643,9 +654,9 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	if err := vcl.Validate(plan.VCL); err != nil {
+	if err := customvcl.Validate(plan.CustomVCL); err != nil {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("vcl"),
+			path.Root("custom_vcl"),
 			"Invalid custom VCL configuration",
 			err.Error(),
 		)
@@ -882,9 +893,9 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	if err := vcl.Validate(plan.VCL); err != nil {
+	if err := customvcl.Validate(plan.CustomVCL); err != nil {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("vcl"),
+			path.Root("custom_vcl"),
 			"Invalid custom VCL configuration",
 			err.Error(),
 		)
