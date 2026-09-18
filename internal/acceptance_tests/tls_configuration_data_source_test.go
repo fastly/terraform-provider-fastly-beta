@@ -28,6 +28,7 @@ func TestAccFastlyDataSourceTLSConfiguration_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
 					resource.TestCheckResourceAttrSet(resourceName, "updated_at"),
 					resource.TestCheckResourceAttrSet(resourceName, "dns_records.#"),
+					resource.TestMatchResourceAttr(resourceName, "staging_ip", regexp.MustCompile(`^\d+\.\d+\.\d+\.\d+$`)),
 				),
 			},
 		},
