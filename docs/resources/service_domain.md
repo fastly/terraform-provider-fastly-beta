@@ -9,7 +9,7 @@ description: |-
 
 Fastly service domain resource. Writes directly to the specified writable service version.
 
-~> **Note:** This resource configures *classic domains*, which are only available on accounts created before September 16, 2025. We recommend the versionless domain resources — [`fastly_domain`](domain.md) and [`fastly_domain_service_link`](domain_service_link.md) — for all accounts.
+~> **Note:** This resource configures [classic domains](https://www.fastly.com/documentation/guides/getting-started/domains/about-domains/#working-with-classic-domains), which are only available on accounts created before September 16, 2025. We recommend the versionless domain resources — [`fastly_domain`](domain.md) and [`fastly_domain_service_link`](domain_service_link.md).
 
 This resource is part of the explicit/default first-class resource family. It
 manages a domain on the configured service version. It does not clone, activate,

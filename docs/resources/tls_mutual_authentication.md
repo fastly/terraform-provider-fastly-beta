@@ -46,6 +46,40 @@ resource "fastly_tls_mutual_authentication" "example" {
 }
 ```
 
+For services using [classic domains](https://www.fastly.com/documentation/guides/getting-started/domains/about-domains/#working-with-classic-domains), the domain is declared inside the service:
+
+```terraform
+resource "fastly_service_cdn_auto" "example" {
+  name = "example-service"
+
+  domain {
+    name = "example.com"
+  }
+
+  backend {
+    address = "127.0.0.1"
+    name    = "localhost"
+  }
+}
+
+resource "fastly_tls_certificate" "example" {
+  certificate_body = file("example.com.crt")
+  name             = "example-cert"
+}
+
+resource "fastly_tls_activation" "example" {
+  certificate_id = fastly_tls_certificate.example.id
+  domain         = "example.com"
+  depends_on     = [fastly_service_cdn_auto.example]
+}
+
+resource "fastly_tls_mutual_authentication" "example" {
+  activation_ids = [fastly_tls_activation.example.id]
+  cert_bundle    = file("client-ca-bundle.crt")
+  enforced       = true
+}
+```
+
 ## Schema
 
 ### Required
