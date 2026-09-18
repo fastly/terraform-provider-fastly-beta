@@ -39,6 +39,31 @@ resource "fastly_tls_subscription" "example" {
 }
 ```
 
+For services using [classic domains](https://www.fastly.com/documentation/guides/getting-started/domains/about-domains/#working-with-classic-domains), the domain is declared inside the service:
+
+```terraform
+resource "fastly_service_cdn_auto" "example" {
+  name = "example-service"
+
+  domain {
+    name = "example.com"
+  }
+
+  backend {
+    address = "127.0.0.1"
+    name    = "localhost"
+  }
+}
+
+resource "fastly_tls_subscription" "example" {
+  domains               = [for domain in fastly_service_cdn_auto.example.domain : domain.name]
+  certificate_authority = "lets-encrypt"
+  force_destroy         = true
+
+  depends_on = [fastly_service_cdn_auto.example]
+}
+```
+
 See the [`fastly_tls_subscription_validation`](tls_subscription_validation.md) documentation for a complete example of configuring DNS validation records and waiting for the certificate to be issued.
 
 {{ .SchemaMarkdown | trimspace }}

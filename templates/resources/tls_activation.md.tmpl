@@ -42,6 +42,34 @@ resource "fastly_tls_activation" "example" {
 }
 ```
 
+For services using [classic domains](https://www.fastly.com/documentation/guides/getting-started/domains/about-domains/#working-with-classic-domains), the domain is declared inside the service:
+
+```terraform
+resource "fastly_service_cdn_auto" "example" {
+  name = "example-service"
+
+  domain {
+    name = "example.com"
+  }
+
+  backend {
+    address = "127.0.0.1"
+    name    = "localhost"
+  }
+}
+
+resource "fastly_tls_certificate" "example" {
+  certificate_body = file("example.com.crt")
+  name             = "example-cert"
+}
+
+resource "fastly_tls_activation" "example" {
+  certificate_id = fastly_tls_certificate.example.id
+  domain         = "example.com"
+  depends_on     = [fastly_service_cdn_auto.example]
+}
+```
+
 Rotating the certificate should be done in multiple plan/apply steps to avoid downtime: create the new `fastly_tls_certificate` alongside the currently active one, update `fastly_tls_activation.certificate_id` to point at it, then delete the old certificate.
 
 `mutual_authentication_id` can only be applied via an update after the activation is created, so setting it at creation time still requires two applies:
