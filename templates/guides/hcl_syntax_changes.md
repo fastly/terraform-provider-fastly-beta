@@ -264,7 +264,9 @@ also available in the legacy provider.
 `fastly_domain.example.id` instead. `fastly_domain_service_link` is
 unchanged, and its `domain_id` argument still takes that UUID.
 
-### Next-Gen WAF Rules
+### Next-Gen WAF
+
+#### Rules
 
 Next-Gen WAF rules have their own resources by rule type and scope
 ('account' or 'workspace'), instead of being combined into one
@@ -283,7 +285,7 @@ apply`.
 |`fastly_ngwaf_workspace_rule` - `rate_limit`|`fastly_ngwaf_workspace_rate_limit_rule`|
 |`fastly_ngwaf_workspace_rule` - `templated_signal`|`fastly_ngwaf_workspace_templated_signal_rule`|
 
-### Next-Gen WAF Lists
+#### Lists
 
 Next-Gen WAF lists have their own resources by list type and scope
 ('account' or 'workspace'), instead of being combined into one
@@ -306,13 +308,18 @@ apply`.
 |`fastly_ngwaf_workspace_list` - `wildcard`|`fastly_ngwaf_workspace_wildcard_list`|
 |`fastly_ngwaf_workspace_list` - `signal`|`fastly_ngwaf_workspace_signal_list`|
 
-### Other Changes
+#### Renamed Resources
 
-`fastly_ngwaf_virtual_patches` has been renamed to
-`fastly_ngwaf_workspace_virtual_patch` to reflect that it manages a
-single Virtual Patch and also that it applies to a workspace, not the
-entire account.
+|Legacy resource|Resource in this provider|
+|---|---|
+|`fastly_ngwaf_account_signal`|`fastly_ngwaf_signal`|
+|`fastly_ngwaf_alert_{TYPE}_integration`|`fastly_ngwaf_workspace_alert_{TYPE}_integration`|
+|`fastly_ngwaf_redaction`|`fastly_ngwaf_workspace_redaction`|
+|`fastly_ngwaf_thresholds`|`fastly_ngwaf_workspace_threshold`|
+|`fastly_ngwaf_virtual_patches`|`fastly_ngwaf_workspace_virtual_patch`|
 
-All of the `fastly_ngwaf_alert_{TYPE}_integration` resources have been
-renamed to `fastly_ngwaf_workspace_alert_{TYPE}_integration` to
-reflect that they apply to a workspace, not the entire account.
+The resources whose names gained a `workspace` element were renamed
+to reflect that they apply to a workspace, not the entire account.
+`fastly_ngwaf_thresholds` and `fastly_ngwaf_virtual_patches` also
+became singular, reflecting that each resource manages a single
+threshold or Virtual Patch.
