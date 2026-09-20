@@ -203,6 +203,29 @@ logging_kafka {
 }
 ```
 
+### Other Nested Block Attributes
+
+The `dynamicsnippet` block has been renamed to `dynamic_snippet`.
+
+Some nested blocks have also gained or lost attributes:
+
+|Block|Change|
+|---|---|
+|`backend` (CDN)|`error_threshold` removed, `comment` added|
+|`backend` (Compute)|`auto_loadbalance`, `comment`, and `request_condition` added|
+|`image_optimizer_default_settings`|`name` removed; available on CDN services only|
+|`logging_bigquery` (CDN)|`format_version` added|
+|`logging_newrelicotlp` (Compute)|`format`, `format_version`, `placement`, and `response_condition` removed|
+|`logging_splunk`|`request_max_bytes` and `request_max_entries` added|
+|`rate_limiter` (CDN)|`ratelimiter_id` renamed to `rate_limiter_id`|
+
+On a Compute service, `logging_newrelicotlp` now accepts only
+`authentication`, `name`, `processing_region`, `region`, and `url`.
+It was the only Compute logging block in the legacy provider which
+accepted `format`, `format_version`, `placement`, and
+`response_condition`, and they had no effect there, so a working
+configuration is unlikely to set them.
+
 ### Container Item Management
 
 In the legacy provider a number of resources which manage items in
