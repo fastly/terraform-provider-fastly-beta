@@ -237,7 +237,19 @@ ignoring any other items which may be present in the container.
 
 This change applies to `fastly_acl_entries`,
 `fastly_configstore_items`, `fastly_service_cdn_acl_entries`, and
-`fastly_service_dictionary_items`.
+`fastly_service_dictionary_items`. Most of those resources were
+renamed as well, along with the ACL resource itself:
+
+|Legacy resource|Resource in this provider|
+|---|---|
+|`fastly_compute_acl`|`fastly_acl`|
+|`fastly_compute_acl_entries`|`fastly_acl_entries`|
+|`fastly_configstore_entries`|`fastly_configstore_items`|
+|`fastly_service_acl_entries`|`fastly_service_cdn_acl_entries`|
+
+`fastly_configstore_entries` was renamed to match the vocabulary
+used in the Fastly Control Panel and API documentation.
+`fastly_service_dictionary_items` kept its name.
 
 ### Next-Gen WAF Rules
 
@@ -294,7 +306,3 @@ reflect that they apply to a workspace, not the entire account.
 
 The deprecated aliases `fastly_domain_v1` and
 `fastly_domain_v1_service_link` are not available.
-
-`fastly_configstore_entries` was renamed to `fastly_configstore_items`
-to match the vocabulary used in the Fastly Control Panel and API
-documentation.
