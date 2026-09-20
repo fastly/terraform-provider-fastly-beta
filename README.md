@@ -77,6 +77,7 @@ The rest are configured on those two resources as nested blocks:
 | `fastly_service_dynamic_vcl_snippet` | `dynamic_snippet` block | CDN |
 | `fastly_service_logging_*` | `logging_*` blocks | both |
 | `fastly_service_resource_link` | `resource_link` block | Compute |
+| `fastly_service_settings` | `settings` block | CDN |
 | `fastly_service_vcl_snippet` | `snippet` block | CDN |
 
 \* Both `fastly_service_domain` and the `domain` block configure classic domains, which are only
