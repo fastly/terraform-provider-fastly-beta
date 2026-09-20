@@ -293,9 +293,8 @@ the provider deletes and recreates the dictionary, which discards its items
 just like removing the block would.
 
 Either empty the dictionary first (for example with
-`fastly_service_dictionary_items`, once ported to this provider), or set
-`force_destroy = true` on the block before removing it or changing
-`write_only`:
+`fastly_service_dictionary_items`), or set `force_destroy = true` on the
+block before removing it or changing `write_only`:
 
 ```hcl
   dictionary {
