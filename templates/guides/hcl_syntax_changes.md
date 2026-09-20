@@ -40,8 +40,8 @@ resource configuration.
 
 Product enablement is now available as top-level versionless
 resources, and no longer available as a nested block in a `service`
-resource. This changes aligns to the Fastly product enablement API,
-and also allows individual products to be enabled (or diabled) without
+resource. This change aligns with the Fastly product enablement API,
+and also allows individual products to be enabled (or disabled) without
 affecting the enablement status or configuration of other products on
 the service.
 
@@ -163,7 +163,7 @@ apply`.
 Next-Gen WAF lists have their own resources by list type and scope
 ('account' or 'workspace'), instead of being combined into one
 resource by scope and using a `type` attribute to distinguish list
-types. This change allows more thoroughl validation of the resource's
+types. This change allows more thorough validation of the resource's
 configuration during `terraform plan`, reducing the chances that the
 list's attributes will be rejected by the Fastly API during `terraform
 apply`.
