@@ -36,6 +36,44 @@ nested blocks. This is the same behavior provided by the legacy
 provider when `activate = true` and `stage = false` were used in the
 resource configuration.
 
+### Service Settings
+
+Settings which were top-level attributes of the service resource
+in the legacy provider are now configured in a nested `settings`
+block. This applies to `default_host`, `default_ttl`, `http3`,
+`stale_if_error`, and `stale_if_error_ttl`. The service resources
+in this provider carry only `name`, `comment`, `force_destroy`,
+and `reuse` at the top level.
+
+In the legacy provider, these settings were written this way:
+
+```hcl
+resource "fastly_service_vcl" "example" {
+  name           = "example"
+  default_host   = "origin.example.com"
+  default_ttl    = 3600
+  stale_if_error = true
+}
+```
+
+In this provider, they are written this way:
+
+```hcl
+resource "fastly_service_cdn_auto" "example" {
+  name = "example"
+
+  settings {
+    default_host   = "origin.example.com"
+    default_ttl    = 3600
+    stale_if_error = true
+  }
+}
+```
+
+Removing the `settings` block resets these settings to the Fastly
+API's defaults, rather than leaving them at their last configured
+values.
+
 ### Product Enablement
 
 Product enablement is now available as top-level versionless
