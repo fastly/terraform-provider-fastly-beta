@@ -146,23 +146,62 @@ not changed.
 Sensitive attributes have been moved into nested blocks with names
 reflecting their usage by the resource. This allows `terraform plan`
 to display the remaining (non-sensitive) attributes of the resource
-when they have changed.
+when they have changed. The grouping is by purpose rather than by
+sensitivity, so these blocks also hold attributes which are not
+themselves sensitive: for example, the `tls` block contains
+`ca_cert` and `hostname` as well as `client_key`.
 
-|Resource|Sensitive attribute block name|
+|Where it appears|Nested block|
 |---|---|
-|`fastly_integration`|`authentication`|
-|`fastly_ngwaf_workspace_alert` integrations (all types)|`authentication`|
-|`fastly_service_cdn_auto` - `backend` block|`ssl_client_secrets`|
-|`fastly_service_cdn_auto` - `logging_https` block|`tls`|
-|`fastly_service_cdn_auto` - `logging_splunk` block|`tls` and `authentication`|
-|`fastly_service_cdn_auto` - `logging_syslog` block|`tls` and `authentication`|
-|`fastly_service_cdn_auto` - `logging` blocks (all other types)|`authentication`|
-|`fastly_service_compute_auto` - `backend` block|`ssl_client_secrets`|
-|`fastly_service_compute_auto` - `logging_https` block|`tls`|
-|`fastly_service_compute_auto` - `logging_splunk` block|`tls` and `authentication`|
-|`fastly_service_compute_auto` - `logging_syslog` block|`tls` and `authentication`|
-|`fastly_service_compute_auto` - `logging` blocks (all other types)|`authentication`|
-|`fastly_tls_private_key`|`pem`|
+|`fastly_tls_private_key`|`private_key`|
+|`fastly_integration` and the NGWAF alert integrations|`authentication`|
+|The `backend` block|`ssl_client_secrets`|
+|The `logging_https` block|`tls`|
+|The `logging_elasticsearch`, `logging_kafka`, `logging_splunk`, and `logging_syslog` blocks|`tls` and `authentication`|
+|All other `logging` blocks, except `logging_papertrail` and `logging_sumologic`|`authentication`|
+
+The `backend` and `logging` blocks appear on both
+`fastly_service_cdn_auto` and `fastly_service_compute_auto`.
+
+Attribute names inside these blocks are not always the legacy
+names: some lose a prefix which the block name now supplies, and a
+few change outright. Check the resource reference for the names a
+given block expects.
+
+For example, the `logging_kafka` block uses both `authentication`
+and `tls`. In the legacy provider, it was written this way:
+
+```hcl
+logging_kafka {
+  name            = "example"
+  brokers         = "kafka.example.com:9092"
+  topic           = "logs"
+  user            = var.kafka_user
+  password        = var.kafka_password
+  tls_client_cert = var.kafka_client_cert
+  tls_hostname    = "kafka.example.com"
+}
+```
+
+In this provider, it is written this way:
+
+```hcl
+logging_kafka {
+  name    = "example"
+  brokers = "kafka.example.com:9092"
+  topic   = "logs"
+
+  authentication {
+    user     = var.kafka_user
+    password = var.kafka_password
+  }
+
+  tls {
+    client_cert = var.kafka_client_cert
+    hostname    = "kafka.example.com"
+  }
+}
+```
 
 ### Container Item Management
 
