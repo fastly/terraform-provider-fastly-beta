@@ -251,6 +251,19 @@ renamed as well, along with the ACL resource itself:
 used in the Fastly Control Panel and API documentation.
 `fastly_service_dictionary_items` kept its name.
 
+### Domain Resources
+
+The deprecated aliases `fastly_domain_v1` and
+`fastly_domain_v1_service_link` are not available. Use
+`fastly_domain` and `fastly_domain_service_link` instead; both are
+also available in the legacy provider.
+
+`fastly_domain` no longer has a separate `domain_id` attribute. Its
+`id` is the domain's UUID, so a configuration which refers to
+`fastly_domain.example.domain_id` must refer to
+`fastly_domain.example.id` instead. `fastly_domain_service_link` is
+unchanged, and its `domain_id` argument still takes that UUID.
+
 ### Next-Gen WAF Rules
 
 Next-Gen WAF rules have their own resources by rule type and scope
@@ -303,6 +316,3 @@ entire account.
 All of the `fastly_ngwaf_alert_{TYPE}_integration` resources have been
 renamed to `fastly_ngwaf_workspace_alert_{TYPE}_integration` to
 reflect that they apply to a workspace, not the entire account.
-
-The deprecated aliases `fastly_domain_v1` and
-`fastly_domain_v1_service_link` are not available.
