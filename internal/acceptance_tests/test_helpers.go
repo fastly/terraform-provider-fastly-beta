@@ -2587,6 +2587,95 @@ func ConfigConditionForImport(serviceName, domainName, conditionName string) str
 	)
 }
 
+// Configuration helpers for fastly_service_ratelimiter resources (explicit version management)
+
+// ConfigRateLimiterBasic returns a basic rate limiter resource config.
+func ConfigRateLimiterBasic(serviceName, domainName, rateLimiterName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"SERVICE_COMMENT":   "",
+			"DOMAIN_NAME":       domainName,
+			"SERVICE_VERSION":   "1",
+			"RATE_LIMITER_NAME": rateLimiterName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/ratelimiter_explicit.tf",
+	)
+}
+
+// ConfigRateLimiterUpdated returns a rate limiter resource config with updated limits.
+func ConfigRateLimiterUpdated(serviceName, domainName, rateLimiterName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"SERVICE_COMMENT":   "",
+			"DOMAIN_NAME":       domainName,
+			"SERVICE_VERSION":   "1",
+			"RATE_LIMITER_NAME": rateLimiterName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/ratelimiter_explicit_updated.tf",
+	)
+}
+
+// ConfigRateLimiterResponseAction returns a rate limiter resource config using action = "response".
+func ConfigRateLimiterResponseAction(serviceName, domainName, rateLimiterName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"SERVICE_COMMENT":   "",
+			"DOMAIN_NAME":       domainName,
+			"SERVICE_VERSION":   "1",
+			"RATE_LIMITER_NAME": rateLimiterName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/ratelimiter_explicit_response_action.tf",
+	)
+}
+
+// ConfigRateLimiterForImport returns a test configuration for importing a rate limiter.
+func ConfigRateLimiterForImport(serviceName, domainName, rateLimiterName string) string {
+	return ConfigRateLimiterBasic(serviceName, domainName, rateLimiterName)
+}
+
+// ConfigRateLimiterOnComputeService returns a fastly_service_ratelimiter resource attached to a
+// Compute service, to prove the VCL-only service-kind restriction is enforced.
+func ConfigRateLimiterOnComputeService(serviceName, rateLimiterName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"SERVICE_COMMENT":   "",
+			"SERVICE_VERSION":   "1",
+			"RATE_LIMITER_NAME": rateLimiterName,
+		},
+		"internal/acceptance_tests/blocks/ratelimiter_explicit_on_compute.tf",
+	)
+}
+
+// ConfigRateLimiterOnLockedVersion returns a config with the service/domain pinned to editable
+// version 1, plus a rate limiter resource targeting version 2 - the version the locked-version
+// test activates out-of-band before this config is applied - to prove writes to a locked version
+// are rejected without disturbing cleanup of the version-1 resources.
+func ConfigRateLimiterOnLockedVersion(serviceName, domainName, rateLimiterName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":      serviceName,
+			"SERVICE_COMMENT":   "",
+			"DOMAIN_NAME":       domainName,
+			"SERVICE_VERSION":   "1",
+			"RATE_LIMITER_NAME": rateLimiterName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/ratelimiter_explicit_on_locked_version.tf",
+	)
+}
+
 // Configuration helpers for fastly_service_domain resources (explicit version management)
 
 // ConfigServiceDomainBasic returns a basic domain resource config.
