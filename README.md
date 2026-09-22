@@ -114,6 +114,7 @@ Shared versioned resources include:
 
 - `fastly_service_domain`
 - `fastly_service_backend`
+- `fastly_service_dictionary`
 
 ## Design documents
 
