@@ -2,14 +2,14 @@
 
 This example demonstrates the automatic compatibility workflow in the dual-model
 Fastly Terraform provider. It uses `fastly_service_cdn_auto` with nested
-`domain` and `backend` blocks.
+`backend` blocks, and versionless `fastly_domain` resources alongside it.
 
 The example provisions and manages:
 
 - two Fastly CDN services
 - one shared backend reused across both services
 - one service-specific backend on only service 1
-- one domain per service
+- one versionless `fastly_domain` per service
 - one ACL per service (service 1 has an IP allowlist, service 2 has a temporary blocklist)
 - one condition on service 1, referenced by its gzip and cache setting
   configurations' `cache_condition`
@@ -25,7 +25,7 @@ This example tests current-provider-style behavior with the automatic
 compatibility resource family:
 
 - one aggregate service resource owns the nested service configuration
-- nested domain/backend changes are reconciled at the service level
+- nested backend changes are reconciled at the service level
 - one working version is selected per changed service update
 - the provider validates and activates automatically
 
@@ -54,7 +54,7 @@ Expected bootstrap behavior:
 
 1. Terraform creates both `fastly_service_cdn_auto` services.
 2. Fastly creates editable version `1` for each new service.
-3. The provider reconciles the nested `domain`, `backend`, `acl`, `condition`,
+3. The provider reconciles the nested `backend`, `acl`, `condition`,
    `healthcheck`, `gzip`, and `cache_setting` blocks to version `1`.
    `condition` is reconciled before `backend`, `gzip`, and `cache_setting`
    since all three can reference a condition by name, and `healthcheck` is
@@ -113,12 +113,7 @@ You should see:
 
 ### Change both services
 
-For example:
-
-- change the shared backend port
-- or change both domain names
-
-Then run:
+For example, change the shared backend port. Then run:
 
 ```bash
 terraform apply
@@ -298,9 +293,8 @@ the provider deletes and recreates the dictionary, which discards its items
 just like removing the block would.
 
 Either empty the dictionary first (for example with
-`fastly_service_dictionary_items`, once ported to this provider), or set
-`force_destroy = true` on the block before removing it or changing
-`write_only`:
+`fastly_service_dictionary_items`), or set `force_destroy = true` on the
+block before removing it or changing `write_only`:
 
 ```hcl
   dictionary {
@@ -380,7 +374,7 @@ You should see:
 - Do not mix `fastly_service_cdn_auto` with first-class explicit/default
   resources for the same Fastly service.
 - This resource is intended to provide convenience-oriented lifecycle
-  behavior for service, domain, and backend.
+  behavior for service configuration and backends.
 - At most one `image_optimizer_default_settings` block is supported per
   service, and it requires the Image Optimizer product to already be enabled
   on that service.

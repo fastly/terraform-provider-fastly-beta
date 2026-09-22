@@ -127,10 +127,6 @@ For CDN services:
 
 ```hcl
 resource "fastly_service_cdn_auto" "example" {
-  domain {
-    name = "www.example.com"
-  }
-
   backend {
     name    = "origin"
     address = "origin.example.com"
@@ -143,10 +139,6 @@ For Compute services:
 
 ```hcl
 resource "fastly_service_compute_auto" "example" {
-  domain {
-    name = "www.example.com"
-  }
-
   backend {
     name    = "origin"
     address = "origin.example.com"
@@ -591,10 +583,6 @@ Example:
 
 ```hcl
 resource "fastly_service_cdn_auto" "example" {
-  domain {
-    name = "www.example.com"
-  }
-
   backend {
     name    = "origin"
     address = "origin.example.com"

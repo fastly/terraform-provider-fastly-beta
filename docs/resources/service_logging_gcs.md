@@ -91,10 +91,6 @@ minus `service_id` and `version`, which the parent service owns.
 resource "fastly_service_cdn_auto" "example" {
   name = "my-service"
 
-  domain {
-    name = "www.example.com"
-  }
-
   logging_gcs {
     name        = "gcs-example"
     bucket_name = "my-log-bucket"
@@ -113,10 +109,6 @@ arguments (`format`, `format_version`, `placement`, `response_condition`):
 ```terraform
 resource "fastly_service_compute_auto" "example" {
   name = "my-compute-service"
-
-  domain {
-    name = "www.example.com"
-  }
 
   package {
     filename         = "package.tar.gz"

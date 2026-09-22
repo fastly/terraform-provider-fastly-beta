@@ -19,6 +19,32 @@ DNS records need to be added on the domains being secured, in order to respond t
 resource "fastly_service_cdn_auto" "example" {
   name = "example-service"
 
+  backend {
+    address = "127.0.0.1"
+    name    = "localhost"
+  }
+}
+
+resource "fastly_domain" "example" {
+  fqdn       = "example.com"
+  service_id = fastly_service_cdn_auto.example.id
+}
+
+resource "fastly_tls_subscription" "example" {
+  domains               = [fastly_domain.example.fqdn]
+  certificate_authority = "lets-encrypt"
+  force_destroy         = true
+
+  depends_on = [fastly_domain.example]
+}
+```
+
+For services using [classic domains](https://www.fastly.com/documentation/guides/getting-started/domains/about-domains/#working-with-classic-domains), the domain is declared inside the service:
+
+```terraform
+resource "fastly_service_cdn_auto" "example" {
+  name = "example-service"
+
   domain {
     name = "example.com"
   }
