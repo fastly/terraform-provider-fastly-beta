@@ -134,10 +134,13 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 // this is never reached for those.
 //
 // When the version is unchanged, there's nothing to read remotely: force_destroy has no API
-// representation, so the plan is written to state as-is. When the version changes, the target
-// version must already contain a dictionary with this name (e.g. because it was cloned from the
-// prior version), since there's nothing to create or rename here. Fetch that dictionary and
-// flatten it into state so id/dictionary_id reflect the new version rather than the old one.
+// representation, so state is reused with force_destroy overlaid from plan (id/dictionary_id are
+// Computed with no UseStateForUnknown modifier, so plan's copies of them are unknown, not carried
+// forward from state automatically - writing plan directly would produce "Provider returned
+// invalid result object after apply"). When the version changes, the target version must already
+// contain a dictionary with this name (e.g. because it was cloned from the prior version), since
+// there's nothing to create or rename here. Fetch that dictionary and flatten it into state so
+// id/dictionary_id reflect the new version rather than the old one.
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan Model
 	var state Model
@@ -154,7 +157,8 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 			"version":    plan.Version.ValueInt64(),
 			"name":       service.StringValue(plan.Name),
 		})
-		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+		state.ForceDestroy = plan.ForceDestroy
+		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 		return
 	}
 

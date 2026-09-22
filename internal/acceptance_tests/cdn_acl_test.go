@@ -356,6 +356,44 @@ func TestAccFastlyServiceCDNACL_versionUpdateInPlace(t *testing.T) {
 	})
 }
 
+// TestAccFastlyServiceCDNACL_forceDestroyOnlyChange verifies that changing only
+// force_destroy - the one attribute besides version that doesn't force replacement - applies
+// in place without requiring the current version to be re-read from the API.
+func TestAccFastlyServiceCDNACL_forceDestroyOnlyChange(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	aclName := fmt.Sprintf("acl_%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigACLExplicitWithForceDestroy(serviceName, domainName, aclName, true),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_acl.test", "force_destroy", "true"),
+				),
+			},
+			{
+				Config: ConfigACLExplicitWithForceDestroy(serviceName, domainName, aclName, false),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_acl.test", "force_destroy", "false"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_acl.test", "version", "1"),
+				),
+			},
+			{
+				// Undo the force_destroy=false change before CheckDestroy needs to
+				// tear the service down.
+				Config: ConfigACLExplicitWithForceDestroy(serviceName, domainName, aclName, true),
+			},
+		},
+	})
+}
+
 // TestAccFastlyServiceCDNACL_computeServiceRejected verifies that fastly_service_cdn_acl, a
 // CDN-only resource (ACLs were never registered for Compute services in the legacy provider
 // either), is rejected when targeting a Compute service.
