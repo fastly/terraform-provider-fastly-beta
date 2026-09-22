@@ -75,6 +75,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/apisecurityoperation"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/apisecurityoperationtag"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/backend"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cachesetting"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cdnacl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cdnaclentries"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/condition"
@@ -239,6 +240,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		apisecurityoperation.NewResource,
 		apisecurityoperationtag.NewResource,
 		backend.NewResource,
+		cachesetting.NewResource,
 		cdnacl.NewResource,
 		cdnaclentries.NewResource,
 		condition.NewResource,
@@ -401,6 +403,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListResource {
 	return []func() list.ListResource{
 		backend.NewListResource,
+		cachesetting.NewListResource,
 		cdnacl.NewListResource,
 		cdnaclentries.NewListResource,
 		condition.NewListResource,

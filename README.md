@@ -71,6 +71,7 @@ The rest are configured on those two resources as nested blocks:
 | Explicit/default resource | Use instead | Available on |
 | --- | --- | --- |
 | `fastly_service_backend` | `backend` block | both |
+| `fastly_service_cache_setting` | `cache_setting` block | CDN |
 | `fastly_service_cdn_acl` | `acl` block | CDN |
 | `fastly_service_condition` | `condition` block | CDN |
 | `fastly_service_custom_vcl` | `custom_vcl` block | CDN |
