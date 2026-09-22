@@ -6,76 +6,52 @@ subcategory: "Guides"
 ## Beta Testing Guide
 
 This provider is a ground-up rewrite of the Fastly Terraform provider
-on HashiCorp's Plugin Framework. It's designed to provide [two
-parallel resource
-families](https://github.com/fastly/terraform-provider-fastly-beta#resource-families).
-This release contains the **Automatic** resource family, which keeps
-the version lifecycle behavior you have today: the provider clones,
-validates, and activates a service version for you during
-`terraform apply`.
+on HashiCorp's Plugin Framework, built around two parallel resource
+families. This release contains one of them.
 
-This guide walks through testing the beta against a configuration you
-already run. It covers setup, checking your translated configuration,
-and exercising the workflow. For the HCL changes themselves, see the
-[HCL Syntax Changes](hcl_syntax_changes.md) guide.
+The **Automatic** family keeps the default version lifecycle behavior
+you have today: the provider clones, validates, and activates a
+service version for you during `terraform apply`. If that's how you
+work with Fastly now, the beta is ready for you to test.
 
-**This is not a migration.** You are not moving production state. You
-are building a parallel configuration in a separate directory, so you
-can find out what a real migration would involve before committing to
-one.
+The **Explicit** family hands the version lifecycle back to you. If
+you currently use `activate = false` or staging to control when
+changes go live, wait until this family is ready for testing in mid-Q4
+2026. It uses its own set of resources, some of which are registered
+here and appear in the navigation, but they aren't ready to use yet.
+Visit the [repository
+README](https://github.com/fastly/terraform-provider-fastly-beta#resource-families)
+for a full list.
 
-### You can test without creating a Fastly service
+Everything else in the provider is versionless: it works with either
+family, and it's ready to test now.
 
-The most useful result — *does everything I do today translate?* —
-costs nothing and creates nothing.
+This guide takes you through setting up the beta provider, running
+`validate` against a copy of your existing configuration, using what
+it reports to guide the translation until it validates, then
+optionally exercising `plan` and `apply`. For the HCL changes
+themselves, see the [HCL Syntax Changes](hcl_syntax_changes.md) guide.
 
-|Command|Needs an API token|Calls the Fastly API|Creates anything|
-|---|---|---|---|
-|`terraform init`|No|No|No|
-|`terraform validate`|No|No|No|
-|`terraform plan`|Yes|Reads only|No|
-|`terraform apply`|Yes|Yes|Yes|
+### You can test without changing your Fastly service
 
-`terraform validate` checks your configuration against the provider's
-schema — resource names, arguments, types, block structure. It will
-find every renamed resource and every moved attribute.
+**This is not a migration.** You're not moving production state, but
+instead building a parallel configuration in a separate directory with
+its own state file.
 
-That is where most of the feedback we need comes from. If you can only
-do this part, please still do it and tell us what you find.
-
-If you also have a non-production service, applying against it tests
-the parts a plan can't reach. That's covered further down, and it's
-optional.
-
-### Who should test now
-
-Good fit if you use the legacy provider with automatic activation —
-`activate = true`, or the default.
-
-**Worth waiting** if you use `activate = false` or staging to control
-when changes go live. The Automatic family always activates. The
-**Explicit** resource family is designed for controlled activation and
-is targeted for beta testing in mid-Q4 2026. It uses its own set of
-resources, so a configuration translated for the Automatic family now
-would not carry over — it's worth waiting for that release rather than
-translating twice. If you'd like to help shape the Explicit design
-while it's in development, reply on the [community
-forum](https://community.fastly.com/t/introducing-the-public-beta-of-the-new-fastly-terraform-provider/4494)
-or talk to your account team about becoming a design partner.
+If you're short on time, you can stop after `terraform validate`. That
+tells you what changes your configuration would need, and helps
+surface gaps or issues we need to address. Each step after that tells
+you more about how the provider behaves in practice.
 
 ### Before you start
 
 You need three things:
 
-- **Terraform.** Any 1.x release works with the Automatic family. We've
-  confirmed the provider loads and configurations validate on 1.0.11,
-  1.5.7, 1.13.0, and 1.16.1, and that a full apply and destroy cycle
-  succeeds on both 1.5.7 and 1.16.1 — so you shouldn't need to upgrade
-  Terraform to take part.
-- **A Fastly API token**, for the `plan` step onward. Not needed to
-  begin.
-- **A copy of a configuration you already run.** A real one. Trimmed
-  examples won't surface the gaps we're looking for.
+- **Terraform.** We recommend a recent release, but any 1.x release
+  works with the Automatic family.
+- **A Fastly API token**, for the `plan` step onward.
+- **Your existing HCL configuration for the Fastly provider**, to work
+  from. Real configurations are best for surfacing gaps.
 
 Work in a **new directory with its own state file**. Do not point this
 provider at your existing Terraform state.
@@ -95,7 +71,9 @@ provider "fastly" {}
 ```
 
 The provider reads `FASTLY_API_TOKEN` from the environment, or takes an
-`api_token` argument. Note the changes from the legacy provider:
+`api_token` argument.
+
+~> **Important:** Several provider settings changed from the legacy provider, so a `provider` block copied across as-is will not work. Refer to the table below to update your attributes and environment variables as needed.
 
 |Legacy provider|This provider|
 |---|---|
@@ -104,62 +82,63 @@ The provider reads `FASTLY_API_TOKEN` from the environment, or takes an
 |`FASTLY_API_KEY`|`FASTLY_API_TOKEN`|
 |`base_url`, `no_auth`, `force_http2`|Not available|
 
-The provider is still changing during the beta, so we suggest leaving
-the version unpinned and running `terraform init -upgrade` to pick up
-new releases.
-
 Then:
 
 ```bash
 terraform init
 ```
 
-### Translate your configuration
+The provider is still changing during the beta, so we suggest leaving
+the version unpinned and running `terraform init -upgrade` to pick up
+new releases.
 
-Copy your configuration into the new directory and work through the
-[HCL Syntax Changes](hcl_syntax_changes.md) guide. Two things are worth
-doing before anything else.
+### Translate and validate your configuration
 
-**Rename the service resources.** `fastly_service_vcl` becomes
-`fastly_service_cdn_auto`, and `fastly_service_compute` becomes
-`fastly_service_compute_auto`.
+Copy your configuration into the new directory. Before anything else,
+rename the service resources:
 
-Do `fastly_service_compute` first. That name still exists in this
-provider, naming a service resource in the **Explicit** family, which
-is still in development and not ready for testing. It requires only
-`name`, so a block copied across without renaming can validate and
-apply — quietly creating the wrong kind of object.
-`fastly_service_vcl` is safe by comparison: it no longer exists, so
-Terraform rejects it outright. Find both:
+|Legacy provider|This provider|
+|---|---|
+|`fastly_service_vcl`|`fastly_service_cdn_auto`|
+|`fastly_service_compute`|`fastly_service_compute_auto`|
+
+To find them:
 
 ```bash
 grep -rnE 'resource "fastly_service_(vcl|compute)"' . --include=*.tf
 ```
 
-Other Explicit-family resources are registered in this provider but
-aren't ready to use either — the [README lists
-them](https://github.com/fastly/terraform-provider-fastly-beta#resource-families).
-Everything else works with the Automatic family.
+Rename these first, because `fastly_service_compute` still exists in
+this provider, as the **Explicit** family counterpart to
+`fastly_service_compute_auto`. It accepts none of the nested blocks a
+legacy Compute service uses, so a block left unrenamed reports errors
+on `package`, `domain`, and `backend` rather than on the resource type
+— taken at face value, those errors lead you to delete configuration
+you need.
 
-**Remove `activate` and `stage`.** The Automatic family has no
-equivalent; it always activates.
-
-You don't need to get the translation perfect before moving on. The
-next step will tell you what's left.
-
-### Check your translation
+With the service resources renamed, let `terraform validate` find the
+rest:
 
 ```bash
 terraform validate
 ```
 
-No token needed. Work through what it reports — most findings will be
-one of two things:
+It checks your configuration against the provider's schema and reports
+what doesn't match: renamed resources, arguments that no longer exist,
+and attributes that moved into nested blocks. Work through it
+alongside the [HCL Syntax Changes](hcl_syntax_changes.md) guide,
+running it again as you go — Terraform doesn't look inside a block it
+has already rejected, so the findings arrive in layers rather than all
+at once.
+
+Most of what it reports will be one of two things:
 
 - **A renamed or moved argument.** Covered in the
   [HCL Syntax Changes](hcl_syntax_changes.md) guide.
-- **Something unexpected.** That may be a bug, and it's the most
-  valuable thing you can report.
+- **Something unexpected.** That may be a bug. Reporting it will help
+  us improve the provider.
+
+### Review the plan
 
 When `validate` is clean, set your token and run a plan:
 
@@ -174,7 +153,18 @@ should look like your existing configuration.
 
 ### Exercise the workflow
 
-Optional, and recommended against a **non-production service**.
+Optional. We suggest using a **non-production service** — either a
+service you already run outside production, or a copy of a production
+service created for this test.
+
+The steps below assume the second case: the configuration creates a
+new service, and no existing state is involved.
+
+Pointing this provider at a service Terraform already manages is a
+different exercise: a real migration rather than a parallel test.
+State can't be carried across from the legacy provider, and we don't
+have documentation or tooling for that path yet, so it's outside what
+this guide covers.
 
 Applying tests the parts a plan cannot: the clone, validate, and
 activate cycle that runs on every change. A few things worth trying,
@@ -213,10 +203,9 @@ This is the point of the beta, and every kind of report is useful:
 - **Something was confusing** — unclear errors, gaps in this guide or
   the syntax guide.
 
-Reach us by [opening an
-issue](https://github.com/fastly/terraform-provider-fastly-beta/issues),
-posting on the [Fastly community forum](https://community.fastly.com/c/terraform/26),
-or through your Fastly account team.
+[Open an
+issue](https://github.com/fastly/terraform-provider-fastly-beta/issues)
+in the provider repository, or reach out to your Fastly account team.
 
 For bugs, the most useful report includes the relevant configuration
 snippet, what you expected, what happened, and your Terraform and
