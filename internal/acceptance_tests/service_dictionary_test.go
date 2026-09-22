@@ -3,6 +3,7 @@ package acceptancetests
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -265,6 +266,106 @@ func TestAccFastlyServiceDictionary_versionUpdateInPlace(t *testing.T) {
 						return nil
 					},
 				),
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceDictionary_versionUpdateMissingInTarget verifies that switching an
+// explicit fastly_service_dictionary resource's version to one that doesn't contain a dictionary
+// of this name fails with a clear error, rather than trying to create or rename it - Update has
+// no such fallback since name changes are handled via replacement, not Update.
+func TestAccFastlyServiceDictionary_versionUpdateMissingInTarget(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	dictionaryName := fmt.Sprintf("dict_%s", acctest.RandString(10))
+
+	var serviceID string
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigDictionaryAtVersion(serviceName, domainName, dictionaryName, 1),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn.test"),
+					func(s *terraform.State) error {
+						rs, ok := s.RootModule().Resources["fastly_service_dictionary.test"]
+						if !ok {
+							return fmt.Errorf("dictionary resource not found")
+						}
+						serviceID = rs.Primary.Attributes["service_id"]
+						return nil
+					},
+				),
+			},
+			{
+				PreConfig: func() {
+					client, err := NewFastlyClient()
+					if err != nil {
+						t.Fatalf("error creating Fastly client: %s", err)
+					}
+					if _, err := client.CloneVersion(context.Background(), &fastly.CloneVersionInput{
+						ServiceID:      serviceID,
+						ServiceVersion: 1,
+					}); err != nil {
+						t.Fatalf("error cloning version 1: %s", err)
+					}
+					// Remove the dictionary from the cloned version so version 2 - the
+					// target the next step switches to - doesn't contain it.
+					if err := client.DeleteDictionary(context.Background(), &fastly.DeleteDictionaryInput{
+						ServiceID:      serviceID,
+						ServiceVersion: 2,
+						Name:           dictionaryName,
+					}); err != nil {
+						t.Fatalf("error deleting dictionary from version 2: %s", err)
+					}
+				},
+				Config:      ConfigDictionaryAtVersion(serviceName, domainName, dictionaryName, 2),
+				ExpectError: regexp.MustCompile("Dictionary not found in target version"),
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceDictionary_forceDestroyOnlyChange verifies that changing only
+// force_destroy - the one attribute besides version that doesn't force replacement - applies
+// in place without requiring the current version to be re-read from the API.
+func TestAccFastlyServiceDictionary_forceDestroyOnlyChange(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	dictionaryName := fmt.Sprintf("dict_%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigDictionaryExplicitWithForceDestroy(serviceName, domainName, dictionaryName, true),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn.test"),
+					resource.TestCheckResourceAttr("fastly_service_dictionary.test", "force_destroy", "true"),
+				),
+			},
+			{
+				Config: ConfigDictionaryExplicitWithForceDestroy(serviceName, domainName, dictionaryName, false),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn.test"),
+					resource.TestCheckResourceAttr("fastly_service_dictionary.test", "force_destroy", "false"),
+					resource.TestCheckResourceAttr("fastly_service_dictionary.test", "version", "1"),
+				),
+			},
+			{
+				// Undo the force_destroy=false change before CheckDestroy needs to
+				// tear the service down, since the dictionary is non-empty-agnostic
+				// here but force_destroy=false would still block deletion for a
+				// write_only dictionary or one containing items.
+				Config: ConfigDictionaryExplicitWithForceDestroy(serviceName, domainName, dictionaryName, true),
 			},
 		},
 	})

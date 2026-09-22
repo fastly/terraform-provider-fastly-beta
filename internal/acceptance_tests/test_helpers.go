@@ -1015,6 +1015,26 @@ func ConfigDictionaryAtVersion(serviceName, domainName, dictionaryName string, v
 	)
 }
 
+// ConfigDictionaryExplicitWithForceDestroy returns a service/domain/dictionary config for the
+// explicit fastly_service_dictionary resource pinned to version 1, with force_destroy set to the
+// given value - for exercising a force_destroy-only change, the one config attribute besides
+// version that doesn't force replacement.
+func ConfigDictionaryExplicitWithForceDestroy(serviceName, domainName, dictionaryName string, forceDestroy bool) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"DICTIONARY_NAME": dictionaryName,
+			"FORCE_DESTROY":   fmt.Sprintf("%t", forceDestroy),
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/dictionary_explicit_force_destroy.tf",
+	)
+}
+
 // ConfigDictionaryOnComputeService returns a fastly_service_dictionary resource attached to a
 // Compute service, since dictionaries - unlike ACLs and general settings - are supported on
 // both CDN and Compute services.
