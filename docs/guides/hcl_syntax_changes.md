@@ -36,12 +36,50 @@ nested blocks. This is the same behavior provided by the legacy
 provider when `activate = true` and `stage = false` were used in the
 resource configuration.
 
+### Service Settings
+
+Settings which were top-level attributes of the service resource
+in the legacy provider are now configured in a nested `settings`
+block. This applies to `default_host`, `default_ttl`, `http3`,
+`stale_if_error`, and `stale_if_error_ttl`. The service resources
+in this provider carry only `name`, `comment`, `force_destroy`,
+and `reuse` at the top level.
+
+In the legacy provider, these settings were written this way:
+
+```hcl
+resource "fastly_service_vcl" "example" {
+  name           = "example"
+  default_host   = "origin.example.com"
+  default_ttl    = 3600
+  stale_if_error = true
+}
+```
+
+In this provider, they are written this way:
+
+```hcl
+resource "fastly_service_cdn_auto" "example" {
+  name = "example"
+
+  settings {
+    default_host   = "origin.example.com"
+    default_ttl    = 3600
+    stale_if_error = true
+  }
+}
+```
+
+Removing the `settings` block resets these settings to the Fastly
+API's defaults, rather than leaving them at their last configured
+values.
+
 ### Product Enablement
 
 Product enablement is now available as top-level versionless
 resources, and no longer available as a nested block in a `service`
-resource. This changes aligns to the Fastly product enablement API,
-and also allows individual products to be enabled (or diabled) without
+resource. This change aligns with the Fastly product enablement API,
+and also allows individual products to be enabled (or disabled) without
 affecting the enablement status or configuration of other products on
 the service.
 
@@ -108,23 +146,85 @@ not changed.
 Sensitive attributes have been moved into nested blocks with names
 reflecting their usage by the resource. This allows `terraform plan`
 to display the remaining (non-sensitive) attributes of the resource
-when they have changed.
+when they have changed. The grouping is by purpose rather than by
+sensitivity, so these blocks also hold attributes which are not
+themselves sensitive: for example, the `tls` block contains
+`ca_cert` and `hostname` as well as `client_key`.
 
-|Resource|Sensitive attribute block name|
+|Where it appears|Nested block|
 |---|---|
-|`fastly_integration`|`authentication`|
-|`fastly_ngwaf_workspace_alert` integrations (all types)|`authentication`|
-|`fastly_service_cdn_auto` - `backend` block|`ssl_client_secrets`|
-|`fastly_service_cdn_auto` - `logging_https` block|`tls`|
-|`fastly_service_cdn_auto` - `logging_splunk` block|`tls` and `authentication`|
-|`fastly_service_cdn_auto` - `logging_syslog` block|`tls` and `authentication`|
-|`fastly_service_cdn_auto` - `logging` blocks (all other types)|`authentication`|
-|`fastly_service_compute_auto` - `backend` block|`ssl_client_secrets`|
-|`fastly_service_compute_auto` - `logging_https` block|`tls`|
-|`fastly_service_compute_auto` - `logging_splunk` block|`tls` and `authentication`|
-|`fastly_service_compute_auto` - `logging_syslog` block|`tls` and `authentication`|
-|`fastly_service_compute_auto` - `logging` blocks (all other types)|`authentication`|
-|`fastly_tls_private_key`|`pem`|
+|`fastly_tls_private_key`|`private_key`|
+|`fastly_integration` and the NGWAF alert integrations|`authentication`|
+|The `backend` block|`ssl_client_secrets`|
+|The `logging_https` block|`tls`|
+|The `logging_elasticsearch`, `logging_kafka`, `logging_splunk`, and `logging_syslog` blocks|`tls` and `authentication`|
+|All other `logging` blocks, except `logging_papertrail` and `logging_sumologic`|`authentication`|
+
+The `backend` and `logging` blocks appear on both
+`fastly_service_cdn_auto` and `fastly_service_compute_auto`.
+
+Attribute names inside these blocks are not always the legacy
+names: some lose a prefix which the block name now supplies, and a
+few change outright. Check the resource reference for the names a
+given block expects.
+
+For example, the `logging_kafka` block uses both `authentication`
+and `tls`. In the legacy provider, it was written this way:
+
+```hcl
+logging_kafka {
+  name            = "example"
+  brokers         = "kafka.example.com:9092"
+  topic           = "logs"
+  user            = var.kafka_user
+  password        = var.kafka_password
+  tls_client_cert = var.kafka_client_cert
+  tls_hostname    = "kafka.example.com"
+}
+```
+
+In this provider, it is written this way:
+
+```hcl
+logging_kafka {
+  name    = "example"
+  brokers = "kafka.example.com:9092"
+  topic   = "logs"
+
+  authentication {
+    user     = var.kafka_user
+    password = var.kafka_password
+  }
+
+  tls {
+    client_cert = var.kafka_client_cert
+    hostname    = "kafka.example.com"
+  }
+}
+```
+
+### Other Nested Block Attributes
+
+The `dynamicsnippet` block has been renamed to `dynamic_snippet`.
+
+Some nested blocks have also gained or lost attributes:
+
+|Block|Change|
+|---|---|
+|`backend` (CDN)|`error_threshold` removed, `comment` added|
+|`backend` (Compute)|`auto_loadbalance`, `comment`, and `request_condition` added|
+|`image_optimizer_default_settings`|`name` removed; available on CDN services only|
+|`logging_bigquery` (CDN)|`format_version` added|
+|`logging_newrelicotlp` (Compute)|`format`, `format_version`, `placement`, and `response_condition` removed|
+|`logging_splunk`|`request_max_bytes` and `request_max_entries` added|
+|`rate_limiter` (CDN)|`ratelimiter_id` renamed to `rate_limiter_id`|
+
+On a Compute service, `logging_newrelicotlp` now accepts only
+`authentication`, `name`, `processing_region`, `region`, and `url`.
+It was the only Compute logging block in the legacy provider which
+accepted `format`, `format_version`, `placement`, and
+`response_condition`, and they had no effect there, so a working
+configuration is unlikely to set them.
 
 ### Container Item Management
 
@@ -137,9 +237,36 @@ ignoring any other items which may be present in the container.
 
 This change applies to `fastly_acl_entries`,
 `fastly_configstore_items`, `fastly_service_cdn_acl_entries`, and
-`fastly_service_dictionary_items`.
+`fastly_service_dictionary_items`. Most of those resources were
+renamed as well, along with the ACL resource itself:
 
-### Next-Gen WAF Rules
+|Legacy resource|Resource in this provider|
+|---|---|
+|`fastly_compute_acl`|`fastly_acl`|
+|`fastly_compute_acl_entries`|`fastly_acl_entries`|
+|`fastly_configstore_entries`|`fastly_configstore_items`|
+|`fastly_service_acl_entries`|`fastly_service_cdn_acl_entries`|
+
+`fastly_configstore_entries` was renamed to match the vocabulary
+used in the Fastly Control Panel and API documentation.
+`fastly_service_dictionary_items` kept its name.
+
+### Domain Resources
+
+The deprecated aliases `fastly_domain_v1` and
+`fastly_domain_v1_service_link` are not available. Use
+`fastly_domain` and `fastly_domain_service_link` instead; both are
+also available in the legacy provider.
+
+`fastly_domain` no longer has a separate `domain_id` attribute. Its
+`id` is the domain's UUID, so a configuration which refers to
+`fastly_domain.example.domain_id` must refer to
+`fastly_domain.example.id` instead. `fastly_domain_service_link` is
+unchanged, and its `domain_id` argument still takes that UUID.
+
+### Next-Gen WAF
+
+#### Rules
 
 Next-Gen WAF rules have their own resources by rule type and scope
 ('account' or 'workspace'), instead of being combined into one
@@ -158,12 +285,12 @@ apply`.
 |`fastly_ngwaf_workspace_rule` - `rate_limit`|`fastly_ngwaf_workspace_rate_limit_rule`|
 |`fastly_ngwaf_workspace_rule` - `templated_signal`|`fastly_ngwaf_workspace_templated_signal_rule`|
 
-### Next-Gen WAF Lists
+#### Lists
 
 Next-Gen WAF lists have their own resources by list type and scope
 ('account' or 'workspace'), instead of being combined into one
 resource by scope and using a `type` attribute to distinguish list
-types. This change allows more thoroughl validation of the resource's
+types. This change allows more thorough validation of the resource's
 configuration during `terraform plan`, reducing the chances that the
 list's attributes will be rejected by the Fastly API during `terraform
 apply`.
@@ -181,20 +308,18 @@ apply`.
 |`fastly_ngwaf_workspace_list` - `wildcard`|`fastly_ngwaf_workspace_wildcard_list`|
 |`fastly_ngwaf_workspace_list` - `signal`|`fastly_ngwaf_workspace_signal_list`|
 
-### Other Changes
+#### Renamed Resources
 
-`fastly_ngwaf_virtual_patches` has been renamed to
-`fastly_ngwaf_workspace_virtual_patch` to reflect that it manages a
-single Virtual Patch and also that it applies to a workspace, not the
-entire account.
+|Legacy resource|Resource in this provider|
+|---|---|
+|`fastly_ngwaf_account_signal`|`fastly_ngwaf_signal`|
+|`fastly_ngwaf_alert_{TYPE}_integration`|`fastly_ngwaf_workspace_alert_{TYPE}_integration`|
+|`fastly_ngwaf_redaction`|`fastly_ngwaf_workspace_redaction`|
+|`fastly_ngwaf_thresholds`|`fastly_ngwaf_workspace_threshold`|
+|`fastly_ngwaf_virtual_patches`|`fastly_ngwaf_workspace_virtual_patch`|
 
-All of the `fastly_ngwaf_alert_{TYPE}_integration` resources have been
-renamed to `fastly_ngwaf_workspace_alert_{TYPE}_integration` to
-reflect that they apply to a workspace, not the entire account.
-
-The deprecated aliases `fastly_domain_v1` and
-`fastly_domain_v1_service_link` are not available.
-
-`fastly_configstore_entries` was renamed to `fastly_configstore_items`
-to match the vocabulary used in the Fastly Control Panel and API
-documentation.
+The resources whose names gained a `workspace` element were renamed
+to reflect that they apply to a workspace, not the entire account.
+`fastly_ngwaf_thresholds` and `fastly_ngwaf_virtual_patches` also
+became singular, reflecting that each resource manages a single
+threshold or Virtual Patch.

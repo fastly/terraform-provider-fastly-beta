@@ -39,6 +39,7 @@
 - fix(cloudfiles_logging): ensure that the `format` attribute can't be set to null ([#93](https://github.com/fastly/terraform-provider-fastly-beta/pull/93))
 - fix(docs): correct the README list of explicit/default resources, and map each one to its automatic-family equivalent ([#122](https://github.com/fastly/terraform-provider-fastly-beta/pull/122))
 - fix(docs): add `fastly_service_settings` to the README table of explicit/default resources ([#132](https://github.com/fastly/terraform-provider-fastly-beta/pull/132))
+- fix(docs): fill gaps and correct errors in the HCL syntax changes guide ([#131](https://github.com/fastly/terraform-provider-fastly-beta/pull/131))
 
 ### Dependencies:
 
