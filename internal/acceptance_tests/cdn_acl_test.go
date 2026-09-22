@@ -356,6 +356,27 @@ func TestAccFastlyServiceCDNACL_versionUpdateInPlace(t *testing.T) {
 	})
 }
 
+// TestAccFastlyServiceCDNACL_computeServiceRejected verifies that fastly_service_cdn_acl, a
+// CDN-only resource (ACLs were never registered for Compute services in the legacy provider
+// either), is rejected when targeting a Compute service.
+func TestAccFastlyServiceCDNACL_computeServiceRejected(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	aclName := fmt.Sprintf("acl_%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_compute"),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigACLOnComputeService(serviceName, aclName),
+				ExpectError: regexp.MustCompile(`(?s)fastly_service_cdn_acl does not support Fastly service.*of type "Compute"`),
+			},
+		},
+	})
+}
+
 func TestAccFastlyServiceCDNACL_importWithUnderscores(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))

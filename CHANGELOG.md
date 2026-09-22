@@ -41,6 +41,7 @@
 - fix(docs): use versionless domains in examples, show the nested `domain` block as an alternative on the TLS pages, and note that classic domains are only available on accounts created before September 16, 2025 ([#121](https://github.com/fastly/terraform-provider-fastly-beta/pull/121))
 - fix(docs): correct the README list of explicit/default resources, and map each one to its automatic-family equivalent ([#122](https://github.com/fastly/terraform-provider-fastly-beta/pull/122))
 - fix(docs): fill gaps and correct errors in the HCL syntax changes guide ([#131](https://github.com/fastly/terraform-provider-fastly-beta/pull/131))
+- test(service_cdn_acl): add acceptance test coverage verifying the explicit `fastly_service_cdn_acl` resource rejects Compute services ([#135](https://github.com/fastly/terraform-provider-fastly-beta/pull/135))
 
 ### Dependencies:
 
