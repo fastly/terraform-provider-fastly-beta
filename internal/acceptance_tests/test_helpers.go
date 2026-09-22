@@ -961,6 +961,76 @@ func ConfigCDNAutoWithDictionaryForceDestroy(serviceName, domainName, dictionary
 	)
 }
 
+// Configuration helpers for the explicit fastly_service_dictionary resource
+
+// ConfigDictionaryExplicit returns a service/domain/dictionary config for the explicit
+// fastly_service_dictionary resource, pinned to version 1.
+func ConfigDictionaryExplicit(serviceName, domainName, dictionaryName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"DICTIONARY_NAME": dictionaryName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/dictionary_explicit.tf",
+	)
+}
+
+// ConfigDictionaryExplicitWriteOnly returns a service/domain/dictionary config for the explicit
+// fastly_service_dictionary resource with write_only enabled, pinned to version 1.
+func ConfigDictionaryExplicitWriteOnly(serviceName, domainName, dictionaryName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"DICTIONARY_NAME": dictionaryName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/dictionary_explicit_write_only.tf",
+	)
+}
+
+// ConfigDictionaryAtVersion returns a service/domain/dictionary config pinned to the given
+// version, for exercising in-place version changes on the explicit fastly_service_dictionary
+// resource.
+func ConfigDictionaryAtVersion(serviceName, domainName, dictionaryName string, version int) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": fmt.Sprintf("%d", version),
+			"DICTIONARY_NAME": dictionaryName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/dictionary_explicit.tf",
+	)
+}
+
+// ConfigDictionaryOnComputeService returns a fastly_service_dictionary resource attached to a
+// Compute service, since dictionaries - unlike ACLs and general settings - are supported on
+// both CDN and Compute services.
+func ConfigDictionaryOnComputeService(serviceName, dictionaryName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"SERVICE_VERSION": "1",
+			"DICTIONARY_NAME": dictionaryName,
+		},
+		"internal/acceptance_tests/blocks/dictionary_explicit_on_compute.tf",
+	)
+}
+
 // ConfigCDNAutoWithHealthCheck returns a CDN auto service config with a domain and a health check.
 func ConfigCDNAutoWithHealthCheck(serviceName, domainName, healthCheckName string) string {
 	return BuildConfig(

@@ -34,6 +34,7 @@
 - feat(tls_configuration): add `staging_ip` attribute to the `fastly_tls_configuration` data source ([#126](https://github.com/fastly/terraform-provider-fastly-beta/pull/126))
 - feat(service_settings): add `fastly_service_settings` resource for explicit/default service version management of general settings; CDN services only ([#128](https://github.com/fastly/terraform-provider-fastly-beta/pull/128))
 - feat(rate_limiter): add explicit family support for Rate Limiting ([#134](https://github.com/fastly/terraform-provider-fastly-beta/pull/134))
+- feat(dictionary): add `fastly_service_dictionary` resource for explicit/default service version management of Edge Dictionaries; CDN and Compute services
 
 ### BUG FIXES:
 
