@@ -1792,6 +1792,21 @@ func ConfigACLAtVersion(serviceName, domainName, aclName string, version int) st
 	)
 }
 
+// ConfigACLOnComputeService returns a fastly_service_cdn_acl resource attached to a
+// Compute service, to prove the CDN-only service-kind restriction is enforced.
+func ConfigACLOnComputeService(serviceName, aclName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"SERVICE_VERSION": "1",
+			"ACL_NAME":        aclName,
+		},
+		"internal/acceptance_tests/blocks/acl_explicit_on_compute.tf",
+	)
+}
+
 // Configuration helpers for Compute Auto service
 
 // ConfigComputeAutoBasic returns a basic Compute auto service config with a domain and package.
