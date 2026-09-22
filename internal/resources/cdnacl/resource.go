@@ -131,17 +131,37 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-// Update only runs when the ACL's version changes in place: service_id and name
-// both force replacement, so this is never reached for a rename or a move to a
-// different service. The target version must already contain an ACL with this
-// name (e.g. because it was cloned from the prior version), since the ACL API has
-// no update operation to create or rename one here. Fetch that ACL and flatten it
-// into state so id/acl_id reflect the new version rather than the old one.
+// Update runs for either an in-place version change or a force_destroy-only change (the only
+// two attributes that don't force replacement); service_id and name both force replacement, so
+// this is never reached for a rename or a move to a different service.
+//
+// When the version is unchanged, there's nothing to read remotely: force_destroy has no API
+// representation, so the plan is written to state as-is. When the version changes, the target
+// version must already contain an ACL with this name (e.g. because it was cloned from the prior
+// version), since the ACL API has no update operation to create or rename one here. Fetch that
+// ACL and flatten it into state so id/acl_id reflect the new version rather than the old one.
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan Model
+	var state Model
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if plan.Version.ValueInt64() == state.Version.ValueInt64() {
+		tflog.Debug(ctx, "Updating Fastly service ACL config-only attributes", map[string]any{
+			"service_id": plan.Service.ValueString(),
+			"version":    plan.Version.ValueInt64(),
+			"name":       service.StringValue(plan.Name),
+		})
+		// force_destroy is the only attribute that can differ here (everything else
+		// either forces replacement or is unchanged, since version matched). Reuse
+		// state for id/acl_id: they're Computed with no UseStateForUnknown modifier,
+		// so plan's copies are unknown, not carried forward from state automatically.
+		state.ForceDestroy = plan.ForceDestroy
+		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 		return
 	}
 

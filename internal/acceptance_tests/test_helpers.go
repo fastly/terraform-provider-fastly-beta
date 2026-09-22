@@ -1882,6 +1882,26 @@ func ConfigACLAtVersion(serviceName, domainName, aclName string, version int) st
 	)
 }
 
+// ConfigACLExplicitWithForceDestroy returns a service/domain/ACL config for the explicit
+// fastly_service_cdn_acl resource pinned to version 1, with force_destroy set to the given
+// value - for exercising a force_destroy-only change, the one config attribute besides version
+// that doesn't force replacement.
+func ConfigACLExplicitWithForceDestroy(serviceName, domainName, aclName string, forceDestroy bool) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"ACL_NAME":        aclName,
+			"FORCE_DESTROY":   fmt.Sprintf("%t", forceDestroy),
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/acl_explicit_force_destroy.tf",
+	)
+}
+
 // ConfigACLOnComputeService returns a fastly_service_cdn_acl resource attached to a
 // Compute service, to prove the CDN-only service-kind restriction is enforced.
 func ConfigACLOnComputeService(serviceName, aclName string) string {
