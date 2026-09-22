@@ -149,6 +149,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafworkspacewildcardlist"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/objectstorageaccesskey"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/productenablement"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ratelimiter"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/resourcelink"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/secretstore"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecdn"
@@ -323,6 +324,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		productenablement.NewBotManagementResource,
 		productenablement.NewDDoSProtectionResource,
 		productenablement.NewNGWAFResource,
+		ratelimiter.NewResource,
 		resourcelink.NewResource,
 		secretstore.NewResource,
 		servicecdn.NewResource,
@@ -425,6 +427,7 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		customvcl.NewListResource,
 		loggingopenstack.NewListResource,
 		loggingpapertrail.NewListResource,
+		ratelimiter.NewListResource,
 		loggings3.NewListResource,
 		loggingscalyr.NewListResource,
 		loggingsftp.NewListResource,

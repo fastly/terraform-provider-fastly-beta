@@ -1,0 +1,67 @@
+---
+page_title: "fastly_service_ratelimiter Resource - fastly"
+subcategory: ""
+description: |-
+  Fastly service rate limiter resource. Writes directly to the specified writable service version.
+---
+
+# fastly_service_ratelimiter (Resource)
+
+Fastly service rate limiter resource. Writes directly to the specified writable service version.
+
+This resource is part of the explicit/default first-class resource family. It
+manages a rate limiter on the configured service version. It does not clone,
+activate, or stage service versions. Rate limiters are only supported on VCL
+services.
+
+## Example Usage
+
+```terraform
+resource "fastly_service_ratelimiter" "login_throttle" {
+  service_id           = fastly_service_cdn.example.id
+  version              = 1
+  name                 = "login_throttle"
+  action               = "response"
+  client_key           = ["req.http.Fastly-Client-IP"]
+  http_methods         = ["POST"]
+  penalty_box_duration = 10
+  rps_limit            = 20
+  window_size          = 10
+
+  response = {
+    content      = "Too many requests"
+    content_type = "text/plain"
+    status       = 429
+  }
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import a rate limiter using the service ID, version, and rate limiter name:
+
+```shell
+terraform import fastly_service_ratelimiter.login_throttle SERVICE_ID/VERSION/RATE_LIMITER_NAME
+```
+
+Example:
+
+```shell
+terraform import fastly_service_ratelimiter.login_throttle SU1Z0isxPaozGVKXdv0eY/3/login_throttle
+```
+
+## Version lifecycle
+
+This resource does not clone, activate, or stage service versions. Use explicit
+service-version lifecycle actions to clone, validate, stage, or activate a
+service version.
+
+## Clearing response, response_object_name, or uri_dictionary_name
+
+The Fastly API's update endpoint silently keeps the previous value in place if
+`uri_dictionary_name`, `response_object_name`, or `response` is simply omitted
+from a request. When any of these fields is removed from configuration, the
+provider deletes and recreates the rate limiter on the same service version
+instead of issuing an update, so the change actually takes effect.
