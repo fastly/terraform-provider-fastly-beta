@@ -32,10 +32,6 @@ resource "fastly_service_cdn_auto" "example" {
   name          = "example-service"
   force_destroy = true
 
-  domain {
-    name = "example.com"
-  }
-
   dictionary {
     name = "application_configuration"
   }

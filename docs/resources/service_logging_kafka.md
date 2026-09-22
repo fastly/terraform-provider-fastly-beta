@@ -88,10 +88,6 @@ minus `service_id` and `version`, which the parent service owns.
 resource "fastly_service_cdn_auto" "example" {
   name = "my-service"
 
-  domain {
-    name = "www.example.com"
-  }
-
   logging_kafka {
     name    = "kafka-example"
     brokers = "kafka-1.example.com:9092,kafka-2.example.com:9092"
@@ -106,10 +102,6 @@ arguments (`format`, `format_version`, `placement`, `response_condition`):
 ```terraform
 resource "fastly_service_compute_auto" "example" {
   name = "my-compute-service"
-
-  domain {
-    name = "www.example.com"
-  }
 
   package {
     filename         = "package.tar.gz"

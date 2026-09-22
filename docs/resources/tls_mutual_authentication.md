@@ -17,6 +17,41 @@ Mutual TLS can be added to an existing [`fastly_tls_activation`](tls_activation.
 resource "fastly_service_cdn_auto" "example" {
   name = "example-service"
 
+  backend {
+    address = "127.0.0.1"
+    name    = "localhost"
+  }
+}
+
+resource "fastly_domain" "example" {
+  fqdn       = "example.com"
+  service_id = fastly_service_cdn_auto.example.id
+}
+
+resource "fastly_tls_certificate" "example" {
+  certificate_body = file("example.com.crt")
+  name             = "example-cert"
+}
+
+resource "fastly_tls_activation" "example" {
+  certificate_id = fastly_tls_certificate.example.id
+  domain         = fastly_domain.example.fqdn
+  depends_on     = [fastly_domain.example]
+}
+
+resource "fastly_tls_mutual_authentication" "example" {
+  activation_ids = [fastly_tls_activation.example.id]
+  cert_bundle    = file("client-ca-bundle.crt")
+  enforced       = true
+}
+```
+
+For services using [classic domains](https://www.fastly.com/documentation/guides/getting-started/domains/about-domains/#working-with-classic-domains), the domain is declared inside the service:
+
+```terraform
+resource "fastly_service_cdn_auto" "example" {
+  name = "example-service"
+
   domain {
     name = "example.com"
   }

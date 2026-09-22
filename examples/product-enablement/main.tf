@@ -13,10 +13,6 @@ provider "fastly" {
 resource "fastly_service_cdn_auto" "example" {
   name = "example-service"
 
-  domain {
-    name = "example.com"
-  }
-
   backend {
     name    = "example-backend"
     address = "example.com"

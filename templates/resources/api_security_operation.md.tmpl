@@ -15,10 +15,6 @@ Manages an API Security operation for a Fastly service. Operations represent API
 resource "fastly_service_cdn" "example" {
   name = "example-service"
 
-  domain {
-    name = "example.com"
-  }
-
   backend {
     address = "http-me.fastly.dev"
     name    = "backend"
