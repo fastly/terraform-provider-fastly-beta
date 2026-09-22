@@ -58,7 +58,7 @@ func flatten(ctx context.Context, g *fastly.GrafanaCloudLogs, m *Model) {
 		return
 	}
 
-	id := fastly.ToValue(g.ServiceID) + "-" + strconv.Itoa(fastly.ToValue(g.ServiceVersion)) + "-" + fastly.ToValue(g.Name)
+	id := fastly.ToValue(g.ServiceID) + "/" + strconv.Itoa(fastly.ToValue(g.ServiceVersion)) + "/" + fastly.ToValue(g.Name)
 	m.ID = types.StringValue(id)
 	m.Service = types.StringValue(fastly.ToValue(g.ServiceID))
 	m.Version = types.Int64Value(int64(fastly.ToValue(g.ServiceVersion)))

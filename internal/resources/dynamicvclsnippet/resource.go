@@ -88,7 +88,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 }
 
 func ID(serviceID string, version int, name string) string {
-	return fmt.Sprintf("%s-%d-%s", serviceID, version, name)
+	return fmt.Sprintf("%s/%d/%s", serviceID, version, name)
 }
 
 func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

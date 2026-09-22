@@ -120,7 +120,7 @@ func Validate(vcls []NestedModel) error {
 }
 
 func ID(serviceID string, version int, name string) string {
-	return fmt.Sprintf("%s-%d-%s", serviceID, version, name)
+	return fmt.Sprintf("%s/%d/%s", serviceID, version, name)
 }
 
 func MatchOrderPreservePlanContent(items, plan []NestedModel) []NestedModel {

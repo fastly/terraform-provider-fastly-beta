@@ -57,7 +57,7 @@ func flatten(ctx context.Context, n *fastly.NewRelicOTLP, m *Model) {
 		return
 	}
 
-	id := fastly.ToValue(n.ServiceID) + "-" + strconv.Itoa(fastly.ToValue(n.ServiceVersion)) + "-" + fastly.ToValue(n.Name)
+	id := fastly.ToValue(n.ServiceID) + "/" + strconv.Itoa(fastly.ToValue(n.ServiceVersion)) + "/" + fastly.ToValue(n.Name)
 	m.ID = types.StringValue(id)
 	m.Service = types.StringValue(fastly.ToValue(n.ServiceID))
 	m.Version = types.Int64Value(int64(fastly.ToValue(n.ServiceVersion)))

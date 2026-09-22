@@ -65,7 +65,7 @@ func flatten(ctx context.Context, s *fastly.Splunk, m *Model) {
 		return
 	}
 
-	id := fastly.ToValue(s.ServiceID) + "-" + strconv.Itoa(fastly.ToValue(s.ServiceVersion)) + "-" + fastly.ToValue(s.Name)
+	id := fastly.ToValue(s.ServiceID) + "/" + strconv.Itoa(fastly.ToValue(s.ServiceVersion)) + "/" + fastly.ToValue(s.Name)
 	m.ID = types.StringValue(id)
 	m.Service = types.StringValue(fastly.ToValue(s.ServiceID))
 	m.Version = types.Int64Value(int64(fastly.ToValue(s.ServiceVersion)))

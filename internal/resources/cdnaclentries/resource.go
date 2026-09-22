@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -22,6 +23,7 @@ import (
 var (
 	_ resource.Resource                = &Resource{}
 	_ resource.ResourceWithImportState = &Resource{}
+	_ resource.ResourceWithIdentity    = &Resource{}
 )
 
 type Resource struct {
@@ -32,8 +34,31 @@ func NewResource() resource.Resource {
 	return &Resource{}
 }
 
+// IdentityModel identifies an ACL's entries by service and ACL, not by
+// version: ACL entries are read/written against the ACL directly, not
+// pinned to a service version.
+type IdentityModel struct {
+	ServiceID types.String `tfsdk:"service_id"`
+	ACLID     types.String `tfsdk:"acl_id"`
+}
+
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_service_cdn_acl_entries"
+}
+
+func (r *Resource) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	resp.IdentitySchema = identityschema.Schema{
+		Attributes: map[string]identityschema.Attribute{
+			"service_id": identityschema.StringAttribute{
+				RequiredForImport: true,
+				Description:       "Fastly service ID.",
+			},
+			"acl_id": identityschema.StringAttribute{
+				RequiredForImport: true,
+				Description:       "Fastly ACL ID.",
+			},
+		},
+	}
 }
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -105,6 +130,16 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 	plan.Entry = flattenEntries(ctx, filterManagedRemoteEntries(refreshed, desired), plan.Entry, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, &IdentityModel{
+			ServiceID: plan.ServiceID,
+			ACLID:     plan.ACLID,
+		})...)
+	}
 }
 
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -155,6 +190,16 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 
 	state.ID = types.StringValue(fmt.Sprintf("%s/%s", serviceID, aclID))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, &IdentityModel{
+			ServiceID: state.ServiceID,
+			ACLID:     state.ACLID,
+		})...)
+	}
 }
 
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -216,6 +261,13 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 
 	plan.Entry = flattenEntries(ctx, filterManagedRemoteEntries(refreshed, desired), plan.Entry, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, &IdentityModel{
+			ServiceID: plan.ServiceID,
+			ACLID:     plan.ACLID,
+		})...)
+	}
 }
 
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -266,12 +318,24 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 }
 
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	split := strings.Split(req.ID, "/")
+	if req.ID != "" {
+		r.importByCompositeID(ctx, req.ID, resp)
+		return
+	}
+	r.importByIdentity(ctx, req, resp)
+}
+
+// importByCompositeID handles the legacy `terraform import` string ID
+// format (service_id/acl_id). It doesn't set identity: a plain-ID import
+// leaves the framework to derive it from the resulting state on the next
+// Read, same as any other resource.
+func (r *Resource) importByCompositeID(ctx context.Context, id string, resp *resource.ImportStateResponse) {
+	split := strings.Split(id, "/")
 
 	if len(split) != 2 {
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",
-			fmt.Sprintf("Invalid id: %s. The ID should be in the format [service_id]/[acl_id]", req.ID),
+			fmt.Sprintf("Invalid id: %s. The ID should be in the format [service_id]/[acl_id]", id),
 		)
 		return
 	}
@@ -281,7 +345,32 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("service_id"), serviceID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("acl_id"), aclID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
+}
+
+// importByIdentity handles `terraform query`-generated `import { identity =
+// {...} }` blocks.
+func (r *Resource) importByIdentity(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	var identity IdentityModel
+	resp.Diagnostics.Append(req.Identity.Get(ctx, &identity)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	serviceID := identity.ServiceID.ValueString()
+	aclID := identity.ACLID.ValueString()
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("service_id"), serviceID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("acl_id"), aclID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), fmt.Sprintf("%s/%s", serviceID, aclID))...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, &IdentityModel{
+		ServiceID: types.StringValue(serviceID),
+		ACLID:     types.StringValue(aclID),
+	})...)
 }
 
 func (r *Resource) listEntries(ctx context.Context, serviceID, aclID string) ([]*fastly.ACLEntry, error) {

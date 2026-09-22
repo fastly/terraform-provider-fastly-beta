@@ -131,7 +131,7 @@ func flatten(ctx context.Context, d *fastly.DigitalOcean, m *Model) {
 		return
 	}
 
-	id := fastly.ToValue(d.ServiceID) + "-" + strconv.Itoa(fastly.ToValue(d.ServiceVersion)) + "-" + fastly.ToValue(d.Name)
+	id := fastly.ToValue(d.ServiceID) + "/" + strconv.Itoa(fastly.ToValue(d.ServiceVersion)) + "/" + fastly.ToValue(d.Name)
 	m.ID = types.StringValue(id)
 	m.Service = types.StringValue(fastly.ToValue(d.ServiceID))
 	m.Version = types.Int64Value(int64(fastly.ToValue(d.ServiceVersion)))

@@ -131,7 +131,7 @@ func flatten(ctx context.Context, o *fastly.Openstack, m *Model) {
 		return
 	}
 
-	id := fastly.ToValue(o.ServiceID) + "-" + strconv.Itoa(fastly.ToValue(o.ServiceVersion)) + "-" + fastly.ToValue(o.Name)
+	id := fastly.ToValue(o.ServiceID) + "/" + strconv.Itoa(fastly.ToValue(o.ServiceVersion)) + "/" + fastly.ToValue(o.Name)
 	m.ID = types.StringValue(id)
 	m.Service = types.StringValue(fastly.ToValue(o.ServiceID))
 	m.Version = types.Int64Value(int64(fastly.ToValue(o.ServiceVersion)))

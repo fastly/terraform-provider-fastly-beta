@@ -67,7 +67,7 @@ func flatten(ctx context.Context, es *fastly.Elasticsearch, m *Model) {
 		return
 	}
 
-	id := fastly.ToValue(es.ServiceID) + "-" + strconv.Itoa(fastly.ToValue(es.ServiceVersion)) + "-" + fastly.ToValue(es.Name)
+	id := fastly.ToValue(es.ServiceID) + "/" + strconv.Itoa(fastly.ToValue(es.ServiceVersion)) + "/" + fastly.ToValue(es.Name)
 	m.ID = types.StringValue(id)
 	m.Service = types.StringValue(fastly.ToValue(es.ServiceID))
 	m.Version = types.Int64Value(int64(fastly.ToValue(es.ServiceVersion)))

@@ -95,7 +95,7 @@ func TestFlatten(t *testing.T) {
 				LinkID:         new("link_xyz789"),
 			},
 			validate: func(t *testing.T, m *Model) {
-				assert.Equal(t, types.StringValue("service_123-5-link_xyz789"), m.ID)
+				assert.Equal(t, types.StringValue("service_123/5/link_xyz789"), m.ID)
 				assert.Equal(t, types.StringValue("service_123"), m.Service)
 				assert.Equal(t, types.Int64Value(5), m.Version)
 				assert.Equal(t, types.StringValue("my_acl"), m.Name)

@@ -125,7 +125,7 @@ func TestFlatten(t *testing.T) {
 				ACLID:          ptrTo("acl_abc123"),
 			},
 			validate: func(t *testing.T, m *Model) {
-				assert.Equal(t, types.StringValue("service_123-5-test_acl"), m.ID)
+				assert.Equal(t, types.StringValue("service_123/5/test_acl"), m.ID)
 				assert.Equal(t, types.StringValue("service_123"), m.Service)
 				assert.Equal(t, types.Int64Value(5), m.Version)
 				assert.Equal(t, types.StringValue("test_acl"), m.Name)
@@ -141,7 +141,7 @@ func TestFlatten(t *testing.T) {
 				ACLID:          ptrTo("acl_xyz789"),
 			},
 			validate: func(t *testing.T, m *Model) {
-				assert.Equal(t, types.StringValue("service_456-10-full_acl"), m.ID)
+				assert.Equal(t, types.StringValue("service_456/10/full_acl"), m.ID)
 				assert.Equal(t, types.StringValue("service_456"), m.Service)
 				assert.Equal(t, types.Int64Value(10), m.Version)
 				assert.Equal(t, types.StringValue("full_acl"), m.Name)

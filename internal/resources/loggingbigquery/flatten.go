@@ -61,7 +61,7 @@ func flatten(ctx context.Context, bq *fastly.BigQuery, m *Model) {
 		return
 	}
 
-	id := fastly.ToValue(bq.ServiceID) + "-" + strconv.Itoa(fastly.ToValue(bq.ServiceVersion)) + "-" + fastly.ToValue(bq.Name)
+	id := fastly.ToValue(bq.ServiceID) + "/" + strconv.Itoa(fastly.ToValue(bq.ServiceVersion)) + "/" + fastly.ToValue(bq.Name)
 	m.ID = types.StringValue(id)
 	m.Service = types.StringValue(fastly.ToValue(bq.ServiceID))
 	m.Version = types.Int64Value(int64(fastly.ToValue(bq.ServiceVersion)))

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
-	"github.com/fastly/terraform-provider-fastly-beta/internal/listidentity"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -12,6 +11,7 @@ import (
 	listschema "github.com/hashicorp/terraform-plugin-framework/list/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/fastly/go-fastly/v17/fastly"
@@ -73,8 +73,11 @@ func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *l
 			}
 			count++
 
-			result := listidentity.NewResult(ctx, req)
+			result := req.NewListResult(ctx)
 			result.DisplayName = service.ToGeneratedResourceName(fastly.ToValue(svc.Name), fastly.ToValue(svc.ServiceID))
+			result.Diagnostics.Append(result.Identity.Set(ctx, &IdentityModel{
+				ID: types.StringValue(fastly.ToValue(svc.ServiceID)),
+			})...)
 
 			if req.IncludeResource {
 				result.Diagnostics.Append(setResourceAttrs(ctx, &result, svc)...)

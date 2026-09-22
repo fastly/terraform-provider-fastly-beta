@@ -106,7 +106,7 @@ func TestFlatten(t *testing.T) {
 
 		flatten(ctx, api, m)
 
-		assert.Equal(t, types.StringValue("svc-123-5-main"), m.ID)
+		assert.Equal(t, types.StringValue("svc-123/5/main"), m.ID)
 		assert.Equal(t, types.StringValue("svc-123"), m.Service)
 		assert.Equal(t, types.Int64Value(5), m.Version)
 		assert.Equal(t, types.StringValue("main"), m.Name)
@@ -446,5 +446,5 @@ func TestMatchOrder(t *testing.T) {
 }
 
 func TestID(t *testing.T) {
-	assert.Equal(t, "svc-123-5-main", ID("svc-123", 5, "main"))
+	assert.Equal(t, "svc-123/5/main", ID("svc-123", 5, "main"))
 }

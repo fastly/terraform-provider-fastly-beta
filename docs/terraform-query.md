@@ -15,18 +15,65 @@ It is not used for the automatic compatibility resource family.
 
 ## Supported resource family
 
-`terraform query` is supported for these explicit/default resources:
+`terraform query` is supported for every explicit/default resource that has a
+corresponding list resource registered in `provider.go`'s `ListResources()`.
+As of this writing, that is:
+
+Top-level services:
 
 - `fastly_service_cdn`
 - `fastly_service_compute`
-- `fastly_service_domain`
+
+Versioned child resources:
+
 - `fastly_service_backend`
+- `fastly_service_domain`
+- `fastly_service_dictionary`
 - `fastly_service_settings`
 - `fastly_service_ratelimiter`
-- `fastly_service_dictionary`
+- `fastly_service_cdn_acl`
+- `fastly_service_cdn_acl_entries`
+- `fastly_service_condition`
+- `fastly_service_custom_vcl`
+
+Logging endpoints (one per provider):
+
+- `fastly_service_logging_bigquery`
+- `fastly_service_logging_blobstorage`
+- `fastly_service_logging_cloudfiles`
+- `fastly_service_logging_datadog`
+- `fastly_service_logging_digitalocean`
+- `fastly_service_logging_elasticsearch`
+- `fastly_service_logging_ftp`
+- `fastly_service_logging_gcs`
+- `fastly_service_logging_googlepubsub`
+- `fastly_service_logging_grafanacloudlogs`
+- `fastly_service_logging_heroku`
+- `fastly_service_logging_honeycomb`
+- `fastly_service_logging_https`
+- `fastly_service_logging_kafka`
+- `fastly_service_logging_kinesis`
+- `fastly_service_logging_loggly`
+- `fastly_service_logging_logshuttle`
+- `fastly_service_logging_newrelic`
+- `fastly_service_logging_newrelicotlp`
+- `fastly_service_logging_openstack`
+- `fastly_service_logging_papertrail`
+- `fastly_service_logging_s3`
+- `fastly_service_logging_scalyr`
+- `fastly_service_logging_sftp`
+- `fastly_service_logging_splunk`
+- `fastly_service_logging_sumologic`
+- `fastly_service_logging_syslog`
 
 These resources are first-class Terraform resources, so they can be discovered
 independently and generated as separate resource blocks.
+
+This list grows as new explicit/default resources gain a `list.go` (see
+"Adding a new resource" in the top-level `CLAUDE.md`). If a resource you
+expect to query is missing, check whether its package has a `list.go` and
+whether it's registered in `ListResources()` before assuming query doesn't
+support it.
 
 Example explicit/default configuration:
 
@@ -170,7 +217,14 @@ list "fastly_service_ratelimiter" "all" {
 list "fastly_service_dictionary" "all" {
   provider = fastly
 }
+
+list "fastly_service_logging_s3" "all" {
+  provider = fastly
+}
 ```
+
+This is a representative subset; add a `list` block for any resource named
+under "Supported resource family" above, following the same pattern.
 
 The `provider` argument is required in every `list` block. It tells Terraform
 which provider configuration to use.
@@ -225,7 +279,17 @@ terraform query -generate-config-out=generated.tf
 `terraform query -generate-config-out=generated.tf` produces Terraform resource
 blocks and matching import blocks.
 
-Example service output:
+Every resource in the supported family implements Terraform's
+[resource identity](https://developer.hashicorp.com/terraform/plugin/framework/resources/identity)
+(`resource.ResourceWithIdentity`), so generated import blocks use an
+`identity` block rather than a plain `id` string. Identity deliberately
+excludes `version`: a resource identity can't safely contain a mutable field,
+since Terraform treats an identity change as a different resource and forces
+a replace. Import by identity is version-less by design — it always resolves
+to the active version, or the latest version when no active version exists,
+the same way query itself picks one (see "Version selection" below).
+
+Example service output (identity is just the service ID):
 
 ```hcl
 resource "fastly_service_cdn" "my_service" {
@@ -237,12 +301,12 @@ import {
   to       = fastly_service_cdn.my_service
   provider = fastly
   identity = {
-    service_id = "abc123"
+    id = "abc123"
   }
 }
 ```
 
-Example domain output:
+Example domain output (identity is `service_id` + `name`):
 
 ```hcl
 resource "fastly_service_domain" "www_example_com" {
@@ -257,13 +321,12 @@ import {
   provider = fastly
   identity = {
     service_id = "abc123"
-    version    = 7
     name       = "www.example.com"
   }
 }
 ```
 
-Example backend output:
+Example backend output (same `service_id` + `name` shape as domain):
 
 ```hcl
 resource "fastly_service_backend" "origin" {
@@ -280,11 +343,28 @@ import {
   provider = fastly
   identity = {
     service_id = "abc123"
-    version    = 7
     name       = "origin"
   }
 }
 ```
+
+Most versioned child resources follow the `service_id` + `name` shape above.
+Two exceptions:
+
+- `fastly_service_settings` has no name component (it's a singleton per
+  service version), so its identity is `service_id` alone.
+- `fastly_service_cdn_acl_entries` isn't pinned to a version at all (ACL
+  entries are read/written against the ACL directly, not a service version),
+  so its identity is `service_id` + `acl_id`.
+
+The legacy composite-string `terraform import <resource> service_id/version/name`
+format (and `service_id/version`, `service_id/acl_id` for the two exceptions
+above) still works for manual imports — it's what each resource's
+`ImportState` falls back to when identity isn't present on the import block.
+Unlike identity-based import, that path *is* version-pinned: it reads exactly
+the version named in the string. Prefer identity-based import (what query
+generates) unless you specifically need to pin an import to a non-active,
+non-latest version.
 
 After generating configuration:
 

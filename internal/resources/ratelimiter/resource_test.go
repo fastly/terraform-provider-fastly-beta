@@ -66,7 +66,7 @@ func TestFlatten(t *testing.T) {
 				}
 			}(),
 			want: func(t *testing.T, m *Model) {
-				assert.Equal(t, types.StringValue("service-123-5-rate-limiter"), m.ID)
+				assert.Equal(t, types.StringValue("service-123/5/rate-limiter"), m.ID)
 				assert.Equal(t, types.StringValue("service-123"), m.Service)
 				assert.Equal(t, types.Int64Value(5), m.Version)
 				assert.Equal(t, types.StringValue("rate-limiter"), m.Name)

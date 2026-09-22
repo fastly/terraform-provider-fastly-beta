@@ -54,7 +54,7 @@ func TestFlatten(t *testing.T) {
 				WriteOnly:      new(false),
 			},
 			validate: func(t *testing.T, m *Model) {
-				assert.Equal(t, types.StringValue("service_123-5-test_dictionary"), m.ID)
+				assert.Equal(t, types.StringValue("service_123/5/test_dictionary"), m.ID)
 				assert.Equal(t, types.StringValue("service_123"), m.Service)
 				assert.Equal(t, types.Int64Value(5), m.Version)
 				assert.Equal(t, types.StringValue("test_dictionary"), m.Name)

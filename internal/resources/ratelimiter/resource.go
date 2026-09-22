@@ -11,6 +11,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -21,6 +22,7 @@ import (
 var (
 	_ resource.Resource                   = &Resource{}
 	_ resource.ResourceWithImportState    = &Resource{}
+	_ resource.ResourceWithIdentity       = &Resource{}
 	_ resource.ResourceWithValidateConfig = &Resource{}
 )
 
@@ -41,6 +43,29 @@ type Model struct {
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_service_ratelimiter"
+}
+
+// IdentityModel deliberately excludes version: a resource identity can't
+// safely contain a mutable field, since Terraform treats an identity change
+// as a different resource and forces a replace.
+type IdentityModel struct {
+	ServiceID types.String `tfsdk:"service_id"`
+	Name      types.String `tfsdk:"name"`
+}
+
+func (r *Resource) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	resp.IdentitySchema = identityschema.Schema{
+		Attributes: map[string]identityschema.Attribute{
+			"service_id": identityschema.StringAttribute{
+				RequiredForImport: true,
+				Description:       "Fastly service ID.",
+			},
+			"name": identityschema.StringAttribute{
+				RequiredForImport: true,
+				Description:       "Rate limiter name.",
+			},
+		},
+	}
 }
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -103,6 +128,16 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 	flatten(ctx, e, &plan)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, &IdentityModel{
+			ServiceID: plan.Service,
+			Name:      plan.Name,
+		})...)
+	}
 }
 
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -134,6 +169,16 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 
 	flatten(ctx, e, &state)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, &IdentityModel{
+			ServiceID: state.Service,
+			Name:      state.Name,
+		})...)
+	}
 }
 
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -176,6 +221,16 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 
 	flatten(ctx, e, &plan)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, &IdentityModel{
+			ServiceID: plan.Service,
+			Name:      plan.Name,
+		})...)
+	}
 }
 
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -223,7 +278,19 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 }
 
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	serviceID, version, name, err := importutil.ParseCompositeID(req.ID)
+	if req.ID != "" {
+		r.importByCompositeID(ctx, req.ID, resp)
+		return
+	}
+	r.importByIdentity(ctx, req, resp)
+}
+
+// importByCompositeID handles the legacy `terraform import` string ID format
+// (service_id/version/name). It doesn't set identity: a plain-ID import
+// leaves the framework to derive it from the resulting state on the next
+// Read, same as any other resource.
+func (r *Resource) importByCompositeID(ctx context.Context, id string, resp *resource.ImportStateResponse) {
+	serviceID, version, name, err := importutil.ParseCompositeID(id)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",
@@ -254,6 +321,55 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 	flatten(ctx, e, &state)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+// importByIdentity handles `terraform query`-generated `import { identity =
+// {...} }` blocks. Identity carries no version, so the version to read is
+// selected the same way query itself picks one: active, else latest.
+func (r *Resource) importByIdentity(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	var identity IdentityModel
+	resp.Diagnostics.Append(req.Identity.Get(ctx, &identity)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	serviceID := identity.ServiceID.ValueString()
+	name := identity.Name.ValueString()
+
+	version, _, err := service.SelectReadVersion(ctx, r.providerData.Client, serviceID)
+	if err != nil {
+		resp.Diagnostics.AddError("Error selecting service version for import", err.Error())
+		return
+	}
+
+	tflog.Debug(ctx, "Importing rate limiter", map[string]any{
+		"service_id": serviceID,
+		"version":    version,
+		"name":       name,
+	})
+
+	e, err := findByName(ctx, r.providerData.Client, serviceID, version, name)
+	if err != nil {
+		resp.Diagnostics.AddError("Error importing rate limiter", err.Error())
+		return
+	}
+	if e == nil {
+		resp.Diagnostics.AddError("Error importing rate limiter", "no rate limiter named \""+name+"\" was found in service "+serviceID+" version "+strconv.Itoa(version))
+		return
+	}
+
+	var state Model
+	flatten(ctx, e, &state)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, &IdentityModel{
+		ServiceID: types.StringValue(serviceID),
+		Name:      types.StringValue(name),
+	})...)
 }
 
 // findByName returns the rate limiter matching name at the given service version, or nil if none

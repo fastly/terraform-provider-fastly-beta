@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
-	"github.com/fastly/terraform-provider-fastly-beta/internal/listidentity"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -104,8 +103,12 @@ func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *l
 				}
 				count++
 
-				result := listidentity.NewResult(ctx, req)
+				result := req.NewListResult(ctx)
 				result.DisplayName = service.ToGeneratedResourceName(fastly.ToValue(svc.Name), serviceID, *es.Name)
+				result.Diagnostics.Append(result.Identity.Set(ctx, &IdentityModel{
+					ServiceID: types.StringValue(serviceID),
+					Name:      types.StringValue(fastly.ToValue(es.Name)),
+				})...)
 
 				if req.IncludeResource {
 					result.Diagnostics.Append(setResourceAttrs(ctx, &result, es, serviceID, version, fastly.ToValue(svc.Type))...)
@@ -129,7 +132,7 @@ func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *l
 func setResourceAttrs(ctx context.Context, result *list.ListResult, es *fastly.Elasticsearch, serviceID string, version int, serviceType string) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	id := serviceID + "-" + fmt.Sprintf("%d", version) + "-" + fastly.ToValue(es.Name)
+	id := serviceID + "/" + fmt.Sprintf("%d", version) + "/" + fastly.ToValue(es.Name)
 
 	model := Model{
 		NestedModel: FlattenToNestedModel(es),

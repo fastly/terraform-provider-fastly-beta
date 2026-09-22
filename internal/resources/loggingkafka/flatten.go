@@ -70,7 +70,7 @@ func flatten(ctx context.Context, k *fastly.Kafka, m *Model) {
 		return
 	}
 
-	id := fastly.ToValue(k.ServiceID) + "-" + strconv.Itoa(fastly.ToValue(k.ServiceVersion)) + "-" + fastly.ToValue(k.Name)
+	id := fastly.ToValue(k.ServiceID) + "/" + strconv.Itoa(fastly.ToValue(k.ServiceVersion)) + "/" + fastly.ToValue(k.Name)
 	m.ID = types.StringValue(id)
 	m.Service = types.StringValue(fastly.ToValue(k.ServiceID))
 	m.Version = types.Int64Value(int64(fastly.ToValue(k.ServiceVersion)))

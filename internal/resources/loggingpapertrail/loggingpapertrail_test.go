@@ -152,7 +152,7 @@ func TestFlatten(t *testing.T) {
 				Port:           new(12345),
 			},
 			validate: func(t *testing.T, m *Model) {
-				assert.Equal(t, types.StringValue("service-123-5-test-papertrail"), m.ID)
+				assert.Equal(t, types.StringValue("service-123/5/test-papertrail"), m.ID)
 				assert.Equal(t, types.StringValue("service-123"), m.Service)
 				assert.Equal(t, types.Int64Value(5), m.Version)
 				assert.Equal(t, types.StringValue("test-papertrail"), m.Name)

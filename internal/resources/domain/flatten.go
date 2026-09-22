@@ -16,7 +16,7 @@ func flatten(ctx context.Context, d *fastly.Domain, m *Model) {
 		return
 	}
 
-	id := *d.ServiceID + "-" + strconv.Itoa(*d.ServiceVersion) + "-" + *d.Name
+	id := *d.ServiceID + "/" + strconv.Itoa(*d.ServiceVersion) + "/" + *d.Name
 	m.ID = types.StringValue(id)
 	m.Service = types.StringValue(*d.ServiceID)
 	m.Version = types.Int64Value(int64(*d.ServiceVersion))

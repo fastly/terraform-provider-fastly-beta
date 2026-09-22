@@ -85,8 +85,9 @@ func TestSetResourceAttrs_computeResetsVCLOnlyFields(t *testing.T) {
 }
 
 // buildTestListResult builds a list.ListResult backed by the standalone
-// resource's own schema, mirroring how List() constructs one via
-// listidentity.NewResult but without requiring a full list.ListRequest.
+// resource's own schema, without requiring a full list.ListRequest. It leaves
+// Identity unset since these tests only exercise setResourceAttrs, which
+// never touches it.
 func buildTestListResult(ctx context.Context) list.ListResult {
 	s := schema.Schema{Attributes: ResourceAttributes()}
 	return list.ListResult{

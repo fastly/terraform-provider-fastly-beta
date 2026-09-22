@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/list"
 	listschema "github.com/hashicorp/terraform-plugin-framework/list/schema"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -105,10 +104,10 @@ func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *l
 
 				result := req.NewListResult(ctx)
 				result.DisplayName = service.ToGeneratedResourceName(fastly.ToValue(svc.Name), serviceID, *v.Name)
-
-				result.Diagnostics.Append(result.Identity.SetAttribute(ctx, path.Root("service_id"), serviceID)...)
-				result.Diagnostics.Append(result.Identity.SetAttribute(ctx, path.Root("version"), int64(version))...)
-				result.Diagnostics.Append(result.Identity.SetAttribute(ctx, path.Root("name"), *v.Name)...)
+				result.Diagnostics.Append(result.Identity.Set(ctx, &IdentityModel{
+					ServiceID: types.StringValue(serviceID),
+					Name:      types.StringValue(fastly.ToValue(v.Name)),
+				})...)
 
 				if req.IncludeResource {
 					result.Diagnostics.Append(setResourceAttrs(ctx, &result, v, serviceID, version)...)

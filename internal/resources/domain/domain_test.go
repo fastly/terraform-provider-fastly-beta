@@ -58,7 +58,7 @@ func TestFlatten(t *testing.T) {
 		m := &Model{}
 		flatten(ctx, domain, m)
 
-		assert.Equal(t, types.StringValue("svc-123-5-example.com"), m.ID)
+		assert.Equal(t, types.StringValue("svc-123/5/example.com"), m.ID)
 		assert.Equal(t, types.StringValue("svc-123"), m.Service)
 		assert.Equal(t, types.Int64Value(5), m.Version)
 		assert.Equal(t, types.StringValue("example.com"), m.Name)
@@ -75,7 +75,7 @@ func TestFlatten(t *testing.T) {
 		m := &Model{}
 		flatten(ctx, domain, m)
 
-		assert.Equal(t, types.StringValue("svc-456-1-minimal.com"), m.ID)
+		assert.Equal(t, types.StringValue("svc-456/1/minimal.com"), m.ID)
 		assert.Equal(t, types.StringValue("svc-456"), m.Service)
 		assert.Equal(t, types.Int64Value(1), m.Version)
 		assert.Equal(t, types.StringValue("minimal.com"), m.Name)
@@ -205,9 +205,9 @@ func TestIDGeneration(t *testing.T) {
 		svc, name, expectedID string
 		ver                   int
 	}{
-		{"svc1", "example.com", "svc1-1-example.com", 1},
-		{"svc2", "api.example.com", "svc2-10-api.example.com", 10},
-		{"svc3", "*.example.com", "svc3-5-*.example.com", 5},
+		{"svc1", "example.com", "svc1/1/example.com", 1},
+		{"svc2", "api.example.com", "svc2/10/api.example.com", 10},
+		{"svc3", "*.example.com", "svc3/5/*.example.com", 5},
 	}
 
 	for _, c := range cases {

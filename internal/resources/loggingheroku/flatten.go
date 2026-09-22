@@ -56,7 +56,7 @@ func flatten(ctx context.Context, h *fastly.Heroku, m *Model) {
 		return
 	}
 
-	id := fastly.ToValue(h.ServiceID) + "-" + strconv.Itoa(fastly.ToValue(h.ServiceVersion)) + "-" + fastly.ToValue(h.Name)
+	id := fastly.ToValue(h.ServiceID) + "/" + strconv.Itoa(fastly.ToValue(h.ServiceVersion)) + "/" + fastly.ToValue(h.Name)
 	m.ID = types.StringValue(id)
 	m.Service = types.StringValue(fastly.ToValue(h.ServiceID))
 	m.Version = types.Int64Value(int64(fastly.ToValue(h.ServiceVersion)))
