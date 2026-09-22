@@ -1,4 +1,4 @@
-package cdnacl
+package dictionary
 
 import (
 	"context"
@@ -39,12 +39,12 @@ type Model struct {
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_service_cdn_acl"
+	resp.TypeName = req.ProviderTypeName + "_service_dictionary"
 }
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Fastly CDN service ACL resource. Writes directly to the specified writable service version.",
+		Description: "Fastly service dictionary resource. Writes directly to the specified writable service version.",
 		Attributes:  ResourceAttributes(),
 	}
 }
@@ -66,12 +66,12 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_cdn_acl", service.TypeVCL); err != nil {
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_dictionary", service.TypeVCL, service.TypeCompute); err != nil {
 		resp.Diagnostics.AddError("Unsupported Fastly service type", err.Error())
 		return
 	}
 
-	tflog.Debug(ctx, "Creating Fastly service ACL", map[string]any{
+	tflog.Debug(ctx, "Creating Fastly service dictionary", map[string]any{
 		"service_id": plan.Service.ValueString(),
 		"version":    plan.Version.ValueInt64(),
 		"name":       service.StringValue(plan.Name),
@@ -82,40 +82,37 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	opts := BuildCreateInput(plan.Service.ValueString(), int(plan.Version.ValueInt64()), plan.NestedModel)
-
-	a, err := r.providerData.Client.CreateACL(ctx, opts)
+	d, err := ops{}.Create(ctx, r.providerData.Client, plan.Service.ValueString(), int(plan.Version.ValueInt64()), plan.NestedModel)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating explicit service ACL", err.Error())
+		resp.Diagnostics.AddError("Error creating explicit service dictionary", err.Error())
 		return
 	}
 
-	flatten(ctx, a, &plan)
+	flatten(ctx, d, &plan)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state Model
-
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	tflog.Debug(ctx, "Reading Fastly service ACL from API", map[string]any{
+	tflog.Debug(ctx, "Reading Fastly service dictionary from API", map[string]any{
 		"service_id": state.Service.ValueString(),
 		"version":    state.Version.ValueInt64(),
 		"name":       state.Name.ValueString(),
 	})
 
-	a, err := r.providerData.Client.GetACL(ctx, &fastly.GetACLInput{
+	d, err := r.providerData.Client.GetDictionary(ctx, &fastly.GetDictionaryInput{
 		ServiceID:      state.Service.ValueString(),
 		ServiceVersion: int(state.Version.ValueInt64()),
 		Name:           state.Name.ValueString(),
 	})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			tflog.Warn(ctx, "Service ACL not found, removing from state", map[string]any{
+			tflog.Warn(ctx, "Service dictionary not found, removing from state", map[string]any{
 				"service_id": state.Service.ValueString(),
 				"version":    state.Version.ValueInt64(),
 				"name":       state.Name.ValueString(),
@@ -123,23 +120,27 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError("Error reading explicit service ACL", err.Error())
+		resp.Diagnostics.AddError("Error reading explicit service dictionary", err.Error())
 		return
 	}
 
-	flatten(ctx, a, &state)
+	flatten(ctx, d, &state)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 // Update runs for either an in-place version change or a force_destroy-only change (the only
-// two attributes that don't force replacement); service_id and name both force replacement, so
-// this is never reached for a rename or a move to a different service.
+// two attributes that don't force replacement - see ResourceAttributes). service_id, name, and
+// write_only all force replacement (write_only has no in-place API update - see ops.Update), so
+// this is never reached for those.
 //
 // When the version is unchanged, there's nothing to read remotely: force_destroy has no API
-// representation, so the plan is written to state as-is. When the version changes, the target
-// version must already contain an ACL with this name (e.g. because it was cloned from the prior
-// version), since the ACL API has no update operation to create or rename one here. Fetch that
-// ACL and flatten it into state so id/acl_id reflect the new version rather than the old one.
+// representation, so state is reused with force_destroy overlaid from plan (id/dictionary_id are
+// Computed with no UseStateForUnknown modifier, so plan's copies of them are unknown, not carried
+// forward from state automatically - writing plan directly would produce "Provider returned
+// invalid result object after apply"). When the version changes, the target version must already
+// contain a dictionary with this name (e.g. because it was cloned from the prior version), since
+// there's nothing to create or rename here. Fetch that dictionary and flatten it into state so
+// id/dictionary_id reflect the new version rather than the old one.
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan Model
 	var state Model
@@ -151,27 +152,23 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	if plan.Version.ValueInt64() == state.Version.ValueInt64() {
-		tflog.Debug(ctx, "Updating Fastly service ACL config-only attributes", map[string]any{
+		tflog.Debug(ctx, "Updating Fastly service dictionary config-only attributes", map[string]any{
 			"service_id": plan.Service.ValueString(),
 			"version":    plan.Version.ValueInt64(),
 			"name":       service.StringValue(plan.Name),
 		})
-		// force_destroy is the only attribute that can differ here (everything else
-		// either forces replacement or is unchanged, since version matched). Reuse
-		// state for id/acl_id: they're Computed with no UseStateForUnknown modifier,
-		// so plan's copies are unknown, not carried forward from state automatically.
 		state.ForceDestroy = plan.ForceDestroy
 		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 		return
 	}
 
-	tflog.Debug(ctx, "Reading Fastly service ACL for new version", map[string]any{
+	tflog.Debug(ctx, "Reading Fastly service dictionary for new version", map[string]any{
 		"service_id": plan.Service.ValueString(),
 		"version":    plan.Version.ValueInt64(),
 		"name":       service.StringValue(plan.Name),
 	})
 
-	a, err := r.providerData.Client.GetACL(ctx, &fastly.GetACLInput{
+	d, err := r.providerData.Client.GetDictionary(ctx, &fastly.GetDictionaryInput{
 		ServiceID:      plan.Service.ValueString(),
 		ServiceVersion: int(plan.Version.ValueInt64()),
 		Name:           plan.Name.ValueString(),
@@ -179,9 +176,9 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	if err != nil {
 		if errors.IsNotFound(err) {
 			resp.Diagnostics.AddError(
-				"ACL not found in target version",
+				"Dictionary not found in target version",
 				fmt.Sprintf(
-					"Service %q version %d has no ACL named %q. Clone a version that already contains this ACL before switching to it.",
+					"Service %q version %d has no dictionary named %q. Clone a version that already contains this dictionary before switching to it.",
 					plan.Service.ValueString(),
 					plan.Version.ValueInt64(),
 					plan.Name.ValueString(),
@@ -189,11 +186,11 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 			)
 			return
 		}
-		resp.Diagnostics.AddError("Error reading explicit service ACL for new version", err.Error())
+		resp.Diagnostics.AddError("Error reading explicit service dictionary for new version", err.Error())
 		return
 	}
 
-	flatten(ctx, a, &plan)
+	flatten(ctx, d, &plan)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -204,13 +201,13 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 		return
 	}
 
-	tflog.Debug(ctx, "Deleting Fastly service ACL", map[string]any{
+	tflog.Debug(ctx, "Deleting Fastly service dictionary", map[string]any{
 		"service_id": state.Service.ValueString(),
 		"version":    state.Version.ValueInt64(),
 		"name":       state.Name.ValueString(),
 	})
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, state.Service.ValueString(), "fastly_service_cdn_acl", service.TypeVCL); err != nil {
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, state.Service.ValueString(), "fastly_service_dictionary", service.TypeVCL, service.TypeCompute); err != nil {
 		if errors.IsNotFound(err) {
 			return
 		}
@@ -225,31 +222,35 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 	}
 
 	if !service.BoolValue(state.ForceDestroy) {
-		mayDelete, err := isACLEmpty(ctx, state.Service.ValueString(), state.ACLID.ValueString(), r.providerData.Client)
+		if service.BoolValue(state.WriteOnly) {
+			resp.Diagnostics.AddError(
+				"Cannot delete write_only dictionary",
+				fmt.Sprintf("Cannot delete dictionary %q because it is write_only, so it may contain data that can't be inspected. Set force_destroy to true and apply it before making this change.", state.DictionaryID.ValueString()),
+			)
+			return
+		}
+
+		mayDelete, err := isDictionaryEmpty(ctx, r.providerData.Client, state.Service.ValueString(), state.DictionaryID.ValueString())
 		if err != nil {
-			resp.Diagnostics.AddError("Error checking if ACL is empty", err.Error())
+			resp.Diagnostics.AddError("Error checking if dictionary is empty", err.Error())
 			return
 		}
 
 		if !mayDelete {
 			resp.Diagnostics.AddError(
-				"Cannot delete non-empty ACL",
-				fmt.Sprintf("Cannot delete ACL %q because it contains entries. Either delete the entries first, or set force_destroy to true and apply it before making this change.", state.ACLID.ValueString()),
+				"Cannot delete non-empty dictionary",
+				fmt.Sprintf("Cannot delete dictionary %q because it contains items. Either delete the items first, or set force_destroy to true and apply it before making this change.", state.DictionaryID.ValueString()),
 			)
 			return
 		}
 	}
 
-	err := r.providerData.Client.DeleteACL(ctx, &fastly.DeleteACLInput{
-		ServiceID:      state.Service.ValueString(),
-		ServiceVersion: int(state.Version.ValueInt64()),
-		Name:           state.Name.ValueString(),
-	})
-	if err != nil {
+	dictOps := ops{}
+	if err := dictOps.Delete(ctx, r.providerData.Client, state.Service.ValueString(), int(state.Version.ValueInt64()), state.Name.ValueString()); err != nil {
 		if errors.IsNotFound(err) {
 			return
 		}
-		resp.Diagnostics.AddError("Error deleting explicit service ACL", err.Error())
+		resp.Diagnostics.AddError("Error deleting explicit service dictionary", err.Error())
 	}
 }
 
@@ -259,44 +260,32 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",
 			"Expected import ID in format: service_id/version/name\n"+
-				"For example: service123/3/my-acl\n\n"+
+				"For example: service123/3/my-dictionary\n\n"+
 				"Error: "+err.Error(),
 		)
 		return
 	}
 
-	tflog.Debug(ctx, "Importing ACL", map[string]any{
+	tflog.Debug(ctx, "Importing dictionary", map[string]any{
 		"service_id": serviceID,
 		"version":    version,
 		"name":       name,
 	})
 
-	a, err := r.providerData.Client.GetACL(ctx, &fastly.GetACLInput{
+	d, err := r.providerData.Client.GetDictionary(ctx, &fastly.GetDictionaryInput{
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 		Name:           name,
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("Error importing ACL", err.Error())
+		resp.Diagnostics.AddError("Error importing dictionary", err.Error())
 		return
 	}
 
 	var state Model
 	state.Service = types.StringValue(serviceID)
 	state.Version = types.Int64Value(int64(version))
-	flatten(ctx, a, &state)
+	flatten(ctx, d, &state)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-}
-
-func isACLEmpty(ctx context.Context, serviceID, aclID string, client *fastly.Client) (bool, error) {
-	entries, err := client.ListACLEntries(ctx, &fastly.ListACLEntriesInput{
-		ServiceID: serviceID,
-		ACLID:     aclID,
-	})
-	if err != nil {
-		return false, err
-	}
-
-	return len(entries) == 0, nil
 }

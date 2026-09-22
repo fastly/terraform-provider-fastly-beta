@@ -961,6 +961,96 @@ func ConfigCDNAutoWithDictionaryForceDestroy(serviceName, domainName, dictionary
 	)
 }
 
+// Configuration helpers for the explicit fastly_service_dictionary resource
+
+// ConfigDictionaryExplicit returns a service/domain/dictionary config for the explicit
+// fastly_service_dictionary resource, pinned to version 1.
+func ConfigDictionaryExplicit(serviceName, domainName, dictionaryName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"DICTIONARY_NAME": dictionaryName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/dictionary_explicit.tf",
+	)
+}
+
+// ConfigDictionaryExplicitWriteOnly returns a service/domain/dictionary config for the explicit
+// fastly_service_dictionary resource with write_only enabled, pinned to version 1.
+func ConfigDictionaryExplicitWriteOnly(serviceName, domainName, dictionaryName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"DICTIONARY_NAME": dictionaryName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/dictionary_explicit_write_only.tf",
+	)
+}
+
+// ConfigDictionaryAtVersion returns a service/domain/dictionary config pinned to the given
+// version, for exercising in-place version changes on the explicit fastly_service_dictionary
+// resource.
+func ConfigDictionaryAtVersion(serviceName, domainName, dictionaryName string, version int) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": fmt.Sprintf("%d", version),
+			"DICTIONARY_NAME": dictionaryName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/dictionary_explicit.tf",
+	)
+}
+
+// ConfigDictionaryExplicitWithForceDestroy returns a service/domain/dictionary config for the
+// explicit fastly_service_dictionary resource pinned to version 1, with force_destroy set to the
+// given value - for exercising a force_destroy-only change, the one config attribute besides
+// version that doesn't force replacement.
+func ConfigDictionaryExplicitWithForceDestroy(serviceName, domainName, dictionaryName string, forceDestroy bool) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"DICTIONARY_NAME": dictionaryName,
+			"FORCE_DESTROY":   fmt.Sprintf("%t", forceDestroy),
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/dictionary_explicit_force_destroy.tf",
+	)
+}
+
+// ConfigDictionaryOnComputeService returns a fastly_service_dictionary resource attached to a
+// Compute service, since dictionaries - unlike ACLs and general settings - are supported on
+// both CDN and Compute services.
+func ConfigDictionaryOnComputeService(serviceName, dictionaryName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"SERVICE_VERSION": "1",
+			"DICTIONARY_NAME": dictionaryName,
+		},
+		"internal/acceptance_tests/blocks/dictionary_explicit_on_compute.tf",
+	)
+}
+
 // ConfigCDNAutoWithHealthCheck returns a CDN auto service config with a domain and a health check.
 func ConfigCDNAutoWithHealthCheck(serviceName, domainName, healthCheckName string) string {
 	return BuildConfig(
@@ -1789,6 +1879,41 @@ func ConfigACLAtVersion(serviceName, domainName, aclName string, version int) st
 		},
 		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
 		"internal/acceptance_tests/blocks/acl_explicit.tf",
+	)
+}
+
+// ConfigACLExplicitWithForceDestroy returns a service/domain/ACL config for the explicit
+// fastly_service_cdn_acl resource pinned to version 1, with force_destroy set to the given
+// value - for exercising a force_destroy-only change, the one config attribute besides version
+// that doesn't force replacement.
+func ConfigACLExplicitWithForceDestroy(serviceName, domainName, aclName string, forceDestroy bool) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"ACL_NAME":        aclName,
+			"FORCE_DESTROY":   fmt.Sprintf("%t", forceDestroy),
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/acl_explicit_force_destroy.tf",
+	)
+}
+
+// ConfigACLOnComputeService returns a fastly_service_cdn_acl resource attached to a
+// Compute service, to prove the CDN-only service-kind restriction is enforced.
+func ConfigACLOnComputeService(serviceName, aclName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"SERVICE_VERSION": "1",
+			"ACL_NAME":        aclName,
+		},
+		"internal/acceptance_tests/blocks/acl_explicit_on_compute.tf",
 	)
 }
 

@@ -23,6 +23,7 @@ It is not used for the automatic compatibility resource family.
 - `fastly_service_backend`
 - `fastly_service_settings`
 - `fastly_service_ratelimiter`
+- `fastly_service_dictionary`
 - `fastly_service_cache_setting`
 
 These resources are first-class Terraform resources, so they can be discovered
@@ -164,6 +165,10 @@ list "fastly_service_settings" "all" {
 }
 
 list "fastly_service_ratelimiter" "all" {
+  provider = fastly
+}
+
+list "fastly_service_dictionary" "all" {
   provider = fastly
 }
 
