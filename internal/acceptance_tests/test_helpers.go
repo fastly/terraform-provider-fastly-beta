@@ -2820,6 +2820,115 @@ func ConfigCacheSettingOnLockedVersion(serviceName, domainName, cacheSettingName
 	)
 }
 
+// Configuration helpers for gzip resources (explicit version management)
+
+// ConfigGzipBasic returns a basic gzip resource config with content_types and extensions set.
+func ConfigGzipBasic(serviceName, domainName, gzipName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"GZIP_NAME":       gzipName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/gzip_explicit.tf",
+	)
+}
+
+// ConfigGzipUpdated returns a gzip resource config with a different set of content_types and
+// extensions than ConfigGzipBasic.
+func ConfigGzipUpdated(serviceName, domainName, gzipName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"GZIP_NAME":       gzipName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/gzip_explicit_updated.tf",
+	)
+}
+
+// ConfigGzipMinimal returns a gzip resource config with only the required name, leaving
+// content_types and extensions unset so the API's default list applies.
+func ConfigGzipMinimal(serviceName, domainName, gzipName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"GZIP_NAME":       gzipName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/gzip_explicit_minimal.tf",
+	)
+}
+
+// ConfigGzipWithCacheCondition returns a gzip resource config that references a CACHE-type
+// condition via cache_condition.
+func ConfigGzipWithCacheCondition(serviceName, domainName, gzipName, conditionName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"GZIP_NAME":       gzipName,
+			"CONDITION_NAME":  conditionName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/gzip_explicit_with_cache_condition.tf",
+	)
+}
+
+// ConfigGzipForImport returns a test configuration for importing a gzip configuration.
+func ConfigGzipForImport(serviceName, domainName, gzipName string) string {
+	return ConfigGzipBasic(serviceName, domainName, gzipName)
+}
+
+// ConfigGzipOnComputeService returns a fastly_service_gzip resource attached to a Compute
+// service, to prove the VCL-only service-kind restriction is enforced.
+func ConfigGzipOnComputeService(serviceName, gzipName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"SERVICE_VERSION": "1",
+			"GZIP_NAME":       gzipName,
+		},
+		"internal/acceptance_tests/blocks/gzip_explicit_on_compute.tf",
+	)
+}
+
+// ConfigGzipOnLockedVersion returns a config with the service/domain pinned to editable version
+// 1, plus a gzip resource targeting version 2 - the version the locked-version test activates
+// out-of-band before this config is applied - to prove writes to a locked version are rejected
+// without disturbing cleanup of the version-1 resources.
+func ConfigGzipOnLockedVersion(serviceName, domainName, gzipName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"GZIP_NAME":       gzipName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/gzip_explicit_on_locked_version.tf",
+	)
+}
+
 // Configuration helpers for fastly_service_ratelimiter resources (explicit version management)
 
 // ConfigRateLimiterBasic returns a basic rate limiter resource config.

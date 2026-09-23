@@ -32,17 +32,18 @@
 - feat(sftp_logging): add support for SFTP Logging ([#124](https://github.com/fastly/terraform-provider-fastly-beta/pull/124))
 - feat(papertrail_logging): add support for Papertrail Logging ([#123](https://github.com/fastly/terraform-provider-fastly-beta/pull/123))
 - feat(tls_configuration): add `staging_ip` attribute to the `fastly_tls_configuration` data source ([#126](https://github.com/fastly/terraform-provider-fastly-beta/pull/126))
-- feat(service_settings): add `fastly_service_settings` resource for explicit/default service version management of general settings; CDN services only ([#128](https://github.com/fastly/terraform-provider-fastly-beta/pull/128))
+- feat(service_settings): add `fastly_service_settings` resource for explicit service version management of general settings; CDN services only ([#128](https://github.com/fastly/terraform-provider-fastly-beta/pull/128))
 - feat(rate_limiter): add explicit family support for Rate Limiting ([#134](https://github.com/fastly/terraform-provider-fastly-beta/pull/134))
-- feat(dictionary): add `fastly_service_dictionary` resource for explicit/default service version management of Edge Dictionaries; CDN and Compute services ([#136](https://github.com/fastly/terraform-provider-fastly-beta/pull/136))
+- feat(dictionary): add `fastly_service_dictionary` resource for explicit service version management of Edge Dictionaries; CDN and Compute services ([#136](https://github.com/fastly/terraform-provider-fastly-beta/pull/136))
 - feat(cache_settings): add explicit family support for Cache Settings ([#138](https://github.com/fastly/terraform-provider-fastly-beta/pull/138))
+- feat(gzip): add `fastly_service_gzip` resource for explicit service version management of Gzip configurations; CDN services only
 
 ### BUG FIXES:
 
 - fix(cloudfiles_logging): ensure that the `format` attribute can't be set to null ([#93](https://github.com/fastly/terraform-provider-fastly-beta/pull/93))
 - fix(docs): use versionless domains in examples, show the nested `domain` block as an alternative on the TLS pages, and note that classic domains are only available on accounts created before September 16, 2025 ([#121](https://github.com/fastly/terraform-provider-fastly-beta/pull/121))
-- fix(docs): correct the README list of explicit/default resources, and map each one to its automatic-family equivalent ([#122](https://github.com/fastly/terraform-provider-fastly-beta/pull/122))
-- fix(docs): add `fastly_service_settings` to the README table of explicit/default resources ([#132](https://github.com/fastly/terraform-provider-fastly-beta/pull/132))
+- fix(docs): correct the README list of explicit resources, and map each one to its automatic-family equivalent ([#122](https://github.com/fastly/terraform-provider-fastly-beta/pull/122))
+- fix(docs): add `fastly_service_settings` to the README table of explicit resources ([#132](https://github.com/fastly/terraform-provider-fastly-beta/pull/132))
 - fix(docs): fill gaps and correct errors in the HCL syntax changes guide ([#131](https://github.com/fastly/terraform-provider-fastly-beta/pull/131))
 - test(service_cdn_acl): add acceptance test coverage verifying the explicit `fastly_service_cdn_acl` resource rejects Compute services ([#135](https://github.com/fastly/terraform-provider-fastly-beta/pull/135))
 - fix(compute): ensure that the Compute package hash is refreshed on `import` ([#140](https://github.com/fastly/terraform-provider-fastly-beta/pull/140))
