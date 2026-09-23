@@ -2712,6 +2712,114 @@ func ConfigConditionForImport(serviceName, domainName, conditionName string) str
 	)
 }
 
+// Configuration helpers for cache setting resources (explicit version management)
+
+// ConfigCacheSettingBasic returns a basic cache setting resource config.
+func ConfigCacheSettingBasic(serviceName, domainName, cacheSettingName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":       serviceName,
+			"SERVICE_COMMENT":    "",
+			"DOMAIN_NAME":        domainName,
+			"SERVICE_VERSION":    "1",
+			"CACHE_SETTING_NAME": cacheSettingName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/cache_setting_explicit.tf",
+	)
+}
+
+// ConfigCacheSettingUpdated returns a cache setting resource config with an updated action and TTLs.
+func ConfigCacheSettingUpdated(serviceName, domainName, cacheSettingName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":       serviceName,
+			"SERVICE_COMMENT":    "",
+			"DOMAIN_NAME":        domainName,
+			"SERVICE_VERSION":    "1",
+			"CACHE_SETTING_NAME": cacheSettingName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/cache_setting_explicit_updated.tf",
+	)
+}
+
+// ConfigCacheSettingMinimal returns a cache setting resource config with only the required name,
+// relying on the API/schema defaults for action, cache_condition, ttl, and stale_ttl.
+func ConfigCacheSettingMinimal(serviceName, domainName, cacheSettingName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":       serviceName,
+			"SERVICE_COMMENT":    "",
+			"DOMAIN_NAME":        domainName,
+			"SERVICE_VERSION":    "1",
+			"CACHE_SETTING_NAME": cacheSettingName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/cache_setting_explicit_minimal.tf",
+	)
+}
+
+// ConfigCacheSettingWithCacheCondition returns a cache setting resource config that references a
+// CACHE-type condition via cache_condition.
+func ConfigCacheSettingWithCacheCondition(serviceName, domainName, cacheSettingName, conditionName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":       serviceName,
+			"SERVICE_COMMENT":    "",
+			"DOMAIN_NAME":        domainName,
+			"SERVICE_VERSION":    "1",
+			"CACHE_SETTING_NAME": cacheSettingName,
+			"CONDITION_NAME":     conditionName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/cache_setting_explicit_with_cache_condition.tf",
+	)
+}
+
+// ConfigCacheSettingForImport returns a test configuration for importing a cache setting.
+func ConfigCacheSettingForImport(serviceName, domainName, cacheSettingName string) string {
+	return ConfigCacheSettingBasic(serviceName, domainName, cacheSettingName)
+}
+
+// ConfigCacheSettingOnComputeService returns a fastly_service_cache_setting resource attached to a
+// Compute service, to prove the VCL-only service-kind restriction is enforced.
+func ConfigCacheSettingOnComputeService(serviceName, cacheSettingName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":       serviceName,
+			"SERVICE_COMMENT":    "",
+			"SERVICE_VERSION":    "1",
+			"CACHE_SETTING_NAME": cacheSettingName,
+		},
+		"internal/acceptance_tests/blocks/cache_setting_explicit_on_compute.tf",
+	)
+}
+
+// ConfigCacheSettingOnLockedVersion returns a config with the service/domain pinned to editable
+// version 1, plus a cache setting resource targeting version 2 - the version the locked-version
+// test activates out-of-band before this config is applied - to prove writes to a locked version
+// are rejected without disturbing cleanup of the version-1 resources.
+func ConfigCacheSettingOnLockedVersion(serviceName, domainName, cacheSettingName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":       serviceName,
+			"SERVICE_COMMENT":    "",
+			"DOMAIN_NAME":        domainName,
+			"SERVICE_VERSION":    "1",
+			"CACHE_SETTING_NAME": cacheSettingName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/cache_setting_explicit_on_locked_version.tf",
+	)
+}
+
 // Configuration helpers for fastly_service_ratelimiter resources (explicit version management)
 
 // ConfigRateLimiterBasic returns a basic rate limiter resource config.

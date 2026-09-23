@@ -2,6 +2,7 @@ package cachesetting
 
 import (
 	"context"
+	"maps"
 	"strings"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/planmodifiers"
@@ -70,6 +71,25 @@ func CommonAttributes() map[string]schema.Attribute {
 	}
 }
 
+func ResourceAttributes() map[string]schema.Attribute {
+	attrs := map[string]schema.Attribute{
+		"id": schema.StringAttribute{
+			Computed:    true,
+			Description: "Terraform resource identifier.",
+		},
+		"service_id": schema.StringAttribute{
+			Required:    true,
+			Description: "Fastly service ID.",
+		},
+		"version": schema.Int64Attribute{
+			Required:    true,
+			Description: "Writable Fastly service version to modify.",
+		},
+	}
+	maps.Copy(attrs, CommonAttributes())
+	return attrs
+}
+
 func NestedBlockSchema() schema.ListNestedBlock {
 	return schema.ListNestedBlock{
 		Description: "Cache settings attached to this service.",
@@ -100,25 +120,8 @@ func (o ops) Delete(ctx context.Context, client *fastly.Client, serviceID string
 	})
 }
 
-// Create omits Action entirely when unset, rather than sending an empty string, since the
-// Fastly API validates Action as one of cache/pass/restart and may reject a blank value on
-// creation. Update (below) always sends Action, since that's the only way to clear a
-// previously configured value back to unset.
 func (o ops) Create(ctx context.Context, client *fastly.Client, serviceID string, version int, desired NestedModel) (*fastly.CacheSetting, error) {
-	name := service.StringValue(desired.Name)
-	cacheCondition := service.StringValue(desired.CacheCondition)
-	ttl := int(service.Int64Value(desired.TTL))
-	staleTTL := int(service.Int64Value(desired.StaleTTL))
-
-	return client.CreateCacheSetting(ctx, &fastly.CreateCacheSettingInput{
-		ServiceID:      serviceID,
-		ServiceVersion: version,
-		Name:           &name,
-		Action:         actionPointer(desired.Action),
-		CacheCondition: &cacheCondition,
-		TTL:            &ttl,
-		StaleTTL:       &staleTTL,
-	})
+	return client.CreateCacheSetting(ctx, BuildCreateInput(serviceID, version, desired))
 }
 
 // actionPointer returns nil for a null/unknown/empty action, so Create omits the field
@@ -138,20 +141,7 @@ func (o ops) Equal(desired NestedModel, remote *fastly.CacheSetting) bool {
 }
 
 func (o ops) Update(ctx context.Context, client *fastly.Client, serviceID string, version int, desired NestedModel) (*fastly.CacheSetting, error) {
-	action := fastly.CacheSettingAction(strings.ToLower(service.StringValue(desired.Action)))
-	cacheCondition := service.StringValue(desired.CacheCondition)
-	ttl := int(service.Int64Value(desired.TTL))
-	staleTTL := int(service.Int64Value(desired.StaleTTL))
-
-	return client.UpdateCacheSetting(ctx, &fastly.UpdateCacheSettingInput{
-		ServiceID:      serviceID,
-		ServiceVersion: version,
-		Name:           service.StringValue(desired.Name),
-		Action:         &action,
-		CacheCondition: &cacheCondition,
-		TTL:            &ttl,
-		StaleTTL:       &staleTTL,
-	})
+	return client.UpdateCacheSetting(ctx, BuildUpdateInput(serviceID, version, desired))
 }
 
 func (o ops) ToModel(api *fastly.CacheSetting) NestedModel {
