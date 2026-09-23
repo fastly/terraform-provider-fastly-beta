@@ -36,7 +36,7 @@
 - feat(rate_limiter): add explicit family support for Rate Limiting ([#134](https://github.com/fastly/terraform-provider-fastly-beta/pull/134))
 - feat(dictionary): add `fastly_service_dictionary` resource for explicit service version management of Edge Dictionaries; CDN and Compute services ([#136](https://github.com/fastly/terraform-provider-fastly-beta/pull/136))
 - feat(cache_settings): add explicit family support for Cache Settings ([#138](https://github.com/fastly/terraform-provider-fastly-beta/pull/138))
-- feat(gzip): add `fastly_service_gzip` resource for explicit service version management of Gzip configurations; CDN services only
+- feat(gzip): add `fastly_service_gzip` resource for explicit service version management of Gzip configurations; CDN services only ([#142](https://github.com/fastly/terraform-provider-fastly-beta/pull/142))
 
 ### BUG FIXES:
 
