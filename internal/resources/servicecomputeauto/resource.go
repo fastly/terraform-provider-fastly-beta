@@ -58,6 +58,11 @@ type Resource struct {
 	providerData *fastlyclient.Data
 }
 
+// computePackageImportedPrivateKey marks, via private state, that the current Read follows an
+// import. ImportStatePassthroughID leaves Package empty in state (only "id" is set), so without
+// this marker a just-imported service's package source_code_hash is never refreshed from the API.
+const computePackageImportedPrivateKey = "compute_package_imported"
+
 var (
 	_ resource.Resource                = &Resource{}
 	_ resource.ResourceWithConfigure   = &Resource{}
@@ -722,7 +727,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	packages, err := computepackage.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version, plan.Package)
+	packages, err := computepackage.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version, plan.Package, false)
 	if err != nil {
 		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading Compute package", err.Error())
@@ -799,6 +804,16 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		state.ActiveVersion = types.Int64Null()
 	}
 	state.ManagedVersion = types.Int64Value(int64(readVersion))
+
+	importedBytes, diags := req.Private.GetKey(ctx, computePackageImportedPrivateKey)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	imported := len(importedBytes) > 0
+	if imported {
+		resp.Diagnostics.Append(resp.Private.SetKey(ctx, computePackageImportedPrivateKey, nil)...)
+	}
 
 	domains, err := domain.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
@@ -994,7 +1009,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 	state.ResourceLink = resourcelink.MatchOrder(resourceLinks, state.ResourceLink)
 
-	packages, err := computepackage.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion, state.Package)
+	packages, err := computepackage.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion, state.Package, imported)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading Compute package", err.Error())
 		return
@@ -1496,7 +1511,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 			return
 		}
 
-		packages, err := computepackage.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Package)
+		packages, err := computepackage.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.Package, false)
 		if err != nil {
 			resp.Diagnostics.AddError("Error reading Compute package", err.Error())
 			return
@@ -1582,6 +1597,7 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	resp.Diagnostics.Append(resp.Private.SetKey(ctx, computePackageImportedPrivateKey, []byte("true"))...)
 }
 
 func (r *Resource) selectWorkingVersion(ctx context.Context, serviceID string) (version int, shouldClone bool, err error) {

@@ -168,8 +168,9 @@ func Update(ctx context.Context, client *fastly.Client, serviceID string, versio
 	return nil
 }
 
-func ReadForVersion(ctx context.Context, client *fastly.Client, serviceID string, version int, current []Model) ([]Model, error) {
-	if len(current) == 0 {
+// forceRefresh lets a just-imported service (current empty) still pick up source_code_hash.
+func ReadForVersion(ctx context.Context, client *fastly.Client, serviceID string, version int, current []Model, forceRefresh bool) ([]Model, error) {
+	if len(current) == 0 && !forceRefresh {
 		return current, nil
 	}
 
@@ -184,7 +185,10 @@ func ReadForVersion(ctx context.Context, client *fastly.Client, serviceID string
 		return nil, err
 	}
 
-	result := current[0]
+	var result Model
+	if len(current) > 0 {
+		result = current[0]
+	}
 	if pkg != nil && pkg.Metadata != nil && pkg.Metadata.FilesHash != nil && *pkg.Metadata.FilesHash != "" {
 		result.SourceCodeHash = types.StringValue(*pkg.Metadata.FilesHash)
 	} else if result.SourceCodeHash.IsUnknown() {
