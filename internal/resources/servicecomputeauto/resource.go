@@ -805,13 +805,6 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 	state.ManagedVersion = types.Int64Value(int64(readVersion))
 
-	importedBytes, diags := req.Private.GetKey(ctx, computePackageImportedPrivateKey)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	imported := len(importedBytes) > 0
-
 	domains, err := domain.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading service domains", err.Error())
@@ -1005,6 +998,13 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 	state.ResourceLink = resourcelink.MatchOrder(resourceLinks, state.ResourceLink)
+
+	importedBytes, diags := req.Private.GetKey(ctx, computePackageImportedPrivateKey)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	imported := len(importedBytes) > 0
 
 	packages, err := computepackage.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion, state.Package, imported)
 	if err != nil {
