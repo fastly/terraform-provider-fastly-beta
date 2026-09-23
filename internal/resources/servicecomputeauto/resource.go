@@ -811,9 +811,6 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 	imported := len(importedBytes) > 0
-	if imported {
-		resp.Diagnostics.Append(resp.Private.SetKey(ctx, computePackageImportedPrivateKey, nil)...)
-	}
 
 	domains, err := domain.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
@@ -1015,6 +1012,10 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 	state.Package = packages
+
+	if imported {
+		resp.Diagnostics.Append(resp.Private.SetKey(ctx, computePackageImportedPrivateKey, nil)...)
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
