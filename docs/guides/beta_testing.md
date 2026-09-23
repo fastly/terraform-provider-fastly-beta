@@ -213,13 +213,19 @@ service. Those are worth reporting.
 ### Exercise the workflow
 
 This is the step that takes over managing the service, so use a
-**non-production** one. When the plan looks right:
+**non-production** one. If it's a Compute service, check that the
+package on disk is the one you want running — this apply uploads it
+and activates it, replacing what the service is serving now.
+
+When the plan looks right:
 
 ```bash
 terraform apply
 ```
 
-Your service should stay on the version it was already running. Run
+A CDN service should stay on the version it was already running. A
+Compute service gets a new one: taking over the service re-uploads the
+package, even when it matches what's already deployed. Either way, run
 `terraform plan` once more and it should report no changes.
 
 ~> **Important:** While you're testing, don't run your legacy configuration against this service. Both configurations now describe it, and applying from the legacy one would fight the beta provider.
