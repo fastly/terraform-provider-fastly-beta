@@ -9,10 +9,11 @@ This provider is a ground-up rewrite of the Fastly Terraform provider
 on HashiCorp's Plugin Framework, built around two parallel resource
 families. This release contains one of them.
 
-The **Automatic** family keeps the default version lifecycle behavior
-you have today: the provider clones, validates, and activates a
-service version for you during `terraform apply`. If that's how you
-work with Fastly now, the beta is ready for you to test.
+The **Automatic** family carries over the [default activation
+behavior](https://registry.terraform.io/providers/fastly/fastly/latest/docs/resources/service_vcl#activation-and-staging)
+from the legacy provider: it clones, validates, and activates a service
+version for you during `terraform apply`. If that's how you work with
+Fastly now, the beta is ready for you to test.
 
 The **Explicit** family hands the version lifecycle back to you. If
 you currently use `activate = false` or staging to control when
@@ -23,8 +24,8 @@ Visit the [repository
 README](https://github.com/fastly/terraform-provider-fastly-beta#resource-families)
 for a full list.
 
-Everything else in the provider is versionless: it works with either
-family, and it's ready to test now.
+All other resources in the provider work independently of the
+activation workflow, and are ready to test now.
 
 This guide takes you through setting up the beta provider, running
 `validate` against a copy of your existing configuration, using what
@@ -32,26 +33,36 @@ it reports to guide the translation until it validates, then
 optionally exercising `plan` and `apply`. For the HCL changes
 themselves, see the [HCL Syntax Changes](hcl_syntax_changes.md) guide.
 
-### You can test without changing your Fastly service
+### Choose how far you want to go
 
-**This is not a migration.** You're not moving production state, but
-instead building a parallel configuration in a separate directory with
-its own state file.
+Everything up to `terraform validate` runs entirely on your own
+machine. You work from a copy of your configuration in a separate
+directory with its own state file, and nothing contacts Fastly. If
+you're short on time, you can stop there: it tells you what changes your
+configuration would need, and helps surface gaps or issues we need to
+address.
 
-If you're short on time, you can stop after `terraform validate`. That
-tells you what changes your configuration would need, and helps
-surface gaps or issues we need to address. Each step after that tells
-you more about how the provider behaves in practice.
+The next step is the first that contacts Fastly. You add an `import`
+block for one of your services and run `terraform plan`, which shows
+you the whole migration without writing anything — no state file, and
+no change to the service. Any service is safe to read this way; the
+work is in gathering the IDs, so pick something small to start.
+
+Applying is where the provider takes over managing the service. Use a
+**non-production** service, and from there you can make changes and watch
+how it handles them.
 
 ### Before you start
 
-You need three things:
+You need:
 
-- **Terraform.** We recommend a recent release, but any 1.x release
-  works with the Automatic family.
-- **A Fastly API token**, for the `plan` step onward.
+- **Terraform.** Any 1.x release works through `terraform validate`.
+  The steps after that need **Terraform 1.5 or later**.
 - **Your existing HCL configuration for the Fastly provider**, to work
   from. Real configurations are best for surfacing gaps.
+- **A Fastly API token**, from the `import` step onward.
+- **A non-production service**, from the `apply` step onward. That's
+  where the provider takes over managing it.
 
 Work in a **new directory with its own state file**. Do not point this
 provider at your existing Terraform state.
@@ -135,61 +146,133 @@ Most of what it reports will be one of two things:
 
 - **A renamed or moved argument.** Covered in the
   [HCL Syntax Changes](hcl_syntax_changes.md) guide.
-- **Something unexpected.** That may be a bug. Reporting it will help
-  us improve the provider.
+- **Something unexpected.** That may be a bug.
+  [Reporting it](#send-us-feedback) will help us improve the provider.
 
-### Review the plan
+### Import an existing service
 
-When `validate` is clean, set your token and run a plan:
+From here on you need an API token. Nothing in this section changes
+anything: the plan reads your service and writes no state.
+
+Applying your translated configuration as it stands would try to
+create a *second* service with the same domains, which Fastly won't
+allow. So rather than creating anything, take over the service you
+already have.
+
+If the configuration you translated covers several services, narrow it
+first. Terraform tries to *create* anything in the configuration you
+don't import, which runs straight back into that conflict. Copy just
+the blocks for the service you're importing into a directory of its
+own, and work from there.
+
+Your existing configuration already knows the service ID. In the
+directory where you run that configuration:
+
+```bash
+terraform state list
+```
+
+```bash
+terraform state show fastly_service_vcl.example
+```
+
+`state list` gives you the resource addresses; in the output of `state
+show`, `id` is the service ID. Domain IDs come from the same place, if
+your configuration uses `fastly_domain`.
+
+Add an `import` block for the service, and one for each versionless
+resource attached to it — domains, ACLs, config stores.
+
+```hcl
+import {
+  to = fastly_service_cdn_auto.example
+  id = "<service-id>"
+}
+
+import {
+  to = fastly_domain.example
+  id = "<domain-id>"
+}
+```
+
+Then set your token and plan:
 
 ```bash
 export FASTLY_API_TOKEN=...
 terraform plan
 ```
 
-Read the plan output as a review of your translation: the resource
-count should roughly match what you expect, and the attribute values
-should look like your existing configuration.
+This plan writes nothing — not even a state file. It reads the live
+service and shows you what importing it would produce, so you can read
+the whole migration before committing to any of it.
+
+Read it as a review of your translation. Alongside the imports you
+should see one small in-place update to the service: `force_destroy`
+and `reuse` being set, and the version attributes recomputed. Those are
+the provider's own bookkeeping and don't touch the service. Anything
+else is a real difference between your configuration and the live
+service. Those are worth reporting.
 
 ### Exercise the workflow
 
-Optional. We suggest using a **non-production service** — either a
-service you already run outside production, or a copy of a production
-service created for this test.
+This is the step that takes over managing the service, so use a
+**non-production** one. When the plan looks right:
 
-The steps below assume the second case: the configuration creates a
-new service, and no existing state is involved.
+```bash
+terraform apply
+```
 
-Pointing this provider at a service Terraform already manages is a
-different exercise: a real migration rather than a parallel test.
-State can't be carried across from the legacy provider, and we don't
-have documentation or tooling for that path yet, so it's outside what
-this guide covers.
+Your service should stay on the version it was already running. Run
+`terraform plan` once more and it should report no changes.
 
-Applying tests the parts a plan cannot: the clone, validate, and
-activate cycle that runs on every change. A few things worth trying,
-checking the service version in the Fastly UI or API as you go:
+~> **Important:** While you're testing, don't run your legacy configuration against this service. Both configurations now describe it, and applying from the legacy one would fight the beta provider.
 
-1. **Apply once.** The service should be created and its first version
-   activated.
-2. **Change one attribute** on one backend, and read the plan before
+Now make some changes. This tests the parts a plan cannot: the clone,
+validate, and activate cycle that runs on every change.
+
+Terraform's output shows that the version attributes changed, but not
+their new values — `terraform state show` reports `active_version`,
+and the Fastly UI shows what actually landed in that version. A few
+things worth trying:
+
+1. **Change one attribute** on one backend, and read the plan before
    you apply. The `backend` block should show that one attribute
    changing, with the rest reported as unchanged — not the whole block
    being removed and re-added, which is how the legacy provider
    renders it. Applying should then give you one new version,
    activated, containing only that change.
-3. **Remove a nested block** and apply. The removal should land in a
+2. **Remove a nested block** and apply. The removal should land in a
    single new version.
-4. **Run `terraform plan` again** with nothing changed. It should report
+3. **Run `terraform plan` again** with nothing changed. It should report
    no changes. If it doesn't, that's a convergence bug and we want to
    hear about it.
-5. **If you manage several services**, change one and confirm the others
+4. **If you manage several services**, change one and confirm the others
    are untouched.
 
 The [`orchestration-cdn-auto`
 example](https://github.com/fastly/terraform-provider-fastly-beta/tree/main/examples/orchestration-cdn-auto)
 in the provider repository has a longer list of suggested tests with
 expected outcomes.
+
+### When you're done
+
+Your legacy configuration still has this service in its state, so
+none of this is hard to undo: delete the beta directory and carry on
+as you were.
+
+If you decide to keep the service on the beta provider, remove it from
+the legacy state and delete its resource block from that
+configuration:
+
+```bash
+terraform state rm -dry-run fastly_service_vcl.example
+terraform state rm fastly_service_vcl.example
+```
+
+`state rm` removes only the resource you name, and changes nothing in
+Fastly. Delete the resource block too, along with anything that
+references it — otherwise the next legacy plan will try to create the
+service again.
 
 ### Send us feedback
 
