@@ -31,7 +31,8 @@ This provider offers two ways to manage a Fastly service. Resources from both
 appear in the navigation, so it is worth knowing which is which.
 
 The **Automatic** family — `fastly_service_cdn_auto` and
-`fastly_service_compute_auto` — keeps the behavior of the legacy provider.
+`fastly_service_compute_auto` — retains the legacy provider's [default
+activation behavior](https://registry.terraform.io/providers/fastly/fastly/latest/docs/resources/service_vcl#activation-and-staging).
 Service configuration lives in nested blocks, and the provider clones,
 validates and activates a service version for you during `terraform apply`.
 **This is the family to use today.**
