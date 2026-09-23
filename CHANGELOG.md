@@ -44,7 +44,7 @@
 - fix(docs): add `fastly_service_settings` to the README table of explicit/default resources ([#132](https://github.com/fastly/terraform-provider-fastly-beta/pull/132))
 - fix(docs): fill gaps and correct errors in the HCL syntax changes guide ([#131](https://github.com/fastly/terraform-provider-fastly-beta/pull/131))
 - test(service_cdn_acl): add acceptance test coverage verifying the explicit `fastly_service_cdn_acl` resource rejects Compute services ([#135](https://github.com/fastly/terraform-provider-fastly-beta/pull/135))
-- fix(compute): ensure that the Compute package hash is refresh on `import` ([#140](https://github.com/fastly/terraform-provider-fastly-beta/pull/140))
+- fix(compute): ensure that the Compute package hash is refreshed on `import` ([#140](https://github.com/fastly/terraform-provider-fastly-beta/pull/140))
 
 ### Dependencies:
 
