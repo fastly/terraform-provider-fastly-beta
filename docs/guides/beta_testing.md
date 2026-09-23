@@ -132,7 +132,7 @@ and attributes that moved into nested blocks. Work through it
 alongside the [HCL Syntax Changes](hcl_syntax_changes.md) guide,
 running it again as you go — Terraform doesn't look inside a block it
 has already rejected, so the findings arrive in layers rather than all
-at once.
+at once. Repeat until it reports success.
 
 Most of what it reports will be one of two things:
 
@@ -154,26 +154,31 @@ already have.
 If the configuration you translated covers several services, narrow it
 first. Terraform tries to *create* anything in the configuration you
 don't import, which runs straight back into that conflict. Copy just
-the blocks for the service you're importing into a directory of its
-own, and work from there.
+the blocks for the service you're importing — the service resource
+plus anything that references it, usually through `service_id` — into
+a directory of its own, and work from there.
 
-Your existing configuration already knows the service ID. In the
-directory where you run that configuration:
+Your existing configuration already knows the service ID:
 
 ```bash
+# in your existing configuration's directory
 terraform state list
 ```
 
 ```bash
+# in your existing configuration's directory
 terraform state show fastly_service_vcl.example
 ```
 
-`state list` gives you the resource addresses; in the output of `state
-show`, `id` is the service ID. Domain IDs come from the same place, if
-your configuration uses `fastly_domain`.
+`state list` gives you the resource addresses — use yours in place of
+`fastly_service_vcl.example` here, and wherever `example` appears
+below. In the output of `state show`, `id` is the service ID. Domain
+IDs come from the same place, if your configuration uses
+`fastly_domain`.
 
-Add an `import` block for the service, and one for each versionless
-resource attached to it — domains, ACLs, config stores.
+Back in the new directory, add an `import` block for the service, and
+one for each versionless resource attached to it — domains, ACLs,
+config stores.
 
 ```hcl
 import {
@@ -190,7 +195,7 @@ import {
 Then set your token and plan:
 
 ```bash
-export FASTLY_API_TOKEN=...
+export FASTLY_API_TOKEN=<your-token>
 terraform plan
 ```
 
@@ -257,6 +262,7 @@ the legacy state and delete its resource block from that
 configuration:
 
 ```bash
+# in your existing configuration's directory
 terraform state rm -dry-run fastly_service_vcl.example
 terraform state rm fastly_service_vcl.example
 ```
