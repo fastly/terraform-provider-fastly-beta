@@ -15,32 +15,24 @@ from the legacy provider: it clones, validates, and activates a service
 version for you during `terraform apply`. If that's how you work with
 Fastly now, the beta is ready for you to test.
 
-The **Explicit** family hands the version lifecycle back to you. If
-you currently use `activate = false` or staging to control when
-changes go live, wait until this family is ready for testing in mid-Q4
-2026. It uses its own set of resources, some of which are registered
-here and appear in the navigation, but they aren't ready to use yet.
-Visit the [repository
+If you use `activate = false` or staging to control when changes go
+live, wait for the **Explicit** family, ready for testing in mid-Q4
+2026. Its resources appear in the navigation here but aren't usable
+yet; the [repository
 README](https://github.com/fastly/terraform-provider-fastly-beta#resource-families)
-for a full list.
+lists them.
 
 All other resources in the provider work independently of the
 activation workflow, and are ready to test now.
-
-This guide takes you through setting up the beta provider, running
-`validate` against a copy of your existing configuration, using what
-it reports to guide the translation until it validates, then
-optionally exercising `plan` and `apply`. For the HCL changes
-themselves, see the [HCL Syntax Changes](hcl_syntax_changes.md) guide.
 
 ### Choose how far you want to go
 
 Everything up to `terraform validate` runs entirely on your own
 machine. You work from a copy of your configuration in a separate
 directory with its own state file, and nothing contacts Fastly. If
-you're short on time, you can stop there: it tells you what changes your
-configuration would need, and helps surface gaps or issues we need to
-address.
+you're short on time, you can stop there: it tells you what changes
+your configuration would need, and surfaces anything that would block
+your migration in time for us to fix it.
 
 The next step is the first that contacts Fastly. You add an `import`
 block for one of your services and run `terraform plan`, which shows
