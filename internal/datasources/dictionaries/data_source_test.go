@@ -3,8 +3,9 @@ package dictionaries
 import (
 	"testing"
 
-	"github.com/fastly/go-fastly/v17/fastly"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestFlattenDictionaries(t *testing.T) {
