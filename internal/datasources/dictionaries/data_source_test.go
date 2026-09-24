@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/fastly/go-fastly/v17/fastly"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 func TestFlattenDictionaries(t *testing.T) {
@@ -32,6 +33,28 @@ func TestFlattenDictionaries(t *testing.T) {
 
 	if len(setVal.Elements()) != 1 {
 		t.Fatalf("set elements length = %d, want 1", len(setVal.Elements()))
+	}
+
+	obj, ok := setVal.Elements()[0].(types.Object)
+	if !ok {
+		t.Fatalf("element type = %T, want types.Object", setVal.Elements()[0])
+	}
+
+	attributes := obj.Attributes()
+
+	gotID, ok := attributes["id"].(types.String)
+	if !ok || gotID.ValueString() != id {
+		t.Fatalf("id = %v, want %q", attributes["id"], id)
+	}
+
+	gotName, ok := attributes["name"].(types.String)
+	if !ok || gotName.ValueString() != name {
+		t.Fatalf("name = %v, want %q", attributes["name"], name)
+	}
+
+	gotWriteOnly, ok := attributes["write_only"].(types.Bool)
+	if !ok || gotWriteOnly.ValueBool() != writeOnly {
+		t.Fatalf("write_only = %v, want %v", attributes["write_only"], writeOnly)
 	}
 }
 
