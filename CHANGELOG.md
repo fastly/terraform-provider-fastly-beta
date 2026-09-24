@@ -47,6 +47,7 @@
 - fix(docs): fill gaps and correct errors in the HCL syntax changes guide ([#131](https://github.com/fastly/terraform-provider-fastly-beta/pull/131))
 - test(service_cdn_acl): add acceptance test coverage verifying the explicit `fastly_service_cdn_acl` resource rejects Compute services ([#135](https://github.com/fastly/terraform-provider-fastly-beta/pull/135))
 - fix(compute): ensure that the Compute package hash is refreshed on `import` ([#140](https://github.com/fastly/terraform-provider-fastly-beta/pull/140))
+- fix(gzip, condition, cache_settings): add `RequiresReplace` to `name` and `service_id` on the explicit `fastly_service_gzip`, `fastly_service_condition`, and `fastly_service_cache_setting` resources; changing either previously called Update against a name-keyed path that no longer matched the API's actual object, rather than the destroy/recreate their docs already described
 
 ### Dependencies:
 
