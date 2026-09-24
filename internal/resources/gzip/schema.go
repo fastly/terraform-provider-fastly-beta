@@ -2,6 +2,7 @@ package gzip
 
 import (
 	"context"
+	"maps"
 	"sort"
 	"strings"
 
@@ -68,6 +69,25 @@ func CommonAttributes() map[string]schema.Attribute {
 			Description: "File extensions for each file type to dynamically gzip. Example: `[\"css\", \"js\"]`.",
 		},
 	}
+}
+
+func ResourceAttributes() map[string]schema.Attribute {
+	attrs := map[string]schema.Attribute{
+		"id": schema.StringAttribute{
+			Computed:    true,
+			Description: "Terraform resource identifier.",
+		},
+		"service_id": schema.StringAttribute{
+			Required:    true,
+			Description: "Fastly service ID.",
+		},
+		"version": schema.Int64Attribute{
+			Required:    true,
+			Description: "Writable Fastly service version to modify.",
+		},
+	}
+	maps.Copy(attrs, CommonAttributes())
+	return attrs
 }
 
 func NestedBlockSchema() schema.ListNestedBlock {

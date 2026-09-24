@@ -90,6 +90,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domainservicelink"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dynamicsnippetcontent"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dynamicvclsnippet"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/gzip"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/integration"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/kvstore"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingbigquery"
@@ -253,6 +254,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		domain.NewResource,
 		domainmanagement.NewResource,
 		domainservicelink.NewResource,
+		gzip.NewResource,
 		loggingbigquery.NewResource,
 		loggingblobstorage.NewResource,
 		loggingcloudfiles.NewResource,
@@ -411,6 +413,7 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		condition.NewListResource,
 		dictionary.NewListResource,
 		domain.NewListResource,
+		gzip.NewListResource,
 		loggingbigquery.NewListResource,
 		loggingblobstorage.NewListResource,
 		loggingcloudfiles.NewListResource,

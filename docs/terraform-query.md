@@ -25,6 +25,7 @@ It is not used for the automatic compatibility resource family.
 - `fastly_service_ratelimiter`
 - `fastly_service_dictionary`
 - `fastly_service_cache_setting`
+- `fastly_service_gzip`
 
 These resources are first-class Terraform resources, so they can be discovered
 independently and generated as separate resource blocks.
@@ -173,6 +174,10 @@ list "fastly_service_dictionary" "all" {
 }
 
 list "fastly_service_cache_setting" "all" {
+  provider = fastly
+}
+
+list "fastly_service_gzip" "all" {
   provider = fastly
 }
 ```
