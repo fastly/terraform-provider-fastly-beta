@@ -26,6 +26,37 @@ It is not used for the automatic compatibility resource family.
 - `fastly_service_dictionary`
 - `fastly_service_cache_setting`
 - `fastly_service_gzip`
+- `fastly_service_cdn_acl`
+- `fastly_service_cdn_acl_entries`
+- `fastly_service_condition`
+- `fastly_service_custom_vcl`
+- `fastly_service_logging_bigquery`
+- `fastly_service_logging_blobstorage`
+- `fastly_service_logging_cloudfiles`
+- `fastly_service_logging_datadog`
+- `fastly_service_logging_digitalocean`
+- `fastly_service_logging_elasticsearch`
+- `fastly_service_logging_ftp`
+- `fastly_service_logging_gcs`
+- `fastly_service_logging_googlepubsub`
+- `fastly_service_logging_grafanacloudlogs`
+- `fastly_service_logging_heroku`
+- `fastly_service_logging_honeycomb`
+- `fastly_service_logging_https`
+- `fastly_service_logging_kafka`
+- `fastly_service_logging_kinesis`
+- `fastly_service_logging_loggly`
+- `fastly_service_logging_logshuttle`
+- `fastly_service_logging_newrelic`
+- `fastly_service_logging_newrelicotlp`
+- `fastly_service_logging_openstack`
+- `fastly_service_logging_papertrail`
+- `fastly_service_logging_s3`
+- `fastly_service_logging_scalyr`
+- `fastly_service_logging_sftp`
+- `fastly_service_logging_splunk`
+- `fastly_service_logging_sumologic`
+- `fastly_service_logging_syslog`
 
 These resources are first-class Terraform resources, so they can be discovered
 independently and generated as separate resource blocks.
@@ -178,6 +209,130 @@ list "fastly_service_cache_setting" "all" {
 }
 
 list "fastly_service_gzip" "all" {
+  provider = fastly
+}
+
+list "fastly_service_cdn_acl" "all" {
+  provider = fastly
+}
+
+list "fastly_service_cdn_acl_entries" "all" {
+  provider = fastly
+}
+
+list "fastly_service_condition" "all" {
+  provider = fastly
+}
+
+list "fastly_service_custom_vcl" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_bigquery" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_blobstorage" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_cloudfiles" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_datadog" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_digitalocean" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_elasticsearch" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_ftp" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_gcs" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_googlepubsub" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_grafanacloudlogs" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_heroku" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_honeycomb" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_https" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_kafka" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_kinesis" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_loggly" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_logshuttle" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_newrelic" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_newrelicotlp" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_openstack" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_papertrail" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_s3" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_scalyr" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_sftp" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_splunk" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_sumologic" "all" {
+  provider = fastly
+}
+
+list "fastly_service_logging_syslog" "all" {
   provider = fastly
 }
 ```
