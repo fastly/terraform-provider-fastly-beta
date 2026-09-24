@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/fastly/go-fastly/v17/fastly"
@@ -239,6 +240,40 @@ func TestAccFastlyServiceGzip_importBasic(t *testing.T) {
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceGzip_nameForcesReplace verifies changing name forces destroy/create
+// rather than an in-place update.
+func TestAccFastlyServiceGzip_nameForcesReplace(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	gzipName1 := fmt.Sprintf("gzip-%s", acctest.RandString(10))
+	gzipName2 := fmt.Sprintf("gzip-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigGzipBasic(serviceName, domainName, gzipName1),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn.test"),
+					resource.TestCheckResourceAttr("fastly_service_gzip.test", "name", gzipName1),
+				),
+			},
+			{
+				Config: ConfigGzipBasic(serviceName, domainName, gzipName2),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("fastly_service_gzip.test", plancheck.ResourceActionReplace),
+					},
+				},
+				Check: resource.TestCheckResourceAttr("fastly_service_gzip.test", "name", gzipName2),
 			},
 		},
 	})

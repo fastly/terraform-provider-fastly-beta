@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/fastly/go-fastly/v17/fastly"
@@ -237,6 +238,40 @@ func TestAccFastlyServiceCacheSetting_importBasic(t *testing.T) {
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceCacheSetting_nameForcesReplace verifies changing name forces
+// destroy/create rather than an in-place update.
+func TestAccFastlyServiceCacheSetting_nameForcesReplace(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	cacheSettingName1 := fmt.Sprintf("cache-setting-%s", acctest.RandString(10))
+	cacheSettingName2 := fmt.Sprintf("cache-setting-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigCacheSettingBasic(serviceName, domainName, cacheSettingName1),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn.test"),
+					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "name", cacheSettingName1),
+				),
+			},
+			{
+				Config: ConfigCacheSettingBasic(serviceName, domainName, cacheSettingName2),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("fastly_service_cache_setting.test", plancheck.ResourceActionReplace),
+					},
+				},
+				Check: resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "name", cacheSettingName2),
 			},
 		},
 	})
