@@ -26,6 +26,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/apisecurityoperationtags"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/configstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/datacenters"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/dictionaries"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/dnszones"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/domains"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ipranges"
@@ -358,6 +359,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		apisecurityoperationtags.NewDataSource,
 		configstores.NewDataSource,
 		datacenters.NewDataSource,
+		dictionaries.NewDataSource,
 		dnszones.NewDataSource,
 		domains.NewDataSource,
 		ipranges.NewDataSource,

@@ -946,6 +946,15 @@ func ConfigCDNAutoWithMultipleDictionaries(serviceName, domainName, dictionaryNa
 	)
 }
 
+// ConfigDataSourceDictionaries returns a CDN auto service config with multiple dictionaries plus a
+// fastly_dictionaries data source reading them back.
+func ConfigDataSourceDictionaries(serviceName, domainName, dictionaryName1, dictionaryName2 string) string {
+	serviceConfig := ConfigCDNAutoWithMultipleDictionaries(serviceName, domainName, dictionaryName1, dictionaryName2)
+	dataSource := RenderBlock("internal/acceptance_tests/blocks/dictionaries_data_source.tf", nil)
+
+	return joinBlocks(serviceConfig, dataSource)
+}
+
 // ConfigCDNAutoWithDictionaryForceDestroy returns a CDN auto service config with a dictionary
 // that has force_destroy enabled.
 func ConfigCDNAutoWithDictionaryForceDestroy(serviceName, domainName, dictionaryName string) string {

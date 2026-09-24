@@ -37,6 +37,7 @@
 - feat(dictionary): add `fastly_service_dictionary` resource for explicit service version management of Edge Dictionaries; CDN and Compute services ([#136](https://github.com/fastly/terraform-provider-fastly-beta/pull/136))
 - feat(cache_settings): add explicit family support for Cache Settings ([#138](https://github.com/fastly/terraform-provider-fastly-beta/pull/138))
 - feat(gzip): add `fastly_service_gzip` resource for explicit service version management of Gzip configurations; CDN services only ([#142](https://github.com/fastly/terraform-provider-fastly-beta/pull/142))
+- feat(dictionaries): add `fastly_dictionaries` data source, ported from the legacy provider ([#146](https://github.com/fastly/terraform-provider-fastly-beta/pull/146))
 
 ### BUG FIXES:
 
