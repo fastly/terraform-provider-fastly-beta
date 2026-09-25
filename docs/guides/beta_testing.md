@@ -21,7 +21,7 @@ appear in the navigation here but aren't usable yet; the [repository
 README](https://github.com/fastly/terraform-provider-fastly-beta#resource-families)
 lists them.
 
-This guide takes one existing service and puts it under the beta provider's
+This guide walks you though moving one existing service and moves it under  beta provider's
 management, using Terraform's [configuration
 generation](https://developer.hashicorp.com/terraform/language/import/generating-configuration)
 to build the configuration from the live service rather than by hand. Nothing
