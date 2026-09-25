@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestAccFastlyServiceComputeAuto_basic(t *testing.T) {
@@ -640,6 +641,43 @@ func TestAccFastlyServiceComputeAuto_import(t *testing.T) {
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"force_destroy", "package", "reuse"},
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceComputeAuto_packageImportRefreshesHash documents CDTOOL-1762: content and
+// filename can never be recovered on import, since the API does not return package contents, but
+// source_code_hash still gets refreshed from the API rather than left empty.
+func TestAccFastlyServiceComputeAuto_packageImportRefreshesHash(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_compute_auto"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigComputeAutoBasic(serviceName, domainName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_compute_auto.test"),
+					resource.TestCheckResourceAttrSet("fastly_service_compute_auto.test", "package.0.source_code_hash"),
+				),
+			},
+			{
+				ResourceName: "fastly_service_compute_auto.test",
+				ImportState:  true,
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					if got := states[0].Attributes["package.0.source_code_hash"]; got == "" {
+						return fmt.Errorf("expected package.0.source_code_hash to be refreshed from the API immediately after import, got empty")
+					}
+					if got := states[0].Attributes["package.0.filename"]; got != "" {
+						return fmt.Errorf("expected package.0.filename to stay empty after import (API never returns package contents), got %q", got)
+					}
+					return nil
+				},
 			},
 		},
 	})

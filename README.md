@@ -77,6 +77,7 @@ The rest are configured on those two resources as nested blocks:
 | `fastly_service_custom_vcl` | `custom_vcl` block | CDN |
 | `fastly_service_domain` | `domain` block \* | both |
 | `fastly_service_dynamic_vcl_snippet` | `dynamic_snippet` block | CDN |
+| `fastly_service_gzip` | `gzip` block | CDN |
 | `fastly_service_logging_*` | `logging_*` blocks | both |
 | `fastly_service_ratelimiter` | `rate_limiter` block | CDN |
 | `fastly_service_resource_link` | `resource_link` block | Compute |

@@ -14,11 +14,11 @@ import (
 	"github.com/fastly/go-fastly/v17/fastly"
 )
 
-func TestAccFastlyServiceCacheSetting_basic(t *testing.T) {
+func TestAccFastlyServiceGzip_basic(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
-	cacheSettingName := fmt.Sprintf("cache-setting-%s", acctest.RandString(10))
+	gzipName := fmt.Sprintf("gzip-%s", acctest.RandString(10))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { PreCheck(t) },
@@ -26,27 +26,26 @@ func TestAccFastlyServiceCacheSetting_basic(t *testing.T) {
 		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigCacheSettingBasic(serviceName, domainName, cacheSettingName),
+				Config: ConfigGzipBasic(serviceName, domainName, gzipName),
 				Check: resource.ComposeTestCheckFunc(
 					CheckServiceExists("fastly_service_cdn.test"),
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "name", cacheSettingName),
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "action", "cache"),
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "ttl", "3600"),
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "stale_ttl", "120"),
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "version", "1"),
-					resource.TestCheckResourceAttrSet("fastly_service_cache_setting.test", "service_id"),
-					resource.TestCheckResourceAttrSet("fastly_service_cache_setting.test", "id"),
+					resource.TestCheckResourceAttr("fastly_service_gzip.test", "name", gzipName),
+					resource.TestCheckResourceAttr("fastly_service_gzip.test", "content_types.#", "2"),
+					resource.TestCheckResourceAttr("fastly_service_gzip.test", "extensions.#", "2"),
+					resource.TestCheckResourceAttr("fastly_service_gzip.test", "version", "1"),
+					resource.TestCheckResourceAttrSet("fastly_service_gzip.test", "service_id"),
+					resource.TestCheckResourceAttrSet("fastly_service_gzip.test", "id"),
 				),
 			},
 		},
 	})
 }
 
-func TestAccFastlyServiceCacheSetting_minimal(t *testing.T) {
+func TestAccFastlyServiceGzip_minimal(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
-	cacheSettingName := fmt.Sprintf("cache-setting-%s", acctest.RandString(10))
+	gzipName := fmt.Sprintf("gzip-%s", acctest.RandString(10))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { PreCheck(t) },
@@ -54,23 +53,28 @@ func TestAccFastlyServiceCacheSetting_minimal(t *testing.T) {
 		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigCacheSettingMinimal(serviceName, domainName, cacheSettingName),
+				Config: ConfigGzipMinimal(serviceName, domainName, gzipName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "name", cacheSettingName),
-					resource.TestCheckNoResourceAttr("fastly_service_cache_setting.test", "action"),
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "ttl", "0"),
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "stale_ttl", "0"),
+					resource.TestCheckResourceAttr("fastly_service_gzip.test", "name", gzipName),
+					resource.TestCheckNoResourceAttr("fastly_service_gzip.test", "content_types"),
+					resource.TestCheckNoResourceAttr("fastly_service_gzip.test", "extensions"),
 				),
+			},
+			{
+				// The API silently substitutes a default content_types/extensions list when
+				// they're left unset - re-applying the same config must not show drift.
+				Config:   ConfigGzipMinimal(serviceName, domainName, gzipName),
+				PlanOnly: true,
 			},
 		},
 	})
 }
 
-func TestAccFastlyServiceCacheSetting_update(t *testing.T) {
+func TestAccFastlyServiceGzip_update(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
-	cacheSettingName := fmt.Sprintf("cache-setting-%s", acctest.RandString(10))
+	gzipName := fmt.Sprintf("gzip-%s", acctest.RandString(10))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { PreCheck(t) },
@@ -78,30 +82,28 @@ func TestAccFastlyServiceCacheSetting_update(t *testing.T) {
 		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigCacheSettingBasic(serviceName, domainName, cacheSettingName),
+				Config: ConfigGzipBasic(serviceName, domainName, gzipName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "action", "cache"),
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "ttl", "3600"),
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "stale_ttl", "120"),
+					resource.TestCheckResourceAttr("fastly_service_gzip.test", "content_types.#", "2"),
+					resource.TestCheckResourceAttr("fastly_service_gzip.test", "extensions.#", "2"),
 				),
 			},
 			{
-				Config: ConfigCacheSettingUpdated(serviceName, domainName, cacheSettingName),
+				Config: ConfigGzipUpdated(serviceName, domainName, gzipName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "action", "pass"),
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "ttl", "7200"),
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "stale_ttl", "300"),
+					resource.TestCheckResourceAttr("fastly_service_gzip.test", "content_types.#", "3"),
+					resource.TestCheckResourceAttr("fastly_service_gzip.test", "extensions.#", "3"),
 				),
 			},
 		},
 	})
 }
 
-func TestAccFastlyServiceCacheSetting_withCacheCondition(t *testing.T) {
+func TestAccFastlyServiceGzip_withCacheCondition(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
-	cacheSettingName := fmt.Sprintf("cache-setting-%s", acctest.RandString(10))
+	gzipName := fmt.Sprintf("gzip-%s", acctest.RandString(10))
 	conditionName := fmt.Sprintf("condition-%s", acctest.RandString(10))
 
 	resource.Test(t, resource.TestCase{
@@ -110,9 +112,9 @@ func TestAccFastlyServiceCacheSetting_withCacheCondition(t *testing.T) {
 		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigCacheSettingWithCacheCondition(serviceName, domainName, cacheSettingName, conditionName),
+				Config: ConfigGzipWithCacheCondition(serviceName, domainName, gzipName, conditionName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "cache_condition", conditionName),
+					resource.TestCheckResourceAttr("fastly_service_gzip.test", "cache_condition", conditionName),
 					resource.TestCheckResourceAttr("fastly_service_condition.cache", "type", "CACHE"),
 				),
 			},
@@ -120,13 +122,13 @@ func TestAccFastlyServiceCacheSetting_withCacheCondition(t *testing.T) {
 	})
 }
 
-// TestAccFastlyServiceCacheSetting_computeServiceRejected verifies that
-// fastly_service_cache_setting, a VCL-only resource (cache settings are not supported for
-// Compute services in the legacy provider either), is rejected when targeting a Compute service.
-func TestAccFastlyServiceCacheSetting_computeServiceRejected(t *testing.T) {
+// TestAccFastlyServiceGzip_computeServiceRejected verifies that fastly_service_gzip, a VCL-only
+// resource (gzip configurations are not supported for Compute services in the legacy provider
+// either), is rejected when targeting a Compute service.
+func TestAccFastlyServiceGzip_computeServiceRejected(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
-	cacheSettingName := fmt.Sprintf("cache-setting-%s", acctest.RandString(10))
+	gzipName := fmt.Sprintf("gzip-%s", acctest.RandString(10))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { PreCheck(t) },
@@ -134,23 +136,23 @@ func TestAccFastlyServiceCacheSetting_computeServiceRejected(t *testing.T) {
 		CheckDestroy:             CheckServiceDestroy("fastly_service_compute"),
 		Steps: []resource.TestStep{
 			{
-				Config:      ConfigCacheSettingOnComputeService(serviceName, cacheSettingName),
-				ExpectError: regexp.MustCompile(`(?s)fastly_service_cache_setting does not support Fastly service.*of type "Compute"`),
+				Config:      ConfigGzipOnComputeService(serviceName, gzipName),
+				ExpectError: regexp.MustCompile(`(?s)fastly_service_gzip does not support Fastly service.*of type "Compute"`),
 			},
 		},
 	})
 }
 
-// TestAccFastlyServiceCacheSetting_lockedVersion verifies that the provider refuses to write a
-// cache setting to an activated (locked) service version. Version 1, which holds the service and
+// TestAccFastlyServiceGzip_lockedVersion verifies that the provider refuses to write a gzip
+// configuration to an activated (locked) service version. Version 1, which holds the service and
 // domain the test cleans up afterward, is never activated - only a cloned version 2 is - so the
 // locked-version write attempt itself never lands in state and cleanup of version 1 is
 // unaffected.
-func TestAccFastlyServiceCacheSetting_lockedVersion(t *testing.T) {
+func TestAccFastlyServiceGzip_lockedVersion(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
-	cacheSettingName := fmt.Sprintf("cache-setting-%s", acctest.RandString(10))
+	gzipName := fmt.Sprintf("gzip-%s", acctest.RandString(10))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { PreCheck(t) },
@@ -194,18 +196,18 @@ func TestAccFastlyServiceCacheSetting_lockedVersion(t *testing.T) {
 				),
 			},
 			{
-				Config:      ConfigCacheSettingOnLockedVersion(serviceName, domainName, cacheSettingName),
+				Config:      ConfigGzipOnLockedVersion(serviceName, domainName, gzipName),
 				ExpectError: regexp.MustCompile(`(?s)is locked and cannot be modified`),
 			},
 		},
 	})
 }
 
-func TestAccFastlyServiceCacheSetting_importBasic(t *testing.T) {
+func TestAccFastlyServiceGzip_importBasic(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
-	cacheSettingName := fmt.Sprintf("cache-setting-%s", acctest.RandString(10))
+	gzipName := fmt.Sprintf("gzip-%s", acctest.RandString(10))
 
 	var serviceID string
 	var versionNumber string
@@ -216,14 +218,14 @@ func TestAccFastlyServiceCacheSetting_importBasic(t *testing.T) {
 		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigCacheSettingForImport(serviceName, domainName, cacheSettingName),
+				Config: ConfigGzipForImport(serviceName, domainName, gzipName),
 				Check: resource.ComposeTestCheckFunc(
 					CheckServiceExists("fastly_service_cdn.test"),
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "name", cacheSettingName),
+					resource.TestCheckResourceAttr("fastly_service_gzip.test", "name", gzipName),
 					func(s *terraform.State) error {
-						rs, ok := s.RootModule().Resources["fastly_service_cache_setting.test"]
+						rs, ok := s.RootModule().Resources["fastly_service_gzip.test"]
 						if !ok {
-							return fmt.Errorf("cache setting resource not found")
+							return fmt.Errorf("gzip resource not found")
 						}
 						serviceID = rs.Primary.Attributes["service_id"]
 						versionNumber = rs.Primary.Attributes["version"]
@@ -232,9 +234,9 @@ func TestAccFastlyServiceCacheSetting_importBasic(t *testing.T) {
 				),
 			},
 			{
-				ResourceName: "fastly_service_cache_setting.test",
+				ResourceName: "fastly_service_gzip.test",
 				ImportStateIdFunc: func(_ *terraform.State) (string, error) {
-					return fmt.Sprintf("%s/%s/%s", serviceID, versionNumber, cacheSettingName), nil
+					return fmt.Sprintf("%s/%s/%s", serviceID, versionNumber, gzipName), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -243,14 +245,14 @@ func TestAccFastlyServiceCacheSetting_importBasic(t *testing.T) {
 	})
 }
 
-// TestAccFastlyServiceCacheSetting_nameForcesReplace verifies changing name forces
-// destroy/create rather than an in-place update.
-func TestAccFastlyServiceCacheSetting_nameForcesReplace(t *testing.T) {
+// TestAccFastlyServiceGzip_nameForcesReplace verifies changing name forces destroy/create
+// rather than an in-place update.
+func TestAccFastlyServiceGzip_nameForcesReplace(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
 	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
-	cacheSettingName1 := fmt.Sprintf("cache-setting-%s", acctest.RandString(10))
-	cacheSettingName2 := fmt.Sprintf("cache-setting-%s", acctest.RandString(10))
+	gzipName1 := fmt.Sprintf("gzip-%s", acctest.RandString(10))
+	gzipName2 := fmt.Sprintf("gzip-%s", acctest.RandString(10))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { PreCheck(t) },
@@ -258,20 +260,20 @@ func TestAccFastlyServiceCacheSetting_nameForcesReplace(t *testing.T) {
 		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
 		Steps: []resource.TestStep{
 			{
-				Config: ConfigCacheSettingBasic(serviceName, domainName, cacheSettingName1),
+				Config: ConfigGzipBasic(serviceName, domainName, gzipName1),
 				Check: resource.ComposeTestCheckFunc(
 					CheckServiceExists("fastly_service_cdn.test"),
-					resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "name", cacheSettingName1),
+					resource.TestCheckResourceAttr("fastly_service_gzip.test", "name", gzipName1),
 				),
 			},
 			{
-				Config: ConfigCacheSettingBasic(serviceName, domainName, cacheSettingName2),
+				Config: ConfigGzipBasic(serviceName, domainName, gzipName2),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction("fastly_service_cache_setting.test", plancheck.ResourceActionReplace),
+						plancheck.ExpectResourceAction("fastly_service_gzip.test", plancheck.ResourceActionReplace),
 					},
 				},
-				Check: resource.TestCheckResourceAttr("fastly_service_cache_setting.test", "name", cacheSettingName2),
+				Check: resource.TestCheckResourceAttr("fastly_service_gzip.test", "name", gzipName2),
 			},
 		},
 	})
