@@ -122,7 +122,7 @@ type that appears only in an `import` block doesn't resolve through
 configured. You'll remove the line again in
 [step 5](#5-finish-the-configuration).
 
-Your existing configuration already knows the IDs:
+Your existing `terraform.tfstate` file contains the IDs you'll need to use:
 
 ```bash
 # in your existing configuration's directory
