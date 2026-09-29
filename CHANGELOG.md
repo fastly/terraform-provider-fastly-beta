@@ -9,6 +9,7 @@
 ### BUG FIXES:
 
 ### Dependencies:
+- build(deps): `github.com/ProtonMail/go-crypto` from 1.4.1 to 1.5.0 ([#153](https://github.com/fastly/terraform-provider-fastly-beta/pull/153))
 
 ## 0.2.0 (September 29, 2026)
 
