@@ -10,10 +10,10 @@ import (
 
 func TestFlattenToNestedModel(t *testing.T) {
 	api := &fastly.Snippet{
-		Name:     fastly.ToPointer("recv_test"),
-		Type:     fastly.ToPointer(fastly.SnippetTypeRecv),
-		Priority: fastly.ToPointer("110"),
-		Content:  fastly.ToPointer(`set req.http.X-Test = "true";`),
+		Name:     new("recv_test"),
+		Type:     new(fastly.SnippetTypeRecv),
+		Priority: new("110"),
+		Content:  new(`set req.http.X-Test = "true";`),
 	}
 
 	got, err := FlattenToNestedModel(api)
@@ -37,10 +37,10 @@ func TestFlattenToNestedModel(t *testing.T) {
 
 func TestFlattenToNestedModelInvalidPriority(t *testing.T) {
 	api := &fastly.Snippet{
-		Name:     fastly.ToPointer("recv_test"),
-		Type:     fastly.ToPointer(fastly.SnippetTypeRecv),
-		Priority: fastly.ToPointer("invalid"),
-		Content:  fastly.ToPointer(`set req.http.X-Test = "true";`),
+		Name:     new("recv_test"),
+		Type:     new(fastly.SnippetTypeRecv),
+		Priority: new("invalid"),
+		Content:  new(`set req.http.X-Test = "true";`),
 	}
 
 	_, err := FlattenToNestedModel(api)

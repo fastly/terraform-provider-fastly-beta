@@ -61,15 +61,15 @@ func TestSchema(t *testing.T) {
 func TestFlattenDatacenters(t *testing.T) {
 	datacenters := []fastly.Datacenter{
 		{
-			Code: fastly.ToPointer("SEA"), Group: fastly.ToPointer("US"), Name: fastly.ToPointer("Seattle"), Shield: fastly.ToPointer("seattle-va-us"),
+			Code: new("SEA"), Group: new("US"), Name: new("Seattle"), Shield: new("seattle-va-us"),
 			Coordinates: &fastly.Coordinates{
-				Latitude:  fastly.ToPointer(47.6062),
-				Longitude: fastly.ToPointer(-122.3321),
-				X:         fastly.ToPointer(100.0),
-				Y:         fastly.ToPointer(200.0),
+				Latitude:  new(47.6062),
+				Longitude: new(-122.3321),
+				X:         new(100.0),
+				Y:         new(200.0),
 			},
 		},
-		{Code: fastly.ToPointer("LHR"), Group: fastly.ToPointer("EU"), Name: fastly.ToPointer("London")},
+		{Code: new("LHR"), Group: new("EU"), Name: new("London")},
 	}
 
 	setValue, ids, diags := flattenDatacenters(datacenters)
@@ -116,8 +116,8 @@ func TestFlattenDatacenters(t *testing.T) {
 }
 
 func TestFingerprintChangesWithNonCodeFields(t *testing.T) {
-	base := fastly.Datacenter{Code: fastly.ToPointer("SEA"), Group: fastly.ToPointer("US"), Name: fastly.ToPointer("Seattle"), Shield: fastly.ToPointer("seattle-va-us")}
-	changedShield := fastly.Datacenter{Code: fastly.ToPointer("SEA"), Group: fastly.ToPointer("US"), Name: fastly.ToPointer("Seattle"), Shield: fastly.ToPointer("seattle-wa-us")}
+	base := fastly.Datacenter{Code: new("SEA"), Group: new("US"), Name: new("Seattle"), Shield: new("seattle-va-us")}
+	changedShield := fastly.Datacenter{Code: new("SEA"), Group: new("US"), Name: new("Seattle"), Shield: new("seattle-wa-us")}
 
 	require.NotEqual(t, fingerprint(base), fingerprint(changedShield))
 }
