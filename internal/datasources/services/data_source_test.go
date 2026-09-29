@@ -15,13 +15,13 @@ func TestFlattenServices(t *testing.T) {
 
 	setValue, ids, diags := flattenServices([]*fastly.Service{
 		{
-			ServiceID:     fastly.ToPointer("service-1"),
-			Name:          fastly.ToPointer("example"),
-			Type:          fastly.ToPointer("vcl"),
-			Comment:       fastly.ToPointer("a comment"),
-			CustomerID:    fastly.ToPointer("customer-1"),
+			ServiceID:     new("service-1"),
+			Name:          new("example"),
+			Type:          new("vcl"),
+			Comment:       new("a comment"),
+			CustomerID:    new("customer-1"),
 			CreatedAt:     &createdAt,
-			ActiveVersion: fastly.ToPointer(3),
+			ActiveVersion: new(3),
 		},
 	})
 	assert.False(t, diags.HasError(), diags)
