@@ -40,9 +40,9 @@ func TestFlattenToNestedModel(t *testing.T) {
 
 	t.Run("full VCL", func(t *testing.T) {
 		api := &fastly.VCL{
-			Name:    fastly.ToPointer("main"),
-			Content: fastly.ToPointer("sub vcl_recv {\n#FASTLY recv\n}\n"),
-			Main:    fastly.ToPointer(true),
+			Name:    new("main"),
+			Content: new("sub vcl_recv {\n#FASTLY recv\n}\n"),
+			Main:    new(true),
 		}
 
 		model := FlattenToNestedModel(api)
@@ -54,8 +54,8 @@ func TestFlattenToNestedModel(t *testing.T) {
 
 	t.Run("nil main defaults to false", func(t *testing.T) {
 		api := &fastly.VCL{
-			Name:    fastly.ToPointer("include"),
-			Content: fastly.ToPointer("sub helper {}\n"),
+			Name:    new("include"),
+			Content: new("sub helper {}\n"),
 		}
 
 		model := FlattenToNestedModel(api)
@@ -96,11 +96,11 @@ func TestFlatten(t *testing.T) {
 	t.Run("full VCL", func(t *testing.T) {
 		ctx := context.Background()
 		api := &fastly.VCL{
-			ServiceID:      fastly.ToPointer("svc-123"),
-			ServiceVersion: fastly.ToPointer(5),
-			Name:           fastly.ToPointer("main"),
-			Content:        fastly.ToPointer("sub vcl_recv {\n#FASTLY recv\n}\n"),
-			Main:           fastly.ToPointer(true),
+			ServiceID:      new("svc-123"),
+			ServiceVersion: new(5),
+			Name:           new("main"),
+			Content:        new("sub vcl_recv {\n#FASTLY recv\n}\n"),
+			Main:           new(true),
 		}
 		m := &Model{}
 
