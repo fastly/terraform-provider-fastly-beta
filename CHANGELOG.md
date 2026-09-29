@@ -8,7 +8,7 @@
 
 ### Dependencies:
 
-## 0.2.0 (September 28, 2026)
+## 0.2.0 (September 29, 2026)
 
 ### BREAKING:
 
