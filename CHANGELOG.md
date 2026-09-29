@@ -4,6 +4,8 @@
 
 ### ENHANCEMENTS:
 
+- feat(docs): add intro content to the provider landing page ([#151](https://github.com/fastly/terraform-provider-fastly-beta/pull/151))
+
 ### BUG FIXES:
 
 ### Dependencies:
