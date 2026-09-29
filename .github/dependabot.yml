@@ -9,8 +9,7 @@ updates:
     labels:
       - dependencies
       - go
-      # TODO: Change this to Auto-Changelog after the first release
-      - Skip-Changelog
+      - Auto-Changelog
     groups:
       go-dependencies:
         patterns:
