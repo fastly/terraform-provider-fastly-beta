@@ -6,6 +6,7 @@
 
 ### ENHANCEMENTS:
 
+- feat(docs): update the provider landing page to say what the provider manages, how it relates to `fastly/fastly`, and which guides to read first; raise the example's minimum version to `>= 0.2.1` ([#151](https://github.com/fastly/terraform-provider-fastly-beta/pull/151))
 - feat(docs): add a beta testing guide, and provider overview content explaining the resource families ([#148](https://github.com/fastly/terraform-provider-fastly-beta/pull/148))
 - feat(logging_grafanacloudlogs): add support for Grafana Cloud Logs, including the explicit `fastly_service_logging_grafanacloudlogs` resource ([#92](https://github.com/fastly/terraform-provider-fastly-beta/pull/92))
 - feat(ngwaf_workspace_templated_signal_rules): moved Templated Signal Rules to the dedicated `fastly_ngwaf_workspace_templated_signal_rules` data source ([#90](https://github.com/fastly/terraform-provider-fastly-beta/pull/90))
