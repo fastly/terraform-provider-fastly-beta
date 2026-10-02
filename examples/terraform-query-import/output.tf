@@ -59,7 +59,6 @@ import {
   identity = {
     name       = "prod.example.com"
     service_id = "123456Prod"
-    version    = 37
   }
 }
 
@@ -77,7 +76,6 @@ import {
   identity = {
     name       = "staging.example.com"
     service_id = "123456Stag"
-    version    = 22
   }
 }
 
@@ -95,7 +93,6 @@ import {
   identity = {
     name       = "dev.example.com"
     service_id = "123456Dev"
-    version    = 207
   }
 }
 
@@ -118,7 +115,6 @@ import {
   identity = {
     name       = "Host 1"
     service_id = "123456Prod"
-    version    = 37
   }
 }
 
@@ -138,7 +134,6 @@ import {
   identity = {
     name       = "Host 2"
     service_id = "123456Stag"
-    version    = 22
   }
 }
 
@@ -158,6 +153,5 @@ import {
   identity = {
     name       = "Host 3"
     service_id = "123456Dev"
-    version    = 207
   }
 }

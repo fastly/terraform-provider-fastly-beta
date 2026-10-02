@@ -390,7 +390,18 @@ terraform query -generate-config-out=generated.tf
 `terraform query -generate-config-out=generated.tf` produces Terraform resource
 blocks and matching import blocks.
 
-Example service output:
+Every resource in the supported explicit/default family implements Terraform
+resource identity (`resource.ResourceWithIdentity`). Generated import blocks use
+stable logical identity and deliberately exclude mutable service `version`.
+Changing a resource from version 7 to version 8 therefore keeps the same
+Terraform identity instead of making Terraform treat it as a different object.
+
+Identity-based import resolves versioned resources against the same readable
+service version that query uses: active version when one exists, otherwise the
+latest version. The generated resource configuration still contains the
+discovered `version`, because version remains ordinary resource configuration.
+
+Example service output (identity is the stable Fastly service ID):
 
 ```hcl
 resource "fastly_service_cdn" "my_service" {
@@ -407,7 +418,7 @@ import {
 }
 ```
 
-Example domain output:
+Example domain output (identity is `service_id` + `name`):
 
 ```hcl
 resource "fastly_service_domain" "www_example_com" {
@@ -422,13 +433,12 @@ import {
   provider = fastly
   identity = {
     service_id = "abc123"
-    version    = 7
     name       = "www.example.com"
   }
 }
 ```
 
-Example backend output:
+Example backend output (same `service_id` + `name` identity shape):
 
 ```hcl
 resource "fastly_service_backend" "origin" {
@@ -445,11 +455,29 @@ import {
   provider = fastly
   identity = {
     service_id = "abc123"
-    version    = 7
     name       = "origin"
   }
 }
 ```
+
+Most versioned child resources use `service_id + name`. The exceptions are:
+
+- `fastly_service_cdn` and `fastly_service_compute`: `service_id`
+- `fastly_service_settings`: `service_id`
+- `fastly_service_cdn_acl_entries`: `service_id + acl_id`
+
+The existing string-based `terraform import` formats remain supported. For
+versioned named resources that is `service_id/version/name`; service settings
+use `service_id/version`; ACL entry collections use `service_id/acl_id`.
+String-based imports continue to read exactly the version named in the string,
+while query-generated identity imports intentionally resolve active/latest.
+
+Because generated configuration is a snapshot, the readable service version can
+change between `terraform query -generate-config-out` and `terraform apply`. In
+that case identity import resolves the current active/latest version while the
+generated resource block still contains the earlier version number. Review the
+generated configuration before applying it; adding mutable `version` back to
+identity would recreate the identity-change problem this design avoids.
 
 After generating configuration:
 
