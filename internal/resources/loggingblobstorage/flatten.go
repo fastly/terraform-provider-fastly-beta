@@ -64,6 +64,10 @@ func FlattenToComputeNestedModel(s *fastly.BlobStorage) ComputeNestedModel {
 // the API's auto-managed value is discarded so the provider does not report a
 // permanent diff against the sentinel.
 func preserveGzipSentinelCommon(m *commonModel, desired commonModel) {
+	if desired.GzipLevel.IsNull() {
+		inferGzipSentinelOnImport(m)
+		return
+	}
 	if service.Int64Value(desired.GzipLevel) == DefaultGzipLevel {
 		m.GzipLevel = types.Int64Value(DefaultGzipLevel)
 	}
