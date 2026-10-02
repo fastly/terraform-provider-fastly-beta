@@ -4,11 +4,17 @@
 
 ### ENHANCEMENTS:
 
-- feat(docs): add intro content to the provider landing page ([#151](https://github.com/fastly/terraform-provider-fastly-beta/pull/151))
-
 ### BUG FIXES:
 
 - fix(query): restore stable resource identities for explicit resources to support `terraform query` and generated imports, excluding mutable service `version` from identity ([#155](https://github.com/fastly/terraform-provider-fastly-beta/pull/155))
+
+### Dependencies:
+
+## 0.2.1 (October 2, 2026)
+
+### ENHANCEMENTS:
+
+- feat(docs): add intro content to the provider landing page ([#151](https://github.com/fastly/terraform-provider-fastly-beta/pull/151))
 
 ### Dependencies:
 
