@@ -33,6 +33,7 @@ func defaultCommonModel() commonModel {
 		MessageType:      types.StringValue(DefaultMessageType),
 		TimestampFormat:  types.StringValue(DefaultTimestampFormat),
 		ProcessingRegion: types.StringValue(DefaultProcessingRegion),
+		PublicKey:        types.StringValue(DefaultPublicKey),
 	}
 }
 
@@ -62,6 +63,7 @@ func fullNestedModel() NestedModel {
 	m.MessageType = types.StringValue("loggly")
 	m.TimestampFormat = types.StringValue("%Y-%m-%d")
 	m.ProcessingRegion = types.StringValue("eu")
+	m.PublicKey = types.StringValue("pgp-public-key")
 	m.Format = types.StringValue("%h %l %u")
 	m.FormatVersion = types.Int64Value(1)
 	m.Placement = types.StringValue("none")
@@ -123,6 +125,7 @@ func TestFlattenToNestedModel(t *testing.T) {
 				MessageType:       new("loggly"),
 				TimestampFormat:   new("%Y-%m-%d"),
 				ProcessingRegion:  new("eu"),
+				PublicKey:         new("pgp-public-key"),
 				Format:            new("%h %l %u"),
 				FormatVersion:     new(1),
 				Placement:         new("none"),
@@ -154,6 +157,7 @@ func TestFlattenToComputeNestedModel(t *testing.T) {
 		MessageType:      new("loggly"),
 		TimestampFormat:  new("%Y-%m-%d"),
 		ProcessingRegion: new("eu"),
+		PublicKey:        new("pgp-public-key"),
 		// VCL-only fields must be ignored by the Compute flatten.
 		Format:            new("%h %l %u"),
 		FormatVersion:     new(1),
@@ -376,6 +380,7 @@ func TestBuildCreateInput(t *testing.T) {
 				assert.Equal(t, "loggly", *input.MessageType)
 				assert.Equal(t, "%Y-%m-%d", *input.TimestampFormat)
 				assert.Equal(t, "eu", *input.ProcessingRegion)
+				assert.Equal(t, "pgp-public-key", *input.PublicKey)
 				assert.Equal(t, "%h %l %u", *input.Format)
 				assert.Equal(t, 1, *input.FormatVersion)
 				assert.Equal(t, "none", *input.Placement)
@@ -402,6 +407,7 @@ func TestBuildComputeCreateInput(t *testing.T) {
 	assert.Equal(t, "service-account", *input.AccountName)
 	assert.Equal(t, "example-fastly-log", *input.ProjectID)
 	assert.Equal(t, "eu", *input.ProcessingRegion)
+	assert.Equal(t, "pgp-public-key", *input.PublicKey)
 	assert.Nil(t, input.Format, "VCL-only fields must never be set for Compute")
 	assert.Nil(t, input.FormatVersion)
 	assert.Nil(t, input.Placement)
@@ -421,6 +427,7 @@ func TestBuildUpdateInput(t *testing.T) {
 	assert.Equal(t, "test-secret-key", *input.SecretKey)
 	assert.Equal(t, "example-fastly-log", *input.ProjectID)
 	assert.Equal(t, "eu", *input.ProcessingRegion)
+	assert.Equal(t, "pgp-public-key", *input.PublicKey)
 	assert.Equal(t, "%h %l %u", *input.Format)
 	assert.Equal(t, 1, *input.FormatVersion)
 	assert.Equal(t, fastly.NewNullable("none"), input.Placement)
@@ -428,7 +435,7 @@ func TestBuildUpdateInput(t *testing.T) {
 }
 
 // TestBuildUpdateInputClearsClearableFields verifies that response_condition,
-// project_id, and the email/secret_key credential fields are always sent as
+// project_id, public_key, and the email/secret_key credential fields are always sent as
 // concrete values on update — even when empty — so clearing them actually
 // reaches the API rather than being omitted (which would leave a
 // previously-set value in place). placement is cleared the same way, but as
@@ -441,6 +448,8 @@ func TestBuildUpdateInputClearsClearableFields(t *testing.T) {
 	assert.Nil(t, input.AccountName, "unset account_name must be omitted, not sent as an empty string the API rejects")
 	assert.NotNil(t, input.ProjectID, "project_id must be sent even when empty")
 	assert.Equal(t, "", *input.ProjectID)
+	assert.NotNil(t, input.PublicKey, "public_key must be sent even when empty")
+	assert.Equal(t, "", *input.PublicKey)
 	assert.NotNil(t, input.ResponseCondition, "response_condition must be sent even when empty")
 	assert.Equal(t, "", *input.ResponseCondition)
 	assert.NotNil(t, input.Placement, "unset placement must be sent as an explicit null, not omitted (omitting leaves a previously-set \"none\" in place)")
@@ -602,6 +611,20 @@ func TestModelsEqual(t *testing.T) {
 			expected: false,
 		},
 		{
+			name: "different public_key",
+			a: func() NestedModel {
+				m := minimalNestedModel()
+				m.PublicKey = types.StringValue("key-1")
+				return m
+			}(),
+			b: func() NestedModel {
+				m := minimalNestedModel()
+				m.PublicKey = types.StringValue("key-2")
+				return m
+			}(),
+			expected: false,
+		},
+		{
 			name: "different format only affects NestedModel equality",
 			a: func() NestedModel {
 				m := minimalNestedModel()
@@ -667,6 +690,7 @@ func TestComputeModelsEqualIgnoresVCLOnlyFields(t *testing.T) {
 		MessageType:       new("loggly"),
 		TimestampFormat:   new("%Y-%m-%d"),
 		ProcessingRegion:  new("eu"),
+		PublicKey:         new("pgp-public-key"),
 		Format:            new("something-else-entirely"),
 		FormatVersion:     new(1),
 		Placement:         new("none"),
@@ -792,7 +816,7 @@ func TestComputeAttributesOmitsVCLOnly(t *testing.T) {
 		assert.Contains(t, common, name)
 	}
 
-	for _, name := range []string{"name", "bucket_name", "authentication", "project_id", "path", "period", "compression_codec", "gzip_level", "message_type", "timestamp_format", "processing_region"} {
+	for _, name := range []string{"name", "bucket_name", "authentication", "project_id", "path", "period", "compression_codec", "gzip_level", "message_type", "timestamp_format", "processing_region", "public_key"} {
 		assert.Contains(t, compute, name)
 		assert.Contains(t, common, name)
 	}

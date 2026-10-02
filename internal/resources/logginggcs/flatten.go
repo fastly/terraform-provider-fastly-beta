@@ -35,6 +35,7 @@ func FlattenToNestedModel(g *fastly.GCS) NestedModel {
 	m.MessageType = service.StringPointerOrDefault(g.MessageType, DefaultMessageType)
 	m.TimestampFormat = service.StringPointerOrDefault(g.TimestampFormat, DefaultTimestampFormat)
 	m.ProcessingRegion = service.StringPointerOrDefault(g.ProcessingRegion, DefaultProcessingRegion)
+	m.PublicKey = service.StringPointerOrDefault(g.PublicKey, DefaultPublicKey)
 	m.Format = service.StringPointerOrDefault(g.Format, constants.LoggingGCSDefaultFormat)
 	m.FormatVersion = service.Int64PointerOrDefault(g.FormatVersion, DefaultFormatVersion)
 	m.Placement = service.StringPointerOrNull(g.Placement)

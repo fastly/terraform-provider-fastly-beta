@@ -391,6 +391,7 @@ Optional:
 - `period` (Number) How frequently log files are finalized so they can be available for reading, in seconds. Default `3600`.
 - `processing_region` (String) The geographic region where the logs will be processed before streaming to Google Cloud Storage. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
 - `project_id` (String) Your Google Cloud Platform project ID. Not required if `account_name` is specified.
+- `public_key` (String) A PGP public key that Fastly will use to encrypt your log files before writing them to disk.
 - `timestamp_format` (String) `strftime`-specified timestamp format for log filename.
 
 <a id="nestedatt--logging_gcs--authentication"></a>
