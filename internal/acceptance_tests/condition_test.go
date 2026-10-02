@@ -1,13 +1,17 @@
 package acceptancetests
 
 import (
+	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	"github.com/fastly/go-fastly/v17/fastly"
 )
 
 func TestAccFastlyServiceCondition_basic(t *testing.T) {
@@ -150,6 +154,86 @@ func TestAccFastlyServiceCondition_heredocContent(t *testing.T) {
 			{
 				Config:   ConfigConditionHeredoc(serviceName, domainName, conditionName),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceCondition_computeServiceRejected verifies that fastly_service_condition, a
+// VCL-only resource, is rejected when targeting a Compute service.
+func TestAccFastlyServiceCondition_computeServiceRejected(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	conditionName := fmt.Sprintf("condition-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_compute"),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigConditionOnComputeService(serviceName, conditionName),
+				ExpectError: regexp.MustCompile(`(?s)fastly_service_condition does not support Fastly service.*of type "Compute"`),
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceCondition_lockedVersion verifies that the provider refuses to write a
+// condition to an activated (locked) service version. Version 1, which holds the service and
+// domain the test cleans up afterward, is never activated - only a cloned version 2 is - so the
+// locked-version write attempt itself never lands in state and cleanup of version 1 is
+// unaffected.
+func TestAccFastlyServiceCondition_lockedVersion(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	conditionName := fmt.Sprintf("condition-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigServiceCDNWithDomain(serviceName, domainName, 1),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn.test"),
+					func(s *terraform.State) error {
+						rs, ok := s.RootModule().Resources["fastly_service_cdn.test"]
+						if !ok {
+							return fmt.Errorf("service resource not found")
+						}
+
+						client, err := NewFastlyClient()
+						if err != nil {
+							return fmt.Errorf("error creating Fastly client: %w", err)
+						}
+
+						ctx := context.Background()
+						cloned, err := client.CloneVersion(ctx, &fastly.CloneVersionInput{
+							ServiceID:      rs.Primary.ID,
+							ServiceVersion: 1,
+						})
+						if err != nil {
+							return fmt.Errorf("error cloning version: %w", err)
+						}
+
+						_, err = client.ActivateVersion(ctx, &fastly.ActivateVersionInput{
+							ServiceID:      rs.Primary.ID,
+							ServiceVersion: fastly.ToValue(cloned.Number),
+						})
+						if err != nil {
+							return fmt.Errorf("error activating cloned version: %w", err)
+						}
+
+						return nil
+					},
+				),
+			},
+			{
+				Config:      ConfigConditionOnLockedVersion(serviceName, domainName, conditionName),
+				ExpectError: regexp.MustCompile(`(?s)is locked and cannot be modified`),
 			},
 		},
 	})
