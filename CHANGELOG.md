@@ -13,7 +13,7 @@
 ### ENHANCEMENTS:
 
 - feat(docs): add intro content to the provider landing page ([#151](https://github.com/fastly/terraform-provider-fastly-beta/pull/151))
-- feat(logging_gcp): add support for the `public_key` attribute  ([#158](https://github.com/fastly/terraform-provider-fastly-beta/pull/158))
+- feat(logging_gcs): add support for the `public_key` attribute  ([#158](https://github.com/fastly/terraform-provider-fastly-beta/pull/158))
 
 ### Dependencies:
 
