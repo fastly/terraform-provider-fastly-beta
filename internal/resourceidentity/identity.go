@@ -111,9 +111,25 @@ func ACLCollection(serviceID, aclID types.String) *ACLCollectionModel {
 	return &ACLCollectionModel{ServiceID: serviceID, ACLID: aclID}
 }
 
+func requireImportIdentity(req resource.ImportStateRequest, resp *resource.ImportStateResponse) bool {
+	if req.Identity != nil {
+		return true
+	}
+
+	resp.Diagnostics.AddError(
+		"Missing resource identity",
+		"The import request did not include a resource identity. Identity-based import requires an identity payload.",
+	)
+	return false
+}
+
 // ImportService seeds enough state for the resource's normal Read operation to
 // finish an identity-based import of a top-level service.
 func ImportService(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if !requireImportIdentity(req, resp) {
+		return
+	}
+
 	var identity ServiceModel
 	resp.Diagnostics.Append(req.Identity.Get(ctx, &identity)...)
 	if resp.Diagnostics.HasError() {
@@ -136,6 +152,10 @@ func ImportService(ctx context.Context, req resource.ImportStateRequest, resp *r
 // version, and name. Terraform will then invoke the resource's normal Read
 // operation to populate the remaining state.
 func ImportNamedVersioned(ctx context.Context, client *fastly.Client, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if !requireImportIdentity(req, resp) {
+		return
+	}
+
 	var identity NamedVersionedModel
 	resp.Diagnostics.Append(req.Identity.Get(ctx, &identity)...)
 	if resp.Diagnostics.HasError() {
@@ -172,6 +192,10 @@ func ImportNamedVersioned(ctx context.Context, client *fastly.Client, req resour
 // ImportServiceScopedVersioned is the singleton counterpart of
 // ImportNamedVersioned. It resolves active/latest version but has no name key.
 func ImportServiceScopedVersioned(ctx context.Context, client *fastly.Client, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if !requireImportIdentity(req, resp) {
+		return
+	}
+
 	var identity ServiceScopedVersionedModel
 	resp.Diagnostics.Append(req.Identity.Get(ctx, &identity)...)
 	if resp.Diagnostics.HasError() {
@@ -203,6 +227,10 @@ func ImportServiceScopedVersioned(ctx context.Context, client *fastly.Client, re
 // ImportACLCollection seeds the stable service/ACL identity and deterministic
 // resource ID. The normal Read operation adopts the current ACL entries.
 func ImportACLCollection(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if !requireImportIdentity(req, resp) {
+		return
+	}
+
 	var identity ACLCollectionModel
 	resp.Diagnostics.Append(req.Identity.Get(ctx, &identity)...)
 	if resp.Diagnostics.HasError() {

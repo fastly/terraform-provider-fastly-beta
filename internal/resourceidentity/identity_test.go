@@ -1,8 +1,10 @@
 package resourceidentity
 
 import (
+	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 )
 
@@ -46,6 +48,37 @@ func TestIdentitySchemasAreStable(t *testing.T) {
 				if _, ok := tt.schema.Attributes[attr]; !ok {
 					t.Errorf("missing identity attribute %q", attr)
 				}
+			}
+		})
+	}
+}
+
+func TestImportHelpersRejectMissingIdentity(t *testing.T) {
+	ctx := context.Background()
+	req := resource.ImportStateRequest{}
+
+	tests := map[string]func(*resource.ImportStateResponse){
+		"service": func(resp *resource.ImportStateResponse) {
+			ImportService(ctx, req, resp)
+		},
+		"named versioned": func(resp *resource.ImportStateResponse) {
+			ImportNamedVersioned(ctx, nil, req, resp)
+		},
+		"service scoped versioned": func(resp *resource.ImportStateResponse) {
+			ImportServiceScopedVersioned(ctx, nil, req, resp)
+		},
+		"ACL collection": func(resp *resource.ImportStateResponse) {
+			ImportACLCollection(ctx, req, resp)
+		},
+	}
+
+	for name, importFn := range tests {
+		t.Run(name, func(t *testing.T) {
+			resp := &resource.ImportStateResponse{}
+			importFn(resp)
+
+			if !resp.Diagnostics.HasError() {
+				t.Fatal("expected missing resource identity diagnostic")
 			}
 		})
 	}
