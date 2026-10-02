@@ -4,11 +4,18 @@
 
 ### ENHANCEMENTS:
 
-- feat(docs): add intro content to the provider landing page ([#151](https://github.com/fastly/terraform-provider-fastly-beta/pull/151))
-
 ### BUG FIXES:
 
 ### Dependencies:
+
+## 0.2.1 (October 2, 2026)
+
+### ENHANCEMENTS:
+
+- feat(docs): add intro content to the provider landing page ([#151](https://github.com/fastly/terraform-provider-fastly-beta/pull/151))
+
+### Dependencies:
+
 - build(deps): `github.com/ProtonMail/go-crypto` from 1.4.1 to 1.5.0 ([#153](https://github.com/fastly/terraform-provider-fastly-beta/pull/153))
 
 ## 0.2.0 (September 29, 2026)
