@@ -6,6 +6,7 @@ import (
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/importutil"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resourceidentity"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 
@@ -18,6 +19,7 @@ import (
 var (
 	_ resource.Resource                = &Resource{}
 	_ resource.ResourceWithImportState = &Resource{}
+	_ resource.ResourceWithIdentity    = &Resource{}
 )
 
 type Resource struct {
@@ -37,6 +39,10 @@ type Model struct {
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_service_settings"
+}
+
+func (r *Resource) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	resp.IdentitySchema = resourceidentity.ServiceScopedVersionedSchema()
 }
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -89,6 +95,9 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 	flattenModel(&plan, result[0], serviceID, version)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	if !resp.Diagnostics.HasError() && resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, resourceidentity.ServiceScopedVersioned(plan.Service))...)
+	}
 }
 
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -122,6 +131,9 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 
 	flattenModel(&state, m, serviceID, version)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	if !resp.Diagnostics.HasError() && resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, resourceidentity.ServiceScopedVersioned(state.Service))...)
+	}
 }
 
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -160,6 +172,9 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 
 	flattenModel(&plan, result[0], serviceID, version)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	if !resp.Diagnostics.HasError() && resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, resourceidentity.ServiceScopedVersioned(plan.Service))...)
+	}
 }
 
 // Delete resets the general settings back to their API defaults rather than actually deleting
@@ -204,6 +219,11 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 }
 
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if req.ID == "" {
+		resourceidentity.ImportServiceScopedVersioned(ctx, r.providerData.Client, req, resp)
+		return
+	}
+
 	serviceID, version, err := importutil.ParseServiceVersionID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -230,4 +250,7 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 	flattenModel(&state, m, serviceID, version)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	if !resp.Diagnostics.HasError() && resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, resourceidentity.ServiceScopedVersioned(state.Service))...)
+	}
 }

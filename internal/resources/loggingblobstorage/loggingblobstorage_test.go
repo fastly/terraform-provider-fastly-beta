@@ -218,6 +218,36 @@ func TestPreserveGzipSentinel(t *testing.T) {
 			expected: types.Int64Value(DefaultGzipLevel),
 		},
 		{
+			name: "null prior falls back to import inference",
+			remote: func() NestedModel {
+				m := minimalNestedModel()
+				m.CompressionCodec = types.StringValue("")
+				m.GzipLevel = types.Int64Value(0)
+				return m
+			}(),
+			desired: func() NestedModel {
+				m := minimalNestedModel()
+				m.GzipLevel = types.Int64Null()
+				return m
+			}(),
+			expected: types.Int64Value(DefaultGzipLevel),
+		},
+		{
+			name: "explicit zero prior remains zero",
+			remote: func() NestedModel {
+				m := minimalNestedModel()
+				m.CompressionCodec = types.StringValue("")
+				m.GzipLevel = types.Int64Value(0)
+				return m
+			}(),
+			desired: func() NestedModel {
+				m := minimalNestedModel()
+				m.GzipLevel = types.Int64Value(0)
+				return m
+			}(),
+			expected: types.Int64Value(0),
+		},
+		{
 			name: "desired set keeps the API value",
 			remote: func() NestedModel {
 				m := minimalNestedModel()

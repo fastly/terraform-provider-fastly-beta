@@ -6,6 +6,8 @@
 
 ### BUG FIXES:
 
+- fix(query): restore stable resource identities for explicit resources to support `terraform query` and generated imports, excluding mutable service `version` from identity ([#155](https://github.com/fastly/terraform-provider-fastly-beta/pull/155))
+
 ### Dependencies:
 
 ## 0.2.1 (October 2, 2026)
