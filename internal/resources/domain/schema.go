@@ -7,6 +7,8 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	fastly "github.com/fastly/go-fastly/v17/fastly"
@@ -39,6 +41,9 @@ func ResourceAttributes() map[string]schema.Attribute {
 		"service_id": schema.StringAttribute{
 			Required:    true,
 			Description: "Fastly service ID.",
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.RequiresReplace(),
+			},
 		},
 		"version": schema.Int64Attribute{
 			Required:    true,
@@ -46,6 +51,12 @@ func ResourceAttributes() map[string]schema.Attribute {
 		},
 	}
 	maps.Copy(attrs, CommonAttributes())
+
+	nameAttr := attrs["name"].(schema.StringAttribute)
+	nameAttr.PlanModifiers = []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	}
+	attrs["name"] = nameAttr
 	return attrs
 }
 
