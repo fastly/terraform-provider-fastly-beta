@@ -53,9 +53,10 @@ func ResourceAttributes() map[string]schema.Attribute {
 	maps.Copy(attrs, CommonAttributes())
 
 	nameAttr := attrs["name"].(schema.StringAttribute)
-	nameAttr.PlanModifiers = []planmodifier.String{
+	nameAttr.PlanModifiers = append(
+		nameAttr.PlanModifiers,
 		stringplanmodifier.RequiresReplace(),
-	}
+	)
 	attrs["name"] = nameAttr
 	return attrs
 }
