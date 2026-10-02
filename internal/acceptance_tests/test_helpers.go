@@ -2721,6 +2721,40 @@ func ConfigConditionForImport(serviceName, domainName, conditionName string) str
 	)
 }
 
+// ConfigConditionOnComputeService returns a fastly_service_condition resource attached to a
+// Compute service, to prove the VCL-only service-kind restriction is enforced.
+func ConfigConditionOnComputeService(serviceName, conditionName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"SERVICE_VERSION": "1",
+			"CONDITION_NAME":  conditionName,
+		},
+		"internal/acceptance_tests/blocks/condition_explicit_on_compute.tf",
+	)
+}
+
+// ConfigConditionOnLockedVersion returns a config with the service/domain pinned to editable
+// version 1, plus a condition resource targeting version 2 - the version the locked-version test
+// activates out-of-band before this config is applied - to prove writes to a locked version are
+// rejected without disturbing cleanup of the version-1 resources.
+func ConfigConditionOnLockedVersion(serviceName, domainName, conditionName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"CONDITION_NAME":  conditionName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/condition_explicit_on_locked_version.tf",
+	)
+}
+
 // Configuration helpers for cache setting resources (explicit version management)
 
 // ConfigCacheSettingBasic returns a basic cache setting resource config.
