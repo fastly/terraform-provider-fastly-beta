@@ -91,6 +91,7 @@ func TestAccFastlyServiceCDNAuto_withLoggingGCSUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "logging_gcs.0.authentication.email", "updated-gcs@fastly-test-project.iam.gserviceaccount.com"),
 					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "logging_gcs.0.bucket_name", "fastly-test-bucket-updated"),
 					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "logging_gcs.0.processing_region", "eu"),
+					resource.TestCheckResourceAttrSet("fastly_service_cdn_auto.test", "logging_gcs.0.public_key"),
 					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "logging_gcs.0.format_version", "2"),
 					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "logging_gcs.0.message_type", "loggly"),
 					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "active_version", "2"),

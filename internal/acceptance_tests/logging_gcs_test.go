@@ -195,6 +195,7 @@ func TestAccFastlyServiceLoggingGCS_update(t *testing.T) {
 					resource.TestCheckResourceAttr("fastly_service_logging_gcs.test", "authentication.email", "updated-gcs@fastly-test-project.iam.gserviceaccount.com"),
 					resource.TestCheckResourceAttrSet("fastly_service_logging_gcs.test", "authentication.secret_key"),
 					resource.TestCheckResourceAttr("fastly_service_logging_gcs.test", "processing_region", "eu"),
+					resource.TestCheckResourceAttrSet("fastly_service_logging_gcs.test", "public_key"),
 					resource.TestCheckResourceAttr("fastly_service_logging_gcs.test", "path", "/logs/"),
 					resource.TestCheckResourceAttr("fastly_service_logging_gcs.test", "message_type", "loggly"),
 					resource.TestCheckResourceAttr("fastly_service_logging_gcs.test", "format", "%h %l %u %t \"%r\" %>s %b"),
@@ -320,6 +321,9 @@ func TestAccFastlyServiceLoggingGCS_clearToDefaults(t *testing.T) {
 			{
 				Config: ConfigLoggingGCSBasic(serviceName, domainName, loggerName),
 				Check: resource.ComposeTestCheckFunc(
+					// public_key must actually clear to "" on update, not be left in
+					// place by an omitted empty value.
+					resource.TestCheckResourceAttr("fastly_service_logging_gcs.test", "public_key", ""),
 					resource.TestCheckResourceAttr("fastly_service_logging_gcs.test", "path", ""),
 					resource.TestCheckResourceAttr("fastly_service_logging_gcs.test", "processing_region", "none"),
 					resource.TestCheckResourceAttr("fastly_service_logging_gcs.test", "message_type", "classic"),
