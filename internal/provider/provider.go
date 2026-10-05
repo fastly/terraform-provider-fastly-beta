@@ -85,6 +85,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customdashboard"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customvcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dictionary"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/director"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dnszone"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domain"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domainmanagement"
@@ -252,6 +253,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		configstoreitems.NewResource,
 		customdashboard.NewResource,
 		dictionary.NewResource,
+		director.NewResource,
 		dnszone.NewResource,
 		domain.NewResource,
 		domainmanagement.NewResource,
@@ -416,6 +418,7 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		cdnaclentries.NewListResource,
 		condition.NewListResource,
 		dictionary.NewListResource,
+		director.NewListResource,
 		domain.NewListResource,
 		gzip.NewListResource,
 		healthcheck.NewListResource,
