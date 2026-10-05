@@ -1,0 +1,66 @@
+---
+page_title: "fastly_service_healthcheck Resource - fastly"
+subcategory: ""
+description: |-
+  Fastly service health check resource. Writes directly to the specified writable service version.
+---
+
+# fastly_service_healthcheck (Resource)
+
+Fastly service health check resource. Writes directly to the specified writable service version.
+
+This resource is part of the explicit/default first-class resource family. It
+manages a health check on the configured service version. It does not clone,
+activate, or stage service versions. Health checks are supported on both CDN
+and Compute services.
+
+## Example Usage
+
+```terraform
+resource "fastly_service_healthcheck" "origin" {
+  service_id = fastly_service_cdn.example.id
+  version    = 1
+  name       = "origin-healthcheck"
+  host       = "api.example.com"
+  path       = "/healthz"
+
+  check_interval    = 10000
+  expected_response = 200
+  method            = "GET"
+  headers           = ["X-Api-Key: abc123"]
+}
+
+resource "fastly_service_backend" "origin" {
+  service_id = fastly_service_cdn.example.id
+  version    = 1
+  name       = "origin"
+
+  address     = "api.example.com"
+  port        = 443
+  use_ssl     = true
+  healthcheck = fastly_service_healthcheck.origin.name
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import a health check using the service ID, version, and health check name:
+
+```shell
+terraform import fastly_service_healthcheck.origin SERVICE_ID/VERSION/HEALTHCHECK_NAME
+```
+
+Example:
+
+```shell
+terraform import fastly_service_healthcheck.origin SU1Z0isxPaozGVKXdv0eY/3/origin-healthcheck
+```
+
+## Version lifecycle
+
+This resource does not clone, activate, or stage service versions. Use explicit
+service-version lifecycle actions to clone, validate, stage, or activate a
+service version.
+

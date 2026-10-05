@@ -26,6 +26,7 @@ It is not used for the automatic compatibility resource family.
 - `fastly_service_dictionary`
 - `fastly_service_cache_setting`
 - `fastly_service_gzip`
+- `fastly_service_healthcheck`
 - `fastly_service_cdn_acl`
 - `fastly_service_cdn_acl_entries`
 - `fastly_service_condition`
@@ -209,6 +210,10 @@ list "fastly_service_cache_setting" "all" {
 }
 
 list "fastly_service_gzip" "all" {
+  provider = fastly
+}
+
+list "fastly_service_healthcheck" "all" {
   provider = fastly
 }
 

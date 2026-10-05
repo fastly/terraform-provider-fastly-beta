@@ -2,14 +2,21 @@ package healthcheck
 
 import (
 	"context"
+	"maps"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	fastly "github.com/fastly/go-fastly/v17/fastly"
@@ -24,7 +31,12 @@ const (
 	DefaultThreshold        = 3
 	DefaultTimeout          = 5000
 	DefaultWindow           = 5
+
+	MinCheckInterval = 1000
+	MaxCheckInterval = 3600000
 )
+
+var HTTPVersions = []string{"1.0", "1.1"}
 
 type NestedModel struct {
 	Name             types.String `tfsdk:"name"`
@@ -90,7 +102,10 @@ func CommonAttributes() map[string]schema.Attribute {
 			Optional:    true,
 			Computed:    true,
 			Default:     int64default.StaticInt64(DefaultCheckInterval),
-			Description: "How often to run the health check in milliseconds. Default `5000`.",
+			Description: "How often to run the health check in milliseconds. Must be between `1000` and `3600000`. Default `5000`.",
+			Validators: []validator.Int64{
+				int64validator.Between(MinCheckInterval, MaxCheckInterval),
+			},
 		},
 		"expected_response": schema.Int64Attribute{
 			Optional:    true,
@@ -108,6 +123,9 @@ func CommonAttributes() map[string]schema.Attribute {
 			Computed:    true,
 			Default:     stringdefault.StaticString(DefaultHTTPVersion),
 			Description: "Whether to use version `1.0` or `1.1` HTTP. Default `1.1`.",
+			Validators: []validator.String{
+				stringvalidator.OneOf(HTTPVersions...),
+			},
 		},
 		"initial": schema.Int64Attribute{
 			Optional:    true,
@@ -140,6 +158,55 @@ func CommonAttributes() map[string]schema.Attribute {
 			Description: "The number of most recent health check queries to keep for this health check. Default `5`.",
 		},
 	}
+}
+
+func ResourceAttributes() map[string]schema.Attribute {
+	attrs := map[string]schema.Attribute{
+		"id": schema.StringAttribute{
+			Computed:    true,
+			Description: "Terraform resource identifier.",
+		},
+		"service_id": schema.StringAttribute{
+			Required:    true,
+			Description: "Fastly service ID.",
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.RequiresReplace(),
+			},
+		},
+		"version": schema.Int64Attribute{
+			Required:    true,
+			Description: "Writable Fastly service version to modify.",
+		},
+	}
+	maps.Copy(attrs, CommonAttributes())
+	// service_id + name locate the health check in the API, so changing either can't be an
+	// in-place update. Set here, not in CommonAttributes, so the nested block's
+	// list-keyed name is unaffected.
+	nameAttr := attrs["name"].(schema.StringAttribute)
+	nameAttr.PlanModifiers = []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	}
+	attrs["name"] = nameAttr
+
+	headersAttr := attrs["headers"].(schema.SetAttribute)
+	headersAttr.PlanModifiers = []planmodifier.Set{
+		setplanmodifier.RequiresReplaceIf(
+			headersClearedRequiresReplace,
+			"Removing all headers requires replacing the health check.",
+			"Removing all headers requires replacing the health check.",
+		),
+	}
+	attrs["headers"] = headersAttr
+	return attrs
+}
+
+// headersClearedRequiresReplace forces replacement when every header is removed: go-fastly omits
+// an empty headers array from the request, so an in-place update would leave the old headers set.
+func headersClearedRequiresReplace(_ context.Context, req planmodifier.SetRequest, resp *setplanmodifier.RequiresReplaceIfFuncResponse) {
+	if req.PlanValue.IsUnknown() {
+		return
+	}
+	resp.RequiresReplace = !headersUnset(req.StateValue) && headersUnset(req.PlanValue)
 }
 
 func NestedBlockSchema() schema.ListNestedBlock {
