@@ -6,6 +6,7 @@
 
 - feat(healthchecks_explicit): add support for explicit healthchecks and `terraform query` support ([#160](https://github.com/fastly/terraform-provider-fastly-beta/pull/160))
 - feat(director): add `fastly_service_director` explicit/default resource ([#159](https://github.com/fastly/terraform-provider-fastly-beta/pull/159))
+- feat(header): add `fastly_service_header` explicit/default resource for caller-managed service version lifecycle ([#163](https://github.com/fastly/terraform-provider-fastly-beta/pull/163))
 
 ### BUG FIXES:
 
