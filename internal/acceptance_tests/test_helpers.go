@@ -2863,6 +2863,79 @@ func ConfigCacheSettingOnLockedVersion(serviceName, domainName, cacheSettingName
 	)
 }
 
+// Configuration helpers for fastly_service_healthcheck resources (explicit version management)
+
+func configHealthCheckCDN(serviceName, domainName, healthCheckName, block string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"HEALTHCHECK_NAME": healthCheckName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		block,
+	)
+}
+
+// ConfigHealthCheckBasic returns a health check resource config with only the required fields set.
+func ConfigHealthCheckBasic(serviceName, domainName, healthCheckName string) string {
+	return configHealthCheckCDN(serviceName, domainName, healthCheckName, "internal/acceptance_tests/blocks/healthcheck_explicit.tf")
+}
+
+// ConfigHealthCheckUpdated returns a health check resource config with every optional field set
+// to a non-default value, including headers.
+func ConfigHealthCheckUpdated(serviceName, domainName, healthCheckName string) string {
+	return configHealthCheckCDN(serviceName, domainName, healthCheckName, "internal/acceptance_tests/blocks/healthcheck_explicit_updated.tf")
+}
+
+// ConfigHealthCheckForImport returns a test configuration for importing a health check.
+func ConfigHealthCheckForImport(serviceName, domainName, healthCheckName string) string {
+	return ConfigHealthCheckUpdated(serviceName, domainName, healthCheckName)
+}
+
+// ConfigHealthCheckWithBackend returns a health check plus an explicit backend that references
+// it by name.
+func ConfigHealthCheckWithBackend(serviceName, domainName, healthCheckName, backendName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"HEALTHCHECK_NAME": healthCheckName,
+			"BACKEND_NAME":     backendName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/healthcheck_explicit_with_backend.tf",
+	)
+}
+
+// ConfigHealthCheckOnComputeService returns a fastly_service_healthcheck resource attached to a
+// Compute service, which (unlike the VCL-only resources) is supported.
+func ConfigHealthCheckOnComputeService(serviceName, healthCheckName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"SERVICE_VERSION":  "1",
+			"HEALTHCHECK_NAME": healthCheckName,
+		},
+		"internal/acceptance_tests/blocks/healthcheck_explicit_on_compute.tf",
+	)
+}
+
+// ConfigHealthCheckOnLockedVersion returns a config with the service/domain pinned to editable
+// version 1, plus a health check targeting version 2 - the version the locked-version test
+// activates out-of-band before this config is applied.
+func ConfigHealthCheckOnLockedVersion(serviceName, domainName, healthCheckName string) string {
+	return configHealthCheckCDN(serviceName, domainName, healthCheckName, "internal/acceptance_tests/blocks/healthcheck_explicit_on_locked_version.tf")
+}
+
 // Configuration helpers for gzip resources (explicit version management)
 
 // ConfigGzipBasic returns a basic gzip resource config with content_types and extensions set.
