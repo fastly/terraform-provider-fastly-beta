@@ -30,6 +30,7 @@ It is not used for the automatic compatibility resource family.
 - `fastly_service_cdn_acl`
 - `fastly_service_cdn_acl_entries`
 - `fastly_service_condition`
+- `fastly_service_director`
 - `fastly_service_custom_vcl`
 - `fastly_service_logging_bigquery`
 - `fastly_service_logging_blobstorage`
@@ -226,6 +227,10 @@ list "fastly_service_cdn_acl_entries" "all" {
 }
 
 list "fastly_service_condition" "all" {
+  provider = fastly
+}
+
+list "fastly_service_director" "all" {
   provider = fastly
 }
 

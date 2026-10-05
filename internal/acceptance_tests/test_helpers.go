@@ -3045,6 +3045,83 @@ func ConfigGzipOnLockedVersion(serviceName, domainName, gzipName string) string 
 	)
 }
 
+// Configuration helpers for director resources (explicit version management)
+
+// ConfigDirectorBasic returns a basic director resource config, with a backend to map it to.
+func ConfigDirectorBasic(serviceName, domainName, backendName, directorName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"BACKEND_NAME":    backendName,
+			"DIRECTOR_NAME":   directorName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/director_explicit.tf",
+	)
+}
+
+// ConfigDirectorUpdated returns a director resource config with comment/quorum/retries/shield/type
+// changed from ConfigDirectorBasic's defaults.
+func ConfigDirectorUpdated(serviceName, domainName, backendName, directorName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"BACKEND_NAME":    backendName,
+			"DIRECTOR_NAME":   directorName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/director_explicit_updated.tf",
+	)
+}
+
+// ConfigDirectorForImport returns a test configuration for importing a director.
+func ConfigDirectorForImport(serviceName, domainName, backendName, directorName string) string {
+	return ConfigDirectorBasic(serviceName, domainName, backendName, directorName)
+}
+
+// ConfigDirectorOnComputeService returns a fastly_service_director resource attached to a
+// Compute service, to prove the VCL-only service-kind restriction is enforced.
+func ConfigDirectorOnComputeService(serviceName, directorName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"SERVICE_VERSION": "1",
+			"DIRECTOR_NAME":   directorName,
+		},
+		"internal/acceptance_tests/blocks/director_explicit_on_compute.tf",
+	)
+}
+
+// ConfigDirectorOnLockedVersion returns a config with the service/domain/backend pinned to
+// editable version 1, plus a director resource targeting version 2 - the version the
+// locked-version test activates out-of-band before this config is applied - to prove writes to a
+// locked version are rejected without disturbing cleanup of the version-1 resources.
+func ConfigDirectorOnLockedVersion(serviceName, domainName, backendName, directorName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"BACKEND_NAME":    backendName,
+			"DIRECTOR_NAME":   directorName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/director_explicit_on_locked_version.tf",
+	)
+}
+
 // Configuration helpers for fastly_service_ratelimiter resources (explicit version management)
 
 // ConfigRateLimiterBasic returns a basic rate limiter resource config.

@@ -3,6 +3,7 @@ package director
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sort"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -129,6 +131,69 @@ func CommonAttributes() map[string]schema.Attribute {
 				stringvalidator.OneOf("random", "hash", "client", "1", "3", "4"),
 			},
 		},
+	}
+}
+
+func ResourceAttributes() map[string]schema.Attribute {
+	attrs := map[string]schema.Attribute{
+		"id": schema.StringAttribute{
+			Computed:    true,
+			Description: "Terraform resource identifier.",
+		},
+		"service_id": schema.StringAttribute{
+			Required:    true,
+			Description: "Fastly service ID.",
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.RequiresReplace(),
+			},
+		},
+		"version": schema.Int64Attribute{
+			Required:    true,
+			Description: "Writable Fastly service version to modify.",
+		},
+	}
+	maps.Copy(attrs, CommonAttributes())
+
+	// service_id + name locate the director in the API, so changing either can't be an in-place
+	// update. Set here, not in CommonAttributes, so the nested block's list-keyed name is
+	// unaffected.
+	nameAttr := attrs["name"].(schema.StringAttribute)
+	nameAttr.PlanModifiers = []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	}
+	attrs["name"] = nameAttr
+
+	typeAttr := attrs["type"].(schema.StringAttribute)
+	typeAttr.PlanModifiers = []planmodifier.String{typeStickyDefaultAttr{}}
+	attrs["type"] = typeAttr
+
+	return attrs
+}
+
+// typeStickyDefaultAttr is typeStickyDefault's single-resource equivalent: no list of directors to
+// match by name, since plan/state here are both just this one resource's prior type.
+type typeStickyDefaultAttr struct{}
+
+func (m typeStickyDefaultAttr) Description(_ context.Context) string {
+	return fmt.Sprintf("resets type to %q when omitted from config, unless the existing value is round_robin, which isn't settable via config and is preserved instead; canonicalizes a numeric type alias to its friendly name", DefaultType)
+}
+
+func (m typeStickyDefaultAttr) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m typeStickyDefaultAttr) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	switch {
+	case req.ConfigValue.IsNull():
+		resp.PlanValue = types.StringValue(DefaultType)
+		if !req.StateValue.IsNull() && !req.StateValue.IsUnknown() && req.StateValue.ValueString() == "round_robin" {
+			resp.PlanValue = req.StateValue
+		}
+	case req.ConfigValue.IsUnknown():
+	default:
+		if canonical, ok := directorTypeCanonical(req.ConfigValue.ValueString()); ok {
+			resp.PlanValue = types.StringValue(canonical)
+		}
 	}
 }
 
