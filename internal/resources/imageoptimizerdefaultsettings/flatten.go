@@ -3,12 +3,23 @@ package imageoptimizerdefaultsettings
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	fastly "github.com/fastly/go-fastly/v17/fastly"
 )
+
+// flattenModel populates the standalone resource's Model from a NestedModel plus the
+// service/version it belongs to. There is no name component, so the ID is just the
+// service/version pair.
+func flattenModel(m *Model, n NestedModel, serviceID string, version int) {
+	m.NestedModel = n
+	m.ID = types.StringValue(serviceID + "/" + strconv.Itoa(version))
+	m.Service = types.StringValue(serviceID)
+	m.Version = types.Int64Value(int64(version))
+}
 
 func FlattenToNestedModel(s *fastly.ImageOptimizerDefaultSettings) NestedModel {
 	if s == nil {
