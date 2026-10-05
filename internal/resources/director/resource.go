@@ -101,6 +101,17 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 
 	if _, err := (ops{}).Create(ctx, r.providerData.Client, plan.Service.ValueString(), int(plan.Version.ValueInt64()), plan.NestedModel); err != nil {
+		// CreateDirector may have already succeeded before a later CreateDirectorBackend call
+		// failed, leaving a director on the service that Terraform doesn't know about. Record
+		// whatever exists now so a retry updates/destroys it instead of colliding on create.
+		if d, getErr := r.providerData.Client.GetDirector(ctx, &fastly.GetDirectorInput{
+			ServiceID:      plan.Service.ValueString(),
+			ServiceVersion: int(plan.Version.ValueInt64()),
+			Name:           service.StringValue(plan.Name),
+		}); getErr == nil {
+			flatten(ctx, d, &plan)
+			resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+		}
 		resp.Diagnostics.AddError("Error creating explicit service director", err.Error())
 		return
 	}
@@ -195,6 +206,17 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	if _, err := o.Update(ctx, r.providerData.Client, plan.Service.ValueString(), int(plan.Version.ValueInt64()), plan.NestedModel); err != nil {
+		// UpdateDirector may have already succeeded before a later backend association
+		// create/delete call failed partway through the diff. Record whatever exists now so
+		// state reflects reality instead of silently keeping the pre-update values.
+		if d, getErr := r.providerData.Client.GetDirector(ctx, &fastly.GetDirectorInput{
+			ServiceID:      plan.Service.ValueString(),
+			ServiceVersion: int(plan.Version.ValueInt64()),
+			Name:           service.StringValue(plan.Name),
+		}); getErr == nil {
+			flatten(ctx, d, &plan)
+			resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+		}
 		resp.Diagnostics.AddError("Error updating explicit service director", err.Error())
 		return
 	}
