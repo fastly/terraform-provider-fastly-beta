@@ -31,12 +31,7 @@ const (
 	DefaultThreshold        = 3
 	DefaultTimeout          = 5000
 	DefaultWindow           = 5
-
-	MinCheckInterval = 1000
-	MaxCheckInterval = 3600000
 )
-
-var HTTPVersions = []string{"1.0", "1.1"}
 
 type NestedModel struct {
 	Name             types.String `tfsdk:"name"`
@@ -104,7 +99,7 @@ func CommonAttributes() map[string]schema.Attribute {
 			Default:     int64default.StaticInt64(DefaultCheckInterval),
 			Description: "How often to run the health check in milliseconds. Must be between `1000` and `3600000`. Default `5000`.",
 			Validators: []validator.Int64{
-				int64validator.Between(MinCheckInterval, MaxCheckInterval),
+				int64validator.Between(1000, 3600000),
 			},
 		},
 		"expected_response": schema.Int64Attribute{
@@ -124,7 +119,7 @@ func CommonAttributes() map[string]schema.Attribute {
 			Default:     stringdefault.StaticString(DefaultHTTPVersion),
 			Description: "Whether to use version `1.0` or `1.1` HTTP. Default `1.1`.",
 			Validators: []validator.String{
-				stringvalidator.OneOf(HTTPVersions...),
+				stringvalidator.OneOf("1.0", "1.1"),
 			},
 		},
 		"initial": schema.Int64Attribute{

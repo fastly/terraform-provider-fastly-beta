@@ -168,10 +168,10 @@ func TestCheckIntervalValidator(t *testing.T) {
 		wantErr bool
 	}{
 		{999, true},
-		{MinCheckInterval, false},
+		{1000, false},
 		{DefaultCheckInterval, false},
-		{MaxCheckInterval, false},
-		{MaxCheckInterval + 1, true},
+		{3600000, false},
+		{3600001, true},
 	} {
 		resp := &validator.Int64Response{}
 		v[0].ValidateInt64(context.Background(), validator.Int64Request{
