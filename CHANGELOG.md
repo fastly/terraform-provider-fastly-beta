@@ -13,6 +13,7 @@
 - fix(query): restore stable resource identities for explicit resources to support `terraform query` and generated imports, excluding mutable service `version` from identity ([#155](https://github.com/fastly/terraform-provider-fastly-beta/pull/155))
 
 ### Dependencies:
+- build(deps): `github.com/ProtonMail/go-crypto` from 1.5.0 to 1.5.2 ([#164](https://github.com/fastly/terraform-provider-fastly-beta/pull/164))
 
 ## 0.2.1 (October 2, 2026)
 
