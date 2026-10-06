@@ -23,6 +23,7 @@ It is not used for the automatic compatibility resource family.
 - `fastly_service_backend`
 - `fastly_service_settings`
 - `fastly_service_ratelimiter`
+- `fastly_service_resource_link`
 - `fastly_service_dictionary`
 - `fastly_service_cache_setting`
 - `fastly_service_gzip`
@@ -201,6 +202,10 @@ list "fastly_service_settings" "all" {
 }
 
 list "fastly_service_ratelimiter" "all" {
+  provider = fastly
+}
+
+list "fastly_service_resource_link" "all" {
   provider = fastly
 }
 
@@ -485,6 +490,8 @@ Most versioned child resources use `service_id + name`. The exceptions are:
 - `fastly_service_cdn` and `fastly_service_compute`: `service_id`
 - `fastly_service_settings`: `service_id`
 - `fastly_service_cdn_acl_entries`: `service_id + acl_id`
+- `fastly_service_resource_link`: `service_id + resource_id`, since a link's
+  `name` can be renamed in place
 
 The existing string-based `terraform import` formats remain supported. For
 versioned named resources that is `service_id/version/name`; service settings
