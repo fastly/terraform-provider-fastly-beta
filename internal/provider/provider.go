@@ -95,6 +95,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/gzip"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/header"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/healthcheck"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/imageoptimizerdefaultsettings"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/integration"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/kvstore"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingbigquery"
@@ -262,6 +263,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		gzip.NewResource,
 		header.NewResource,
 		healthcheck.NewResource,
+		imageoptimizerdefaultsettings.NewResource,
 		loggingbigquery.NewResource,
 		loggingblobstorage.NewResource,
 		loggingcloudfiles.NewResource,
@@ -425,6 +427,7 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		gzip.NewListResource,
 		header.NewListResource,
 		healthcheck.NewListResource,
+		imageoptimizerdefaultsettings.NewListResource,
 		loggingbigquery.NewListResource,
 		loggingblobstorage.NewListResource,
 		loggingcloudfiles.NewListResource,

@@ -4,6 +4,8 @@
 
 ### ENHANCEMENTS:
 
+- feat(image_optimizer_default_explicit): add support for explicit image optimizer defaults and `terraform query` support ([#162](https://github.com/fastly/terraform-provider-fastly-beta/pull/162))
+
 ### BUG FIXES:
 
 ### Dependencies:

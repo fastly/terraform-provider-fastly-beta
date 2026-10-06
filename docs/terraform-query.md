@@ -28,6 +28,7 @@ It is not used for the automatic compatibility resource family.
 - `fastly_service_gzip`
 - `fastly_service_header`
 - `fastly_service_healthcheck`
+- `fastly_service_image_optimizer_default_settings`
 - `fastly_service_cdn_acl`
 - `fastly_service_cdn_acl_entries`
 - `fastly_service_condition`
@@ -220,6 +221,10 @@ list "fastly_service_header" "all" {
 }
 
 list "fastly_service_healthcheck" "all" {
+  provider = fastly
+}
+
+list "fastly_service_image_optimizer_default_settings" "all" {
   provider = fastly
 }
 
