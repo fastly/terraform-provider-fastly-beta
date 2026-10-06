@@ -93,12 +93,13 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	if err := Reconcile(ctx, r.providerData.Client, serviceID, version, nil, []NestedModel{plan.NestedModel}); err != nil {
+	result, err := Reconcile(ctx, r.providerData.Client, serviceID, version, nil, []NestedModel{plan.NestedModel})
+	if err != nil {
 		resp.Diagnostics.AddError("Error creating explicit Image Optimizer default settings", err.Error())
 		return
 	}
 
-	flattenModel(&plan, plan.NestedModel, serviceID, version)
+	flattenModel(&plan, result[0], serviceID, version)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	if !resp.Diagnostics.HasError() && resp.Identity != nil {
 		resp.Diagnostics.Append(resp.Identity.Set(ctx, resourceidentity.ServiceScopedVersioned(plan.Service))...)
@@ -174,12 +175,13 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		"version":    version,
 	})
 
-	if err := Reconcile(ctx, r.providerData.Client, serviceID, version, []NestedModel{state.NestedModel}, []NestedModel{plan.NestedModel}); err != nil {
+	result, err := Reconcile(ctx, r.providerData.Client, serviceID, version, []NestedModel{state.NestedModel}, []NestedModel{plan.NestedModel})
+	if err != nil {
 		resp.Diagnostics.AddError("Error updating explicit Image Optimizer default settings", err.Error())
 		return
 	}
 
-	flattenModel(&plan, plan.NestedModel, serviceID, version)
+	flattenModel(&plan, result[0], serviceID, version)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	if !resp.Diagnostics.HasError() && resp.Identity != nil {
 		resp.Diagnostics.Append(resp.Identity.Set(ctx, resourceidentity.ServiceScopedVersioned(plan.Service))...)
@@ -218,7 +220,7 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 		return
 	}
 
-	if err := Reconcile(ctx, r.providerData.Client, serviceID, version, []NestedModel{state.NestedModel}, nil); err != nil {
+	if _, err := Reconcile(ctx, r.providerData.Client, serviceID, version, []NestedModel{state.NestedModel}, nil); err != nil {
 		if errors.IsNotFound(err) {
 			return
 		}

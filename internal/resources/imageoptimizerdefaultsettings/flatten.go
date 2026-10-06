@@ -2,6 +2,7 @@ package imageoptimizerdefaultsettings
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -71,12 +72,14 @@ func ReadForVersion(ctx context.Context, client *fastly.Client, serviceID string
 // Removing the block from configuration resets the settings back to their API defaults,
 // but only when previous shows the block was actually configured before - otherwise there
 // is nothing to reset, since the block was never under this resource's management.
-func Reconcile(ctx context.Context, client *fastly.Client, serviceID string, version int, previous, desired []NestedModel) error {
+// It returns the resulting remote settings (nil when desired is empty) so callers can skip a
+// separate read-back.
+func Reconcile(ctx context.Context, client *fastly.Client, serviceID string, version int, previous, desired []NestedModel) ([]NestedModel, error) {
 	if len(desired) == 0 {
 		if len(previous) == 0 {
-			return nil
+			return nil, nil
 		}
-		return resetToDefaults(ctx, client, serviceID, version)
+		return nil, resetToDefaults(ctx, client, serviceID, version)
 	}
 
 	remote, err := client.GetImageOptimizerDefaultSettings(ctx, &fastly.GetImageOptimizerDefaultSettingsInput{
@@ -84,30 +87,43 @@ func Reconcile(ctx context.Context, client *fastly.Client, serviceID string, ver
 		ServiceVersion: version,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if remote != nil && desired[0].ModelsEqual(FlattenToNestedModel(remote)) {
-		return nil
+	if remote != nil {
+		current := FlattenToNestedModel(remote)
+		if desired[0].ModelsEqual(current) {
+			return []NestedModel{current}, nil
+		}
 	}
 
-	return update(ctx, client, serviceID, version, desired[0])
+	result, err := update(ctx, client, serviceID, version, desired[0])
+	if err != nil {
+		return nil, err
+	}
+	return []NestedModel{result}, nil
 }
 
-func update(ctx context.Context, client *fastly.Client, serviceID string, version int, m NestedModel) error {
+func update(ctx context.Context, client *fastly.Client, serviceID string, version int, m NestedModel) (NestedModel, error) {
 	input, err := BuildUpdateInput(serviceID, version, m)
 	if err != nil {
-		return err
+		return NestedModel{}, err
 	}
 
-	_, err = client.UpdateImageOptimizerDefaultSettings(ctx, input)
-	return err
+	remote, err := client.UpdateImageOptimizerDefaultSettings(ctx, input)
+	if err != nil {
+		return NestedModel{}, err
+	}
+	if remote == nil {
+		return NestedModel{}, fmt.Errorf("no Image Optimizer default settings returned for service %q version %d", serviceID, version)
+	}
+	return FlattenToNestedModel(remote), nil
 }
 
 // resetToDefaults resets Image Optimizer default settings back to their API defaults. If the
 // service no longer has Image Optimizer enabled, the API rejects the update; that error is
 // swallowed since a service without Image Optimizer enabled already has no default settings.
 func resetToDefaults(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
-	err := update(ctx, client, serviceID, version, defaultNestedModel())
+	_, err := update(ctx, client, serviceID, version, defaultNestedModel())
 	if err == nil {
 		return nil
 	}
