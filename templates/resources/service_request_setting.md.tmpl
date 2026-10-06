@@ -1,0 +1,60 @@
+---
+page_title: "fastly_service_request_setting Resource - fastly"
+subcategory: ""
+description: |-
+  Fastly service request setting resource. Writes directly to the specified writable service version.
+---
+
+# fastly_service_request_setting (Resource)
+
+Fastly service request setting resource. Writes directly to the specified writable service version.
+
+This resource is part of the explicit/default first-class resource family. It
+manages a Request Setting object on the configured service version. It does not
+clone, activate, or stage service versions. Request Settings are supported on
+CDN services only.
+
+## Example Usage
+
+```terraform
+resource "fastly_service_condition" "api" {
+  service_id = fastly_service_cdn.example.id
+  version    = 1
+  name       = "api-requests"
+  type       = "REQUEST"
+  statement  = "req.url ~ \"^/api/\""
+}
+
+resource "fastly_service_request_setting" "api" {
+  service_id = fastly_service_cdn.example.id
+  version    = 1
+  name       = "api-request-settings"
+
+  action            = "pass"
+  request_condition = fastly_service_condition.api.name
+  force_ssl         = true
+  xff               = "append"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import a Request Setting using the service ID, version, and Request Setting name:
+
+```shell
+terraform import fastly_service_request_setting.api SERVICE_ID/VERSION/REQUEST_SETTING_NAME
+```
+
+Example:
+
+```shell
+terraform import fastly_service_request_setting.api SU1Z0isxPaozGVKXdv0eY/3/api-request-settings
+```
+
+## Version lifecycle
+
+This resource does not clone, activate, or stage service versions. Use explicit
+service-version lifecycle actions to clone, validate, stage, or activate a
+service version.

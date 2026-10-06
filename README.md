@@ -85,6 +85,7 @@ The rest are configured on those two resources as nested blocks:
 | `fastly_service_image_optimizer_default_settings` | `image_optimizer_default_settings` block | CDN |
 | `fastly_service_logging_*` | `logging_*` blocks | both |
 | `fastly_service_ratelimiter` | `rate_limiter` block | CDN |
+| `fastly_service_request_setting` | `request_setting` block | CDN |
 | `fastly_service_resource_link` | `resource_link` block | Compute |
 | `fastly_service_settings` | `settings` block | CDN |
 | `fastly_service_vcl_snippet` | `snippet` block | CDN |
