@@ -75,9 +75,12 @@ The rest are configured on those two resources as nested blocks:
 | `fastly_service_cdn_acl` | `acl` block | CDN |
 | `fastly_service_condition` | `condition` block | CDN |
 | `fastly_service_custom_vcl` | `custom_vcl` block | CDN |
+| `fastly_service_dictionary` | `dictionary` block | both |
+| `fastly_service_director` | `director` block | CDN |
 | `fastly_service_domain` | `domain` block \* | both |
 | `fastly_service_dynamic_vcl_snippet` | `dynamic_snippet` block | CDN |
 | `fastly_service_gzip` | `gzip` block | CDN |
+| `fastly_service_header` | `header` block | CDN |
 | `fastly_service_healthcheck` | `healthcheck` block | both |
 | `fastly_service_image_optimizer_default_settings` | `image_optimizer_default_settings` block | CDN |
 | `fastly_service_logging_*` | `logging_*` blocks | both |
