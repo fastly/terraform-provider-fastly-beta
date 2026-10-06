@@ -93,6 +93,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dynamicsnippetcontent"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dynamicvclsnippet"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/gzip"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/header"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/healthcheck"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/integration"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/kvstore"
@@ -259,6 +260,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		domainmanagement.NewResource,
 		domainservicelink.NewResource,
 		gzip.NewResource,
+		header.NewResource,
 		healthcheck.NewResource,
 		loggingbigquery.NewResource,
 		loggingblobstorage.NewResource,
@@ -421,6 +423,7 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		director.NewListResource,
 		domain.NewListResource,
 		gzip.NewListResource,
+		header.NewListResource,
 		healthcheck.NewListResource,
 		loggingbigquery.NewListResource,
 		loggingblobstorage.NewListResource,

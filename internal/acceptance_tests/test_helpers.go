@@ -2936,6 +2936,86 @@ func ConfigHealthCheckOnLockedVersion(serviceName, domainName, healthCheckName s
 	return configHealthCheckCDN(serviceName, domainName, healthCheckName, "internal/acceptance_tests/blocks/healthcheck_explicit_on_locked_version.tf")
 }
 
+// Configuration helpers for fastly_service_header resources (explicit version management)
+
+func configHeaderCDN(serviceName, domainName, headerName, block string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"HEADER_NAME":     headerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		block,
+	)
+}
+
+// ConfigHeaderBasic returns a header resource config with only the required fields set.
+func ConfigHeaderBasic(serviceName, domainName, headerName string) string {
+	return configHeaderCDN(serviceName, domainName, headerName, "internal/acceptance_tests/blocks/header_explicit.tf")
+}
+
+// ConfigHeaderUpdated returns a header resource config using the `set` action, with
+// ignore_if_set and every other `set`-applicable optional field set to a non-default value.
+func ConfigHeaderUpdated(serviceName, domainName, headerName string) string {
+	return configHeaderCDN(serviceName, domainName, headerName, "internal/acceptance_tests/blocks/header_explicit_updated.tf")
+}
+
+// ConfigHeaderRegex returns a header resource config using the `regex` action, exercising
+// regex/substitution - fields that don't apply to the `set` action ConfigHeaderUpdated covers.
+func ConfigHeaderRegex(serviceName, domainName, headerName string) string {
+	return configHeaderCDN(serviceName, domainName, headerName, "internal/acceptance_tests/blocks/header_explicit_regex.tf")
+}
+
+// ConfigHeaderForImport returns a test configuration for importing a header.
+func ConfigHeaderForImport(serviceName, domainName, headerName string) string {
+	return ConfigHeaderUpdated(serviceName, domainName, headerName)
+}
+
+// ConfigHeaderWithCacheCondition returns a header resource config that references a CACHE-type
+// condition via cache_condition.
+func ConfigHeaderWithCacheCondition(serviceName, domainName, headerName, conditionName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"HEADER_NAME":     headerName,
+			"CONDITION_NAME":  conditionName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/header_explicit_with_cache_condition.tf",
+	)
+}
+
+// ConfigHeaderOnComputeService returns a fastly_service_header resource attached to a Compute
+// service, to prove the VCL-only service-kind restriction is enforced.
+func ConfigHeaderOnComputeService(serviceName, headerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"SERVICE_VERSION": "1",
+			"HEADER_NAME":     headerName,
+		},
+		"internal/acceptance_tests/blocks/header_explicit_on_compute.tf",
+	)
+}
+
+// ConfigHeaderOnLockedVersion returns a config with the service/domain pinned to editable version
+// 1, plus a header resource targeting version 2 - the version the locked-version test activates
+// out-of-band before this config is applied - to prove writes to a locked version are rejected
+// without disturbing cleanup of the version-1 resources.
+func ConfigHeaderOnLockedVersion(serviceName, domainName, headerName string) string {
+	return configHeaderCDN(serviceName, domainName, headerName, "internal/acceptance_tests/blocks/header_explicit_on_locked_version.tf")
+}
+
 // Configuration helpers for gzip resources (explicit version management)
 
 // ConfigGzipBasic returns a basic gzip resource config with content_types and extensions set.
