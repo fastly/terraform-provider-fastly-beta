@@ -181,5 +181,52 @@ test-lifecycle:
 		exit 1; \
 	fi
 
-release-check: build lint test-baseline docs
-	@echo "==> Release check passed"
+release-check:
+	@echo "==> Running release check..."
+	@build_status=0; lint_status=0; baseline_status=0; docs_status=0; \
+	build_start=$$(date +%s); \
+	$(MAKE) --no-print-directory build || build_status=$$?; \
+	build_end=$$(date +%s); \
+	lint_start=$$(date +%s); \
+	$(MAKE) --no-print-directory lint || lint_status=$$?; \
+	lint_end=$$(date +%s); \
+	baseline_start=$$(date +%s); \
+	$(MAKE) --no-print-directory test-baseline || baseline_status=$$?; \
+	baseline_end=$$(date +%s); \
+	docs_start=$$(date +%s); \
+	$(MAKE) --no-print-directory docs || docs_status=$$?; \
+	docs_end=$$(date +%s); \
+	echo ""; \
+	echo "==================================================================="; \
+	echo "  Release Check Summary"; \
+	echo "==================================================================="; \
+	if [ $$build_status -eq 0 ]; then \
+		printf "  %-28s %-2s (%ss)\n" "Build" "✓" "$$((build_end - build_start))"; \
+	else \
+		printf "  %-28s %-2s (%ss, exit %s)\n" "Build" "✗" "$$((build_end - build_start))" "$$build_status"; \
+	fi; \
+	if [ $$lint_status -eq 0 ]; then \
+		printf "  %-28s %-2s (%ss)\n" "Lint" "✓" "$$((lint_end - lint_start))"; \
+	else \
+		printf "  %-28s %-2s (%ss, exit %s)\n" "Lint" "✗" "$$((lint_end - lint_start))" "$$lint_status"; \
+	fi; \
+	if [ $$baseline_status -eq 0 ]; then \
+		printf "  %-28s %-2s (%ss)\n" "Baseline tests" "✓" "$$((baseline_end - baseline_start))"; \
+	else \
+		printf "  %-28s %-2s (%ss, exit %s)\n" "Baseline tests" "✗" "$$((baseline_end - baseline_start))" "$$baseline_status"; \
+	fi; \
+	if [ $$docs_status -eq 0 ]; then \
+		printf "  %-28s %-2s (%ss)\n" "Docs" "✓" "$$((docs_end - docs_start))"; \
+	else \
+		printf "  %-28s %-2s (%ss, exit %s)\n" "Docs" "✗" "$$((docs_end - docs_start))" "$$docs_status"; \
+	fi; \
+	echo "==================================================================="; \
+	if [ $$build_status -eq 0 ] && [ $$lint_status -eq 0 ] && [ $$baseline_status -eq 0 ] && [ $$docs_status -eq 0 ]; then \
+		echo "  Result: RELEASE CHECK PASSED"; \
+		echo "==================================================================="; \
+		exit 0; \
+	else \
+		echo "  Result: RELEASE CHECK FAILED"; \
+		echo "==================================================================="; \
+		exit 1; \
+	fi
