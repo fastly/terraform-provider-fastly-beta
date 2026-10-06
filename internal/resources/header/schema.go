@@ -160,9 +160,10 @@ func ResourceAttributes() map[string]schema.Attribute {
 	// in-place update. Set here, not in CommonAttributes, so the nested block's
 	// list-keyed name is unaffected.
 	nameAttr := attrs["name"].(schema.StringAttribute)
-	nameAttr.PlanModifiers = []planmodifier.String{
+	nameAttr.PlanModifiers = append(
+		nameAttr.PlanModifiers,
 		stringplanmodifier.RequiresReplace(),
-	}
+	)
 	attrs["name"] = nameAttr
 	return attrs
 }

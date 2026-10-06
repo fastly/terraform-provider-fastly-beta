@@ -2958,10 +2958,16 @@ func ConfigHeaderBasic(serviceName, domainName, headerName string) string {
 	return configHeaderCDN(serviceName, domainName, headerName, "internal/acceptance_tests/blocks/header_explicit.tf")
 }
 
-// ConfigHeaderUpdated returns a header resource config with every optional field set to a
-// non-default value.
+// ConfigHeaderUpdated returns a header resource config using the `set` action, with
+// ignore_if_set and every other `set`-applicable optional field set to a non-default value.
 func ConfigHeaderUpdated(serviceName, domainName, headerName string) string {
 	return configHeaderCDN(serviceName, domainName, headerName, "internal/acceptance_tests/blocks/header_explicit_updated.tf")
+}
+
+// ConfigHeaderRegex returns a header resource config using the `regex` action, exercising
+// regex/substitution - fields that don't apply to the `set` action ConfigHeaderUpdated covers.
+func ConfigHeaderRegex(serviceName, domainName, headerName string) string {
+	return configHeaderCDN(serviceName, domainName, headerName, "internal/acceptance_tests/blocks/header_explicit_regex.tf")
 }
 
 // ConfigHeaderForImport returns a test configuration for importing a header.

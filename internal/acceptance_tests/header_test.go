@@ -253,19 +253,47 @@ func TestAccFastlyServiceHeader_update(t *testing.T) {
 				},
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("fastly_service_header.test", "name", headerName),
-					resource.TestCheckResourceAttr("fastly_service_header.test", "action", "regex"),
+					resource.TestCheckResourceAttr("fastly_service_header.test", "action", "set"),
 					resource.TestCheckResourceAttr("fastly_service_header.test", "type", "request"),
 					resource.TestCheckResourceAttr("fastly_service_header.test", "destination", "http.X-Custom"),
 					resource.TestCheckResourceAttr("fastly_service_header.test", "ignore_if_set", "true"),
 					resource.TestCheckResourceAttr("fastly_service_header.test", "priority", "10"),
-					resource.TestCheckResourceAttr("fastly_service_header.test", "regex", "^foo"),
 					resource.TestCheckResourceAttr("fastly_service_header.test", "source", "http.server-name"),
-					resource.TestCheckResourceAttr("fastly_service_header.test", "substitution", "bar"),
 				),
 			},
 			{
 				Config:   ConfigHeaderUpdated(serviceName, domainName, headerName),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceHeader_regexAction covers the regex/substitution fields, which only apply
+// to the regex and regex_repeat actions - distinct from ignore_if_set, which only applies to set
+// (see TestAccFastlyServiceHeader_update).
+func TestAccFastlyServiceHeader_regexAction(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	headerName := fmt.Sprintf("header-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigHeaderRegex(serviceName, domainName, headerName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("fastly_service_header.test", "name", headerName),
+					resource.TestCheckResourceAttr("fastly_service_header.test", "action", "regex"),
+					resource.TestCheckResourceAttr("fastly_service_header.test", "type", "request"),
+					resource.TestCheckResourceAttr("fastly_service_header.test", "destination", "http.X-Custom"),
+					resource.TestCheckResourceAttr("fastly_service_header.test", "priority", "10"),
+					resource.TestCheckResourceAttr("fastly_service_header.test", "regex", "^foo"),
+					resource.TestCheckResourceAttr("fastly_service_header.test", "substitution", "bar"),
+				),
 			},
 		},
 	})
