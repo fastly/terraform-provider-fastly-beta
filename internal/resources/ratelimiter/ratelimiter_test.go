@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 
@@ -142,27 +144,6 @@ func TestOpsEqual(t *testing.T) {
 	assert.True(t, ops{}.Equal(fullNestedModel(), remote))
 }
 
-func TestOpsEqual_caseInsensitiveAction(t *testing.T) {
-	action := fastly.ERLActionLogOnly
-	windowSize := fastly.ERLSize60
-	remote := &fastly.ERL{
-		Name:               new("rate-limiter"),
-		Action:             &action,
-		ClientKey:          []*string{new("req.http.Fastly-Client-IP")},
-		FeatureRevision:    new(1),
-		HTTPMethods:        []*string{new("GET")},
-		PenaltyBoxDuration: new(10),
-		RateLimiterID:      new("abc123"),
-		RpsLimit:           new(100),
-		WindowSize:         &windowSize,
-	}
-
-	desired := minimalNestedModel()
-	desired.Action = types.StringValue("LOG_ONLY")
-
-	assert.True(t, ops{}.Equal(desired, remote))
-}
-
 func TestOpsEqual_mismatch(t *testing.T) {
 	action := fastly.ERLActionLogOnly
 	windowSize := fastly.ERLSize60
@@ -191,7 +172,6 @@ func TestActionPointer(t *testing.T) {
 		{name: "unknown", value: types.StringUnknown(), expected: nil},
 		{name: "empty", value: types.StringValue(""), expected: nil},
 		{name: "log_only", value: types.StringValue("log_only"), expected: new(fastly.ERLActionLogOnly)},
-		{name: "uppercase", value: types.StringValue("RESPONSE"), expected: new(fastly.ERLActionResponse)},
 	}
 
 	for _, tt := range tests {
@@ -215,7 +195,6 @@ func TestLoggerTypePointer(t *testing.T) {
 		{name: "null", value: types.StringNull(), expected: nil},
 		{name: "empty", value: types.StringValue(""), expected: nil},
 		{name: "s3", value: types.StringValue("s3"), expected: new(fastly.ERLLogS3)},
-		{name: "uppercase", value: types.StringValue("BIGQUERY"), expected: new(fastly.ERLLogBigQuery)},
 	}
 
 	for _, tt := range tests {
@@ -449,7 +428,7 @@ func TestValidateConfig(t *testing.T) {
 
 	t.Run("response action missing response block", func(t *testing.T) {
 		item := minimalNestedModel()
-		item.Action = types.StringValue("RESPONSE")
+		item.Action = types.StringValue("response")
 		item.Response = types.ObjectNull(responseAttributeTypes)
 
 		err := ValidateConfig([]NestedModel{item})
@@ -573,4 +552,38 @@ func TestMatchOrder(t *testing.T) {
 	result := MatchOrder([]NestedModel{b, a}, []NestedModel{a, b})
 
 	assert.Equal(t, []NestedModel{a, b}, result)
+}
+
+func validateEnum(t *testing.T, attribute, value string) bool {
+	t.Helper()
+	attr, ok := CommonAttributes()[attribute].(schema.StringAttribute)
+	if !assert.True(t, ok) {
+		return false
+	}
+	req := validator.StringRequest{ConfigValue: types.StringValue(value)}
+	resp := &validator.StringResponse{}
+	for _, v := range attr.Validators {
+		v.ValidateString(context.Background(), req, resp)
+	}
+	return !resp.Diagnostics.HasError()
+}
+
+// The API only accepts lowercase enum values, so mixed case must be rejected at plan time.
+func TestEnumValidators(t *testing.T) {
+	cases := []struct {
+		attribute string
+		value     string
+		valid     bool
+	}{
+		{"action", "log_only", true},
+		{"action", "response_object", true},
+		{"action", "LOG_ONLY", false},
+		{"action", "Response", false},
+		{"logger_type", "bigquery", true},
+		{"logger_type", "BIGQUERY", false},
+	}
+
+	for _, c := range cases {
+		assert.Equal(t, c.valid, validateEnum(t, c.attribute, c.value), "%s = %q", c.attribute, c.value)
+	}
 }

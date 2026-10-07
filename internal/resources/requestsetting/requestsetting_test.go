@@ -1,8 +1,11 @@
 package requestsetting
 
 import (
+	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 
@@ -145,7 +148,6 @@ func TestActionPointer(t *testing.T) {
 		{name: "unknown", value: types.StringUnknown(), expected: nil},
 		{name: "empty", value: types.StringValue(""), expected: nil},
 		{name: "lookup", value: types.StringValue("lookup"), expected: new(fastly.RequestSettingActionLookup)},
-		{name: "uppercase", value: types.StringValue("PASS"), expected: new(fastly.RequestSettingActionPass)},
 	}
 
 	for _, tt := range tests {
@@ -170,7 +172,6 @@ func TestXFFPointer(t *testing.T) {
 		{name: "unknown", value: types.StringUnknown(), expected: nil},
 		{name: "empty", value: types.StringValue(""), expected: nil},
 		{name: "append", value: types.StringValue("append"), expected: new(fastly.RequestSettingXFFAppend)},
-		{name: "uppercase", value: types.StringValue("CLEAR"), expected: new(fastly.RequestSettingXFFClear)},
 	}
 
 	for _, tt := range tests {
@@ -270,4 +271,38 @@ func TestValidateConditionReferences(t *testing.T) {
 
 		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, nil))
 	})
+}
+
+func validateEnum(t *testing.T, attribute, value string) bool {
+	t.Helper()
+	attr, ok := CommonAttributes()[attribute].(schema.StringAttribute)
+	if !assert.True(t, ok) {
+		return false
+	}
+	req := validator.StringRequest{ConfigValue: types.StringValue(value)}
+	resp := &validator.StringResponse{}
+	for _, v := range attr.Validators {
+		v.ValidateString(context.Background(), req, resp)
+	}
+	return !resp.Diagnostics.HasError()
+}
+
+// The API only accepts lowercase enum values, so mixed case must be rejected at plan time.
+func TestEnumValidators(t *testing.T) {
+	cases := []struct {
+		attribute string
+		value     string
+		valid     bool
+	}{
+		{"action", "lookup", true},
+		{"action", "pass", true},
+		{"action", "PASS", false},
+		{"action", "Lookup", false},
+		{"xff", "append_all", true},
+		{"xff", "CLEAR", false},
+	}
+
+	for _, c := range cases {
+		assert.Equal(t, c.valid, validateEnum(t, c.attribute, c.value), "%s = %q", c.attribute, c.value)
+	}
 }

@@ -116,7 +116,7 @@ func TestBuildUpdateInput(t *testing.T) {
 func TestBuildUpdateInput_clearsUnsetAction(t *testing.T) {
 	input := BuildUpdateInput("service-123", 5, minimalNestedModel())
 
-	// Update always sends Action, lowered to empty when unset, so a previously configured
+	// Update always sends Action, as an empty string when unset, so a previously configured
 	// action can be cleared back to unset - unlike Create, which omits it entirely.
 	if assert.NotNil(t, input.Action) {
 		assert.Equal(t, fastly.CacheSettingAction(""), *input.Action)

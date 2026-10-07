@@ -971,7 +971,13 @@ func TestAccFastlyServiceCDNAuto_requestSettingInvalidAction(t *testing.T) {
 		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config:      ConfigCDNAutoWithRequestSettingInvalidAction(serviceName, domainName, requestSettingName),
+				Config:      ConfigCDNAutoWithRequestSettingInvalidAction(serviceName, domainName, requestSettingName, "invalid"),
+				ExpectError: regexp.MustCompile(`Attribute request_setting\[0\]\.action value must be one of`),
+			},
+			// The API only accepts lowercase, so a mixed-case value is rejected at plan time
+			// rather than failing the apply with an inconsistent result.
+			{
+				Config:      ConfigCDNAutoWithRequestSettingInvalidAction(serviceName, domainName, requestSettingName, "PASS"),
 				ExpectError: regexp.MustCompile(`Attribute request_setting\[0\]\.action value must be one of`),
 			},
 		},
