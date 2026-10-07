@@ -1,6 +1,8 @@
 package imageoptimizerdefaultsettings
 
 import (
+	"maps"
+
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -9,7 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -118,6 +122,30 @@ func CommonAttributes() map[string]schema.Attribute {
 			},
 		},
 	}
+}
+
+// ResourceAttributes returns the schema for the standalone
+// fastly_service_image_optimizer_default_settings resource.
+func ResourceAttributes() map[string]schema.Attribute {
+	attrs := map[string]schema.Attribute{
+		"id": schema.StringAttribute{
+			Computed:    true,
+			Description: "Terraform resource identifier.",
+		},
+		"service_id": schema.StringAttribute{
+			Required:    true,
+			Description: "Fastly service ID.",
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.RequiresReplace(),
+			},
+		},
+		"version": schema.Int64Attribute{
+			Required:    true,
+			Description: "Writable Fastly service version to modify.",
+		},
+	}
+	maps.Copy(attrs, CommonAttributes())
+	return attrs
 }
 
 // NestedBlockSchema returns the image_optimizer_default_settings block for use inside

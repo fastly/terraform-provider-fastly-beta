@@ -243,51 +243,58 @@ func CheckImageOptimizerDefaultSettingsMatchAPIDefaults(resourceName string) res
 			return fmt.Errorf("error parsing active_version: %w", err)
 		}
 
-		client, err := NewFastlyClient()
-		if err != nil {
-			return fmt.Errorf("error creating Fastly client: %w", err)
-		}
-
-		settings, err := client.GetImageOptimizerDefaultSettings(context.Background(), &fastly.GetImageOptimizerDefaultSettingsInput{
-			ServiceID:      rs.Primary.ID,
-			ServiceVersion: version,
-		})
-		if err != nil {
-			return fmt.Errorf("error fetching Image Optimizer default settings: %w", err)
-		}
-		if settings == nil {
-			return fmt.Errorf("expected Image Optimizer default settings to be populated since Image Optimizer remains enabled, got nil")
-		}
-
-		var mismatches []string
-		if settings.ResizeFilter != imageoptimizerdefaultsettings.DefaultResizeFilter {
-			mismatches = append(mismatches, fmt.Sprintf("resize_filter=%q, want %q", settings.ResizeFilter, imageoptimizerdefaultsettings.DefaultResizeFilter))
-		}
-		if settings.Webp != imageoptimizerdefaultsettings.DefaultWebp {
-			mismatches = append(mismatches, fmt.Sprintf("webp=%v, want %v", settings.Webp, imageoptimizerdefaultsettings.DefaultWebp))
-		}
-		if settings.WebpQuality != imageoptimizerdefaultsettings.DefaultWebpQuality {
-			mismatches = append(mismatches, fmt.Sprintf("webp_quality=%d, want %d", settings.WebpQuality, imageoptimizerdefaultsettings.DefaultWebpQuality))
-		}
-		if settings.JpegType != imageoptimizerdefaultsettings.DefaultJpegType {
-			mismatches = append(mismatches, fmt.Sprintf("jpeg_type=%q, want %q", settings.JpegType, imageoptimizerdefaultsettings.DefaultJpegType))
-		}
-		if settings.JpegQuality != imageoptimizerdefaultsettings.DefaultJpegQuality {
-			mismatches = append(mismatches, fmt.Sprintf("jpeg_quality=%d, want %d", settings.JpegQuality, imageoptimizerdefaultsettings.DefaultJpegQuality))
-		}
-		if settings.Upscale != imageoptimizerdefaultsettings.DefaultUpscale {
-			mismatches = append(mismatches, fmt.Sprintf("upscale=%v, want %v", settings.Upscale, imageoptimizerdefaultsettings.DefaultUpscale))
-		}
-		if settings.AllowVideo != imageoptimizerdefaultsettings.DefaultAllowVideo {
-			mismatches = append(mismatches, fmt.Sprintf("allow_video=%v, want %v", settings.AllowVideo, imageoptimizerdefaultsettings.DefaultAllowVideo))
-		}
-
-		if len(mismatches) > 0 {
-			return fmt.Errorf("image optimizer default settings were not reset to API defaults in Fastly: %s", strings.Join(mismatches, ", "))
-		}
-
-		return nil
+		return ImageOptimizerDefaultSettingsMatchAPIDefaults(rs.Primary.ID, version)
 	}
+}
+
+// ImageOptimizerDefaultSettingsMatchAPIDefaults fetches Image Optimizer default settings for a
+// service version directly from the Fastly API and returns an error if any field differs from
+// its API default.
+func ImageOptimizerDefaultSettingsMatchAPIDefaults(serviceID string, version int) error {
+	client, err := NewFastlyClient()
+	if err != nil {
+		return fmt.Errorf("error creating Fastly client: %w", err)
+	}
+
+	settings, err := client.GetImageOptimizerDefaultSettings(context.Background(), &fastly.GetImageOptimizerDefaultSettingsInput{
+		ServiceID:      serviceID,
+		ServiceVersion: version,
+	})
+	if err != nil {
+		return fmt.Errorf("error fetching Image Optimizer default settings: %w", err)
+	}
+	if settings == nil {
+		return fmt.Errorf("expected Image Optimizer default settings to be populated since Image Optimizer remains enabled, got nil")
+	}
+
+	var mismatches []string
+	if settings.ResizeFilter != imageoptimizerdefaultsettings.DefaultResizeFilter {
+		mismatches = append(mismatches, fmt.Sprintf("resize_filter=%q, want %q", settings.ResizeFilter, imageoptimizerdefaultsettings.DefaultResizeFilter))
+	}
+	if settings.Webp != imageoptimizerdefaultsettings.DefaultWebp {
+		mismatches = append(mismatches, fmt.Sprintf("webp=%v, want %v", settings.Webp, imageoptimizerdefaultsettings.DefaultWebp))
+	}
+	if settings.WebpQuality != imageoptimizerdefaultsettings.DefaultWebpQuality {
+		mismatches = append(mismatches, fmt.Sprintf("webp_quality=%d, want %d", settings.WebpQuality, imageoptimizerdefaultsettings.DefaultWebpQuality))
+	}
+	if settings.JpegType != imageoptimizerdefaultsettings.DefaultJpegType {
+		mismatches = append(mismatches, fmt.Sprintf("jpeg_type=%q, want %q", settings.JpegType, imageoptimizerdefaultsettings.DefaultJpegType))
+	}
+	if settings.JpegQuality != imageoptimizerdefaultsettings.DefaultJpegQuality {
+		mismatches = append(mismatches, fmt.Sprintf("jpeg_quality=%d, want %d", settings.JpegQuality, imageoptimizerdefaultsettings.DefaultJpegQuality))
+	}
+	if settings.Upscale != imageoptimizerdefaultsettings.DefaultUpscale {
+		mismatches = append(mismatches, fmt.Sprintf("upscale=%v, want %v", settings.Upscale, imageoptimizerdefaultsettings.DefaultUpscale))
+	}
+	if settings.AllowVideo != imageoptimizerdefaultsettings.DefaultAllowVideo {
+		mismatches = append(mismatches, fmt.Sprintf("allow_video=%v, want %v", settings.AllowVideo, imageoptimizerdefaultsettings.DefaultAllowVideo))
+	}
+
+	if len(mismatches) > 0 {
+		return fmt.Errorf("image optimizer default settings were not reset to API defaults in Fastly: %s", strings.Join(mismatches, ", "))
+	}
+
+	return nil
 }
 
 // CheckSettingsMatchAPIDefaults returns a TestCheckFunc that fetches the general settings (and
@@ -2863,6 +2870,230 @@ func ConfigCacheSettingOnLockedVersion(serviceName, domainName, cacheSettingName
 	)
 }
 
+// Configuration helpers for fastly_service_healthcheck resources (explicit version management)
+
+func configHealthCheckCDN(serviceName, domainName, healthCheckName, block string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"HEALTHCHECK_NAME": healthCheckName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		block,
+	)
+}
+
+// ConfigHealthCheckBasic returns a health check resource config with only the required fields set.
+func ConfigHealthCheckBasic(serviceName, domainName, healthCheckName string) string {
+	return configHealthCheckCDN(serviceName, domainName, healthCheckName, "internal/acceptance_tests/blocks/healthcheck_explicit.tf")
+}
+
+// ConfigHealthCheckUpdated returns a health check resource config with every optional field set
+// to a non-default value, including headers.
+func ConfigHealthCheckUpdated(serviceName, domainName, healthCheckName string) string {
+	return configHealthCheckCDN(serviceName, domainName, healthCheckName, "internal/acceptance_tests/blocks/healthcheck_explicit_updated.tf")
+}
+
+// ConfigHealthCheckForImport returns a test configuration for importing a health check.
+func ConfigHealthCheckForImport(serviceName, domainName, healthCheckName string) string {
+	return ConfigHealthCheckUpdated(serviceName, domainName, healthCheckName)
+}
+
+// ConfigHealthCheckWithBackend returns a health check plus an explicit backend that references
+// it by name.
+func ConfigHealthCheckWithBackend(serviceName, domainName, healthCheckName, backendName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"HEALTHCHECK_NAME": healthCheckName,
+			"BACKEND_NAME":     backendName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/healthcheck_explicit_with_backend.tf",
+	)
+}
+
+// ConfigHealthCheckOnComputeService returns a fastly_service_healthcheck resource attached to a
+// Compute service, which (unlike the VCL-only resources) is supported.
+func ConfigHealthCheckOnComputeService(serviceName, healthCheckName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"SERVICE_VERSION":  "1",
+			"HEALTHCHECK_NAME": healthCheckName,
+		},
+		"internal/acceptance_tests/blocks/healthcheck_explicit_on_compute.tf",
+	)
+}
+
+// ConfigHealthCheckOnLockedVersion returns a config with the service/domain pinned to editable
+// version 1, plus a health check targeting version 2 - the version the locked-version test
+// activates out-of-band before this config is applied.
+func ConfigHealthCheckOnLockedVersion(serviceName, domainName, healthCheckName string) string {
+	return configHealthCheckCDN(serviceName, domainName, healthCheckName, "internal/acceptance_tests/blocks/healthcheck_explicit_on_locked_version.tf")
+}
+
+// Configuration helpers for fastly_service_header resources (explicit version management)
+
+func configHeaderCDN(serviceName, domainName, headerName, block string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"HEADER_NAME":     headerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		block,
+	)
+}
+
+// ConfigHeaderBasic returns a header resource config with only the required fields set.
+func ConfigHeaderBasic(serviceName, domainName, headerName string) string {
+	return configHeaderCDN(serviceName, domainName, headerName, "internal/acceptance_tests/blocks/header_explicit.tf")
+}
+
+// ConfigHeaderUpdated returns a header resource config using the `set` action, with
+// ignore_if_set and every other `set`-applicable optional field set to a non-default value.
+func ConfigHeaderUpdated(serviceName, domainName, headerName string) string {
+	return configHeaderCDN(serviceName, domainName, headerName, "internal/acceptance_tests/blocks/header_explicit_updated.tf")
+}
+
+// ConfigHeaderRegex returns a header resource config using the `regex` action, exercising
+// regex/substitution - fields that don't apply to the `set` action ConfigHeaderUpdated covers.
+func ConfigHeaderRegex(serviceName, domainName, headerName string) string {
+	return configHeaderCDN(serviceName, domainName, headerName, "internal/acceptance_tests/blocks/header_explicit_regex.tf")
+}
+
+// ConfigHeaderForImport returns a test configuration for importing a header.
+func ConfigHeaderForImport(serviceName, domainName, headerName string) string {
+	return ConfigHeaderUpdated(serviceName, domainName, headerName)
+}
+
+// ConfigHeaderWithCacheCondition returns a header resource config that references a CACHE-type
+// condition via cache_condition.
+func ConfigHeaderWithCacheCondition(serviceName, domainName, headerName, conditionName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"HEADER_NAME":     headerName,
+			"CONDITION_NAME":  conditionName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/header_explicit_with_cache_condition.tf",
+	)
+}
+
+// ConfigHeaderOnComputeService returns a fastly_service_header resource attached to a Compute
+// service, to prove the VCL-only service-kind restriction is enforced.
+func ConfigHeaderOnComputeService(serviceName, headerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"SERVICE_VERSION": "1",
+			"HEADER_NAME":     headerName,
+		},
+		"internal/acceptance_tests/blocks/header_explicit_on_compute.tf",
+	)
+}
+
+// ConfigHeaderOnLockedVersion returns a config with the service/domain pinned to editable version
+// 1, plus a header resource targeting version 2 - the version the locked-version test activates
+// out-of-band before this config is applied - to prove writes to a locked version are rejected
+// without disturbing cleanup of the version-1 resources.
+func ConfigHeaderOnLockedVersion(serviceName, domainName, headerName string) string {
+	return configHeaderCDN(serviceName, domainName, headerName, "internal/acceptance_tests/blocks/header_explicit_on_locked_version.tf")
+}
+
+// Configuration helpers for fastly_service_image_optimizer_default_settings resources (explicit
+// version management)
+
+func configImageOptimizerDefaultSettingsCDN(serviceName, domainName string, blocks ...string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+		},
+		append([]string{"internal/acceptance_tests/blocks/service_cdn_domain.tf"}, blocks...)...,
+	) + imageOptimizerProductEnablement("fastly_service_cdn.test")
+}
+
+// ConfigImageOptimizerDefaultSettingsEnabledOnly returns a CDN service config with Image Optimizer
+// enabled but no fastly_service_image_optimizer_default_settings resource.
+func ConfigImageOptimizerDefaultSettingsEnabledOnly(serviceName, domainName string) string {
+	return configImageOptimizerDefaultSettingsCDN(serviceName, domainName)
+}
+
+// ConfigImageOptimizerDefaultSettingsBasic returns an Image Optimizer default settings resource
+// config with every attribute set to a non-default value.
+func ConfigImageOptimizerDefaultSettingsBasic(serviceName, domainName string) string {
+	return configImageOptimizerDefaultSettingsCDN(serviceName, domainName, "internal/acceptance_tests/blocks/image_optimizer_default_settings_explicit.tf")
+}
+
+// ConfigImageOptimizerDefaultSettingsUpdated returns the same config with every attribute changed
+// to a different value, to prove in-place update.
+func ConfigImageOptimizerDefaultSettingsUpdated(serviceName, domainName string) string {
+	return configImageOptimizerDefaultSettingsCDN(serviceName, domainName, "internal/acceptance_tests/blocks/image_optimizer_default_settings_explicit_updated.tf")
+}
+
+// ConfigImageOptimizerDefaultSettingsMinimal returns an Image Optimizer default settings resource
+// config with every optional attribute omitted, to prove they populate from documented defaults.
+func ConfigImageOptimizerDefaultSettingsMinimal(serviceName, domainName string) string {
+	return configImageOptimizerDefaultSettingsCDN(serviceName, domainName, "internal/acceptance_tests/blocks/image_optimizer_default_settings_explicit_minimal.tf")
+}
+
+// ConfigImageOptimizerDefaultSettingsOnComputeService returns an Image Optimizer default settings
+// resource attached to a Compute service, to prove the CDN-only restriction is enforced.
+func ConfigImageOptimizerDefaultSettingsOnComputeService(serviceName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"SERVICE_VERSION": "1",
+		},
+		"internal/acceptance_tests/blocks/image_optimizer_default_settings_explicit_on_compute.tf",
+	)
+}
+
+// ConfigImageOptimizerDefaultSettingsOnLockedVersion returns a config with the service/domain
+// pinned to editable version 1, plus Image Optimizer default settings targeting version 2 - the
+// version the locked-version test activates out-of-band before this config is applied.
+func ConfigImageOptimizerDefaultSettingsOnLockedVersion(serviceName, domainName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/image_optimizer_default_settings_explicit_on_locked_version.tf",
+	)
+}
+
 // Configuration helpers for gzip resources (explicit version management)
 
 // ConfigGzipBasic returns a basic gzip resource config with content_types and extensions set.
@@ -2969,6 +3200,83 @@ func ConfigGzipOnLockedVersion(serviceName, domainName, gzipName string) string 
 		},
 		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
 		"internal/acceptance_tests/blocks/gzip_explicit_on_locked_version.tf",
+	)
+}
+
+// Configuration helpers for director resources (explicit version management)
+
+// ConfigDirectorBasic returns a basic director resource config, with a backend to map it to.
+func ConfigDirectorBasic(serviceName, domainName, backendName, directorName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"BACKEND_NAME":    backendName,
+			"DIRECTOR_NAME":   directorName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/director_explicit.tf",
+	)
+}
+
+// ConfigDirectorUpdated returns a director resource config with comment/quorum/retries/shield/type
+// changed from ConfigDirectorBasic's defaults.
+func ConfigDirectorUpdated(serviceName, domainName, backendName, directorName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"BACKEND_NAME":    backendName,
+			"DIRECTOR_NAME":   directorName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/director_explicit_updated.tf",
+	)
+}
+
+// ConfigDirectorForImport returns a test configuration for importing a director.
+func ConfigDirectorForImport(serviceName, domainName, backendName, directorName string) string {
+	return ConfigDirectorBasic(serviceName, domainName, backendName, directorName)
+}
+
+// ConfigDirectorOnComputeService returns a fastly_service_director resource attached to a
+// Compute service, to prove the VCL-only service-kind restriction is enforced.
+func ConfigDirectorOnComputeService(serviceName, directorName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"SERVICE_VERSION": "1",
+			"DIRECTOR_NAME":   directorName,
+		},
+		"internal/acceptance_tests/blocks/director_explicit_on_compute.tf",
+	)
+}
+
+// ConfigDirectorOnLockedVersion returns a config with the service/domain/backend pinned to
+// editable version 1, plus a director resource targeting version 2 - the version the
+// locked-version test activates out-of-band before this config is applied - to prove writes to a
+// locked version are rejected without disturbing cleanup of the version-1 resources.
+func ConfigDirectorOnLockedVersion(serviceName, domainName, backendName, directorName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":    serviceName,
+			"SERVICE_COMMENT": "",
+			"DOMAIN_NAME":     domainName,
+			"SERVICE_VERSION": "1",
+			"BACKEND_NAME":    backendName,
+			"DIRECTOR_NAME":   directorName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/director_explicit_on_locked_version.tf",
 	)
 }
 

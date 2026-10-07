@@ -85,6 +85,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customdashboard"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customvcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dictionary"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/director"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dnszone"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domain"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domainmanagement"
@@ -92,6 +93,9 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dynamicsnippetcontent"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dynamicvclsnippet"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/gzip"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/header"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/healthcheck"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/imageoptimizerdefaultsettings"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/integration"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/kvstore"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingbigquery"
@@ -251,11 +255,15 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		configstoreitems.NewResource,
 		customdashboard.NewResource,
 		dictionary.NewResource,
+		director.NewResource,
 		dnszone.NewResource,
 		domain.NewResource,
 		domainmanagement.NewResource,
 		domainservicelink.NewResource,
 		gzip.NewResource,
+		header.NewResource,
+		healthcheck.NewResource,
+		imageoptimizerdefaultsettings.NewResource,
 		loggingbigquery.NewResource,
 		loggingblobstorage.NewResource,
 		loggingcloudfiles.NewResource,
@@ -414,8 +422,12 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		cdnaclentries.NewListResource,
 		condition.NewListResource,
 		dictionary.NewListResource,
+		director.NewListResource,
 		domain.NewListResource,
 		gzip.NewListResource,
+		header.NewListResource,
+		healthcheck.NewListResource,
+		imageoptimizerdefaultsettings.NewListResource,
 		loggingbigquery.NewListResource,
 		loggingblobstorage.NewListResource,
 		loggingcloudfiles.NewListResource,

@@ -150,7 +150,7 @@ Required:
 
 Optional:
 
-- `check_interval` (Number) How often to run the health check in milliseconds. Default `5000`.
+- `check_interval` (Number) How often to run the health check in milliseconds. Must be between `1000` and `3600000`. Default `5000`.
 - `expected_response` (Number) The status code expected from the host. Default `200`.
 - `headers` (Set of String) Custom health check HTTP headers (e.g. if your health check requires an API key to be provided).
 - `http_version` (String) Whether to use version `1.0` or `1.1` HTTP. Default `1.1`.

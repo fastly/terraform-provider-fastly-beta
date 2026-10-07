@@ -637,15 +637,16 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 		},
 		{
 			label: "Image Optimizer default settings",
+			// imageoptimizerdefaultsettings.Reconcile already returns the reconciled result
 			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
-				return imageoptimizerdefaultsettings.Reconcile(ctx, client, serviceID, version, previous.ImageOptimizerDefaultSettings, plan.ImageOptimizerDefaultSettings)
-			},
-			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
-				result, err := imageoptimizerdefaultsettings.ReadForVersion(ctx, client, serviceID, version, plan.ImageOptimizerDefaultSettings, false)
+				result, err := imageoptimizerdefaultsettings.Reconcile(ctx, client, serviceID, version, previous.ImageOptimizerDefaultSettings, plan.ImageOptimizerDefaultSettings)
 				if err != nil {
 					return err
 				}
 				plan.ImageOptimizerDefaultSettings = result
+				return nil
+			},
+			readBack: func(_ context.Context, _ *fastly.Client, _ string, _ int) error {
 				return nil
 			},
 		},
