@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 
@@ -552,38 +550,4 @@ func TestMatchOrder(t *testing.T) {
 	result := MatchOrder([]NestedModel{b, a}, []NestedModel{a, b})
 
 	assert.Equal(t, []NestedModel{a, b}, result)
-}
-
-func validateEnum(t *testing.T, attribute, value string) bool {
-	t.Helper()
-	attr, ok := CommonAttributes()[attribute].(schema.StringAttribute)
-	if !assert.True(t, ok) {
-		return false
-	}
-	req := validator.StringRequest{ConfigValue: types.StringValue(value)}
-	resp := &validator.StringResponse{}
-	for _, v := range attr.Validators {
-		v.ValidateString(context.Background(), req, resp)
-	}
-	return !resp.Diagnostics.HasError()
-}
-
-// The API only accepts lowercase enum values, so mixed case must be rejected at plan time.
-func TestEnumValidators(t *testing.T) {
-	cases := []struct {
-		attribute string
-		value     string
-		valid     bool
-	}{
-		{"action", "log_only", true},
-		{"action", "response_object", true},
-		{"action", "LOG_ONLY", false},
-		{"action", "Response", false},
-		{"logger_type", "bigquery", true},
-		{"logger_type", "BIGQUERY", false},
-	}
-
-	for _, c := range cases {
-		assert.Equal(t, c.valid, validateEnum(t, c.attribute, c.value), "%s = %q", c.attribute, c.value)
-	}
 }

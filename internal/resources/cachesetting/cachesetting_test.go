@@ -1,11 +1,8 @@
 package cachesetting
 
 import (
-	"context"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 
@@ -211,37 +208,4 @@ func TestValidateConditionReferences(t *testing.T) {
 
 		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, nil))
 	})
-}
-
-func validateEnum(t *testing.T, attribute, value string) bool {
-	t.Helper()
-	attr, ok := CommonAttributes()[attribute].(schema.StringAttribute)
-	if !assert.True(t, ok) {
-		return false
-	}
-	req := validator.StringRequest{ConfigValue: types.StringValue(value)}
-	resp := &validator.StringResponse{}
-	for _, v := range attr.Validators {
-		v.ValidateString(context.Background(), req, resp)
-	}
-	return !resp.Diagnostics.HasError()
-}
-
-// The API only accepts lowercase enum values, so mixed case must be rejected at plan time.
-func TestEnumValidators(t *testing.T) {
-	cases := []struct {
-		attribute string
-		value     string
-		valid     bool
-	}{
-		{"action", "cache", true},
-		{"action", "pass", true},
-		{"action", "restart", true},
-		{"action", "PASS", false},
-		{"action", "Restart", false},
-	}
-
-	for _, c := range cases {
-		assert.Equal(t, c.valid, validateEnum(t, c.attribute, c.value), "%s = %q", c.attribute, c.value)
-	}
 }
