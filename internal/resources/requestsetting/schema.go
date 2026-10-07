@@ -153,7 +153,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 	// the nested block used by the automatic family is unaffected.
 	nameAttr := attrs["name"].(schema.StringAttribute)
 	nameAttr.PlanModifiers = append(
-		nameAttr.PlanModifiers,
+		append([]planmodifier.String(nil), nameAttr.PlanModifiers...),
 		stringplanmodifier.RequiresReplace(),
 	)
 	attrs["name"] = nameAttr
