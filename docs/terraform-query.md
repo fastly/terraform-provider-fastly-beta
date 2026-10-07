@@ -24,6 +24,7 @@ It is not used for the automatic compatibility resource family.
 - `fastly_service_settings`
 - `fastly_service_ratelimiter`
 - `fastly_service_request_setting`
+- `fastly_service_response_object`
 - `fastly_service_resource_link`
 - `fastly_service_dictionary`
 - `fastly_service_cache_setting`
@@ -207,6 +208,10 @@ list "fastly_service_ratelimiter" "all" {
 }
 
 list "fastly_service_request_setting" "all" {
+  provider = fastly
+}
+
+list "fastly_service_response_object" "all" {
   provider = fastly
 }
 

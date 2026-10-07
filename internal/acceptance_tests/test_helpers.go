@@ -1865,6 +1865,84 @@ func ConfigCDNAutoWithResponseObjectConditions(serviceName, domainName, response
 	)
 }
 
+// Configuration helpers for fastly_service_response_object resources (explicit version management)
+
+func configResponseObjectCDN(serviceName, domainName, responseObjectName, block string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"SERVICE_COMMENT":      "",
+			"DOMAIN_NAME":          domainName,
+			"SERVICE_VERSION":      "1",
+			"RESPONSE_OBJECT_NAME": responseObjectName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		block,
+	)
+}
+
+// ConfigResponseObjectBasic returns a response object resource with representative non-default content.
+func ConfigResponseObjectBasic(serviceName, domainName, responseObjectName string) string {
+	return configResponseObjectCDN(serviceName, domainName, responseObjectName, "internal/acceptance_tests/blocks/response_object_explicit.tf")
+}
+
+// ConfigResponseObjectUpdated returns the same response object with its mutable fields changed.
+func ConfigResponseObjectUpdated(serviceName, domainName, responseObjectName string) string {
+	return configResponseObjectCDN(serviceName, domainName, responseObjectName, "internal/acceptance_tests/blocks/response_object_explicit_updated.tf")
+}
+
+// ConfigResponseObjectMinimal omits every optional field, exercising API/schema defaults.
+func ConfigResponseObjectMinimal(serviceName, domainName, responseObjectName string) string {
+	return configResponseObjectCDN(serviceName, domainName, responseObjectName, "internal/acceptance_tests/blocks/response_object_explicit_minimal.tf")
+}
+
+// ConfigResponseObjectForImport returns a test configuration for importing a response object.
+func ConfigResponseObjectForImport(serviceName, domainName, responseObjectName string) string {
+	return ConfigResponseObjectBasic(serviceName, domainName, responseObjectName)
+}
+
+// ConfigResponseObjectWithConditions returns explicit REQUEST and CACHE conditions and a response
+// object that references both by name.
+func ConfigResponseObjectWithConditions(serviceName, domainName, responseObjectName, requestConditionName, cacheConditionName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":           serviceName,
+			"SERVICE_COMMENT":        "",
+			"DOMAIN_NAME":            domainName,
+			"SERVICE_VERSION":        "1",
+			"RESPONSE_OBJECT_NAME":   responseObjectName,
+			"REQUEST_CONDITION_NAME": requestConditionName,
+			"CACHE_CONDITION_NAME":   cacheConditionName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/response_object_explicit_with_conditions.tf",
+	)
+}
+
+// ConfigResponseObjectOnComputeService targets a Compute service to prove the VCL-only
+// service-kind restriction is enforced.
+func ConfigResponseObjectOnComputeService(serviceName, responseObjectName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"SERVICE_COMMENT":      "",
+			"SERVICE_VERSION":      "1",
+			"RESPONSE_OBJECT_NAME": responseObjectName,
+		},
+		"internal/acceptance_tests/blocks/response_object_explicit_on_compute.tf",
+	)
+}
+
+// ConfigResponseObjectOnLockedVersion returns a config with the service/domain pinned to editable
+// version 1, plus a response object targeting version 2 - the version the locked-version test
+// activates out-of-band before this config is applied.
+func ConfigResponseObjectOnLockedVersion(serviceName, domainName, responseObjectName string) string {
+	return configResponseObjectCDN(serviceName, domainName, responseObjectName, "internal/acceptance_tests/blocks/response_object_explicit_on_locked_version.tf")
+}
+
 // ConfigACLForImport returns a test configuration for importing an ACL.
 func ConfigACLForImport(serviceName, domainName, aclName string) string {
 	return BuildConfig(

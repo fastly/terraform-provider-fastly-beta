@@ -2,6 +2,7 @@ package responseobject
 
 import (
 	"context"
+	"maps"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
@@ -91,6 +92,39 @@ func CommonAttributes() map[string]schema.Attribute {
 			Description: "The HTTP Status Code. Default `200`.",
 		},
 	}
+}
+
+func ResourceAttributes() map[string]schema.Attribute {
+	attrs := map[string]schema.Attribute{
+		"id": schema.StringAttribute{
+			Computed:    true,
+			Description: "Terraform resource identifier.",
+		},
+		"service_id": schema.StringAttribute{
+			Required:    true,
+			Description: "Fastly service ID.",
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.RequiresReplace(),
+			},
+		},
+		"version": schema.Int64Attribute{
+			Required:    true,
+			Description: "Writable Fastly service version to modify.",
+		},
+	}
+	maps.Copy(attrs, CommonAttributes())
+
+	// service_id + name locate a response object in the API, so changing either
+	// changes resource identity. Keep this modifier out of CommonAttributes so
+	// the nested block used by the automatic family is unaffected.
+	nameAttr := attrs["name"].(schema.StringAttribute)
+	nameAttr.PlanModifiers = append(
+		append([]planmodifier.String(nil), nameAttr.PlanModifiers...),
+		stringplanmodifier.RequiresReplace(),
+	)
+	attrs["name"] = nameAttr
+
+	return attrs
 }
 
 func NestedBlockSchema() schema.ListNestedBlock {

@@ -160,6 +160,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ratelimiter"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/requestsetting"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/resourcelink"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/responseobject"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/secretstore"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecdn"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecdnauto"
@@ -342,6 +343,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		productenablement.NewNGWAFResource,
 		ratelimiter.NewResource,
 		requestsetting.NewResource,
+		responseobject.NewResource,
 		resourcelink.NewResource,
 		secretstore.NewResource,
 		servicecdn.NewResource,
@@ -454,6 +456,7 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		loggingpapertrail.NewListResource,
 		ratelimiter.NewListResource,
 		requestsetting.NewListResource,
+		responseobject.NewListResource,
 		resourcelink.NewListResource,
 		loggings3.NewListResource,
 		loggingscalyr.NewListResource,
