@@ -3125,6 +3125,84 @@ func ConfigImageOptimizerDefaultSettingsOnLockedVersion(serviceName, domainName 
 	)
 }
 
+// Configuration helpers for fastly_service_request_setting resources (explicit version management)
+
+func configRequestSettingCDN(serviceName, domainName, requestSettingName, block string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"SERVICE_COMMENT":      "",
+			"DOMAIN_NAME":          domainName,
+			"SERVICE_VERSION":      "1",
+			"REQUEST_SETTING_NAME": requestSettingName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		block,
+	)
+}
+
+// ConfigRequestSettingBasic returns a request setting resource with representative non-default values.
+func ConfigRequestSettingBasic(serviceName, domainName, requestSettingName string) string {
+	return configRequestSettingCDN(serviceName, domainName, requestSettingName, "internal/acceptance_tests/blocks/request_setting_explicit.tf")
+}
+
+// ConfigRequestSettingUpdated returns the same request setting with its mutable fields changed.
+func ConfigRequestSettingUpdated(serviceName, domainName, requestSettingName string) string {
+	return configRequestSettingCDN(serviceName, domainName, requestSettingName, "internal/acceptance_tests/blocks/request_setting_explicit_updated.tf")
+}
+
+// ConfigRequestSettingMinimal omits every optional field, exercising defaults and clearing the
+// optional action/xff enums back to their unset state.
+func ConfigRequestSettingMinimal(serviceName, domainName, requestSettingName string) string {
+	return configRequestSettingCDN(serviceName, domainName, requestSettingName, "internal/acceptance_tests/blocks/request_setting_explicit_minimal.tf")
+}
+
+// ConfigRequestSettingForImport returns a test configuration for importing a request setting.
+func ConfigRequestSettingForImport(serviceName, domainName, requestSettingName string) string {
+	return ConfigRequestSettingBasic(serviceName, domainName, requestSettingName)
+}
+
+// ConfigRequestSettingWithRequestCondition returns an explicit REQUEST condition and a request
+// setting that references it by name.
+func ConfigRequestSettingWithRequestCondition(serviceName, domainName, requestSettingName, conditionName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"SERVICE_COMMENT":      "",
+			"DOMAIN_NAME":          domainName,
+			"SERVICE_VERSION":      "1",
+			"REQUEST_SETTING_NAME": requestSettingName,
+			"CONDITION_NAME":       conditionName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		"internal/acceptance_tests/blocks/request_setting_explicit_with_request_condition.tf",
+	)
+}
+
+// ConfigRequestSettingOnComputeService targets a Compute service to prove the VCL-only service-kind
+// restriction is enforced.
+func ConfigRequestSettingOnComputeService(serviceName, requestSettingName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":         serviceName,
+			"SERVICE_COMMENT":      "",
+			"SERVICE_VERSION":      "1",
+			"REQUEST_SETTING_NAME": requestSettingName,
+		},
+		"internal/acceptance_tests/blocks/request_setting_explicit_on_compute.tf",
+	)
+}
+
+// ConfigRequestSettingOnLockedVersion returns a config with the service/domain pinned to editable
+// version 1, plus a request setting targeting version 2 - the version the locked-version test
+// activates out-of-band before this config is applied.
+func ConfigRequestSettingOnLockedVersion(serviceName, domainName, requestSettingName string) string {
+	return configRequestSettingCDN(serviceName, domainName, requestSettingName, "internal/acceptance_tests/blocks/request_setting_explicit_on_locked_version.tf")
+}
+
 // Configuration helpers for gzip resources (explicit version management)
 
 // ConfigGzipBasic returns a basic gzip resource config with content_types and extensions set.

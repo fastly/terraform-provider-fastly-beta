@@ -2,6 +2,7 @@ package requestsetting
 
 import (
 	"context"
+	"maps"
 	"strings"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/planmodifiers"
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -124,6 +126,39 @@ func CommonAttributes() map[string]schema.Attribute {
 			},
 		},
 	}
+}
+
+func ResourceAttributes() map[string]schema.Attribute {
+	attrs := map[string]schema.Attribute{
+		"id": schema.StringAttribute{
+			Computed:    true,
+			Description: "Terraform resource identifier.",
+		},
+		"service_id": schema.StringAttribute{
+			Required:    true,
+			Description: "Fastly service ID.",
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.RequiresReplace(),
+			},
+		},
+		"version": schema.Int64Attribute{
+			Required:    true,
+			Description: "Writable Fastly service version to modify.",
+		},
+	}
+	maps.Copy(attrs, CommonAttributes())
+
+	// service_id + name locate a request setting in the API, so changing either
+	// changes resource identity. Keep this modifier out of CommonAttributes so
+	// the nested block used by the automatic family is unaffected.
+	nameAttr := attrs["name"].(schema.StringAttribute)
+	nameAttr.PlanModifiers = append(
+		append([]planmodifier.String(nil), nameAttr.PlanModifiers...),
+		stringplanmodifier.RequiresReplace(),
+	)
+	attrs["name"] = nameAttr
+
+	return attrs
 }
 
 func NestedBlockSchema() schema.ListNestedBlock {
