@@ -10,6 +10,8 @@
 
 ### BUG FIXES:
 
+- fix(request_setting,cache_setting,rate_limiter): enum attributes (`action`, `xff`, `logger_type`) now only accept lowercase values([#171](https://github.com/fastly/terraform-provider-fastly-beta/pull/171))
+
 ### Dependencies:
 
 ## 0.2.2 (October 6, 2026)

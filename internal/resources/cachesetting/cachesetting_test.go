@@ -109,7 +109,6 @@ func TestActionPointer(t *testing.T) {
 		{name: "unknown", value: types.StringUnknown(), expected: nil},
 		{name: "empty", value: types.StringValue(""), expected: nil},
 		{name: "cache", value: types.StringValue("cache"), expected: new(fastly.CacheSettingActionCache)},
-		{name: "uppercase", value: types.StringValue("PASS"), expected: new(fastly.CacheSettingActionPass)},
 	}
 
 	for _, tt := range tests {
@@ -122,16 +121,6 @@ func TestActionPointer(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestModelsEqual_actionCaseInsensitive(t *testing.T) {
-	state := fullNestedModel()
-	state.Action = types.StringValue("pass")
-
-	config := fullNestedModel()
-	config.Action = types.StringValue("PASS")
-
-	assert.True(t, state.ModelsEqual(config))
 }
 
 func TestEqual(t *testing.T) {

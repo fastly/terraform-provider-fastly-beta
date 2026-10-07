@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"regexp"
-	"strings"
 
-	"github.com/fastly/terraform-provider-fastly-beta/internal/planmodifiers"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dictionary"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/responseobject"
@@ -54,11 +52,11 @@ type NestedModel struct {
 // the desired configuration - see ops.Equal.
 func (n NestedModel) ModelsEqual(other NestedModel) bool {
 	return service.StringValue(n.Name) == service.StringValue(other.Name) &&
-		strings.EqualFold(service.StringValue(n.Action), service.StringValue(other.Action)) &&
+		service.StringValue(n.Action) == service.StringValue(other.Action) &&
 		n.ClientKey.Equal(other.ClientKey) &&
 		service.Int64Value(n.FeatureRevision) == service.Int64Value(other.FeatureRevision) &&
 		n.HTTPMethods.Equal(other.HTTPMethods) &&
-		strings.EqualFold(service.StringValue(n.LoggerType), service.StringValue(other.LoggerType)) &&
+		service.StringValue(n.LoggerType) == service.StringValue(other.LoggerType) &&
 		service.Int64Value(n.PenaltyBoxDuration) == service.Int64Value(other.PenaltyBoxDuration) &&
 		n.Response.Equal(other.Response) &&
 		service.StringValue(n.ResponseObjectName) == service.StringValue(other.ResponseObjectName) &&
@@ -94,10 +92,7 @@ func CommonAttributes() map[string]schema.Attribute {
 			Required:    true,
 			Description: "The action to take when a rate limiter violation is detected. One of `log_only`, `response`, or `response_object`.",
 			Validators: []validator.String{
-				stringvalidator.OneOfCaseInsensitive("log_only", "response", "response_object"),
-			},
-			PlanModifiers: []planmodifier.String{
-				planmodifiers.CaseInsensitiveState(),
+				stringvalidator.OneOf("log_only", "response", "response_object"),
 			},
 		},
 		"client_key": schema.ListAttribute{
@@ -130,15 +125,12 @@ func CommonAttributes() map[string]schema.Attribute {
 			Optional:    true,
 			Description: "Name of the type of logging endpoint to be used when `action` is `log_only`. One of `azureblob`, `bigquery`, `cloudfiles`, `datadog`, `digitalocean`, `elasticsearch`, `ftp`, `gcs`, `googleanalytics`, `heroku`, `honeycomb`, `http`, `https`, `kafka`, `kinesis`, `logentries`, `loggly`, `logshuttle`, `newrelic`, `openstack`, `papertrail`, `pubsub`, `s3`, `scalyr`, `sftp`, `splunk`, `stackdriver`, `sumologic`, `syslog`.",
 			Validators: []validator.String{
-				stringvalidator.OneOfCaseInsensitive(
+				stringvalidator.OneOf(
 					"azureblob", "bigquery", "cloudfiles", "datadog", "digitalocean", "elasticsearch",
 					"ftp", "gcs", "googleanalytics", "heroku", "honeycomb", "http", "https", "kafka",
 					"kinesis", "logentries", "loggly", "logshuttle", "newrelic", "openstack", "papertrail",
 					"pubsub", "s3", "scalyr", "sftp", "splunk", "stackdriver", "sumologic", "syslog",
 				),
-			},
-			PlanModifiers: []planmodifier.String{
-				planmodifiers.CaseInsensitiveState(),
 			},
 		},
 		"penalty_box_duration": schema.Int64Attribute{
@@ -399,13 +391,11 @@ func (o ops) ToModel(api *fastly.ERL) NestedModel {
 	return model
 }
 
-// actionPointer lowercases the configured action, since the schema validates it
-// case-insensitively but the Fastly API expects the lowercase enum value.
 func actionPointer(v types.String) *fastly.ERLAction {
 	if v.IsNull() || v.IsUnknown() || v.ValueString() == "" {
 		return nil
 	}
-	action := fastly.ERLAction(strings.ToLower(v.ValueString()))
+	action := fastly.ERLAction(v.ValueString())
 	return &action
 }
 
@@ -422,13 +412,11 @@ func optionalStringPointer(v types.String) *string {
 	return &value
 }
 
-// loggerTypePointer lowercases the configured logger type, since the schema validates it
-// case-insensitively but the Fastly API expects the lowercase enum value.
 func loggerTypePointer(v types.String) *fastly.ERLLogger {
 	if v.IsNull() || v.IsUnknown() || v.ValueString() == "" {
 		return nil
 	}
-	logger := fastly.ERLLogger(strings.ToLower(v.ValueString()))
+	logger := fastly.ERLLogger(v.ValueString())
 	return &logger
 }
 
@@ -542,7 +530,7 @@ func ValidateConfig(rateLimiters []NestedModel) error {
 			continue
 		}
 
-		switch strings.ToLower(item.Action.ValueString()) {
+		switch item.Action.ValueString() {
 		case "response":
 			if !item.Response.IsUnknown() && item.Response.IsNull() {
 				return fmt.Errorf("rate limiter %q: response is required when action is \"response\"", name)
