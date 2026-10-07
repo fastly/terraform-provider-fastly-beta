@@ -2446,6 +2446,37 @@ func ConfigServiceComputeWithACLResourceLink(serviceName, aclName, linkName stri
 	)
 }
 
+// ConfigServiceComputeWithKVStoreResourceLink returns an explicit Compute service config with a
+// fastly_kvstore linked into the given service version via fastly_service_resource_link.
+func ConfigServiceComputeWithKVStoreResourceLink(serviceName, storeName, linkName string, version int) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":       serviceName,
+			"SERVICE_COMMENT":    "",
+			"KVSTORE_NAME":       storeName,
+			"RESOURCE_LINK_NAME": linkName,
+			"SERVICE_VERSION":    fmt.Sprintf("%d", version),
+		},
+		"internal/acceptance_tests/blocks/resource_link_kvstore.tf",
+	)
+}
+
+// ConfigResourceLinkOnCDNService returns a fastly_service_resource_link attached to a CDN (VCL)
+// service, to prove the Compute-only service-kind restriction is enforced.
+func ConfigResourceLinkOnCDNService(serviceName, linkName string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":       serviceName,
+			"SERVICE_COMMENT":    "",
+			"RESOURCE_LINK_NAME": linkName,
+			"SERVICE_VERSION":    "1",
+		},
+		"internal/acceptance_tests/blocks/resource_link_on_cdn.tf",
+	)
+}
+
 // Configuration helpers for backend resources (explicit version management)
 
 // ConfigBackendBasic returns a basic backend resource config.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 
@@ -307,4 +308,28 @@ func TestMatchOrder(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+// Identity keys on resource_id, so it must force replacement while name stays updatable in place.
+func TestResourceAttributes(t *testing.T) {
+	attrs := ResourceAttributes()
+
+	for _, name := range []string{"id", "service_id", "version"} {
+		assert.Contains(t, attrs, name)
+	}
+	for key := range CommonAttributes() {
+		assert.Contains(t, attrs, key)
+	}
+
+	assert.True(t, attrs["id"].IsComputed())
+	assert.True(t, attrs["service_id"].IsRequired())
+	assert.True(t, attrs["version"].IsRequired())
+	assert.True(t, attrs["link_id"].IsComputed())
+
+	assert.Len(t, attrs["service_id"].(schema.StringAttribute).PlanModifiers, 1)
+	assert.Len(t, attrs["resource_id"].(schema.StringAttribute).PlanModifiers, 1)
+	assert.Empty(t, attrs["name"].(schema.StringAttribute).PlanModifiers)
+
+	// The nested block's resource_id must stay free of plan modifiers.
+	assert.Empty(t, CommonAttributes()["resource_id"].(schema.StringAttribute).PlanModifiers)
 }
