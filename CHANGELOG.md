@@ -6,6 +6,7 @@
 
 - feat(image_optimizer_default_explicit): add support for explicit image optimizer defaults and `terraform query` support ([#162](https://github.com/fastly/terraform-provider-fastly-beta/pull/162))
 - feat(request_setting): add `fastly_service_request_setting` explicit/default resource and `terraform query` support ([#167](https://github.com/fastly/terraform-provider-fastly-beta/pull/167))
+- feat(fastly_service_resource_link): add support for the explicit `fastly_service_resource_link` resources and `terraform query` support ([#168](https://github.com/fastly/terraform-provider-fastly-beta/pull/168))
 
 ### BUG FIXES:
 
@@ -32,6 +33,7 @@
 ### ENHANCEMENTS:
 
 - feat(docs): add intro content to the provider landing page ([#151](https://github.com/fastly/terraform-provider-fastly-beta/pull/151))
+- feat(logging_gcs): add support for the `public_key` attribute  ([#158](https://github.com/fastly/terraform-provider-fastly-beta/pull/158))
 
 ### Dependencies:
 

@@ -454,6 +454,7 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		loggingpapertrail.NewListResource,
 		ratelimiter.NewListResource,
 		requestsetting.NewListResource,
+		resourcelink.NewListResource,
 		loggings3.NewListResource,
 		loggingscalyr.NewListResource,
 		loggingsftp.NewListResource,

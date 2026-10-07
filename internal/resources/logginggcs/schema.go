@@ -44,6 +44,7 @@ const (
 	DefaultResponseCondition = ""
 	DefaultProcessingRegion  = "none"
 	DefaultProjectID         = ""
+	DefaultPublicKey         = ""
 
 	// maximumFormatLength is the maximum length the Fastly API accepts for a
 	// logging endpoint `format` string. Exceeding it is only rejected by the
@@ -81,6 +82,7 @@ type commonModel struct {
 	MessageType      types.String `tfsdk:"message_type"`
 	TimestampFormat  types.String `tfsdk:"timestamp_format"`
 	ProcessingRegion types.String `tfsdk:"processing_region"`
+	PublicKey        types.String `tfsdk:"public_key"`
 }
 
 // NestedModel is the GCS logging model for the standalone
@@ -218,7 +220,8 @@ func (n commonModel) equal(other commonModel) bool {
 		service.StringValue(n.CompressionCodec) == service.StringValue(other.CompressionCodec) &&
 		service.StringValue(n.MessageType) == service.StringValue(other.MessageType) &&
 		service.StringValue(n.TimestampFormat) == service.StringValue(other.TimestampFormat) &&
-		service.StringValue(n.ProcessingRegion) == service.StringValue(other.ProcessingRegion)
+		service.StringValue(n.ProcessingRegion) == service.StringValue(other.ProcessingRegion) &&
+		service.StringValue(n.PublicKey) == service.StringValue(other.PublicKey)
 }
 
 func (n NestedModel) ModelsEqual(other NestedModel) bool {
@@ -360,6 +363,15 @@ func sharedAttributes() map[string]schema.Attribute {
 				stringvalidator.OneOf("none", "us", "eu"),
 			},
 			Description: "The geographic region where the logs will be processed before streaming to Google Cloud Storage. Valid values are `us`, `eu`, and `none` for global. Default: `none`.",
+		},
+		"public_key": schema.StringAttribute{
+			Optional: true,
+			Computed: true,
+			Default:  stringdefault.StaticString(DefaultPublicKey),
+			Validators: []validator.String{
+				notTrimmed{},
+			},
+			Description: "A PGP public key that Fastly will use to encrypt your log files before writing them to disk.",
 		},
 		"timestamp_format": schema.StringAttribute{
 			Optional: true,

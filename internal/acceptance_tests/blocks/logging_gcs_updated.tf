@@ -63,6 +63,7 @@ resource "fastly_service_logging_gcs" "test" {
     )
   }
   processing_region = "eu"
+  public_key        = trimspace(file("{{.PUBLIC_KEY_PATH}}"))
   format             = "%h %l %u %t \"%r\" %>s %b"
   format_version     = 2
   placement          = "none"
