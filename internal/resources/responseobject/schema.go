@@ -114,9 +114,11 @@ func ResourceAttributes() map[string]schema.Attribute {
 	}
 	maps.Copy(attrs, CommonAttributes())
 
-	// service_id + name locate a response object in the API, so changing either
-	// changes resource identity. Keep this modifier out of CommonAttributes so
-	// the nested block used by the automatic family is unaffected.
+	// The Fastly API addresses a response object by service_id + version + name,
+	// while the explicit resource's stable Terraform identity is service_id + name.
+	// Version remains a mutable target selector, so only a name change requires
+	// replacement here. Keep this modifier out of CommonAttributes so the nested
+	// block used by the automatic family is unaffected.
 	nameAttr := attrs["name"].(schema.StringAttribute)
 	nameAttr.PlanModifiers = append(
 		append([]planmodifier.String(nil), nameAttr.PlanModifiers...),
