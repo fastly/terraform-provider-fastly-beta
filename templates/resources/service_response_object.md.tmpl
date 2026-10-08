@@ -1,0 +1,70 @@
+---
+page_title: "fastly_service_response_object Resource - fastly"
+subcategory: ""
+description: |-
+  Fastly service response object resource. Writes directly to the specified writable service version.
+---
+
+# fastly_service_response_object (Resource)
+
+Fastly service response object resource. Writes directly to the specified writable service version.
+
+This resource is part of the explicit/default first-class resource family. It
+manages a Response Object on the configured service version. It does not clone,
+activate, or stage service versions. Response Objects are supported on CDN
+services only.
+
+## Example Usage
+
+```terraform
+resource "fastly_service_condition" "request" {
+  service_id = fastly_service_cdn.example.id
+  version    = 1
+  name       = "maintenance-request"
+  type       = "REQUEST"
+  statement  = "req.url ~ \"^/maintenance\""
+}
+
+resource "fastly_service_condition" "cache" {
+  service_id = fastly_service_cdn.example.id
+  version    = 1
+  name       = "maintenance-cache"
+  type       = "CACHE"
+  statement  = "beresp.status == 503"
+}
+
+resource "fastly_service_response_object" "maintenance" {
+  service_id = fastly_service_cdn.example.id
+  version    = 1
+  name       = "maintenance-response"
+
+  status            = 503
+  response          = "Service Unavailable"
+  content           = "Temporarily unavailable"
+  content_type      = "text/plain"
+  request_condition = fastly_service_condition.request.name
+  cache_condition   = fastly_service_condition.cache.name
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import a Response Object using the service ID, version, and Response Object name:
+
+```shell
+terraform import fastly_service_response_object.maintenance SERVICE_ID/VERSION/RESPONSE_OBJECT_NAME
+```
+
+Example:
+
+```shell
+terraform import fastly_service_response_object.maintenance SU1Z0isxPaozGVKXdv0eY/3/maintenance-response
+```
+
+## Version lifecycle
+
+This resource does not clone, activate, or stage service versions. Use explicit
+service-version lifecycle actions to clone, validate, stage, or activate a
+service version.
