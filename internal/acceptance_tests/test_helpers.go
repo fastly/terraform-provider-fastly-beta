@@ -1756,14 +1756,15 @@ func ConfigCDNAutoWithMultipleRequestSettings(serviceName, domainName, requestSe
 
 // ConfigCDNAutoWithRequestSettingInvalidAction returns a CDN auto service config with a request
 // setting whose action is not one of the accepted values, exercising the schema-level
-// stringvalidator.OneOfCaseInsensitive plan-time check.
-func ConfigCDNAutoWithRequestSettingInvalidAction(serviceName, domainName, requestSettingName string) string {
+// stringvalidator.OneOf plan-time check.
+func ConfigCDNAutoWithRequestSettingInvalidAction(serviceName, domainName, requestSettingName, action string) string {
 	return BuildConfig(
 		ServiceCDNAuto,
 		map[string]string{
-			"SERVICE_NAME":         serviceName,
-			"DOMAIN_NAME":          domainName,
-			"REQUEST_SETTING_NAME": requestSettingName,
+			"SERVICE_NAME":           serviceName,
+			"DOMAIN_NAME":            domainName,
+			"REQUEST_SETTING_NAME":   requestSettingName,
+			"REQUEST_SETTING_ACTION": action,
 		},
 		"internal/acceptance_tests/blocks/domain_single.tf",
 		"internal/acceptance_tests/blocks/request_setting_invalid_action.tf",

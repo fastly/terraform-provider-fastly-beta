@@ -145,7 +145,6 @@ func TestActionPointer(t *testing.T) {
 		{name: "unknown", value: types.StringUnknown(), expected: nil},
 		{name: "empty", value: types.StringValue(""), expected: nil},
 		{name: "lookup", value: types.StringValue("lookup"), expected: new(fastly.RequestSettingActionLookup)},
-		{name: "uppercase", value: types.StringValue("PASS"), expected: new(fastly.RequestSettingActionPass)},
 	}
 
 	for _, tt := range tests {
@@ -170,7 +169,6 @@ func TestXFFPointer(t *testing.T) {
 		{name: "unknown", value: types.StringUnknown(), expected: nil},
 		{name: "empty", value: types.StringValue(""), expected: nil},
 		{name: "append", value: types.StringValue("append"), expected: new(fastly.RequestSettingXFFAppend)},
-		{name: "uppercase", value: types.StringValue("CLEAR"), expected: new(fastly.RequestSettingXFFClear)},
 	}
 
 	for _, tt := range tests {

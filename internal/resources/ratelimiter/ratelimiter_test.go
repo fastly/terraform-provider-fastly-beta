@@ -142,27 +142,6 @@ func TestOpsEqual(t *testing.T) {
 	assert.True(t, ops{}.Equal(fullNestedModel(), remote))
 }
 
-func TestOpsEqual_caseInsensitiveAction(t *testing.T) {
-	action := fastly.ERLActionLogOnly
-	windowSize := fastly.ERLSize60
-	remote := &fastly.ERL{
-		Name:               new("rate-limiter"),
-		Action:             &action,
-		ClientKey:          []*string{new("req.http.Fastly-Client-IP")},
-		FeatureRevision:    new(1),
-		HTTPMethods:        []*string{new("GET")},
-		PenaltyBoxDuration: new(10),
-		RateLimiterID:      new("abc123"),
-		RpsLimit:           new(100),
-		WindowSize:         &windowSize,
-	}
-
-	desired := minimalNestedModel()
-	desired.Action = types.StringValue("LOG_ONLY")
-
-	assert.True(t, ops{}.Equal(desired, remote))
-}
-
 func TestOpsEqual_mismatch(t *testing.T) {
 	action := fastly.ERLActionLogOnly
 	windowSize := fastly.ERLSize60
@@ -191,7 +170,6 @@ func TestActionPointer(t *testing.T) {
 		{name: "unknown", value: types.StringUnknown(), expected: nil},
 		{name: "empty", value: types.StringValue(""), expected: nil},
 		{name: "log_only", value: types.StringValue("log_only"), expected: new(fastly.ERLActionLogOnly)},
-		{name: "uppercase", value: types.StringValue("RESPONSE"), expected: new(fastly.ERLActionResponse)},
 	}
 
 	for _, tt := range tests {
@@ -215,7 +193,6 @@ func TestLoggerTypePointer(t *testing.T) {
 		{name: "null", value: types.StringNull(), expected: nil},
 		{name: "empty", value: types.StringValue(""), expected: nil},
 		{name: "s3", value: types.StringValue("s3"), expected: new(fastly.ERLLogS3)},
-		{name: "uppercase", value: types.StringValue("BIGQUERY"), expected: new(fastly.ERLLogBigQuery)},
 	}
 
 	for _, tt := range tests {
@@ -449,7 +426,7 @@ func TestValidateConfig(t *testing.T) {
 
 	t.Run("response action missing response block", func(t *testing.T) {
 		item := minimalNestedModel()
-		item.Action = types.StringValue("RESPONSE")
+		item.Action = types.StringValue("response")
 		item.Response = types.ObjectNull(responseAttributeTypes)
 
 		err := ValidateConfig([]NestedModel{item})
