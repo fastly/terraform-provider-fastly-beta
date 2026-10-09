@@ -2,8 +2,10 @@ package provider
 
 import (
 	"context"
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/list"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 )
 
@@ -52,6 +54,33 @@ func TestListResourcesHaveStableManagedResourceIdentity(t *testing.T) {
 			}
 			if _, ok := identityResp.IdentitySchema.Attributes["version"]; ok {
 				t.Fatal("mutable service version must not be part of resource identity")
+			}
+		})
+	}
+}
+
+func TestListResourcesSupportServiceIDFilter(t *testing.T) {
+	ctx := context.Background()
+	p := &fastlyProvider{}
+
+	for _, newListResource := range p.ListResources(ctx) {
+		lr := newListResource()
+
+		var metadata resource.MetadataResponse
+		lr.Metadata(ctx, resource.MetadataRequest{ProviderTypeName: "fastly"}, &metadata)
+		if !strings.HasPrefix(metadata.TypeName, "fastly_service_") {
+			continue
+		}
+
+		t.Run(metadata.TypeName, func(t *testing.T) {
+			var schemaResp list.ListResourceSchemaResponse
+			lr.ListResourceConfigSchema(ctx, list.ListResourceSchemaRequest{}, &schemaResp)
+
+			if schemaResp.Diagnostics.HasError() {
+				t.Fatalf("list configuration schema returned diagnostics: %v", schemaResp.Diagnostics)
+			}
+			if _, ok := schemaResp.Schema.Attributes["service_id"]; !ok {
+				t.Fatal("registered service-scoped ListResource must expose optional service_id filtering")
 			}
 		})
 	}
