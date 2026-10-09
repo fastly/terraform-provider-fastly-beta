@@ -10,7 +10,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/list"
-	listschema "github.com/hashicorp/terraform-plugin-framework/list/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -36,10 +35,7 @@ func (l *ListResource) Metadata(_ context.Context, req resource.MetadataRequest,
 }
 
 func (l *ListResource) ListResourceConfigSchema(_ context.Context, _ list.ListResourceSchemaRequest, resp *list.ListResourceSchemaResponse) {
-	resp.Schema = listschema.Schema{
-		Description: "List all S3 logging endpoints across all Fastly CDN and Compute services at their active version, or latest version when no active version exists.",
-		Attributes:  map[string]listschema.Attribute{},
-	}
+	resp.Schema = service.QueryListResourceConfigSchema("List all S3 logging endpoints across all Fastly CDN and Compute services at their active version, or latest version when no active version exists.")
 }
 
 func (l *ListResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -55,11 +51,9 @@ func (l *ListResource) Configure(_ context.Context, req resource.ConfigureReques
 func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *list.ListResultsStream) {
 	tflog.Debug(ctx, "Listing Fastly S3 logging endpoints")
 
-	services, err := l.client.ListServices(ctx, &fastly.ListServicesInput{})
-	if err != nil {
-		stream.Results = list.ListResultsStreamDiagnostics(diag.Diagnostics{
-			diag.NewErrorDiagnostic("Error listing Fastly services", err.Error()),
-		})
+	services, diags := service.ListServicesForQuery(ctx, l.client, req)
+	if diags.HasError() {
+		stream.Results = list.ListResultsStreamDiagnostics(diags)
 		return
 	}
 

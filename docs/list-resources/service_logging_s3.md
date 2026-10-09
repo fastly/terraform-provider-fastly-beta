@@ -13,3 +13,7 @@ List all S3 logging endpoints across all Fastly CDN and Compute services at thei
 
 
 ## Schema
+
+### Optional
+
+- `service_id` (String) Optional Fastly service ID to restrict discovery to a single service. When omitted, all services accessible to the API token are considered.
