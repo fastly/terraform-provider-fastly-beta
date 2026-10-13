@@ -5,6 +5,7 @@
 ### ENHANCEMENTS:
 
 - feat(docs): extend the beta testing guide with an explicit resource family workflow using `terraform query` and service-scoped discovery ([#161](https://github.com/fastly/terraform-provider-fastly-beta/pull/161))
+- feat(routing-config): add `fastly_routing_config` and `fastly_routing_config_domain_link` resources for domain management routing configs, using automatic versioning ([#176](https://github.com/fastly/terraform-provider-fastly-beta/pull/176))
 
 ### BUG FIXES:
 
