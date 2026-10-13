@@ -4,6 +4,14 @@
 
 ### ENHANCEMENTS:
 
+### BUG FIXES:
+
+### Dependencies:
+
+## 0.2.3 (October 13, 2026)
+
+### ENHANCEMENTS:
+
 - feat(query): add optional `service_id` filtering to service-scoped `terraform query` List Resources ([#172](https://github.com/fastly/terraform-provider-fastly-beta/pull/172))
 - feat(image_optimizer_default_explicit): add support for explicit image optimizer defaults and `terraform query` support ([#162](https://github.com/fastly/terraform-provider-fastly-beta/pull/162))
 - feat(request_setting): add `fastly_service_request_setting` explicit/default resource and `terraform query` support ([#167](https://github.com/fastly/terraform-provider-fastly-beta/pull/167))
@@ -13,8 +21,6 @@
 ### BUG FIXES:
 
 - fix(request_setting,cache_setting,rate_limiter): enum attributes (`action`, `xff`, `logger_type`) now only accept lowercase values([#171](https://github.com/fastly/terraform-provider-fastly-beta/pull/171))
-
-### Dependencies:
 
 ## 0.2.2 (October 6, 2026)
 
