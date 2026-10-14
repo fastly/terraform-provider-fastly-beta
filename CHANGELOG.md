@@ -4,6 +4,8 @@
 
 ### ENHANCEMENTS:
 
+- feat(docs): extend the beta testing guide with an explicit resource family workflow using `terraform query` and service-scoped discovery ([#161](https://github.com/fastly/terraform-provider-fastly-beta/pull/161))
+
 ### BUG FIXES:
 
 ### Dependencies:
