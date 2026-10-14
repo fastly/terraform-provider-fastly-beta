@@ -1,4 +1,4 @@
   request_setting {
     name   = "{{.REQUEST_SETTING_NAME}}"
-    action = "invalid"
+    action = "{{.REQUEST_SETTING_ACTION}}"
   }

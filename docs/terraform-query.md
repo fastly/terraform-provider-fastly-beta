@@ -23,12 +23,19 @@ It is not used for the automatic compatibility resource family.
 - `fastly_service_backend`
 - `fastly_service_settings`
 - `fastly_service_ratelimiter`
+- `fastly_service_request_setting`
+- `fastly_service_response_object`
+- `fastly_service_resource_link`
 - `fastly_service_dictionary`
 - `fastly_service_cache_setting`
 - `fastly_service_gzip`
+- `fastly_service_header`
+- `fastly_service_healthcheck`
+- `fastly_service_image_optimizer_default_settings`
 - `fastly_service_cdn_acl`
 - `fastly_service_cdn_acl_entries`
 - `fastly_service_condition`
+- `fastly_service_director`
 - `fastly_service_custom_vcl`
 - `fastly_service_logging_bigquery`
 - `fastly_service_logging_blobstorage`
@@ -200,6 +207,18 @@ list "fastly_service_ratelimiter" "all" {
   provider = fastly
 }
 
+list "fastly_service_request_setting" "all" {
+  provider = fastly
+}
+
+list "fastly_service_response_object" "all" {
+  provider = fastly
+}
+
+list "fastly_service_resource_link" "all" {
+  provider = fastly
+}
+
 list "fastly_service_dictionary" "all" {
   provider = fastly
 }
@@ -212,6 +231,18 @@ list "fastly_service_gzip" "all" {
   provider = fastly
 }
 
+list "fastly_service_header" "all" {
+  provider = fastly
+}
+
+list "fastly_service_healthcheck" "all" {
+  provider = fastly
+}
+
+list "fastly_service_image_optimizer_default_settings" "all" {
+  provider = fastly
+}
+
 list "fastly_service_cdn_acl" "all" {
   provider = fastly
 }
@@ -221,6 +252,10 @@ list "fastly_service_cdn_acl_entries" "all" {
 }
 
 list "fastly_service_condition" "all" {
+  provider = fastly
+}
+
+list "fastly_service_director" "all" {
   provider = fastly
 }
 
@@ -465,6 +500,8 @@ Most versioned child resources use `service_id + name`. The exceptions are:
 - `fastly_service_cdn` and `fastly_service_compute`: `service_id`
 - `fastly_service_settings`: `service_id`
 - `fastly_service_cdn_acl_entries`: `service_id + acl_id`
+- `fastly_service_resource_link`: `service_id + resource_id`, since a link's
+  `name` can be renamed in place
 
 The existing string-based `terraform import` formats remain supported. For
 versioned named resources that is `service_id/version/name`; service settings

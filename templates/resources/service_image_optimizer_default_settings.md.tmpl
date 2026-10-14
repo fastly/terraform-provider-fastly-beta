@@ -1,0 +1,66 @@
+---
+page_title: "fastly_service_image_optimizer_default_settings Resource - fastly"
+subcategory: ""
+description: |-
+  Fastly service Image Optimizer default settings resource. Writes directly to the specified writable service version.
+---
+
+# fastly_service_image_optimizer_default_settings (Resource)
+
+Fastly service Image Optimizer default settings resource. Writes directly to the specified writable service version.
+
+This resource is part of the explicit/default first-class resource family. It
+manages the Image Optimizer default settings on the configured service version.
+It does not clone, activate, or stage service versions. Image Optimizer is only
+supported on CDN services.
+
+Image Optimizer must be enabled on the service before these settings can be
+written. Enabling the product is versionless, so add a `depends_on` on
+`fastly_service_product_image_optimizer` to enable it in the same `apply`.
+
+Every write sets all Image Optimizer default settings, replacing any values
+previously changed in the UI or API. Omitted attributes are set to their
+defaults.
+
+## Example Usage
+
+```terraform
+resource "fastly_service_product_image_optimizer" "example" {
+  service_id = fastly_service_cdn.example.id
+}
+
+resource "fastly_service_image_optimizer_default_settings" "example" {
+  service_id = fastly_service_cdn.example.id
+  version    = 1
+
+  resize_filter = "bicubic"
+  webp          = true
+  webp_quality  = 80
+  jpeg_type     = "progressive"
+  jpeg_quality  = 90
+
+  depends_on = [fastly_service_product_image_optimizer.example]
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import Image Optimizer default settings using the service ID and version:
+
+```shell
+terraform import fastly_service_image_optimizer_default_settings.example SERVICE_ID/VERSION
+```
+
+Example:
+
+```shell
+terraform import fastly_service_image_optimizer_default_settings.example SU1Z0isxPaozGVKXdv0eY/3
+```
+
+## Destroy behavior
+
+Destroying this resource resets all Image Optimizer default settings on the
+configured service version to their API defaults rather than deleting them. If
+Image Optimizer is no longer enabled on the service, the reset is skipped.

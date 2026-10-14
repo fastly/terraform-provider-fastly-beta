@@ -43,6 +43,7 @@ func buildCommonCreateInput(serviceID string, version int, m commonModel) *fastl
 	input.MessageType = fastly.NullString(service.StringValue(m.MessageType))
 	input.TimestampFormat = fastly.NullString(service.StringValue(m.TimestampFormat))
 	input.ProcessingRegion = fastly.NullString(service.StringValue(m.ProcessingRegion))
+	input.PublicKey = fastly.NullString(service.StringValue(m.PublicKey))
 
 	return input
 }
@@ -115,6 +116,7 @@ func buildCommonUpdateInput(serviceID string, version int, m commonModel) *fastl
 	input.MessageType = fastly.NullString(service.StringValue(m.MessageType))
 	input.TimestampFormat = fastly.NullString(service.StringValue(m.TimestampFormat))
 	input.ProcessingRegion = fastly.NullString(service.StringValue(m.ProcessingRegion))
+	input.PublicKey = new(service.StringValue(m.PublicKey))
 
 	return input
 }

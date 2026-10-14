@@ -1,8 +1,6 @@
 package cachesetting
 
 import (
-	"strings"
-
 	fastly "github.com/fastly/go-fastly/v17/fastly"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
@@ -30,7 +28,7 @@ func BuildCreateInput(serviceID string, version int, m NestedModel) *fastly.Crea
 }
 
 func BuildUpdateInput(serviceID string, version int, m NestedModel) *fastly.UpdateCacheSettingInput {
-	action := fastly.CacheSettingAction(strings.ToLower(service.StringValue(m.Action)))
+	action := fastly.CacheSettingAction(service.StringValue(m.Action))
 	cacheCondition := service.StringValue(m.CacheCondition)
 	ttl := int(service.Int64Value(m.TTL))
 	staleTTL := int(service.Int64Value(m.StaleTTL))

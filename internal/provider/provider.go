@@ -85,6 +85,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customdashboard"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/customvcl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dictionary"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/director"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dnszone"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domain"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/domainmanagement"
@@ -92,6 +93,9 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dynamicsnippetcontent"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/dynamicvclsnippet"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/gzip"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/header"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/healthcheck"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/imageoptimizerdefaultsettings"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/integration"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/kvstore"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingbigquery"
@@ -154,7 +158,9 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/objectstorageaccesskey"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/productenablement"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ratelimiter"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/requestsetting"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/resourcelink"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/responseobject"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/secretstore"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecdn"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecdnauto"
@@ -251,11 +257,15 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		configstoreitems.NewResource,
 		customdashboard.NewResource,
 		dictionary.NewResource,
+		director.NewResource,
 		dnszone.NewResource,
 		domain.NewResource,
 		domainmanagement.NewResource,
 		domainservicelink.NewResource,
 		gzip.NewResource,
+		header.NewResource,
+		healthcheck.NewResource,
+		imageoptimizerdefaultsettings.NewResource,
 		loggingbigquery.NewResource,
 		loggingblobstorage.NewResource,
 		loggingcloudfiles.NewResource,
@@ -332,6 +342,8 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		productenablement.NewDDoSProtectionResource,
 		productenablement.NewNGWAFResource,
 		ratelimiter.NewResource,
+		requestsetting.NewResource,
+		responseobject.NewResource,
 		resourcelink.NewResource,
 		secretstore.NewResource,
 		servicecdn.NewResource,
@@ -414,8 +426,12 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		cdnaclentries.NewListResource,
 		condition.NewListResource,
 		dictionary.NewListResource,
+		director.NewListResource,
 		domain.NewListResource,
 		gzip.NewListResource,
+		header.NewListResource,
+		healthcheck.NewListResource,
+		imageoptimizerdefaultsettings.NewListResource,
 		loggingbigquery.NewListResource,
 		loggingblobstorage.NewListResource,
 		loggingcloudfiles.NewListResource,
@@ -439,6 +455,9 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		loggingopenstack.NewListResource,
 		loggingpapertrail.NewListResource,
 		ratelimiter.NewListResource,
+		requestsetting.NewListResource,
+		responseobject.NewListResource,
+		resourcelink.NewListResource,
 		loggings3.NewListResource,
 		loggingscalyr.NewListResource,
 		loggingsftp.NewListResource,

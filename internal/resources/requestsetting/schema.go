@@ -2,9 +2,8 @@ package requestsetting
 
 import (
 	"context"
-	"strings"
+	"maps"
 
-	"github.com/fastly/terraform-provider-fastly-beta/internal/planmodifiers"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
@@ -15,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -37,7 +37,7 @@ type NestedModel struct {
 
 func (n NestedModel) ModelsEqual(other NestedModel) bool {
 	return service.StringValue(n.Name) == service.StringValue(other.Name) &&
-		strings.EqualFold(service.StringValue(n.Action), service.StringValue(other.Action)) &&
+		service.StringValue(n.Action) == service.StringValue(other.Action) &&
 		service.BoolValue(n.BypassBusyWait) == service.BoolValue(other.BypassBusyWait) &&
 		service.StringValue(n.DefaultHost) == service.StringValue(other.DefaultHost) &&
 		service.BoolValue(n.ForceMiss) == service.BoolValue(other.ForceMiss) &&
@@ -46,7 +46,7 @@ func (n NestedModel) ModelsEqual(other NestedModel) bool {
 		service.Int64Value(n.MaxStaleAge) == service.Int64Value(other.MaxStaleAge) &&
 		service.StringValue(n.RequestCondition) == service.StringValue(other.RequestCondition) &&
 		service.BoolValue(n.TimerSupport) == service.BoolValue(other.TimerSupport) &&
-		strings.EqualFold(service.StringValue(n.XFF), service.StringValue(other.XFF))
+		service.StringValue(n.XFF) == service.StringValue(other.XFF)
 }
 
 func CommonAttributes() map[string]schema.Attribute {
@@ -59,10 +59,7 @@ func CommonAttributes() map[string]schema.Attribute {
 			Optional:    true,
 			Description: "Allows you to terminate request handling and immediately perform an action. When set it can be `lookup` or `pass` (ignore the cache completely).",
 			Validators: []validator.String{
-				stringvalidator.OneOfCaseInsensitive("lookup", "pass"),
-			},
-			PlanModifiers: []planmodifier.String{
-				planmodifiers.CaseInsensitiveState(),
+				stringvalidator.OneOf("lookup", "pass"),
 			},
 		},
 		"bypass_busy_wait": schema.BoolAttribute{
@@ -117,13 +114,43 @@ func CommonAttributes() map[string]schema.Attribute {
 			Optional:    true,
 			Description: "X-Forwarded-For, should be `clear`, `leave`, `append`, `append_all`, or `overwrite`.",
 			Validators: []validator.String{
-				stringvalidator.OneOfCaseInsensitive("clear", "leave", "append", "append_all", "overwrite"),
-			},
-			PlanModifiers: []planmodifier.String{
-				planmodifiers.CaseInsensitiveState(),
+				stringvalidator.OneOf("clear", "leave", "append", "append_all", "overwrite"),
 			},
 		},
 	}
+}
+
+func ResourceAttributes() map[string]schema.Attribute {
+	attrs := map[string]schema.Attribute{
+		"id": schema.StringAttribute{
+			Computed:    true,
+			Description: "Terraform resource identifier.",
+		},
+		"service_id": schema.StringAttribute{
+			Required:    true,
+			Description: "Fastly service ID.",
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.RequiresReplace(),
+			},
+		},
+		"version": schema.Int64Attribute{
+			Required:    true,
+			Description: "Writable Fastly service version to modify.",
+		},
+	}
+	maps.Copy(attrs, CommonAttributes())
+
+	// service_id + name locate a request setting in the API, so changing either
+	// changes resource identity. Keep this modifier out of CommonAttributes so
+	// the nested block used by the automatic family is unaffected.
+	nameAttr := attrs["name"].(schema.StringAttribute)
+	nameAttr.PlanModifiers = append(
+		append([]planmodifier.String(nil), nameAttr.PlanModifiers...),
+		stringplanmodifier.RequiresReplace(),
+	)
+	attrs["name"] = nameAttr
+
+	return attrs
 }
 
 func NestedBlockSchema() schema.ListNestedBlock {
@@ -189,14 +216,12 @@ func (o ops) Create(ctx context.Context, client *fastly.Client, serviceID string
 }
 
 // actionPointer returns nil for a null/unknown/empty action, so Create omits the field
-// rather than sending an invalid empty string for an enum the Fastly API validates. The
-// value is lowercased since the validator accepts any case (e.g. LOOKUP) but the API expects
-// the lowercase enum value.
+// rather than sending an invalid empty string for an enum the Fastly API validates.
 func actionPointer(v types.String) *fastly.RequestSettingAction {
 	if v.IsNull() || v.IsUnknown() || v.ValueString() == "" {
 		return nil
 	}
-	action := fastly.RequestSettingAction(strings.ToLower(v.ValueString()))
+	action := fastly.RequestSettingAction(v.ValueString())
 	return &action
 }
 
@@ -206,7 +231,7 @@ func xffPointer(v types.String) *fastly.RequestSettingXFF {
 	if v.IsNull() || v.IsUnknown() || v.ValueString() == "" {
 		return nil
 	}
-	xff := fastly.RequestSettingXFF(strings.ToLower(v.ValueString()))
+	xff := fastly.RequestSettingXFF(v.ValueString())
 	return &xff
 }
 
@@ -215,8 +240,8 @@ func (o ops) Equal(desired NestedModel, remote *fastly.RequestSetting) bool {
 }
 
 func (o ops) Update(ctx context.Context, client *fastly.Client, serviceID string, version int, desired NestedModel) (*fastly.RequestSetting, error) {
-	action := fastly.RequestSettingAction(strings.ToLower(service.StringValue(desired.Action)))
-	xff := fastly.RequestSettingXFF(strings.ToLower(service.StringValue(desired.XFF)))
+	action := fastly.RequestSettingAction(service.StringValue(desired.Action))
+	xff := fastly.RequestSettingXFF(service.StringValue(desired.XFF))
 	defaultHost := service.StringValue(desired.DefaultHost)
 	hashKeys := service.StringValue(desired.HashKeys)
 	maxStaleAge := int(service.Int64Value(desired.MaxStaleAge))

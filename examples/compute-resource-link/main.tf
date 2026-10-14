@@ -15,11 +15,14 @@ resource "fastly_service_compute" "app" {
   comment = "Managed by Terraform"
 }
 
-# Makes the linked resource available to Wasm code, e.g. as a KV Store or
-# Config Store lookup keyed by "store".
+resource "fastly_kvstore" "store" {
+  name = "example-kv-store"
+}
+
+# Makes the KV Store available to Wasm code under the alias "store".
 resource "fastly_service_resource_link" "store" {
   service_id  = fastly_service_compute.app.id
   version     = 1
   name        = "store"
-  resource_id = var.linked_resource_id
+  resource_id = fastly_kvstore.store.id
 }

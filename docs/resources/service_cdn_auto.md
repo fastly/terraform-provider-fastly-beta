@@ -291,7 +291,7 @@ Required:
 
 Optional:
 
-- `check_interval` (Number) How often to run the health check in milliseconds. Default `5000`.
+- `check_interval` (Number) How often to run the health check in milliseconds. Must be between `1000` and `3600000`. Default `5000`.
 - `expected_response` (Number) The status code expected from the host. Default `200`.
 - `headers` (Set of String) Custom health check HTTP headers (e.g. if your health check requires an API key to be provided).
 - `http_version` (String) Whether to use version `1.0` or `1.1` HTTP. Default `1.1`.
@@ -577,6 +577,7 @@ Optional:
 - `placement` (String) Where in the generated VCL the logging call should be placed. If not set, endpoints with `format_version` of `2` are placed in `vcl_log` and those with `format_version` of `1` are placed in `vcl_deliver`. Valid value is `none`.
 - `processing_region` (String) The geographic region where the logs will be processed before streaming to Google Cloud Storage. Valid values are `us`, `eu`, and `none` for global. Default: `none`.
 - `project_id` (String) Your Google Cloud Platform project ID. Not required if `account_name` is specified.
+- `public_key` (String) A PGP public key that Fastly will use to encrypt your log files before writing them to disk.
 - `response_condition` (String) The name of an existing condition in the configured endpoint, or leave blank to always execute.
 - `timestamp_format` (String) `strftime`-specified timestamp format for log filename.
 

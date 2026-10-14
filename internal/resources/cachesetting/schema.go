@@ -3,9 +3,7 @@ package cachesetting
 import (
 	"context"
 	"maps"
-	"strings"
 
-	"github.com/fastly/terraform-provider-fastly-beta/internal/planmodifiers"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
@@ -31,7 +29,7 @@ type NestedModel struct {
 
 func (n NestedModel) ModelsEqual(other NestedModel) bool {
 	return service.StringValue(n.Name) == service.StringValue(other.Name) &&
-		strings.EqualFold(service.StringValue(n.Action), service.StringValue(other.Action)) &&
+		service.StringValue(n.Action) == service.StringValue(other.Action) &&
 		service.StringValue(n.CacheCondition) == service.StringValue(other.CacheCondition) &&
 		service.Int64Value(n.StaleTTL) == service.Int64Value(other.StaleTTL) &&
 		service.Int64Value(n.TTL) == service.Int64Value(other.TTL)
@@ -47,10 +45,7 @@ func CommonAttributes() map[string]schema.Attribute {
 			Optional:    true,
 			Description: "One of `cache`, `pass`, or `restart`, as defined on Fastly's documentation under [\"Caching action descriptions\"](https://docs.fastly.com/en/guides/controlling-caching#caching-action-descriptions).",
 			Validators: []validator.String{
-				stringvalidator.OneOfCaseInsensitive("cache", "pass", "restart"),
-			},
-			PlanModifiers: []planmodifier.String{
-				planmodifiers.CaseInsensitiveState(),
+				stringvalidator.OneOf("cache", "pass", "restart"),
 			},
 		},
 		"cache_condition": schema.StringAttribute{
@@ -137,14 +132,12 @@ func (o ops) Create(ctx context.Context, client *fastly.Client, serviceID string
 }
 
 // actionPointer returns nil for a null/unknown/empty action, so Create omits the field
-// rather than sending an invalid empty string for an enum the Fastly API validates. The
-// value is lowercased since the validator accepts any case (e.g. PASS) but the API expects
-// the lowercase enum value.
+// rather than sending an invalid empty string for an enum the Fastly API validates.
 func actionPointer(v types.String) *fastly.CacheSettingAction {
 	if v.IsNull() || v.IsUnknown() || v.ValueString() == "" {
 		return nil
 	}
-	action := fastly.CacheSettingAction(strings.ToLower(v.ValueString()))
+	action := fastly.CacheSettingAction(v.ValueString())
 	return &action
 }
 

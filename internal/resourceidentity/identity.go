@@ -35,6 +35,14 @@ type ServiceScopedVersionedModel struct {
 	ServiceID types.String `tfsdk:"service_id"`
 }
 
+// ResourceLinkModel identifies a resource link by the shared resource it
+// targets rather than its alias name, since the name can be renamed in place.
+// Version is deliberately absent.
+type ResourceLinkModel struct {
+	ServiceID  types.String `tfsdk:"service_id"`
+	ResourceID types.String `tfsdk:"resource_id"`
+}
+
 // ACLCollectionModel identifies the collection of entries belonging to a Fastly
 // ACL. ACL entries are addressed by service and ACL IDs rather than service
 // version.
@@ -80,6 +88,21 @@ func ServiceScopedVersionedSchema() identityschema.Schema {
 	}
 }
 
+func ResourceLinkSchema() identityschema.Schema {
+	return identityschema.Schema{
+		Attributes: map[string]identityschema.Attribute{
+			"service_id": identityschema.StringAttribute{
+				RequiredForImport: true,
+				Description:       "Fastly service ID.",
+			},
+			"resource_id": identityschema.StringAttribute{
+				RequiredForImport: true,
+				Description:       "ID of the linked shared resource.",
+			},
+		},
+	}
+}
+
 func ACLCollectionSchema() identityschema.Schema {
 	return identityschema.Schema{
 		Attributes: map[string]identityschema.Attribute{
@@ -105,6 +128,10 @@ func NamedVersioned(serviceID, name types.String) *NamedVersionedModel {
 
 func ServiceScopedVersioned(serviceID types.String) *ServiceScopedVersionedModel {
 	return &ServiceScopedVersionedModel{ServiceID: serviceID}
+}
+
+func ResourceLink(serviceID, resourceID types.String) *ResourceLinkModel {
+	return &ResourceLinkModel{ServiceID: serviceID, ResourceID: resourceID}
 }
 
 func ACLCollection(serviceID, aclID types.String) *ACLCollectionModel {
@@ -221,6 +248,46 @@ func ImportServiceScopedVersioned(ctx context.Context, client *fastly.Client, re
 	if resp.Diagnostics.HasError() || resp.Identity == nil {
 		return
 	}
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, &identity)...)
+}
+
+// ImportResourceLink seeds service_id, the currently readable service version,
+// and resource_id. The resource's Read resolves the link from resource_id.
+func ImportResourceLink(ctx context.Context, client *fastly.Client, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if !requireImportIdentity(req, resp) {
+		return
+	}
+
+	var identity ResourceLinkModel
+	resp.Diagnostics.Append(req.Identity.Get(ctx, &identity)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if identity.ServiceID.IsNull() || identity.ServiceID.IsUnknown() || identity.ServiceID.ValueString() == "" {
+		resp.Diagnostics.AddError("Invalid resource identity", "The resource identity must contain a non-empty service_id.")
+		return
+	}
+	if identity.ResourceID.IsNull() || identity.ResourceID.IsUnknown() || identity.ResourceID.ValueString() == "" {
+		resp.Diagnostics.AddError("Invalid resource identity", "The resource identity must contain a non-empty resource_id.")
+		return
+	}
+
+	version, _, err := service.SelectReadVersion(ctx, client, identity.ServiceID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error selecting service version for import",
+			fmt.Sprintf("Could not select an active or latest version for Fastly service %q: %s", identity.ServiceID.ValueString(), err),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("service_id"), identity.ServiceID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("version"), int64(version))...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_id"), identity.ResourceID)...)
+	if resp.Diagnostics.HasError() || resp.Identity == nil {
+		return
+	}
+
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, &identity)...)
 }
 

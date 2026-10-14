@@ -6,15 +6,44 @@
 
 ### BUG FIXES:
 
+### Dependencies:
+
+## 0.2.3 (October 13, 2026)
+
+### ENHANCEMENTS:
+
+- feat(query): add optional `service_id` filtering to service-scoped `terraform query` List Resources ([#172](https://github.com/fastly/terraform-provider-fastly-beta/pull/172))
+- feat(image_optimizer_default_explicit): add support for explicit image optimizer defaults and `terraform query` support ([#162](https://github.com/fastly/terraform-provider-fastly-beta/pull/162))
+- feat(request_setting): add `fastly_service_request_setting` explicit/default resource and `terraform query` support ([#167](https://github.com/fastly/terraform-provider-fastly-beta/pull/167))
+- feat(response_object): add `fastly_service_response_object` explicit/default resource and `terraform query` support ([#170](https://github.com/fastly/terraform-provider-fastly-beta/pull/170))
+- feat(fastly_service_resource_link): add support for the explicit `fastly_service_resource_link` resources and `terraform query` support ([#168](https://github.com/fastly/terraform-provider-fastly-beta/pull/168))
+
+### BUG FIXES:
+
+- fix(request_setting,cache_setting,rate_limiter): enum attributes (`action`, `xff`, `logger_type`) now only accept lowercase values([#171](https://github.com/fastly/terraform-provider-fastly-beta/pull/171))
+
+## 0.2.2 (October 6, 2026)
+
+### ENHANCEMENTS:
+
+- feat(healthchecks_explicit): add support for explicit healthchecks and `terraform query` support ([#160](https://github.com/fastly/terraform-provider-fastly-beta/pull/160))
+- feat(director): add `fastly_service_director` explicit/default resource ([#159](https://github.com/fastly/terraform-provider-fastly-beta/pull/159))
+- feat(header): add `fastly_service_header` explicit/default resource for caller-managed service version lifecycle ([#163](https://github.com/fastly/terraform-provider-fastly-beta/pull/163))
+
+### BUG FIXES:
+
 - fix(query): restore stable resource identities for explicit resources to support `terraform query` and generated imports, excluding mutable service `version` from identity ([#155](https://github.com/fastly/terraform-provider-fastly-beta/pull/155))
 
 ### Dependencies:
+
+- build(deps): `github.com/ProtonMail/go-crypto` from 1.5.0 to 1.5.2 ([#164](https://github.com/fastly/terraform-provider-fastly-beta/pull/164))
 
 ## 0.2.1 (October 2, 2026)
 
 ### ENHANCEMENTS:
 
 - feat(docs): add intro content to the provider landing page ([#151](https://github.com/fastly/terraform-provider-fastly-beta/pull/151))
+- feat(logging_gcs): add support for the `public_key` attribute  ([#158](https://github.com/fastly/terraform-provider-fastly-beta/pull/158))
 
 ### Dependencies:
 

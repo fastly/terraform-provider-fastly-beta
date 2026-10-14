@@ -7,6 +7,7 @@ import (
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/importutil"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resourceidentity"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 
@@ -21,6 +22,7 @@ import (
 var (
 	_ resource.Resource                = &Resource{}
 	_ resource.ResourceWithImportState = &Resource{}
+	_ resource.ResourceWithIdentity    = &Resource{}
 )
 
 type Resource struct {
@@ -40,6 +42,10 @@ type Model struct {
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_service_resource_link"
+}
+
+func (r *Resource) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	resp.IdentitySchema = resourceidentity.ResourceLinkSchema()
 }
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -91,6 +97,9 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 	flatten(ctx, a, &plan)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	if !resp.Diagnostics.HasError() && resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, resourceidentity.ResourceLink(plan.Service, plan.ResourceID))...)
+	}
 }
 
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -106,8 +115,29 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		"link_id":    state.LinkID.ValueString(),
 	})
 
+	linkID := state.LinkID.ValueString()
+	// Identity-based import seeds only resource_id, so the link ID has to be looked up.
+	if linkID == "" {
+		found, err := findLinkID(ctx, r.providerData.Client, state.Service.ValueString(), int(state.Version.ValueInt64()), service.StringValue(state.ResourceID))
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading resource link", err.Error())
+			return
+		}
+		if found == "" {
+			resp.Diagnostics.AddError(
+				"Resource link not found",
+				fmt.Sprintf(
+					"Service %q version %d has no resource link for resource_id %q.",
+					state.Service.ValueString(), state.Version.ValueInt64(), service.StringValue(state.ResourceID),
+				),
+			)
+			return
+		}
+		linkID = found
+	}
+
 	a, err := r.providerData.Client.GetResource(ctx, &fastly.GetResourceInput{
-		ResourceID:     state.LinkID.ValueString(),
+		ResourceID:     linkID,
 		ServiceID:      state.Service.ValueString(),
 		ServiceVersion: int(state.Version.ValueInt64()),
 	})
@@ -127,6 +157,9 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 
 	flatten(ctx, a, &state)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	if !resp.Diagnostics.HasError() && resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, resourceidentity.ResourceLink(state.Service, state.ResourceID))...)
+	}
 }
 
 // Update handles two independent, non-replacing changes: a rename (name changed, same
@@ -138,6 +171,11 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_resource_link", service.TypeCompute); err != nil {
+		resp.Diagnostics.AddError("Unsupported Fastly service type", err.Error())
 		return
 	}
 
@@ -185,6 +223,9 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 
 	flatten(ctx, a, &plan)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	if !resp.Diagnostics.HasError() && resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, resourceidentity.ResourceLink(plan.Service, plan.ResourceID))...)
+	}
 }
 
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -225,6 +266,11 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 }
 
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if req.ID == "" {
+		resourceidentity.ImportResourceLink(ctx, r.providerData.Client, req, resp)
+		return
+	}
+
 	serviceID, version, name, err := importutil.ParseCompositeID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -266,4 +312,7 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 	var state Model
 	flatten(ctx, found, &state)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	if !resp.Diagnostics.HasError() && resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, resourceidentity.ResourceLink(state.Service, state.ResourceID))...)
+	}
 }

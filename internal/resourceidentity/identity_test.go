@@ -25,6 +25,10 @@ func TestIdentitySchemasAreStable(t *testing.T) {
 			want:   map[string]bool{"service_id": true},
 			schema: ServiceScopedVersionedSchema(),
 		},
+		"resource link": {
+			want:   map[string]bool{"service_id": true, "resource_id": true},
+			schema: ResourceLinkSchema(),
+		},
 		"ACL collection": {
 			want:   map[string]bool{"service_id": true, "acl_id": true},
 			schema: ACLCollectionSchema(),
@@ -66,6 +70,9 @@ func TestImportHelpersRejectMissingIdentity(t *testing.T) {
 		},
 		"service scoped versioned": func(resp *resource.ImportStateResponse) {
 			ImportServiceScopedVersioned(ctx, nil, req, resp)
+		},
+		"resource link": func(resp *resource.ImportStateResponse) {
+			ImportResourceLink(ctx, nil, req, resp)
 		},
 		"ACL collection": func(resp *resource.ImportStateResponse) {
 			ImportACLCollection(ctx, req, resp)
