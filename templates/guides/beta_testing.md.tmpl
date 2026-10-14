@@ -429,13 +429,21 @@ Replace `<current-version>` with the current published version from the
 Pin the version and keep the `.terraform.lock.hcl` file that `terraform init`
 writes so that a test can be reproduced against the same beta release.
 
-For a focused test, use an API token that can access only the non-production
-service you want to adopt. List resources enumerate matching resources visible
-to the token, so limiting the token prevents an accidental generated
-configuration containing other services.
+For a focused test, scope discovery to the non-production service you want to
+adopt. You can do this in either of two ways:
+
+- add `config { service_id = "<service-id>" }` to every `list` block, as shown
+  below
+- use an API token whose access is limited to the target service; see
+  [Managing account-level API tokens](https://www.fastly.com/documentation/guides/organizations-and-accounts/account-members-and-permissions/managing-account-level-api-tokens/)
+
+The `service_id` filter controls discovery scope without changing token
+permissions. When it is configured, the provider queries only that service.
+If it is omitted, a List Resource considers all compatible services visible to
+the token.
 
 ```bash
-export FASTLY_API_TOKEN=<service-scoped-token>
+export FASTLY_API_TOKEN=<your-token>
 terraform init
 ```
 
@@ -453,24 +461,49 @@ configuration can start with:
 ```hcl
 list "fastly_service_cdn" "all" {
   provider = fastly-beta
+
+  config {
+    service_id = "<service-id>"
+  }
 }
 
 list "fastly_service_domain" "all" {
   provider = fastly-beta
+
+  config {
+    service_id = "<service-id>"
+  }
 }
 
 list "fastly_service_backend" "all" {
   provider = fastly-beta
+
+  config {
+    service_id = "<service-id>"
+  }
 }
 
 list "fastly_service_settings" "all" {
   provider = fastly-beta
+
+  config {
+    service_id = "<service-id>"
+  }
 }
 
 list "fastly_service_gzip" "all" {
   provider = fastly-beta
+
+  config {
+    service_id = "<service-id>"
+  }
 }
 ```
+
+Use the same `service_id` filter on every list block when you want discovery
+limited to one service. The filter is optional; if you omit it, the provider
+preserves the account-wide behavior and considers all compatible services the
+token can access.
 
 Add a `list` block for every explicit resource type you want Terraform to
 discover. Query only returns resource types that you ask for. The
@@ -492,8 +525,9 @@ terraform query
 This operation is read-only. It discovers resources but does not create
 Terraform state and does not change the Fastly service.
 
-For a service-scoped token, the output should contain only resources belonging
-to the service you are testing. For example:
+With `service_id` filtering as shown above, or with a token limited to the
+target service, the output should contain only resources belonging to the
+service you are testing. For example:
 
 ```text
 list.fastly_service_cdn.all       service_id=<service-id>                  <display-name>
