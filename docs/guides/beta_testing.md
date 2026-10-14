@@ -727,8 +727,8 @@ nothing on Fastly. Delete the test directory.
 
 **If you imported the resources but made no subsequent service changes**, a
 successful no-op plan confirms the generated configuration matches the live
-service. If you do not want to keep the beta configuration, delete the test
-directory rather than running `terraform destroy`.
+service. What you do with the test configuration and state after that depends
+on whether you want to continue managing the service with the beta provider.
 
 **If you made and activated changes with the Explicit family**, treat any
 legacy Terraform state as potentially stale. Review the legacy plan carefully
