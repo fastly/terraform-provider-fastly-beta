@@ -3,7 +3,6 @@ package healthcheck
 import (
 	"context"
 	"maps"
-	"sort"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
@@ -356,21 +355,17 @@ func ReadForVersion(ctx context.Context, client *fastly.Client, serviceID string
 // ReadForVersionWithPlan reads health checks from a service version, then normalizes headers
 // against plan - see applyPlanHeaders.
 func ReadForVersionWithPlan(ctx context.Context, client *fastly.Client, serviceID string, version int, plan []NestedModel) ([]NestedModel, error) {
-	remote, err := ops{}.List(ctx, client, serviceID, version)
+	models, err := reconciler.ReadForVersion(ctx, client, serviceID, version)
 	if err != nil {
 		return nil, err
 	}
-
-	models := make([]NestedModel, 0, len(remote))
-	for _, item := range remote {
-		models = append(models, ops{}.ToModel(item))
-	}
-
 	return applyPlanHeaders(models, plan), nil
 }
 
-// applyPlanHeaders restores each model's plan-matched (by name) headers value whenever that
-// plan value is unset.
+// applyPlanHeaders restores a plan-matched (by name) model's explicit empty headers set when
+// the remote read-back is unset: create/update omit an empty headers field entirely, so the
+// API reports back null, which otherwise fails apply as an inconsistent result. A merely-unset
+// plan value (null/unknown) is left alone so remote drift still surfaces.
 func applyPlanHeaders(models, plan []NestedModel) []NestedModel {
 	planByName := make(map[string]NestedModel, len(plan))
 	for _, p := range plan {
@@ -379,17 +374,19 @@ func applyPlanHeaders(models, plan []NestedModel) []NestedModel {
 
 	result := make([]NestedModel, len(models))
 	for i, model := range models {
-		if planItem, exists := planByName[service.StringValue(model.Name)]; exists && headersUnset(planItem.Headers) {
+		planItem, exists := planByName[service.StringValue(model.Name)]
+		if exists && headersUnset(model.Headers) && headersExplicitlyEmpty(planItem.Headers) {
 			model.Headers = planItem.Headers
 		}
 		result[i] = model
 	}
-
-	sort.Slice(result, func(i, j int) bool {
-		return service.StringValue(result[i].Name) < service.StringValue(result[j].Name)
-	})
-
 	return result
+}
+
+// headersExplicitlyEmpty reports whether s is a known, zero-element set - as opposed to null
+// or unknown, which headersUnset also treats as "unset" but which carry no value to restore.
+func headersExplicitlyEmpty(s types.Set) bool {
+	return !s.IsNull() && !s.IsUnknown() && len(s.Elements()) == 0
 }
 
 func Reconcile(ctx context.Context, client *fastly.Client, serviceID string, version int, desired []NestedModel) error {

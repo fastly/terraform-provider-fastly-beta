@@ -399,6 +399,12 @@ func TestApplyPlanHeaders(t *testing.T) {
 			plan:        NestedModel{},
 			wantHeaders: types.SetNull(types.StringType),
 		},
+		{
+			name:        "headers omitted from plan does not mask non-empty remote headers (drift)",
+			remote:      NestedModel{Name: types.StringValue("hc"), Headers: nonEmptySet},
+			plan:        NestedModel{Name: types.StringValue("hc"), Headers: types.SetNull(types.StringType)},
+			wantHeaders: nonEmptySet,
+		},
 	}
 
 	for _, tt := range tests {
