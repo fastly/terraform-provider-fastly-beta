@@ -293,7 +293,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	healthChecks, err := healthcheck.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	healthChecks, err := healthcheck.ReadForVersionWithPlan(ctx, r.providerData.AutoClient(), serviceID, version, plan.HealthCheck)
 	if err != nil {
 		recordOrphanSafeState()
 		resp.Diagnostics.AddError("Error reading service health checks", err.Error())
@@ -810,7 +810,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading service domains", err.Error())
 		return
 	}
-	healthChecks, err := healthcheck.ReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	healthChecks, err := healthcheck.ReadForVersionWithPlan(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion, state.HealthCheck)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading service health checks", err.Error())
 		return
@@ -1132,7 +1132,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 			return
 		}
 
-		healthChecks, err := healthcheck.ReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		healthChecks, err := healthcheck.ReadForVersionWithPlan(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.HealthCheck)
 		if err != nil {
 			resp.Diagnostics.AddError("Error reading service health checks", err.Error())
 			return
