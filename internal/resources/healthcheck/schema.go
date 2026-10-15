@@ -326,7 +326,7 @@ func headersToSlice(s types.Set) []string {
 
 // headersFromSlice converts the API's headers slice into a Set rather than a List: the Fastly
 // API always returns headers pre-sorted, so a List would show a perpetual diff against
-// differently-ordered configuration 
+// differently-ordered configuration.
 func headersFromSlice(headers []string) types.Set {
 	if len(headers) == 0 {
 		return types.SetNull(types.StringType)
@@ -370,7 +370,7 @@ func ReadForVersionWithPlan(ctx context.Context, client *fastly.Client, serviceI
 }
 
 // applyPlanHeaders restores each model's plan-matched (by name) headers value whenever that
-// plan value is unset
+// plan value is unset.
 func applyPlanHeaders(models, plan []NestedModel) []NestedModel {
 	planByName := make(map[string]NestedModel, len(plan))
 	for _, p := range plan {
