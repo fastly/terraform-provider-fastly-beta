@@ -151,7 +151,7 @@ func beforeBackendAndDirectorSteps(plan, previous *Model) []mutateStep {
 				return healthcheck.Reconcile(ctx, client, serviceID, version, plan.HealthCheck)
 			},
 			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
-				items, err := healthcheck.ReadForVersion(ctx, client, serviceID, version)
+				items, err := healthcheck.ReadForVersionWithPlan(ctx, client, serviceID, version, plan.HealthCheck)
 				if err != nil {
 					return err
 				}
@@ -768,7 +768,7 @@ func readSteps(state *Model, imported bool) []readStep {
 		{
 			label: "health checks",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
-				items, err := healthcheck.ReadForVersion(ctx, client, serviceID, version)
+				items, err := healthcheck.ReadForVersionWithPlan(ctx, client, serviceID, version, state.HealthCheck)
 				if err != nil {
 					return err
 				}

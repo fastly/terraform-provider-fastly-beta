@@ -3,6 +3,7 @@ package healthcheck
 import (
 	"context"
 	"maps"
+	"sort"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
@@ -325,8 +326,7 @@ func headersToSlice(s types.Set) []string {
 
 // headersFromSlice converts the API's headers slice into a Set rather than a List: the Fastly
 // API always returns headers pre-sorted, so a List would show a perpetual diff against
-// differently-ordered configuration (see the equivalent TypeSet usage in the old SDKv2
-// provider's block_fastly_service_healthcheck.go).
+// differently-ordered configuration 
 func headersFromSlice(headers []string) types.Set {
 	if len(headers) == 0 {
 		return types.SetNull(types.StringType)
@@ -347,8 +347,49 @@ var reconciler = &reconcile.Resource[NestedModel, fastly.HealthCheck]{
 	Sortable: true,
 }
 
+// ReadForVersion reads health checks without plan awareness. Prefer ReadForVersionWithPlan
+// when reading as part of resource state management.
 func ReadForVersion(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]NestedModel, error) {
-	return reconciler.ReadForVersion(ctx, client, serviceID, version)
+	return ReadForVersionWithPlan(ctx, client, serviceID, version, nil)
+}
+
+// ReadForVersionWithPlan reads health checks from a service version, then normalizes headers
+// against plan - see applyPlanHeaders.
+func ReadForVersionWithPlan(ctx context.Context, client *fastly.Client, serviceID string, version int, plan []NestedModel) ([]NestedModel, error) {
+	remote, err := ops{}.List(ctx, client, serviceID, version)
+	if err != nil {
+		return nil, err
+	}
+
+	models := make([]NestedModel, 0, len(remote))
+	for _, item := range remote {
+		models = append(models, ops{}.ToModel(item))
+	}
+
+	return applyPlanHeaders(models, plan), nil
+}
+
+// applyPlanHeaders restores each model's plan-matched (by name) headers value whenever that
+// plan value is unset
+func applyPlanHeaders(models, plan []NestedModel) []NestedModel {
+	planByName := make(map[string]NestedModel, len(plan))
+	for _, p := range plan {
+		planByName[service.StringValue(p.Name)] = p
+	}
+
+	result := make([]NestedModel, len(models))
+	for i, model := range models {
+		if planItem, exists := planByName[service.StringValue(model.Name)]; exists && headersUnset(planItem.Headers) {
+			model.Headers = planItem.Headers
+		}
+		result[i] = model
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return service.StringValue(result[i].Name) < service.StringValue(result[j].Name)
+	})
+
+	return result
 }
 
 func Reconcile(ctx context.Context, client *fastly.Client, serviceID string, version int, desired []NestedModel) error {
