@@ -10,7 +10,7 @@ Fastly should follow the same approach. We cannot assume that all users are comf
 
 AI-assisted migration could still be evaluated later as an optional experience built around the same migration rules, but it should not be required for a successful provider migration.
 
-The first release should focus only on the **Automatic (`_auto`) family** because it most closely preserves the legacy provider workflow and is expected to be the migration path for most existing users.
+The migration CLI will only support the **Automatic (`_auto`) family** because it most closely preserves the legacy provider workflow and is expected to be the migration path for most existing users.
 
 The CLI should:
 
@@ -37,14 +37,14 @@ The dual-model provider introduces two ways to manage Fastly services:
 - **Automatic (`_auto`) family** — preserves provider-managed cloning, validation, and activation.
 - **Explicit family** — exposes service configuration as first-class resources and leaves service-version lifecycle to the caller.
 
-For the first migration release, Fastly should support only:
+The migration CLI will support only:
 
 ```text
 fastly_service_vcl     → fastly_service_cdn_auto
 fastly_service_compute → fastly_service_compute_auto
 ```
 
-The Explicit family should be evaluated separately because one legacy service resource can become many independent Terraform resources, making both HCL and state migration substantially more complex.
+The Explicit family is out of scope for this tool because migration requires breaking one legacy service resource into many independent Terraform resources, making both HCL and state migration fundamentally different.
 
 ---
 
@@ -223,9 +223,9 @@ The proof-of-concept should determine:
 The team should agree on the following before implementation begins:
 
 1. Fastly will provide an official migration CLI.
-2. The first release will support only legacy → `_auto` migration.
+2. The CLI will support only legacy -> `_auto` migration.
 3. The CLI will transform existing HCL rather than regenerate configuration.
 4. The CLI will not directly rewrite raw Terraform state.
 5. Terraform Plugin Framework and Terraform-native migration mechanisms will be the preferred state-migration path.
 6. A focused state-migration proof-of-concept will be completed before the CLI architecture is finalized.
-7. Explicit-family migration will be considered separately after `_auto` migration is proven.
+7. Explicit-family migration is out of scope for this CLI and would require a separate migration strategy.
