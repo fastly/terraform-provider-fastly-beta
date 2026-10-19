@@ -1,0 +1,908 @@
+{
+  "block": {
+    "attributes": {
+      "activate": "bool",
+      "active_version": "number",
+      "cloned_version": "number",
+      "comment": "string",
+      "default_host": "string",
+      "default_ttl": "number",
+      "force_destroy": "bool",
+      "force_refresh": "bool",
+      "http3": "bool",
+      "id": "string",
+      "imported": "bool",
+      "name": "string",
+      "reuse": "bool",
+      "stage": "bool",
+      "staged_version": "number",
+      "stale_if_error": "bool",
+      "stale_if_error_ttl": "number",
+      "version_comment": "string"
+    },
+    "block_types": {
+      "acl": {
+        "block": {
+          "attributes": {
+            "acl_id": "string",
+            "force_destroy": "bool",
+            "name": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "backend": {
+        "block": {
+          "attributes": {
+            "address": "string",
+            "auto_loadbalance": "bool",
+            "between_bytes_timeout": "number",
+            "connect_timeout": "number",
+            "error_threshold": "number",
+            "first_byte_timeout": "number",
+            "healthcheck": "string",
+            "keepalive_time": "number",
+            "max_conn": "number",
+            "max_lifetime": "number",
+            "max_tls_version": "string",
+            "max_use": "number",
+            "min_tls_version": "string",
+            "name": "string",
+            "override_host": "string",
+            "port": "number",
+            "prefer_ipv6": "bool",
+            "request_condition": "string",
+            "share_key": "string",
+            "shield": "string",
+            "ssl_ca_cert": "string",
+            "ssl_cert_hostname": "string",
+            "ssl_check_cert": "bool",
+            "ssl_ciphers": "string",
+            "ssl_client_cert": "string",
+            "ssl_client_key": "string",
+            "ssl_sni_hostname": "string",
+            "use_ssl": "bool",
+            "weight": "number"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "cache_setting": {
+        "block": {
+          "attributes": {
+            "action": "string",
+            "cache_condition": "string",
+            "name": "string",
+            "stale_ttl": "number",
+            "ttl": "number"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "condition": {
+        "block": {
+          "attributes": {
+            "name": "string",
+            "priority": "number",
+            "statement": "string",
+            "type": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "dictionary": {
+        "block": {
+          "attributes": {
+            "dictionary_id": "string",
+            "force_destroy": "bool",
+            "name": "string",
+            "write_only": "bool"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "director": {
+        "block": {
+          "attributes": {
+            "backends": [
+              "set",
+              "string"
+            ],
+            "comment": "string",
+            "name": "string",
+            "quorum": "number",
+            "retries": "number",
+            "shield": "string",
+            "type": "number"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "domain": {
+        "block": {
+          "attributes": {
+            "comment": "string",
+            "name": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "dynamicsnippet": {
+        "block": {
+          "attributes": {
+            "content": "string",
+            "name": "string",
+            "priority": "number",
+            "snippet_id": "string",
+            "type": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "gzip": {
+        "block": {
+          "attributes": {
+            "cache_condition": "string",
+            "content_types": [
+              "list",
+              "string"
+            ],
+            "extensions": [
+              "list",
+              "string"
+            ],
+            "name": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "header": {
+        "block": {
+          "attributes": {
+            "action": "string",
+            "cache_condition": "string",
+            "destination": "string",
+            "ignore_if_set": "bool",
+            "name": "string",
+            "priority": "number",
+            "regex": "string",
+            "request_condition": "string",
+            "response_condition": "string",
+            "source": "string",
+            "substitution": "string",
+            "type": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "healthcheck": {
+        "block": {
+          "attributes": {
+            "check_interval": "number",
+            "expected_response": "number",
+            "headers": [
+              "set",
+              "string"
+            ],
+            "host": "string",
+            "http_version": "string",
+            "initial": "number",
+            "method": "string",
+            "name": "string",
+            "path": "string",
+            "threshold": "number",
+            "timeout": "number",
+            "window": "number"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "image_optimizer_default_settings": {
+        "block": {
+          "attributes": {
+            "allow_video": "bool",
+            "jpeg_quality": "number",
+            "jpeg_type": "string",
+            "name": "string",
+            "resize_filter": "string",
+            "upscale": "bool",
+            "webp": "bool",
+            "webp_quality": "number"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_bigquery": {
+        "block": {
+          "attributes": {
+            "account_name": "string",
+            "dataset": "string",
+            "email": "string",
+            "format": "string",
+            "name": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "project_id": "string",
+            "response_condition": "string",
+            "secret_key": "string",
+            "table": "string",
+            "template": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_blobstorage": {
+        "block": {
+          "attributes": {
+            "account_name": "string",
+            "compression_codec": "string",
+            "container": "string",
+            "file_max_bytes": "number",
+            "format": "string",
+            "format_version": "number",
+            "gzip_level": "number",
+            "message_type": "string",
+            "name": "string",
+            "path": "string",
+            "period": "number",
+            "placement": "string",
+            "processing_region": "string",
+            "public_key": "string",
+            "response_condition": "string",
+            "sas_token": "string",
+            "timestamp_format": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_cloudfiles": {
+        "block": {
+          "attributes": {
+            "access_key": "string",
+            "bucket_name": "string",
+            "compression_codec": "string",
+            "format": "string",
+            "format_version": "number",
+            "gzip_level": "number",
+            "message_type": "string",
+            "name": "string",
+            "path": "string",
+            "period": "number",
+            "placement": "string",
+            "processing_region": "string",
+            "public_key": "string",
+            "region": "string",
+            "response_condition": "string",
+            "timestamp_format": "string",
+            "user": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_datadog": {
+        "block": {
+          "attributes": {
+            "format": "string",
+            "format_version": "number",
+            "name": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "region": "string",
+            "response_condition": "string",
+            "token": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_digitalocean": {
+        "block": {
+          "attributes": {
+            "access_key": "string",
+            "bucket_name": "string",
+            "compression_codec": "string",
+            "domain": "string",
+            "format": "string",
+            "format_version": "number",
+            "gzip_level": "number",
+            "message_type": "string",
+            "name": "string",
+            "path": "string",
+            "period": "number",
+            "placement": "string",
+            "processing_region": "string",
+            "public_key": "string",
+            "response_condition": "string",
+            "secret_key": "string",
+            "timestamp_format": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_elasticsearch": {
+        "block": {
+          "attributes": {
+            "format": "string",
+            "format_version": "number",
+            "index": "string",
+            "name": "string",
+            "password": "string",
+            "pipeline": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "request_max_bytes": "number",
+            "request_max_entries": "number",
+            "response_condition": "string",
+            "tls_ca_cert": "string",
+            "tls_client_cert": "string",
+            "tls_client_key": "string",
+            "tls_hostname": "string",
+            "url": "string",
+            "user": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_ftp": {
+        "block": {
+          "attributes": {
+            "address": "string",
+            "compression_codec": "string",
+            "format": "string",
+            "format_version": "number",
+            "gzip_level": "number",
+            "message_type": "string",
+            "name": "string",
+            "password": "string",
+            "path": "string",
+            "period": "number",
+            "placement": "string",
+            "port": "number",
+            "processing_region": "string",
+            "public_key": "string",
+            "response_condition": "string",
+            "timestamp_format": "string",
+            "user": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_gcs": {
+        "block": {
+          "attributes": {
+            "account_name": "string",
+            "bucket_name": "string",
+            "compression_codec": "string",
+            "format": "string",
+            "format_version": "number",
+            "gzip_level": "number",
+            "message_type": "string",
+            "name": "string",
+            "path": "string",
+            "period": "number",
+            "placement": "string",
+            "processing_region": "string",
+            "project_id": "string",
+            "response_condition": "string",
+            "secret_key": "string",
+            "timestamp_format": "string",
+            "user": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_googlepubsub": {
+        "block": {
+          "attributes": {
+            "account_name": "string",
+            "format": "string",
+            "format_version": "number",
+            "name": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "project_id": "string",
+            "response_condition": "string",
+            "secret_key": "string",
+            "topic": "string",
+            "user": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_grafanacloudlogs": {
+        "block": {
+          "attributes": {
+            "format": "string",
+            "format_version": "number",
+            "index": "string",
+            "name": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "response_condition": "string",
+            "token": "string",
+            "url": "string",
+            "user": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_heroku": {
+        "block": {
+          "attributes": {
+            "format": "string",
+            "format_version": "number",
+            "name": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "response_condition": "string",
+            "token": "string",
+            "url": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_honeycomb": {
+        "block": {
+          "attributes": {
+            "dataset": "string",
+            "format": "string",
+            "format_version": "number",
+            "name": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "response_condition": "string",
+            "token": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_https": {
+        "block": {
+          "attributes": {
+            "compression_codec": "string",
+            "content_type": "string",
+            "format": "string",
+            "format_version": "number",
+            "gzip_level": "number",
+            "header_name": "string",
+            "header_value": "string",
+            "json_format": "string",
+            "message_type": "string",
+            "method": "string",
+            "name": "string",
+            "period": "number",
+            "placement": "string",
+            "processing_region": "string",
+            "request_max_bytes": "number",
+            "request_max_entries": "number",
+            "response_condition": "string",
+            "tls_ca_cert": "string",
+            "tls_client_cert": "string",
+            "tls_client_key": "string",
+            "tls_hostname": "string",
+            "url": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_kafka": {
+        "block": {
+          "attributes": {
+            "auth_method": "string",
+            "brokers": "string",
+            "compression_codec": "string",
+            "format": "string",
+            "format_version": "number",
+            "name": "string",
+            "parse_log_keyvals": "bool",
+            "password": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "request_max_bytes": "number",
+            "required_acks": "string",
+            "response_condition": "string",
+            "tls_ca_cert": "string",
+            "tls_client_cert": "string",
+            "tls_client_key": "string",
+            "tls_hostname": "string",
+            "topic": "string",
+            "use_tls": "bool",
+            "user": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_kinesis": {
+        "block": {
+          "attributes": {
+            "access_key": "string",
+            "format": "string",
+            "format_version": "number",
+            "iam_role": "string",
+            "name": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "region": "string",
+            "response_condition": "string",
+            "secret_key": "string",
+            "topic": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_logentries": {
+        "block": {
+          "attributes": {
+            "format": "string",
+            "format_version": "number",
+            "name": "string",
+            "placement": "string",
+            "port": "number",
+            "processing_region": "string",
+            "response_condition": "string",
+            "token": "string",
+            "use_tls": "bool"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_loggly": {
+        "block": {
+          "attributes": {
+            "format": "string",
+            "format_version": "number",
+            "name": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "response_condition": "string",
+            "token": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_logshuttle": {
+        "block": {
+          "attributes": {
+            "format": "string",
+            "format_version": "number",
+            "name": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "response_condition": "string",
+            "token": "string",
+            "url": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_newrelic": {
+        "block": {
+          "attributes": {
+            "format": "string",
+            "format_version": "number",
+            "name": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "region": "string",
+            "response_condition": "string",
+            "token": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_newrelicotlp": {
+        "block": {
+          "attributes": {
+            "format": "string",
+            "format_version": "number",
+            "name": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "region": "string",
+            "response_condition": "string",
+            "token": "string",
+            "url": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_openstack": {
+        "block": {
+          "attributes": {
+            "access_key": "string",
+            "bucket_name": "string",
+            "compression_codec": "string",
+            "format": "string",
+            "format_version": "number",
+            "gzip_level": "number",
+            "message_type": "string",
+            "name": "string",
+            "path": "string",
+            "period": "number",
+            "placement": "string",
+            "processing_region": "string",
+            "public_key": "string",
+            "response_condition": "string",
+            "timestamp_format": "string",
+            "url": "string",
+            "user": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_papertrail": {
+        "block": {
+          "attributes": {
+            "address": "string",
+            "format": "string",
+            "format_version": "number",
+            "name": "string",
+            "placement": "string",
+            "port": "number",
+            "processing_region": "string",
+            "response_condition": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_s3": {
+        "block": {
+          "attributes": {
+            "acl": "string",
+            "bucket_name": "string",
+            "compression_codec": "string",
+            "domain": "string",
+            "file_max_bytes": "number",
+            "format": "string",
+            "format_version": "number",
+            "gzip_level": "number",
+            "message_type": "string",
+            "name": "string",
+            "path": "string",
+            "period": "number",
+            "placement": "string",
+            "processing_region": "string",
+            "public_key": "string",
+            "redundancy": "string",
+            "response_condition": "string",
+            "s3_access_key": "string",
+            "s3_iam_role": "string",
+            "s3_secret_key": "string",
+            "server_side_encryption": "string",
+            "server_side_encryption_kms_key_id": "string",
+            "timestamp_format": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_scalyr": {
+        "block": {
+          "attributes": {
+            "format": "string",
+            "format_version": "number",
+            "name": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "project_id": "string",
+            "region": "string",
+            "response_condition": "string",
+            "token": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_sftp": {
+        "block": {
+          "attributes": {
+            "address": "string",
+            "compression_codec": "string",
+            "format": "string",
+            "format_version": "number",
+            "gzip_level": "number",
+            "message_type": "string",
+            "name": "string",
+            "password": "string",
+            "path": "string",
+            "period": "number",
+            "placement": "string",
+            "port": "number",
+            "processing_region": "string",
+            "public_key": "string",
+            "response_condition": "string",
+            "secret_key": "string",
+            "ssh_known_hosts": "string",
+            "timestamp_format": "string",
+            "user": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_splunk": {
+        "block": {
+          "attributes": {
+            "format": "string",
+            "format_version": "number",
+            "name": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "response_condition": "string",
+            "tls_ca_cert": "string",
+            "tls_client_cert": "string",
+            "tls_client_key": "string",
+            "tls_hostname": "string",
+            "token": "string",
+            "url": "string",
+            "use_tls": "bool"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_sumologic": {
+        "block": {
+          "attributes": {
+            "format": "string",
+            "format_version": "number",
+            "message_type": "string",
+            "name": "string",
+            "placement": "string",
+            "processing_region": "string",
+            "response_condition": "string",
+            "url": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "logging_syslog": {
+        "block": {
+          "attributes": {
+            "address": "string",
+            "format": "string",
+            "format_version": "number",
+            "message_type": "string",
+            "name": "string",
+            "placement": "string",
+            "port": "number",
+            "processing_region": "string",
+            "response_condition": "string",
+            "tls_ca_cert": "string",
+            "tls_client_cert": "string",
+            "tls_client_key": "string",
+            "tls_hostname": "string",
+            "token": "string",
+            "use_tls": "bool"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "product_enablement": {
+        "block": {
+          "attributes": {
+            "api_discovery": "bool",
+            "brotli_compression": "bool",
+            "domain_inspector": "bool",
+            "image_optimizer": "bool",
+            "log_explorer_insights": "bool",
+            "name": "string",
+            "origin_inspector": "bool",
+            "websockets": "bool"
+          },
+          "block_types": {
+            "bot_management": {
+              "block": {
+                "attributes": {
+                  "contentguard": "string",
+                  "enabled": "bool"
+                }
+              },
+              "nesting_mode": "list"
+            },
+            "ddos_protection": {
+              "block": {
+                "attributes": {
+                  "enabled": "bool",
+                  "mode": "string"
+                }
+              },
+              "nesting_mode": "list"
+            },
+            "ngwaf": {
+              "block": {
+                "attributes": {
+                  "enabled": "bool",
+                  "traffic_ramp": "number",
+                  "workspace_id": "string"
+                }
+              },
+              "nesting_mode": "list"
+            }
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "rate_limiter": {
+        "block": {
+          "attributes": {
+            "action": "string",
+            "client_key": "string",
+            "feature_revision": "number",
+            "http_methods": "string",
+            "logger_type": "string",
+            "name": "string",
+            "penalty_box_duration": "number",
+            "ratelimiter_id": "string",
+            "response_object_name": "string",
+            "rps_limit": "number",
+            "uri_dictionary_name": "string",
+            "window_size": "number"
+          },
+          "block_types": {
+            "response": {
+              "block": {
+                "attributes": {
+                  "content": "string",
+                  "content_type": "string",
+                  "status": "number"
+                }
+              },
+              "nesting_mode": "list"
+            }
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "request_setting": {
+        "block": {
+          "attributes": {
+            "action": "string",
+            "bypass_busy_wait": "bool",
+            "default_host": "string",
+            "force_miss": "bool",
+            "force_ssl": "bool",
+            "hash_keys": "string",
+            "max_stale_age": "number",
+            "name": "string",
+            "request_condition": "string",
+            "timer_support": "bool",
+            "xff": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "response_object": {
+        "block": {
+          "attributes": {
+            "cache_condition": "string",
+            "content": "string",
+            "content_type": "string",
+            "name": "string",
+            "request_condition": "string",
+            "response": "string",
+            "status": "number"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "snippet": {
+        "block": {
+          "attributes": {
+            "content": "string",
+            "name": "string",
+            "priority": "number",
+            "type": "string"
+          }
+        },
+        "nesting_mode": "set"
+      },
+      "vcl": {
+        "block": {
+          "attributes": {
+            "content": "string",
+            "main": "bool",
+            "name": "string"
+          }
+        },
+        "nesting_mode": "set"
+      }
+    }
+  },
+  "version": 1
+}
