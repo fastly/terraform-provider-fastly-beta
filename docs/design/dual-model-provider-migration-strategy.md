@@ -21,12 +21,13 @@ The CLI should:
 - provide a preview/dry-run before migration
 - validate the result with Terraform
 
-Recommended project:
+Recommended binary:
 
 ```text
-Repository: fastly/terraform-provider-fastly-migrate
-Binary:     fastly-tf-migrate
+fastly-tf-migrate
 ```
+
+The migration CLI should live in this repository and be built and distributed as a separate binary. Keeping the CLI and provider together allows migration rules and provider changes to remain synchronized and land in the same pull request.
 
 ---
 
