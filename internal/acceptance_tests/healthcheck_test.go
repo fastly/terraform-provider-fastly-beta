@@ -57,6 +57,37 @@ func TestAccFastlyServiceCDNAuto_withHealthCheck(t *testing.T) {
 	})
 }
 
+// TestAccFastlyServiceCDNAuto_withHealthCheckEmptyHeaders is a regression test for CDTOOL-1734:
+// an explicit headers = [] must apply cleanly and round-trip as an empty set, rather than
+// failing with "Provider produced inconsistent result after apply".
+func TestAccFastlyServiceCDNAuto_withHealthCheckEmptyHeaders(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	healthCheckName := fmt.Sprintf("hc_%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn_auto"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigCDNAutoWithHealthCheckEmptyHeaders(serviceName, domainName, healthCheckName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_cdn_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "healthcheck.#", "1"),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "healthcheck.0.name", healthCheckName),
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "healthcheck.0.headers.#", "0"),
+				),
+			},
+			{
+				Config:   ConfigCDNAutoWithHealthCheckEmptyHeaders(serviceName, domainName, healthCheckName),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
 func TestAccFastlyServiceCDNAuto_withMultipleHealthChecks(t *testing.T) {
 	t.Parallel()
 	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
@@ -195,6 +226,37 @@ func TestAccFastlyServiceComputeAuto_withHealthCheck(t *testing.T) {
 					resource.TestCheckResourceAttr("fastly_service_compute_auto.test", "active_version", "2"),
 					resource.TestCheckResourceAttr("fastly_service_compute_auto.test", "managed_version", "2"),
 				),
+			},
+		},
+	})
+}
+
+// TestAccFastlyServiceComputeAuto_withHealthCheckEmptyHeaders is a regression test for
+// CDTOOL-1734: an explicit headers = [] must apply cleanly and round-trip as an empty set,
+// rather than failing with "Provider produced inconsistent result after apply".
+func TestAccFastlyServiceComputeAuto_withHealthCheckEmptyHeaders(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("%s.example.com", acctest.RandString(10))
+	healthCheckName := fmt.Sprintf("hc_%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_compute_auto"),
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigComputeAutoWithHealthCheckEmptyHeaders(serviceName, domainName, healthCheckName),
+				Check: resource.ComposeTestCheckFunc(
+					CheckServiceExists("fastly_service_compute_auto.test"),
+					resource.TestCheckResourceAttr("fastly_service_compute_auto.test", "healthcheck.#", "1"),
+					resource.TestCheckResourceAttr("fastly_service_compute_auto.test", "healthcheck.0.name", healthCheckName),
+					resource.TestCheckResourceAttr("fastly_service_compute_auto.test", "healthcheck.0.headers.#", "0"),
+				),
+			},
+			{
+				Config:   ConfigComputeAutoWithHealthCheckEmptyHeaders(serviceName, domainName, healthCheckName),
+				PlanOnly: true,
 			},
 		},
 	})

@@ -1081,6 +1081,21 @@ func ConfigCDNAutoWithHealthCheck(serviceName, domainName, healthCheckName strin
 	)
 }
 
+// ConfigCDNAutoWithHealthCheckEmptyHeaders returns a CDN auto service config with a health check
+// whose headers are explicitly set to an empty list (CDTOOL-1734 regression coverage).
+func ConfigCDNAutoWithHealthCheckEmptyHeaders(serviceName, domainName, healthCheckName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"HEALTHCHECK_NAME": healthCheckName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/healthcheck_empty_headers.tf",
+	)
+}
+
 // ConfigCDNAutoWithMultipleHealthChecks returns a CDN auto service config with multiple health
 // checks, the second of which sets every optional attribute to a non-default value.
 func ConfigCDNAutoWithMultipleHealthChecks(serviceName, domainName, healthCheckName1, healthCheckName2 string) string {
@@ -2074,6 +2089,24 @@ func ConfigComputeAutoWithHealthCheck(serviceName, domainName, healthCheckName s
 		},
 		"internal/acceptance_tests/blocks/domain_single.tf",
 		"internal/acceptance_tests/blocks/healthcheck_single.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}
+
+// ConfigComputeAutoWithHealthCheckEmptyHeaders returns a Compute auto service config with a
+// health check whose headers are explicitly set to an empty list (CDTOOL-1734 regression
+// coverage).
+func ConfigComputeAutoWithHealthCheckEmptyHeaders(serviceName, domainName, healthCheckName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"HEALTHCHECK_NAME": healthCheckName,
+			"PACKAGE_PATH":     GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/healthcheck_empty_headers.tf",
 		"internal/acceptance_tests/blocks/package.tf",
 	)
 }
