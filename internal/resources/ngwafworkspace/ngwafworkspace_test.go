@@ -72,6 +72,35 @@ func TestFlattenToModel_zeroThresholdsDefaulted(t *testing.T) {
 	assert.Equal(t, types.BoolValue(false), th.Immediate)
 }
 
+func TestFlattenToModel_clientIPHeaders(t *testing.T) {
+	base := &ws.Workspace{
+		WorkspaceID:                 "abc123",
+		Name:                        "example",
+		Description:                 "desc",
+		Mode:                        "log",
+		DefaultBlockingResponseCode: 406,
+	}
+
+	t.Run("explicit empty list", func(t *testing.T) {
+		workspace := *base
+		workspace.ClientIPHeaders = []string{}
+
+		m, diags := FlattenToModel(context.Background(), &workspace)
+		assert.False(t, diags.HasError())
+		assert.Equal(t, mustList(t), m.ClientIPHeaders)
+		assert.False(t, m.ClientIPHeaders.IsNull())
+	})
+
+	t.Run("omitted", func(t *testing.T) {
+		workspace := *base
+		workspace.ClientIPHeaders = nil
+
+		m, diags := FlattenToModel(context.Background(), &workspace)
+		assert.False(t, diags.HasError())
+		assert.Equal(t, types.ListNull(types.StringType), m.ClientIPHeaders)
+	})
+}
+
 func TestFlattenToModel_explicitValuesPreserved(t *testing.T) {
 	workspace := &ws.Workspace{
 		WorkspaceID:                 "abc123",

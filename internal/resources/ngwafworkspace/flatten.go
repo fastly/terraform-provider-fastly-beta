@@ -33,11 +33,7 @@ func FlattenToModel(ctx context.Context, workspace *ws.Workspace) (Model, diag.D
 
 	headers, d := types.ListValueFrom(ctx, types.StringType, workspace.ClientIPHeaders)
 	diags.Append(d...)
-	if len(workspace.ClientIPHeaders) == 0 {
-		m.ClientIPHeaders = types.ListNull(types.StringType)
-	} else {
-		m.ClientIPHeaders = headers
-	}
+	m.ClientIPHeaders = headers
 
 	m.AttackSignalThresholds = []AttackSignalThresholdsModel{flattenAttackSignalThresholds(workspace.AttackSignalThresholds)}
 
