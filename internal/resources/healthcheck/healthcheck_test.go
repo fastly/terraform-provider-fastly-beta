@@ -364,3 +364,54 @@ func TestHeadersRoundTrip(t *testing.T) {
 		})
 	}
 }
+
+func TestApplyPlanHeaders(t *testing.T) {
+	emptySet := types.SetValueMust(types.StringType, []attr.Value{})
+	nonEmptySet := types.SetValueMust(types.StringType, []attr.Value{types.StringValue("a: 1")})
+
+	tests := []struct {
+		name        string
+		remote      NestedModel
+		plan        NestedModel
+		wantHeaders types.Set
+	}{
+		{
+			name:        "explicit empty set in plan survives a nulled-out API read-back",
+			remote:      NestedModel{Name: types.StringValue("hc"), Headers: types.SetNull(types.StringType)},
+			plan:        NestedModel{Name: types.StringValue("hc"), Headers: emptySet},
+			wantHeaders: emptySet,
+		},
+		{
+			name:        "headers omitted from plan stays null against a nulled-out API read-back",
+			remote:      NestedModel{Name: types.StringValue("hc"), Headers: types.SetNull(types.StringType)},
+			plan:        NestedModel{Name: types.StringValue("hc"), Headers: types.SetNull(types.StringType)},
+			wantHeaders: types.SetNull(types.StringType),
+		},
+		{
+			name:        "configured headers in the plan are left as the API reported them",
+			remote:      NestedModel{Name: types.StringValue("hc"), Headers: nonEmptySet},
+			plan:        NestedModel{Name: types.StringValue("hc"), Headers: nonEmptySet},
+			wantHeaders: nonEmptySet,
+		},
+		{
+			name:        "no matching plan entry leaves the read-back value untouched",
+			remote:      NestedModel{Name: types.StringValue("hc"), Headers: types.SetNull(types.StringType)},
+			plan:        NestedModel{},
+			wantHeaders: types.SetNull(types.StringType),
+		},
+		{
+			name:        "headers omitted from plan does not mask non-empty remote headers (drift)",
+			remote:      NestedModel{Name: types.StringValue("hc"), Headers: nonEmptySet},
+			plan:        NestedModel{Name: types.StringValue("hc"), Headers: types.SetNull(types.StringType)},
+			wantHeaders: nonEmptySet,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := applyPlanHeaders([]NestedModel{tt.remote}, []NestedModel{tt.plan})
+			assert.Len(t, result, 1)
+			assert.True(t, tt.wantHeaders.Equal(result[0].Headers), "got %v, want %v", result[0].Headers, tt.wantHeaders)
+		})
+	}
+}
