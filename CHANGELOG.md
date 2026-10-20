@@ -4,11 +4,20 @@
 
 ### ENHANCEMENTS:
 
+### BUG FIXES:
+
+### Dependencies:
+
+## 0.2.4 (October 20, 2026)
+
+### ENHANCEMENTS:
+
 - feat(docs): extend the beta testing guide with an explicit resource family workflow using `terraform query` and service-scoped discovery ([#161](https://github.com/fastly/terraform-provider-fastly-beta/pull/161))
 
 ### BUG FIXES:
 
-### Dependencies:
+- fix(ngwaf_workspace): `client_ip_headers` no longer causes an "inconsistent result after apply" error when set to an empty list ([#178](https://github.com/fastly/terraform-provider-fastly-beta/pull/178))
+- fix(healthcheck): explicitly empty `headers` no longer causes an "inconsistent result after apply" error or a perpetual diff on `fastly_service_cdn_auto` and `fastly_service_compute_auto` ([#179](https://github.com/fastly/terraform-provider-fastly-beta/pull/179))
 
 ## 0.2.3 (October 13, 2026)
 
