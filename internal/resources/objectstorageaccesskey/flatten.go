@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/fastly/go-fastly/v17/fastly/objectstorage/accesskeys"
+	"github.com/fastly/go-fastly/v18/fastly/objectstorage/accesskeys"
 )
 
 // flattenToModel builds the resource state from an API response. The API only

@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/fastly/go-fastly/v17/fastly/apisecurity/operations"
+	"github.com/fastly/go-fastly/v18/fastly/apisecurity/operations"
 )
 
 func flatten(m *Model, tag *operations.OperationTag, serviceID string) {

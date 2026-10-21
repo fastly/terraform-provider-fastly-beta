@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/fastly/go-fastly/v17/fastly/computeacls"
+	"github.com/fastly/go-fastly/v18/fastly/computeacls"
 )
 
 const (

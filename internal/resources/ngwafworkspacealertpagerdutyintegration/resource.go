@@ -7,8 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
-	PagerdutyAlerts "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/alerts/pagerduty"
+	fastly "github.com/fastly/go-fastly/v18/fastly"
+	PagerdutyAlerts "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/alerts/pagerduty"
 )
 
 const alertType = "pagerduty"

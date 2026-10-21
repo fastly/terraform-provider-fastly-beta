@@ -9,7 +9,7 @@ import (
 	datasourceschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/rules"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/rules"
 )
 
 func TestMetadata(t *testing.T) {

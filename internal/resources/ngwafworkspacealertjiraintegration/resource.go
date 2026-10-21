@@ -7,8 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
-	JiraAlerts "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/alerts/jira"
+	fastly "github.com/fastly/go-fastly/v18/fastly"
+	JiraAlerts "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/alerts/jira"
 )
 
 const alertType = "jira"

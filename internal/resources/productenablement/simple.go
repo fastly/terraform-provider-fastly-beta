@@ -16,16 +16,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/fastly/go-fastly/v17/fastly"
-	"github.com/fastly/go-fastly/v17/fastly/products"
-	"github.com/fastly/go-fastly/v17/fastly/products/apidiscovery"
-	"github.com/fastly/go-fastly/v17/fastly/products/brotlicompression"
-	"github.com/fastly/go-fastly/v17/fastly/products/domaininspector"
-	"github.com/fastly/go-fastly/v17/fastly/products/fanout"
-	"github.com/fastly/go-fastly/v17/fastly/products/imageoptimizer"
-	"github.com/fastly/go-fastly/v17/fastly/products/logexplorerinsights"
-	"github.com/fastly/go-fastly/v17/fastly/products/origininspector"
-	"github.com/fastly/go-fastly/v17/fastly/products/websockets"
+	"github.com/fastly/go-fastly/v18/fastly"
+	"github.com/fastly/go-fastly/v18/fastly/products"
+	"github.com/fastly/go-fastly/v18/fastly/products/apidiscovery"
+	"github.com/fastly/go-fastly/v18/fastly/products/brotlicompression"
+	"github.com/fastly/go-fastly/v18/fastly/products/domaininspector"
+	"github.com/fastly/go-fastly/v18/fastly/products/fanout"
+	"github.com/fastly/go-fastly/v18/fastly/products/imageoptimizer"
+	"github.com/fastly/go-fastly/v18/fastly/products/logexplorerinsights"
+	"github.com/fastly/go-fastly/v18/fastly/products/origininspector"
+	"github.com/fastly/go-fastly/v18/fastly/products/websockets"
 )
 
 // simpleProductSpec describes a Fastly product whose enablement is a plain

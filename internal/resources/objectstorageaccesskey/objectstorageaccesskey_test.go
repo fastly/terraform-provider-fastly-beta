@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fastly/go-fastly/v17/fastly/objectstorage/accesskeys"
+	"github.com/fastly/go-fastly/v18/fastly/objectstorage/accesskeys"
 )
 
 func TestMetadata(t *testing.T) {

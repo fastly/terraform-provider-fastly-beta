@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/fastly/go-fastly/v17/fastly/dns/v1/dnszones"
+	"github.com/fastly/go-fastly/v18/fastly/dns/v1/dnszones"
 )
 
 func flattenXfrConfigInbound(xfr *dnszones.XfrConfigInbound) []XfrConfigInboundModel {

@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/fastly/go-fastly/v17/fastly"
+	"github.com/fastly/go-fastly/v18/fastly"
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resourceidentity"

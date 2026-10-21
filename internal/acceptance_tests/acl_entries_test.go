@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	"github.com/fastly/go-fastly/v17/fastly/computeacls"
+	"github.com/fastly/go-fastly/v18/fastly/computeacls"
 )
 
 const (

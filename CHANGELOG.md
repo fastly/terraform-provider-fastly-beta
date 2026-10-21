@@ -8,6 +8,8 @@
 
 ### Dependencies:
 
+- build(deps): `github.com/fastly/go-fastly` from v17.8.0 to v18.0.0 ([#184](https://github.com/fastly/terraform-provider-fastly-beta/pull/184))
+
 ## 0.2.4 (October 20, 2026)
 
 ### ENHANCEMENTS:
