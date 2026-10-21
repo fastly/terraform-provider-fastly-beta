@@ -14,8 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/fastly/go-fastly/v17/fastly"
-	vp "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/virtualpatches"
+	"github.com/fastly/go-fastly/v18/fastly"
+	vp "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/virtualpatches"
 )
 
 var _ datasource.DataSource = &DataSource{}

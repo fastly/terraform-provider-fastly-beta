@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
+	fastly "github.com/fastly/go-fastly/v18/fastly"
 )
 
 var (

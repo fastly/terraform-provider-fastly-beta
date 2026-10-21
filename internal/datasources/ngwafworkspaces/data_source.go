@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
-	ws "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces"
+	fastly "github.com/fastly/go-fastly/v18/fastly"
+	ws "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces"
 )
 
 var _ datasource.DataSource = &DataSource{}
@@ -106,13 +106,8 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func flattenWorkspaces(workspaces *ws.Workspaces) (types.Set, []string, diag.Diagnostics) {
+func flattenWorkspaces(data []ws.Workspace) (types.Set, []string, diag.Diagnostics) {
 	var diags diag.Diagnostics
-
-	var data []ws.Workspace
-	if workspaces != nil {
-		data = workspaces.Data
-	}
 
 	ids := make([]string, 0, len(data))
 	elements := make([]attr.Value, 0, len(data))

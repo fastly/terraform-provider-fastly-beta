@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/require"
 
-	ws "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces"
+	ws "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces"
 )
 
 func TestMetadata(t *testing.T) {
@@ -50,11 +50,9 @@ func TestSchema(t *testing.T) {
 }
 
 func TestFlattenWorkspaces(t *testing.T) {
-	workspaces := &ws.Workspaces{
-		Data: []ws.Workspace{
-			{WorkspaceID: "workspace-b", Name: "beta"},
-			{WorkspaceID: "workspace-a", Name: "alpha"},
-		},
+	workspaces := []ws.Workspace{
+		{WorkspaceID: "workspace-b", Name: "beta"},
+		{WorkspaceID: "workspace-a", Name: "alpha"},
 	}
 
 	setValue, ids, diags := flattenWorkspaces(workspaces)

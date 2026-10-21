@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/stretchr/testify/require"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
+	fastly "github.com/fastly/go-fastly/v18/fastly"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/constants"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"

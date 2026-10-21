@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	th "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/thresholds"
+	th "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/thresholds"
 )
 
 // TestSchemaDefaults pins the schema-level defaults applied when duration,

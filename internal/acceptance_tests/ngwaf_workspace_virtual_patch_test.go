@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	vp "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/virtualpatches"
+	vp "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/virtualpatches"
 )
 
 const testVirtualPatchID = "CVE-2017-5638"

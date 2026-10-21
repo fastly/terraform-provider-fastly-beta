@@ -1,7 +1,7 @@
 package loggingkafka
 
 import (
-	fastly "github.com/fastly/go-fastly/v17/fastly"
+	fastly "github.com/fastly/go-fastly/v18/fastly"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 )

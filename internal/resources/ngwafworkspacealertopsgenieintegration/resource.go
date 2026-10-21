@@ -7,8 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
-	OpsgenieAlerts "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/alerts/opsgenie"
+	fastly "github.com/fastly/go-fastly/v18/fastly"
+	OpsgenieAlerts "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/alerts/opsgenie"
 )
 
 const alertType = "opsgenie"

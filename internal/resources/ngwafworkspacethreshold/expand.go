@@ -3,7 +3,7 @@ package ngwafworkspacethreshold
 import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
-	th "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/thresholds"
+	th "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/thresholds"
 )
 
 func BuildCreateInput(plan Model) *th.CreateInput {

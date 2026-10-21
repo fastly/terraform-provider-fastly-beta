@@ -13,7 +13,7 @@ import (
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/ngwaflists"
 
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/lists"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/lists"
 )
 
 func TestMetadata(t *testing.T) {

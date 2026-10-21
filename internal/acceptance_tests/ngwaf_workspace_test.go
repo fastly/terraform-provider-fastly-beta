@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	ws "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces"
+	ws "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces"
 )
 
 func TestAccFastlyNGWAFWorkspace_lifecycle(t *testing.T) {

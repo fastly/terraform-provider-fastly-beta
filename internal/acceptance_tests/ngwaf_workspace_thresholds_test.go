@@ -12,9 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	"github.com/fastly/go-fastly/v17/fastly"
-	ws "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces"
-	th "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/thresholds"
+	"github.com/fastly/go-fastly/v18/fastly"
+	ws "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces"
+	th "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/thresholds"
 )
 
 func TestAccFastlyNGWAFWorkspaceThreshold_lifecycle(t *testing.T) {

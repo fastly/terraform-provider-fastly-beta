@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	gofastly "github.com/fastly/go-fastly/v17/fastly"
+	gofastly "github.com/fastly/go-fastly/v18/fastly"
 )
 
 // go-fastly doesn't export constants for these types, so they're defined here.

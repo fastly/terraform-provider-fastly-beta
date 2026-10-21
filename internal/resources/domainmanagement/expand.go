@@ -3,7 +3,7 @@ package domainmanagement
 import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
-	"github.com/fastly/go-fastly/v17/fastly/domainmanagement/v1/domains"
+	"github.com/fastly/go-fastly/v18/fastly/domainmanagement/v1/domains"
 )
 
 func BuildCreateInput(plan Model) *domains.CreateInput {

@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/fastly/go-fastly/v17/fastly/dns/v1/tsigkeys"
+	"github.com/fastly/go-fastly/v18/fastly/dns/v1/tsigkeys"
 )
 
 func secretModel(value string) types.Object {
