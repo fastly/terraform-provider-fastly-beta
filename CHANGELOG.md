@@ -6,6 +6,8 @@
 
 ### BUG FIXES:
 
+- fix(docs): `fastly_service_compute_auto` package examples now set `source_code_hash` from the `fastly_package_hash` data source instead of `filesha512()`, which never matches the API hash and caused an "inconsistent result after apply" error
+
 ### Dependencies:
 
 - build(deps): `github.com/fastly/go-fastly` from v17.8.0 to v18.0.0 ([#184](https://github.com/fastly/terraform-provider-fastly-beta/pull/184))

@@ -115,12 +115,16 @@ resource "fastly_service_cdn_auto" "example" {
 arguments (`format`, `format_version`, `placement`, `response_condition`):
 
 ```terraform
+data "fastly_package_hash" "example" {
+  filename = "package.tar.gz"
+}
+
 resource "fastly_service_compute_auto" "example" {
   name = "my-compute-service"
 
   package {
     filename         = "package.tar.gz"
-    source_code_hash = filesha512("package.tar.gz")
+    source_code_hash = data.fastly_package_hash.example.hash
   }
 
   logging_bigquery {

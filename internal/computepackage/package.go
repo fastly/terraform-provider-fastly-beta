@@ -45,7 +45,7 @@ func CommonAttributes() map[string]schema.Attribute {
 		"source_code_hash": schema.StringAttribute{
 			Optional:    true,
 			Computed:    true,
-			Description: "Hash of the package contents used to detect local package changes.",
+			Description: "Hash of the files within the Compute package (SHA512, in sorted filename order), used to detect local package changes. The usual way to set this is using the `fastly_package_hash` data source.",
 		},
 	}
 }

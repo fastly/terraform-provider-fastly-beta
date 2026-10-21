@@ -925,7 +925,7 @@ Optional:
 
 - `content` (String) The contents of the Compute deployment package as a base64-encoded string. Conflicts with `filename`.
 - `filename` (String) The path to the Compute deployment package on the local filesystem. Conflicts with `content`.
-- `source_code_hash` (String) Hash of the package contents used to detect local package changes.
+- `source_code_hash` (String) Hash of the files within the Compute package (SHA512, in sorted filename order), used to detect local package changes. The usual way to set this is using the `fastly_package_hash` data source.
 
 
 <a id="nestedblock--resource_link"></a>
