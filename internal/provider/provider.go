@@ -227,7 +227,7 @@ func (p *fastlyProvider) Schema(_ context.Context, _ provider.SchemaRequest, res
 			},
 			"api_endpoint": schema.StringAttribute{
 				Optional:    true,
-				Description: "The Fastly API server URL. Must use https. Defaults to https://api.fastly.com. Can also be set via the FASTLY_API_URL environment variable.",
+				Description: "The Fastly API server URL. Must use https. Defaults to https://api.fastly.com. Can also be set via the FASTLY_API_URL environment variable; this argument takes precedence over it.",
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(httpsURLPattern, "must start with https://"),
 				},

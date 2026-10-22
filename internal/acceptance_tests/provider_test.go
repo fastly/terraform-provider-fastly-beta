@@ -232,6 +232,7 @@ provider "fastly" {
 }
 
 // TestAccProvider_ExplicitAPIEndpoint tests provider configuration with the default API endpoint set explicitly.
+// It deliberately targets the production endpoint, so it exercises a real API call without needing an alternate region.
 func TestAccProvider_ExplicitAPIEndpoint(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("TF_ACC") == "" {
