@@ -4,6 +4,8 @@
 
 ### ENHANCEMENTS:
 
+- feat(provider): add `api_endpoint` provider argument (and `FASTLY_API_URL` environment variable) to target a non-default Fastly API endpoint; https only ([#187](https://github.com/fastly/terraform-provider-fastly-beta/pull/187))
+
 ### BUG FIXES:
 
 - fix(alert): `description` is now limited to 4075 characters so the appended "Managed by Terraform" text stays within the API's 4096 limit and leading/trailing whitespace no longer 
