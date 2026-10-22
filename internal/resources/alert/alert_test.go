@@ -2,6 +2,7 @@ package alert
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -43,6 +44,11 @@ func TestValidateSourceWithServiceID(t *testing.T) {
 func TestDescriptionWithManagedSuffix(t *testing.T) {
 	assert.Equal(t, "Managed by Terraform", descriptionWithManagedSuffix(""))
 	assert.Equal(t, "my description Managed by Terraform", descriptionWithManagedSuffix("my description"))
+}
+
+func TestDescriptionWithManagedSuffix_maxConfiguredFitsAPILimit(t *testing.T) {
+	description := strings.Repeat("a", maxConfiguredDescription)
+	assert.Len(t, descriptionWithManagedSuffix(description), apiDescriptionLimit)
 }
 
 func TestBuildCreateInput(t *testing.T) {
@@ -172,6 +178,21 @@ func TestFlattenToModel_descriptionOnlyManagedSuffixBecomesEmptyString(t *testin
 	m, diags := FlattenToModel(context.Background(), ad)
 	require.False(t, diags.HasError())
 	assert.Equal(t, types.StringValue(""), m.Description, "an explicit empty description must round-trip as itself, not null")
+}
+
+func TestFlattenToModel_descriptionWhitespacePreserved(t *testing.T) {
+	ad := &fastly.AlertDefinition{
+		ID:                 "def123",
+		Name:               "my alert",
+		Source:             "stats",
+		Metric:             "status_5xx",
+		Description:        descriptionWithManagedSuffix("  my description\n"),
+		EvaluationStrategy: map[string]any{"type": "above_threshold", "period": "5m", "threshold": float64(10)},
+	}
+
+	m, diags := FlattenToModel(context.Background(), ad)
+	require.False(t, diags.HasError())
+	assert.Equal(t, types.StringValue("  my description\n"), m.Description)
 }
 
 func TestFlattenToModel_dimensionsOnlyConfiguredKeyPresent(t *testing.T) {
