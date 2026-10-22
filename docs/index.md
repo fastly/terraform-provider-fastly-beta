@@ -66,5 +66,5 @@ resource "fastly_domain" "myservice" {
 
 ### Optional
 
+- `api_endpoint` (String) The Fastly API server URL. Must use https. Defaults to https://api.fastly.com. Can also be set via the FASTLY_API_URL environment variable.
 - `api_token` (String, Sensitive) The Fastly API token. Can also be set via the FASTLY_API_TOKEN environment variable.
-- `base_url` (String) The Fastly API server URL. Must use https. Defaults to https://api.fastly.com. Can also be set via the FASTLY_API_URL environment variable.

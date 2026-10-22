@@ -187,26 +187,26 @@ import (
 type fastlyProvider struct{}
 
 type fastlyProviderModel struct {
-	APIToken types.String `tfsdk:"api_token"`
-	BaseURL  types.String `tfsdk:"base_url"`
+	APIToken    types.String `tfsdk:"api_token"`
+	APIEndpoint types.String `tfsdk:"api_endpoint"`
 }
 
 var httpsURLPattern = regexp.MustCompile(`^https://`)
 
-func resolveBaseURL(configured types.String, env string) (string, error) {
-	baseURL := fastly.DefaultEndpoint
+func resolveAPIEndpoint(configured types.String, env string) (string, error) {
+	endpoint := fastly.DefaultEndpoint
 	if env != "" {
-		baseURL = env
+		endpoint = env
 	}
 	if !configured.IsNull() && configured.ValueString() != "" {
-		baseURL = configured.ValueString()
+		endpoint = configured.ValueString()
 	}
 
-	u, err := url.Parse(baseURL)
+	u, err := url.Parse(endpoint)
 	if err != nil || u.Scheme != "https" || u.Host == "" {
-		return "", fmt.Errorf("base URL %q must be an absolute https:// URL", baseURL)
+		return "", fmt.Errorf("API endpoint %q must be an absolute https:// URL", endpoint)
 	}
-	return baseURL, nil
+	return endpoint, nil
 }
 
 func New() provider.Provider {
@@ -225,7 +225,7 @@ func (p *fastlyProvider) Schema(_ context.Context, _ provider.SchemaRequest, res
 				Sensitive:   true,
 				Description: "The Fastly API token. Can also be set via the FASTLY_API_TOKEN environment variable.",
 			},
-			"base_url": schema.StringAttribute{
+			"api_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: "The Fastly API server URL. Must use https. Defaults to https://api.fastly.com. Can also be set via the FASTLY_API_URL environment variable.",
 				Validators: []validator.String{
@@ -256,13 +256,13 @@ func (p *fastlyProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		return
 	}
 
-	baseURL, err := resolveBaseURL(config.BaseURL, os.Getenv("FASTLY_API_URL"))
+	endpoint, err := resolveAPIEndpoint(config.APIEndpoint, os.Getenv("FASTLY_API_URL"))
 	if err != nil {
-		resp.Diagnostics.AddError("Invalid base URL", err.Error())
+		resp.Diagnostics.AddError("Invalid API endpoint", err.Error())
 		return
 	}
 
-	client, err := fastly.NewClientForEndpoint(apiToken, baseURL)
+	client, err := fastly.NewClientForEndpoint(apiToken, endpoint)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to create Fastly client", err.Error())
 		return

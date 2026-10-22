@@ -231,14 +231,14 @@ provider "fastly" {
 `, token, ConfigCDNAutoBasic(serviceName, domainName))
 }
 
-// TestAccProvider_ExplicitBaseURL tests provider configuration with the default API endpoint set explicitly.
-func TestAccProvider_ExplicitBaseURL(t *testing.T) {
+// TestAccProvider_ExplicitAPIEndpoint tests provider configuration with the default API endpoint set explicitly.
+func TestAccProvider_ExplicitAPIEndpoint(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("TF_ACC") == "" {
 		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
 	}
 
-	serviceName := fmt.Sprintf("tf-test-provider-baseurl-%s", acctest.RandString(10))
+	serviceName := fmt.Sprintf("tf-test-provider-endpoint-%s", acctest.RandString(10))
 	domainName := fmt.Sprintf("tf-test-%s.example.com", acctest.RandString(10))
 
 	resource.Test(t, resource.TestCase{
@@ -247,7 +247,7 @@ func TestAccProvider_ExplicitBaseURL(t *testing.T) {
 		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn_auto"),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProviderConfigWithBaseURL("https://api.fastly.com", serviceName, domainName),
+				Config: testAccProviderConfigWithAPIEndpoint("https://api.fastly.com", serviceName, domainName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "name", serviceName),
 				),
@@ -256,8 +256,8 @@ func TestAccProvider_ExplicitBaseURL(t *testing.T) {
 	})
 }
 
-// TestAccProvider_InsecureBaseURL tests that a non-https base_url is rejected at validation time.
-func TestAccProvider_InsecureBaseURL(t *testing.T) {
+// TestAccProvider_InsecureAPIEndpoint tests that a non-https api_endpoint is rejected at validation time.
+func TestAccProvider_InsecureAPIEndpoint(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("TF_ACC") == "" {
 		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
@@ -270,20 +270,20 @@ func TestAccProvider_InsecureBaseURL(t *testing.T) {
 		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccProviderConfigWithBaseURL("http://api.fastly.com", serviceName, domainName),
+				Config:      testAccProviderConfigWithAPIEndpoint("http://api.fastly.com", serviceName, domainName),
 				ExpectError: regexp.MustCompile(`must start with https://`),
 			},
 		},
 	})
 }
 
-// testAccProviderConfigWithBaseURL returns config with an explicit base_url in the provider block.
-func testAccProviderConfigWithBaseURL(baseURL, serviceName, domainName string) string {
+// testAccProviderConfigWithAPIEndpoint returns config with an explicit api_endpoint in the provider block.
+func testAccProviderConfigWithAPIEndpoint(endpoint, serviceName, domainName string) string {
 	return fmt.Sprintf(`
 provider "fastly" {
-  base_url = "%s"
+  api_endpoint = "%s"
 }
 
 %s
-`, baseURL, ConfigCDNAutoBasic(serviceName, domainName))
+`, endpoint, ConfigCDNAutoBasic(serviceName, domainName))
 }

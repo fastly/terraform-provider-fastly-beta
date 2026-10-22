@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func TestResolveBaseURL(t *testing.T) {
+func TestResolveAPIEndpoint(t *testing.T) {
 	tests := []struct {
 		name       string
 		configured types.String
@@ -25,7 +25,7 @@ func TestResolveBaseURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := resolveBaseURL(tt.configured, tt.env)
+			got, err := resolveAPIEndpoint(tt.configured, tt.env)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("err = %v, wantErr %v", err, tt.wantErr)
 			}

@@ -46,7 +46,7 @@ You need:
 
 The provider reads `FASTLY_API_TOKEN` from the environment, or takes an
 `api_token` argument. To target a non-default Fastly API endpoint, set the
-`base_url` argument or the `FASTLY_API_URL` environment variable. It must be an
+`api_endpoint` argument or the `FASTLY_API_URL` environment variable. It must be an
 `https://` URL.
 
 ~> **Important:** Several provider settings changed from the legacy provider, so a `provider` block copied across as-is will not work.
@@ -56,7 +56,8 @@ The provider reads `FASTLY_API_TOKEN` from the environment, or takes an
 |`source = "fastly/fastly"`|`source = "fastly/fastly-beta"`|
 |`api_key`|`api_token`|
 |`FASTLY_API_KEY`|`FASTLY_API_TOKEN`|
-|`base_url`, `FASTLY_API_URL`|Unchanged, but `base_url` must use `https://`|
+|`base_url`|`api_endpoint` (must use `https://`)|
+|`FASTLY_API_URL`|`FASTLY_API_URL`|
 |`no_auth`, `force_http2`|Not available|
 
 ## Test the Automatic family

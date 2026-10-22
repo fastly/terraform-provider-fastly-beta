@@ -4,7 +4,7 @@
 
 ### ENHANCEMENTS:
 
-- feat(provider): add `base_url` provider argument (and `FASTLY_API_URL` environment variable) to target a non-default Fastly API endpoint; https only
+- feat(provider): add `api_endpoint` provider argument (and `FASTLY_API_URL` environment variable) to target a non-default Fastly API endpoint; https only ([#187](https://github.com/fastly/terraform-provider-fastly-beta/pull/187))
 
 ### BUG FIXES:
 
