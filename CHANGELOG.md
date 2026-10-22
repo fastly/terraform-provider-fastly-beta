@@ -4,6 +4,8 @@
 
 ### ENHANCEMENTS:
 
+- feat(service_cdn_auto): add a proof-of-concept state migration path from legacy `fastly_service_vcl` resources ([#180](https://github.com/fastly/terraform-provider-fastly-beta/pull/180))
+
 ### BUG FIXES:
 
 - fix(docs): `fastly_service_compute_auto` package examples now set `source_code_hash` from the `fastly_package_hash` data source instead of `filesha512()`, which never matches the API hash and caused an "inconsistent result after apply" error ([#185](https://github.com/fastly/terraform-provider-fastly-beta/pull/185))
