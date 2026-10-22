@@ -4,6 +4,8 @@
 
 ### ENHANCEMENTS:
 
+- feat(provider): add `base_url` provider argument (and `FASTLY_API_URL` environment variable) to target a non-default Fastly API endpoint; https only
+
 ### BUG FIXES:
 
 - fix(alert): `description` is now limited to 4075 characters so the appended "Managed by Terraform" text stays within the API's 4096 limit and leading/trailing whitespace no longer 

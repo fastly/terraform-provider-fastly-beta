@@ -3,14 +3,18 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
+	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/list"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/fastly/go-fastly/v18/fastly"
@@ -184,6 +188,25 @@ type fastlyProvider struct{}
 
 type fastlyProviderModel struct {
 	APIToken types.String `tfsdk:"api_token"`
+	BaseURL  types.String `tfsdk:"base_url"`
+}
+
+var httpsURLPattern = regexp.MustCompile(`^https://`)
+
+func resolveBaseURL(configured types.String, env string) (string, error) {
+	baseURL := fastly.DefaultEndpoint
+	if env != "" {
+		baseURL = env
+	}
+	if !configured.IsNull() && configured.ValueString() != "" {
+		baseURL = configured.ValueString()
+	}
+
+	u, err := url.Parse(baseURL)
+	if err != nil || u.Scheme != "https" || u.Host == "" {
+		return "", fmt.Errorf("base URL %q must be an absolute https:// URL", baseURL)
+	}
+	return baseURL, nil
 }
 
 func New() provider.Provider {
@@ -201,6 +224,13 @@ func (p *fastlyProvider) Schema(_ context.Context, _ provider.SchemaRequest, res
 				Optional:    true,
 				Sensitive:   true,
 				Description: "The Fastly API token. Can also be set via the FASTLY_API_TOKEN environment variable.",
+			},
+			"base_url": schema.StringAttribute{
+				Optional:    true,
+				Description: "The Fastly API server URL. Must use https. Defaults to https://api.fastly.com. Can also be set via the FASTLY_API_URL environment variable.",
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(httpsURLPattern, "must start with https://"),
+				},
 			},
 		},
 	}
@@ -226,7 +256,13 @@ func (p *fastlyProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		return
 	}
 
-	client, err := fastly.NewClient(apiToken)
+	baseURL, err := resolveBaseURL(config.BaseURL, os.Getenv("FASTLY_API_URL"))
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid base URL", err.Error())
+		return
+	}
+
+	client, err := fastly.NewClientForEndpoint(apiToken, baseURL)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to create Fastly client", err.Error())
 		return
