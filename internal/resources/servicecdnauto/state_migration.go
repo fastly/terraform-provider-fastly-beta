@@ -20,10 +20,15 @@ const (
 // fastly_service_cdn_auto and add a Terraform moved block. Terraform Core then
 // invokes this mover to translate the persisted source state.
 //
-// Only values which cannot be reconstructed safely by Read are copied. The
-// service ID preserves identity; force_destroy and reuse are Terraform lifecycle
-// controls which are not returned by the Fastly API. Read repopulates the service
-// metadata, managed version, active version, and nested service configuration.
+// This proof of concept copies only state that cannot be reconstructed safely
+// by Read. The service ID preserves identity; force_destroy and reuse are
+// Terraform lifecycle controls which are not returned by the Fastly API. Read
+// repopulates service metadata, managed/active versions, and API-readable nested
+// service configuration.
+//
+// Legacy product_enablement is intentionally rejected for now. It must be split
+// into standalone fastly_service_product_* resources and imported separately;
+// silently dropping that nested state would make this POC look safer than it is.
 func (r *Resource) MoveState(_ context.Context) []resource.StateMover {
 	sourceSchema := legacyServiceVCLMoveStateSchema()
 
@@ -59,11 +64,21 @@ func moveLegacyServiceVCLState(ctx context.Context, req resource.MoveStateReques
 	var sourceID types.String
 	var sourceForceDestroy types.Bool
 	var sourceReuse types.Bool
+	var sourceProductEnablement types.Set
 
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("id"), &sourceID)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("force_destroy"), &sourceForceDestroy)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("reuse"), &sourceReuse)...)
+	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("product_enablement"), &sourceProductEnablement)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !sourceProductEnablement.IsNull() && !sourceProductEnablement.IsUnknown() && len(sourceProductEnablement.Elements()) > 0 {
+		resp.Diagnostics.AddError(
+			"Legacy product enablement migration is not yet supported",
+			"fastly_service_vcl product_enablement state must be split into standalone fastly_service_product_* resources. This proof-of-concept mover intentionally blocks that case until the phased product migration is implemented.",
+		)
 		return
 	}
 

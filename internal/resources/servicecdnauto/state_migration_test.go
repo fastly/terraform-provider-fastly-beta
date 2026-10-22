@@ -55,7 +55,7 @@ func TestMoveLegacyServiceVCLState(t *testing.T) {
 	r := NewResource().(*Resource)
 	mover := r.MoveState(ctx)[0]
 
-	sourceState := newLegacyMoveSourceState(ctx, t, mover)
+	sourceState := newLegacyMoveSourceState(t, mover)
 	targetState := newCDNAutoTargetState(ctx, t, r)
 
 	req := resource.MoveStateRequest{
@@ -109,7 +109,7 @@ func TestMoveLegacyServiceVCLStateRejectsOldSchemaVersion(t *testing.T) {
 	req := resource.MoveStateRequest{
 		SourceProviderAddress: legacyFastlyProviderAddress,
 		SourceSchemaVersion:   0,
-		SourceState:           newLegacyMoveSourceState(ctx, t, mover),
+		SourceState:           newLegacyMoveSourceState(t, mover),
 		SourceTypeName:        legacyServiceVCLTypeName,
 	}
 	resp := resource.MoveStateResponse{TargetState: targetState}
@@ -142,33 +142,76 @@ func TestMoveLegacyServiceVCLStateRejectsNilSourceState(t *testing.T) {
 	}
 }
 
-func TestMoveLegacyServiceVCLStateIgnoresOtherSource(t *testing.T) {
+func TestMoveLegacyServiceVCLStateRejectsProductEnablement(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	r := NewResource().(*Resource)
 	mover := r.MoveState(ctx)[0]
 
-	targetState := newCDNAutoTargetState(ctx, t, r)
 	req := resource.MoveStateRequest{
-		SourceProviderAddress: "registry.terraform.io/example/other",
+		SourceProviderAddress: legacyFastlyProviderAddress,
 		SourceSchemaVersion:   legacyServiceVCLSchemaV1,
-		SourceState:           newLegacyMoveSourceState(ctx, t, mover),
+		SourceState:           newLegacyMoveSourceStateWithProductEnablement(t, mover),
 		SourceTypeName:        legacyServiceVCLTypeName,
 	}
-	resp := resource.MoveStateResponse{TargetState: targetState}
+	resp := resource.MoveStateResponse{
+		TargetState: newCDNAutoTargetState(ctx, t, r),
+	}
 
 	mover.StateMover(ctx, req, &resp)
-	if resp.Diagnostics.HasError() {
-		t.Fatalf("state mover returned diagnostics for unrelated source: %v", resp.Diagnostics)
+	if !resp.Diagnostics.HasError() {
+		t.Fatal("state mover accepted legacy product_enablement, want an error")
+	}
+}
+
+func TestMoveLegacyServiceVCLStateIgnoresUnrelatedSource(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		providerAddress string
+		typeName        string
+	}{
+		{
+			name:            "provider",
+			providerAddress: "registry.terraform.io/example/other",
+			typeName:        legacyServiceVCLTypeName,
+		},
+		{
+			name:            "resource type",
+			providerAddress: legacyFastlyProviderAddress,
+			typeName:        "fastly_service_compute",
+		},
 	}
 
-	var gotID types.String
-	if diags := resp.TargetState.GetAttribute(ctx, path.Root("id"), &gotID); diags.HasError() {
-		t.Fatalf("GetAttribute(id) returned diagnostics: %v", diags)
-	}
-	if !gotID.IsNull() {
-		t.Errorf("id = %v, want null for unrelated source", gotID)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			r := NewResource().(*Resource)
+			mover := r.MoveState(ctx)[0]
+
+			req := resource.MoveStateRequest{
+				SourceProviderAddress: test.providerAddress,
+				SourceSchemaVersion:   legacyServiceVCLSchemaV1,
+				SourceState:           newLegacyMoveSourceState(t, mover),
+				SourceTypeName:        test.typeName,
+			}
+			resp := resource.MoveStateResponse{TargetState: newCDNAutoTargetState(ctx, t, r)}
+
+			mover.StateMover(ctx, req, &resp)
+			if resp.Diagnostics.HasError() {
+				t.Fatalf("state mover returned diagnostics for unrelated source: %v", resp.Diagnostics)
+			}
+
+			var gotID types.String
+			if diags := resp.TargetState.GetAttribute(ctx, path.Root("id"), &gotID); diags.HasError() {
+				t.Fatalf("GetAttribute(id) returned diagnostics: %v", diags)
+			}
+			if !gotID.IsNull() {
+				t.Errorf("id = %v, want null for unrelated source", gotID)
+			}
+		})
 	}
 }
 
@@ -286,7 +329,7 @@ func fixtureTerraformType(t *testing.T, value any) tftypes.Type {
 	return nil
 }
 
-func newLegacyMoveSourceState(_ context.Context, t *testing.T, mover resource.StateMover) *tfsdk.State {
+func newLegacyMoveSourceState(t *testing.T, mover resource.StateMover) *tfsdk.State {
 	t.Helper()
 
 	sourceSchema := *mover.SourceSchema
@@ -307,6 +350,50 @@ func newLegacyMoveSourceState(_ context.Context, t *testing.T, mover resource.St
 
 	return &tfsdk.State{
 		Raw:    tftypes.NewValue(objectType, values),
+		Schema: sourceSchema,
+	}
+}
+
+func newLegacyMoveSourceStateWithProductEnablement(t *testing.T, mover resource.StateMover) *tfsdk.State {
+	t.Helper()
+
+	sourceSchema := *mover.SourceSchema
+	fixture := readLegacyServiceVCLTypeFixture(t)
+	terraformType := fixtureBlockTerraformType(t, fixture.Block)
+	rootType, ok := terraformType.(tftypes.Object)
+	if !ok {
+		t.Fatalf("legacy SDKv2 fixture type = %T, want tftypes.Object", terraformType)
+	}
+
+	productSetType, ok := rootType.AttributeTypes["product_enablement"].(tftypes.Set)
+	if !ok {
+		t.Fatalf("product_enablement type = %T, want tftypes.Set", rootType.AttributeTypes["product_enablement"])
+	}
+	productObjectType, ok := productSetType.ElementType.(tftypes.Object)
+	if !ok {
+		t.Fatalf("product_enablement element type = %T, want tftypes.Object", productSetType.ElementType)
+	}
+
+	productValues := make(map[string]tftypes.Value, len(productObjectType.AttributeTypes))
+	for name, attrType := range productObjectType.AttributeTypes {
+		productValues[name] = tftypes.NewValue(attrType, nil)
+	}
+	productValues["api_discovery"] = tftypes.NewValue(tftypes.Bool, true)
+
+	rootValues := make(map[string]tftypes.Value, len(rootType.AttributeTypes))
+	for name, attrType := range rootType.AttributeTypes {
+		rootValues[name] = tftypes.NewValue(attrType, nil)
+	}
+	rootValues["id"] = tftypes.NewValue(tftypes.String, "SID123")
+	rootValues["force_destroy"] = tftypes.NewValue(tftypes.Bool, true)
+	rootValues["reuse"] = tftypes.NewValue(tftypes.Bool, false)
+	rootValues["product_enablement"] = tftypes.NewValue(
+		productSetType,
+		[]tftypes.Value{tftypes.NewValue(productObjectType, productValues)},
+	)
+
+	return &tfsdk.State{
+		Raw:    tftypes.NewValue(rootType, rootValues),
 		Schema: sourceSchema,
 	}
 }

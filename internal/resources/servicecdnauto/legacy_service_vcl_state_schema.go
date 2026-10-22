@@ -1,5 +1,9 @@
-// Code generated from the legacy fastly/fastly fastly_service_vcl schema
-// version 1 Terraform type. DO NOT EDIT BY HAND.
+// This file snapshots the Terraform value type exported by
+// fastly/fastly fastly_service_vcl schema version 1.
+//
+// Keep this schema in sync with testdata/legacy_service_vcl_schema_v1_type.json.
+// TestMoveStateSourceSchemaMatchesLegacyServiceVCLSchemaV1 verifies that the
+// Framework source schema still matches that independently captured SDKv2 type.
 //
 // This schema exists only so Terraform Plugin Framework can decode persisted
 // SDKv2 state before invoking the state mover. Configuration semantics such as
