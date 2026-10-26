@@ -8,6 +8,8 @@ resource "fastly_ngwaf_workspace" "test" {
 
   default_blocking_response_code = 429
 
+  auto_enable_new_virtual_patches = true
+
   attack_signal_thresholds {
     one_minute  = 100
     ten_minutes = 500

@@ -23,6 +23,7 @@ func FlattenToModel(ctx context.Context, workspace *ws.Workspace) (Model, diag.D
 		Mode:                        types.StringValue(workspace.Mode),
 		DefaultBlockingResponseCode: types.Int64Value(int64(workspace.DefaultBlockingResponseCode)),
 		DefaultRedirectURL:          types.StringValue(workspace.DefaultRedirectURL),
+		AutoEnableNewVirtualPatches: types.BoolValue(workspace.AutoEnableNewVirtualPatches != nil && *workspace.AutoEnableNewVirtualPatches),
 	}
 
 	if workspace.IPAnonymization == "" {

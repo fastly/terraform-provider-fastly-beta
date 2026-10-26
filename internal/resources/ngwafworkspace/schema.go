@@ -18,6 +18,7 @@ const (
 	DefaultDefaultBlockingResponseCode = 406
 	DefaultDefaultRedirectURL          = ""
 	DefaultIPAnonymization             = ""
+	DefaultAutoEnableNewVirtualPatches = false
 
 	// These match the defaults actually applied server-side for a workspace
 	// created without an explicit attack_signal_thresholds, but the API's
@@ -40,6 +41,7 @@ type Model struct {
 	ClientIPHeaders             types.List                    `tfsdk:"client_ip_headers"`
 	DefaultBlockingResponseCode types.Int64                   `tfsdk:"default_blocking_response_code"`
 	DefaultRedirectURL          types.String                  `tfsdk:"default_redirect_url"`
+	AutoEnableNewVirtualPatches types.Bool                    `tfsdk:"auto_enable_new_virtual_patches"`
 	AttackSignalThresholds      []AttackSignalThresholdsModel `tfsdk:"attack_signal_thresholds"`
 }
 
@@ -111,6 +113,12 @@ func ResourceAttributes() map[string]schema.Attribute {
 			Computed:    true,
 			Default:     stringdefault.StaticString(DefaultDefaultRedirectURL),
 			Description: "The URL used when `default_blocking_response_code` is `301` or `302`.",
+		},
+		"auto_enable_new_virtual_patches": schema.BoolAttribute{
+			Optional:    true,
+			Computed:    true,
+			Default:     booldefault.StaticBool(DefaultAutoEnableNewVirtualPatches),
+			Description: "Whether virtual patches released after this setting is enabled are automatically enabled for the workspace in block mode. Virtual patches released before it was enabled are not changed. Defaults to `false`.",
 		},
 	}
 }

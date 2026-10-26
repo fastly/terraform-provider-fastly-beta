@@ -30,6 +30,7 @@ func BuildCreateInput(ctx context.Context, plan Model) (*ws.CreateInput, diag.Di
 		IPAnonymization:             new(service.StringValue(plan.IPAnonymization)),
 		DefaultBlockingResponseCode: new(int(service.Int64Value(plan.DefaultBlockingResponseCode))),
 		DefaultRedirectURL:          new(service.StringValue(plan.DefaultRedirectURL)),
+		AutoEnableNewVirtualPatches: new(service.BoolValue(plan.AutoEnableNewVirtualPatches)),
 		ClientIPHeaders:             clientIPHeaders(ctx, plan, &diags),
 	}
 
@@ -63,6 +64,7 @@ func BuildUpdateInput(ctx context.Context, workspaceID string, plan Model) (*ws.
 		IPAnonymization:             new(service.StringValue(plan.IPAnonymization)),
 		DefaultBlockingResponseCode: new(int(service.Int64Value(plan.DefaultBlockingResponseCode))),
 		DefaultRedirectURL:          new(service.StringValue(plan.DefaultRedirectURL)),
+		AutoEnableNewVirtualPatches: new(service.BoolValue(plan.AutoEnableNewVirtualPatches)),
 		ClientIPHeaders:             clientIPHeaders(ctx, plan, &diags),
 	}
 
