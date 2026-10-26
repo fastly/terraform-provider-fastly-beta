@@ -82,6 +82,7 @@ var (
 	_ resource.Resource                   = &Resource{}
 	_ resource.ResourceWithConfigure      = &Resource{}
 	_ resource.ResourceWithImportState    = &Resource{}
+	_ resource.ResourceWithMoveState      = &Resource{}
 	_ resource.ResourceWithValidateConfig = &Resource{}
 )
 
