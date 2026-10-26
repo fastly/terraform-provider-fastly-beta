@@ -99,7 +99,7 @@ For existing Fastly Terraform users, the existing HCL should therefore remain th
 
 Cloudflare provides the official `tf-migrate` CLI for its ground-up v5 provider rewrite.
 
-Its two-phase migration support for resources that split into multiple target resources is particularly relevant to Fastly's legacy `product_enablement` block, which must become standalone product resources in the dual-model provider.
+Its split-resource migration support is particularly relevant to Fastly's legacy `product_enablement` block, which must become standalone product resources in the dual-model provider. Fastly's initial product-enablement proof of concept has shown that, for a simple product, Terraform can combine the service move and product import in one plan/apply; a phased workflow remains a fallback for cases that cannot be proven safe in one operation.
 
 Relevant ideas for Fastly include:
 
@@ -140,7 +140,9 @@ Instead, Fastly should use the migration mechanisms provided by Terraform Core a
 - Terraform `removed` blocks
 - Terraform `import` blocks
 
-Because the legacy resource types are renamed, `UpgradeState` alone is not sufficient. The exact combination of `MoveState`, state upgrade logic, and Terraform migration blocks should be proven before the CLI implementation is finalized.
+Because the legacy service resource types are renamed, `UpgradeState` alone is not sufficient. The VCL-to-CDN Auto proof of concept has now confirmed that a Terraform `moved` block paired with Framework `ResourceWithMoveState` can migrate real SDKv2 schema-v1 state to `fastly_service_cdn_auto` while preserving the Fastly service ID and converging to a no-op plan. `ResourceWithUpgradeState` was not required for that validated path.
+
+The Compute service move and any same-resource schema changes still need to be evaluated independently. `ResourceWithUpgradeState` should be used only where an existing resource type requires an in-place schema upgrade.
 
 ### Terraform-native examples
 
@@ -184,12 +186,22 @@ Terraform remains responsible for backend locking, state serialization, remote s
 
 Product enablement cannot be migrated with the service's `moved` block alone. The legacy `product_enablement` block is nested state and has no independent Terraform resource address, while the target model contains one or more standalone `fastly_service_product_*` resources.
 
-The migration CLI should therefore support a phased migration for services that manage product enablement:
+The migration CLI should therefore:
 
 1. migrate the legacy service to its `_auto` resource while removing the nested product-enablement data from service state without disabling or reconfiguring the live products
-2. generate standalone product resource blocks from the existing HCL and import the corresponding service-scoped product state into those resources
+2. generate standalone product resource blocks from the existing HCL
+3. generate Terraform `import` blocks that adopt the already-enabled service-scoped products by service ID
 
-The proof-of-concept must validate the exact sequencing and confirm that product enablement is not disabled and re-enabled as a side effect of migration. If Terraform can safely perform both parts in one operation, the CLI may collapse the phases; otherwise it should use an explicit two-phase workflow.
+The initial proof of concept has validated this sequencing for a real legacy VCL service with `domain_inspector = true`. Terraform handled the service `moved` block and the standalone Domain Inspector import in the same plan/apply:
+
+```text
+Plan: 1 to import, 0 to add, 0 to change, 0 to destroy.
+Apply complete! Resources: 1 imported, 0 added, 0 changed, 0 destroyed.
+```
+
+The Fastly service ID was preserved, Domain Inspector remained enabled, and the final `terraform plan` was a no-op.
+
+This establishes a single-operation migration as the preferred path for product-enablement cases that can be proven safe. The CLI should fall back to an explicit phased workflow only when a product or configuration cannot safely be moved and imported in one Terraform operation. Additional simple products and configurable products such as Bot Management, DDoS Protection, and Next-Gen WAF still require implementation and validation.
 
 ---
 
@@ -198,27 +210,29 @@ The proof-of-concept must validate the exact sequencing and confirm that product
 The first CLI should provide a small, predictable workflow:
 
 ```bash
-fastly-tf-migrate plan
+fastly-tf-migrate analyze
 fastly-tf-migrate migrate --dry-run
 fastly-tf-migrate migrate
 ```
 
-At a high level it should:
+`analyze` should be read-only and report the supported transformations, required state-migration mechanisms, and any unsupported or ambiguous constructs before files are changed.
+
+At a high level the workflow should:
 
 1. identify legacy Fastly resources and supported `_auto` mappings
 2. back up or require a backup of the current Terraform state
 3. transform supported Fastly HCL while preserving expressions and references
-4. add or coordinate the required Terraform-native migration mechanism, including phased product-enablement migration when needed
+4. add the required Terraform-native migration blocks, including `moved` blocks for service moves and standalone resource plus `import` blocks for product enablement
 5. run or instruct the user to run Terraform validation
-6. require a final `terraform plan` with no unexpected create, destroy, or replace actions
+6. require a final `terraform plan` with no unexpected create, update, destroy, or replace actions
 
-The CLI should never directly modify raw state and should not silently run a destructive Terraform operation.
+The CLI should never directly modify raw state, run `terraform apply`, or silently run a destructive Terraform operation.
 
 ---
 
-## First engineering step
+## Engineering validation status
 
-Before building the full migration CLI, Fastly should prove the state migration path with the two service moves and the product-enablement split:
+The initial migration work identified three key state-transition paths:
 
 ```text
 fastly_service_vcl                     -> fastly_service_cdn_auto
@@ -226,27 +240,25 @@ fastly_service_compute                 -> fastly_service_compute_auto
 legacy service with product_enablement -> _auto service + fastly_service_product_* resources
 ```
 
-The proof-of-concept should determine:
+Current validation status:
 
-- whether Framework `ResourceWithMoveState` can safely handle each resource rename
-- whether `ResourceWithUpgradeState` is also required for schema/type differences
-- whether `moved` blocks are sufficient when paired with provider move-state support
-- when `removed` + `import` is required instead
-- whether the resulting configuration and state produce a no-op Terraform plan
-- whether nested product-enablement state can be separated from the service without changing the live product configuration
-- whether the generated standalone product resources can import the existing product state and converge without enabling, disabling, or reconfiguring products
+- **VCL -> CDN Auto: proven.** Real SDKv2 schema-v1 state was migrated with a Terraform `moved` block plus Framework `ResourceWithMoveState`. The Fastly service ID was preserved, apply completed with 0 added / 0 changed / 0 destroyed, and the final plan was a no-op. `ResourceWithUpgradeState` was not required for this tested path.
+- **Product enablement split: proven for Domain Inspector.** A real legacy VCL service with `domain_inspector = true` was moved to `fastly_service_cdn_auto` while `fastly_service_product_domain_inspector` was imported by service ID in the same Terraform plan/apply. The result was 1 imported / 0 added / 0 changed / 0 destroyed followed by a no-op plan.
+- **Compute -> Compute Auto: not yet validated.** This path still needs provider-side implementation and end-to-end validation, including Compute-specific state such as package handling.
+
+These results establish the two core migration mechanisms needed by the CLI: cross-type service state moves and split-resource adoption through Terraform imports. Remaining resource families should be implemented and validated against the same safety criteria. A separate architecture POC is only necessary if a remaining resource exposes migration behavior that cannot be represented by these mechanisms.
 
 ---
 
-## Decision requested
+## Decisions captured by this strategy
 
-The team should agree on the following before implementation begins:
-
-1. Fastly will provide an official migration CLI.
-2. The CLI will support only legacy -> `_auto` migration.
-3. The CLI will transform existing HCL rather than regenerate configuration.
-4. The CLI will not directly rewrite raw Terraform state.
-5. Terraform Plugin Framework and Terraform-native migration mechanisms will be the preferred state-migration path.
-6. A focused state-migration proof-of-concept will be completed before the CLI architecture is finalized.
-7. Legacy `product_enablement` will be migrated as a targeted split into standalone versionless product resources as part of the `_auto` migration.
-8. Explicit-family migration is out of scope for this CLI and would require a separate migration strategy.
+1. Fastly will provide an official deterministic migration CLI.
+2. The CLI will live in this repository as a separate binary.
+3. The CLI will support only legacy -> `_auto` migration, together with compatible versionless resources used by those configurations.
+4. The CLI will transform existing HCL rather than regenerate configuration.
+5. The CLI will not directly rewrite raw Terraform state or run `terraform apply`.
+6. Terraform Plugin Framework and Terraform-native migration mechanisms will own state transitions.
+7. Cross-type service migrations should use Terraform `moved` blocks plus Framework `ResourceWithMoveState` where supported; `removed` + `import` remains a fallback.
+8. Legacy `product_enablement` will be migrated as a targeted split into standalone versionless product resources. A single Terraform operation is preferred where proven safe; phased migration remains a fallback.
+9. `ResourceWithUpgradeState` will be used only for same-resource schema upgrades or other cases where it is independently required.
+10. Explicit-family migration is out of scope for this CLI and would require a separate migration strategy.
