@@ -3,6 +3,7 @@ package servicecdnauto
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -18,30 +19,25 @@ import (
 func TestMoveStateDeclaresLegacyServiceVCLMover(t *testing.T) {
 	t.Parallel()
 
-	movers := NewResource().(*Resource).MoveState(context.Background())
-	if len(movers) != 1 {
-		t.Fatalf("MoveState() returned %d movers, want 1", len(movers))
-	}
-	if movers[0].SourceSchema == nil {
-		t.Fatal("MoveState() source schema is nil")
-	}
+	ctx := context.Background()
+	r := NewResource().(*Resource)
+
+	_ = legacyServiceVCLSchemaV1Mover(ctx, t, r)
 }
 
 func TestMoveStateSourceSchemaMatchesLegacyServiceVCLSchemaV1(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	movers := NewResource().(*Resource).MoveState(ctx)
-	if len(movers) != 1 || movers[0].SourceSchema == nil {
-		t.Fatalf("MoveState() returned %#v, want one mover with a source schema", movers)
-	}
+	r := NewResource().(*Resource)
+	mover := legacyServiceVCLSchemaV1Mover(ctx, t, r)
 
 	fixture := readLegacyServiceVCLTypeFixture(t)
 	if fixture.Version != legacyServiceVCLSchemaV1 {
 		t.Fatalf("fixture schema version = %d, want %d", fixture.Version, legacyServiceVCLSchemaV1)
 	}
 
-	got := movers[0].SourceSchema.Type().TerraformType(ctx)
+	got := mover.SourceSchema.Type().TerraformType(ctx)
 	want := fixtureBlockTerraformType(t, fixture.Block)
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("legacy move-state Terraform type does not match SDKv2 schema-v1 fixture\ngot:  %#v\nwant: %#v", got, want)
@@ -53,7 +49,7 @@ func TestMoveLegacyServiceVCLState(t *testing.T) {
 
 	ctx := context.Background()
 	r := NewResource().(*Resource)
-	mover := r.MoveState(ctx)[0]
+	mover := legacyServiceVCLSchemaV1Mover(ctx, t, r)
 
 	sourceState := newLegacyMoveSourceState(t, mover)
 	targetState := newCDNAutoTargetState(ctx, t, r)
@@ -98,25 +94,30 @@ func TestMoveLegacyServiceVCLState(t *testing.T) {
 	}
 }
 
-func TestMoveLegacyServiceVCLStateRejectsOldSchemaVersion(t *testing.T) {
+func TestMoveLegacyServiceVCLStateRejectsUnsupportedSchemaVersion(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
-	r := NewResource().(*Resource)
-	mover := r.MoveState(ctx)[0]
+	for _, version := range []int64{0, 2} {
+		t.Run(fmt.Sprintf("schema version %d", version), func(t *testing.T) {
+			t.Parallel()
 
-	targetState := newCDNAutoTargetState(ctx, t, r)
-	req := resource.MoveStateRequest{
-		SourceProviderAddress: legacyFastlyProviderAddress,
-		SourceSchemaVersion:   0,
-		SourceState:           newLegacyMoveSourceState(t, mover),
-		SourceTypeName:        legacyServiceVCLTypeName,
-	}
-	resp := resource.MoveStateResponse{TargetState: targetState}
+			ctx := context.Background()
+			r := NewResource().(*Resource)
+			mover := legacyServiceVCLSchemaV1Mover(ctx, t, r)
 
-	mover.StateMover(ctx, req, &resp)
-	if !resp.Diagnostics.HasError() {
-		t.Fatal("state mover accepted schema version 0, want an error")
+			req := resource.MoveStateRequest{
+				SourceProviderAddress: legacyFastlyProviderAddress,
+				SourceSchemaVersion:   version,
+				SourceState:           newLegacyMoveSourceState(t, mover),
+				SourceTypeName:        legacyServiceVCLTypeName,
+			}
+			resp := resource.MoveStateResponse{TargetState: newCDNAutoTargetState(ctx, t, r)}
+
+			mover.StateMover(ctx, req, &resp)
+			if !resp.Diagnostics.HasError() {
+				t.Fatalf("state mover accepted schema version %d, want an error", version)
+			}
+		})
 	}
 }
 
@@ -125,7 +126,7 @@ func TestMoveLegacyServiceVCLStateRejectsNilSourceState(t *testing.T) {
 
 	ctx := context.Background()
 	r := NewResource().(*Resource)
-	mover := r.MoveState(ctx)[0]
+	mover := legacyServiceVCLSchemaV1Mover(ctx, t, r)
 
 	req := resource.MoveStateRequest{
 		SourceProviderAddress: legacyFastlyProviderAddress,
@@ -147,7 +148,7 @@ func TestMoveLegacyServiceVCLStateRejectsProductEnablement(t *testing.T) {
 
 	ctx := context.Background()
 	r := NewResource().(*Resource)
-	mover := r.MoveState(ctx)[0]
+	mover := legacyServiceVCLSchemaV1Mover(ctx, t, r)
 
 	req := resource.MoveStateRequest{
 		SourceProviderAddress: legacyFastlyProviderAddress,
@@ -189,7 +190,7 @@ func TestMoveLegacyServiceVCLStateIgnoresUnrelatedSource(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
 			r := NewResource().(*Resource)
-			mover := r.MoveState(ctx)[0]
+			mover := legacyServiceVCLSchemaV1Mover(ctx, t, r)
 
 			req := resource.MoveStateRequest{
 				SourceProviderAddress: test.providerAddress,
@@ -213,6 +214,32 @@ func TestMoveLegacyServiceVCLStateIgnoresUnrelatedSource(t *testing.T) {
 			}
 		})
 	}
+}
+
+func legacyServiceVCLSchemaV1Mover(ctx context.Context, t *testing.T, r *Resource) resource.StateMover {
+	t.Helper()
+
+	fixture := readLegacyServiceVCLTypeFixture(t)
+	if fixture.Version != legacyServiceVCLSchemaV1 {
+		t.Fatalf("fixture schema version = %d, want %d", fixture.Version, legacyServiceVCLSchemaV1)
+	}
+	want := fixtureBlockTerraformType(t, fixture.Block)
+
+	var matches []resource.StateMover
+	for _, mover := range r.MoveState(ctx) {
+		if mover.SourceSchema == nil {
+			continue
+		}
+		if reflect.DeepEqual(mover.SourceSchema.Type().TerraformType(ctx), want) {
+			matches = append(matches, mover)
+		}
+	}
+
+	if len(matches) != 1 {
+		t.Fatalf("MoveState() returned %d movers matching legacy fastly_service_vcl schema version 1, want 1", len(matches))
+	}
+
+	return matches[0]
 }
 
 type legacyServiceVCLTypeFixture struct {

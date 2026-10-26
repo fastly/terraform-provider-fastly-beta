@@ -2,6 +2,7 @@ package servicecdnauto
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -48,7 +49,7 @@ func moveLegacyServiceVCLState(ctx context.Context, req resource.MoveStateReques
 	if req.SourceSchemaVersion != legacyServiceVCLSchemaV1 {
 		resp.Diagnostics.AddError(
 			"Unsupported legacy Fastly service state",
-			"fastly_service_cdn_auto can only move state from fastly_service_vcl schema version 1. Upgrade the legacy Fastly provider and refresh the state before migrating.",
+			fmt.Sprintf("fastly_service_cdn_auto can only move state from fastly_service_vcl schema version 1; received schema version %d. This state mover does not support that persisted state schema and requires a migration path that explicitly supports it.", req.SourceSchemaVersion),
 		)
 		return
 	}
