@@ -4,6 +4,7 @@
 
 ### ENHANCEMENTS:
 
+- feat(ngwafworkspace): add support for automated virtual patching ([#190](https://github.com/fastly/terraform-provider-fastly-beta/pull/190))
 - feat(service_cdn_auto): add a proof-of-concept state migration path from legacy `fastly_service_vcl` resources ([#180](https://github.com/fastly/terraform-provider-fastly-beta/pull/180))
 
 ### BUG FIXES:

@@ -63,6 +63,7 @@ func TestFlattenToModel_zeroThresholdsDefaulted(t *testing.T) {
 	assert.Equal(t, types.StringValue("abc123"), m.ID)
 	assert.Equal(t, types.StringNull(), m.IPAnonymization)
 	assert.Equal(t, types.ListNull(types.StringType), m.ClientIPHeaders)
+	assert.Equal(t, types.BoolValue(false), m.AutoEnableNewVirtualPatches)
 
 	assert.Len(t, m.AttackSignalThresholds, 1)
 	th := m.AttackSignalThresholds[0]
@@ -111,6 +112,7 @@ func TestFlattenToModel_explicitValuesPreserved(t *testing.T) {
 		ClientIPHeaders:             []string{"X-Forwarded-For"},
 		DefaultBlockingResponseCode: 429,
 		DefaultRedirectURL:          "https://example.com",
+		AutoEnableNewVirtualPatches: new(true),
 		AttackSignalThresholds: ws.AttackSignalThresholds{
 			OneMinute:  5,
 			TenMinutes: 50,
@@ -124,6 +126,7 @@ func TestFlattenToModel_explicitValuesPreserved(t *testing.T) {
 	assert.Equal(t, types.StringValue("hashed"), m.IPAnonymization)
 	assert.Equal(t, types.Int64Value(429), m.DefaultBlockingResponseCode)
 	assert.Equal(t, types.StringValue("https://example.com"), m.DefaultRedirectURL)
+	assert.Equal(t, types.BoolValue(true), m.AutoEnableNewVirtualPatches)
 
 	var headers []string
 	diags = m.ClientIPHeaders.ElementsAs(context.Background(), &headers, false)
@@ -146,6 +149,7 @@ func TestBuildCreateInput(t *testing.T) {
 		ClientIPHeaders:             mustList(t, "X-Forwarded-For"),
 		DefaultBlockingResponseCode: types.Int64Value(406),
 		DefaultRedirectURL:          types.StringValue(""),
+		AutoEnableNewVirtualPatches: types.BoolValue(true),
 		AttackSignalThresholds: []AttackSignalThresholdsModel{{
 			Immediate:  types.BoolValue(true),
 			OneHour:    types.Int64Value(100),
@@ -161,6 +165,7 @@ func TestBuildCreateInput(t *testing.T) {
 	assert.Equal(t, "hashed", *input.IPAnonymization)
 	assert.Equal(t, []string{"X-Forwarded-For"}, input.ClientIPHeaders)
 	assert.Equal(t, 406, *input.DefaultBlockingResponseCode)
+	assert.True(t, *input.AutoEnableNewVirtualPatches)
 	assert.NotNil(t, input.AttackSignalThresholds)
 	assert.True(t, *input.AttackSignalThresholds.Immediate)
 }
@@ -173,6 +178,7 @@ func TestBuildUpdateInput(t *testing.T) {
 		IPAnonymization:             types.StringNull(),
 		DefaultBlockingResponseCode: types.Int64Value(406),
 		DefaultRedirectURL:          types.StringValue(""),
+		AutoEnableNewVirtualPatches: types.BoolValue(false),
 		AttackSignalThresholds: []AttackSignalThresholdsModel{{
 			Immediate:  types.BoolValue(false),
 			OneHour:    types.Int64Value(100),
@@ -185,6 +191,9 @@ func TestBuildUpdateInput(t *testing.T) {
 	assert.False(t, diags.HasError())
 	assert.Equal(t, "workspace-id", *input.WorkspaceID)
 	assert.Equal(t, "", *input.IPAnonymization)
+	// An explicit false must be sent so disabling the setting takes effect.
+	assert.NotNil(t, input.AutoEnableNewVirtualPatches)
+	assert.False(t, *input.AutoEnableNewVirtualPatches)
 }
 
 // mustList builds a known, non-null types.List even when called with zero

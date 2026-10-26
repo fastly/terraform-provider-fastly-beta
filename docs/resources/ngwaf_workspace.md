@@ -26,6 +26,8 @@ resource "fastly_ngwaf_workspace" "example" {
 
   default_blocking_response_code = 406
 
+  auto_enable_new_virtual_patches = false
+
   attack_signal_thresholds {
     one_minute  = 50
     ten_minutes = 350
@@ -46,6 +48,7 @@ resource "fastly_ngwaf_workspace" "example" {
 ### Optional
 
 - `attack_signal_thresholds` (Block List) Attack signal threshold parameters used for system site alerts. Each threshold is the number of attack signals per IP address that must be detected during the interval before the associated IP address is flagged. Exactly one block is required. (see [below for nested schema](#nestedblock--attack_signal_thresholds))
+- `auto_enable_new_virtual_patches` (Boolean) Whether virtual patches released after this setting is enabled are automatically enabled for the workspace in block mode. Virtual patches released before it was enabled are not changed. Defaults to `false`.
 - `client_ip_headers` (List of String) The request headers containing the client IP address. Maximum of 10 header names.
 - `default_blocking_response_code` (Number) The status code returned when a request is blocked. Applied at the workspace level, but can be overridden by individual rules. Accepted values are `301`, `302`, or any value between `400` and `599`. Defaults to `406`.
 - `default_redirect_url` (String) The URL used when `default_blocking_response_code` is `301` or `302`.
