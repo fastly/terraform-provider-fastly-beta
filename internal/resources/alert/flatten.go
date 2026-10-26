@@ -26,7 +26,13 @@ func FlattenToModel(ctx context.Context, ad *fastly.AlertDefinition) (Model, dia
 		m.ServiceID = types.StringNull()
 	}
 
-	description := strings.TrimSpace(strings.TrimSuffix(ad.Description, managedByTerraform))
+	description := ad.Description
+	// An empty description is sent as the bare marker, with no leading space to strip.
+	if description == managedByTerraform {
+		description = ""
+	} else {
+		description = strings.TrimSuffix(description, " "+managedByTerraform)
+	}
 	m.Description = types.StringValue(description)
 
 	domains, present := ad.Dimensions["domains"]

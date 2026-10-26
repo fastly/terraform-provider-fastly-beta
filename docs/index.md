@@ -35,7 +35,7 @@ terraform {
   required_providers {
     fastly = {
       source  = "fastly/fastly-beta"
-      version = ">= 0.2.4"
+      version = ">= 0.2.5"
     }
   }
 }
@@ -66,4 +66,5 @@ resource "fastly_domain" "myservice" {
 
 ### Optional
 
+- `api_endpoint` (String) The Fastly API server URL. Must use https. Defaults to https://api.fastly.com. Can also be set via the FASTLY_API_URL environment variable; this argument takes precedence over it.
 - `api_token` (String, Sensitive) The Fastly API token. Can also be set via the FASTLY_API_TOKEN environment variable.

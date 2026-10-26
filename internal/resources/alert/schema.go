@@ -16,6 +16,11 @@ import (
 const (
 	managedByTerraform = "Managed by Terraform"
 
+	// The API caps description at 4096, and expand appends " " + managedByTerraform before sending.
+	// As such, we'll need to reduce the limit by the length of this appended text.
+	apiDescriptionLimit      = 4096
+	maxConfiguredDescription = apiDescriptionLimit - len(managedByTerraform) - 1
+
 	badAlertSourceServiceIDConfig = "empty `service_id` is only supported for `stats` as a source"
 )
 
@@ -71,7 +76,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 			Default:     stringdefault.StaticString(""),
 			Description: "Additional text that is included in the alert notification.",
 			Validators: []validator.String{
-				stringvalidator.LengthAtMost(4096),
+				stringvalidator.LengthAtMost(maxConfiguredDescription),
 			},
 		},
 		"service_id": schema.StringAttribute{

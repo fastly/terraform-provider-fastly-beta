@@ -230,3 +230,83 @@ provider "fastly" {
 %s
 `, token, ConfigCDNAutoBasic(serviceName, domainName))
 }
+
+// TestAccProvider_ExplicitAPIEndpoint tests provider configuration with the default API endpoint set explicitly.
+// It deliberately targets the production endpoint, so it exercises a real API call without needing an alternate region.
+func TestAccProvider_ExplicitAPIEndpoint(t *testing.T) {
+	t.Parallel()
+	if os.Getenv("TF_ACC") == "" {
+		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
+	}
+
+	serviceName := fmt.Sprintf("tf-test-provider-endpoint-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("tf-test-%s.example.com", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckServiceDestroy("fastly_service_cdn_auto"),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfigWithAPIEndpoint("https://api.fastly.com", serviceName, domainName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("fastly_service_cdn_auto.test", "name", serviceName),
+				),
+			},
+		},
+	})
+}
+
+// TestAccProvider_InsecureAPIEndpoint tests that a non-https api_endpoint is rejected at validation time.
+func TestAccProvider_InsecureAPIEndpoint(t *testing.T) {
+	t.Parallel()
+	if os.Getenv("TF_ACC") == "" {
+		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
+	}
+
+	serviceName := fmt.Sprintf("tf-test-provider-insecure-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("tf-test-%s.example.com", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProviderConfigWithAPIEndpoint("http://api.fastly.com", serviceName, domainName),
+				ExpectError: regexp.MustCompile(`must start with https://`),
+			},
+		},
+	})
+}
+
+// TestAccProvider_UnresolvableAPIEndpoint tests that a non-default api_endpoint is honored by the client.
+// The .invalid TLD is reserved (RFC 2606) and never resolves, so no request leaves the machine.
+func TestAccProvider_UnresolvableAPIEndpoint(t *testing.T) {
+	t.Parallel()
+	if os.Getenv("TF_ACC") == "" {
+		t.Skip("Acceptance tests skipped unless env 'TF_ACC' is set")
+	}
+
+	serviceName := fmt.Sprintf("tf-test-provider-unresolvable-%s", acctest.RandString(10))
+	domainName := fmt.Sprintf("tf-test-%s.example.com", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProviderConfigWithAPIEndpoint("https://api.fastly.invalid", serviceName, domainName),
+				ExpectError: regexp.MustCompile(`api\.fastly\.invalid`),
+			},
+		},
+	})
+}
+
+// testAccProviderConfigWithAPIEndpoint returns config with an explicit api_endpoint in the provider block.
+func testAccProviderConfigWithAPIEndpoint(endpoint, serviceName, domainName string) string {
+	return fmt.Sprintf(`
+provider "fastly" {
+  api_endpoint = "%s"
+}
+
+%s
+`, endpoint, ConfigCDNAutoBasic(serviceName, domainName))
+}
