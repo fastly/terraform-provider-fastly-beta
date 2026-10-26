@@ -11,8 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/scope"
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/signals"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/scope"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/signals"
 )
 
 func TestAccFastlyNGWAFSignal_lifecycle(t *testing.T) {

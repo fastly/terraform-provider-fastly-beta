@@ -4,11 +4,36 @@
 
 ### ENHANCEMENTS:
 
+### BUG FIXES:
+
+### Dependencies:
+
+## 0.2.5 (October 22, 2026)
+
+### ENHANCEMENTS:
+
+- feat(provider): add `api_endpoint` provider argument (and `FASTLY_API_URL` environment variable) to target a non-default Fastly API endpoint; https only ([#187](https://github.com/fastly/terraform-provider-fastly-beta/pull/187))
+
+### BUG FIXES:
+
+- fix(alert): `description` is now limited to 4075 characters so the appended "Managed by Terraform" text stays within the API's 4096 limit and leading/trailing whitespace no longer 
+  causes an "inconsistent result after apply" error ([#186](https://github.com/fastly/terraform-provider-fastly-beta/pull/186))
+- fix(docs): `fastly_service_compute_auto` package examples now set `source_code_hash` from the `fastly_package_hash` data source instead of `filesha512()`, which never matches the API hash and caused an "inconsistent result after apply" error ([#185](https://github.com/fastly/terraform-provider-fastly-beta/pull/185))
+
+### Dependencies:
+
+- build(deps): `github.com/fastly/go-fastly` from v17.8.0 to v18.0.0 ([#184](https://github.com/fastly/terraform-provider-fastly-beta/pull/184))
+
+## 0.2.4 (October 20, 2026)
+
+### ENHANCEMENTS:
+
 - feat(docs): extend the beta testing guide with an explicit resource family workflow using `terraform query` and service-scoped discovery ([#161](https://github.com/fastly/terraform-provider-fastly-beta/pull/161))
 
 ### BUG FIXES:
 
-### Dependencies:
+- fix(ngwaf_workspace): `client_ip_headers` no longer causes an "inconsistent result after apply" error when set to an empty list ([#178](https://github.com/fastly/terraform-provider-fastly-beta/pull/178))
+- fix(healthcheck): explicitly empty `headers` no longer causes an "inconsistent result after apply" error or a perpetual diff on `fastly_service_cdn_auto` and `fastly_service_compute_auto` ([#179](https://github.com/fastly/terraform-provider-fastly-beta/pull/179))
 
 ## 0.2.3 (October 13, 2026)
 

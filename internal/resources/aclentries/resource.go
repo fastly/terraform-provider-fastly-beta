@@ -15,8 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/fastly/go-fastly/v17/fastly"
-	"github.com/fastly/go-fastly/v17/fastly/computeacls"
+	"github.com/fastly/go-fastly/v18/fastly"
+	"github.com/fastly/go-fastly/v18/fastly/computeacls"
 )
 
 // The Compute ACL batch update endpoint responds 202 Accepted and applies the

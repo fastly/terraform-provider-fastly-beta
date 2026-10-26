@@ -3,7 +3,7 @@ package ngwafworkspacethreshold
 import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	th "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/thresholds"
+	th "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/thresholds"
 )
 
 // FlattenToModel populates state from the API response. duration, interval,

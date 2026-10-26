@@ -9,8 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/rules"
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/scope"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/rules"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/scope"
 )
 
 // ImportWorkspaceState populates workspace_id and id from a

@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	"github.com/fastly/go-fastly/v17/fastly"
+	"github.com/fastly/go-fastly/v18/fastly"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 )
 
@@ -61,6 +62,49 @@ func TestAccFastlyAlert_statsAccountWide(t *testing.T) {
 				ResourceName:      "fastly_alert.test",
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// Esnures that we stay within the API limit for the 'description' field (CDTOOL-1824).
+func TestAccFastlyAlert_descriptionRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	name := fmt.Sprintf("tf-test-alert-%s", acctest.RandString(10))
+	// The HCL "\n" escape yields a trailing newline, matching a heredoc description.
+	whitespaceHCL := `  padded description\n`
+	whitespace := "  padded description\n"
+	maxLength := strings.Repeat("a", 4075)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckAlertDestroy,
+		Steps: []resource.TestStep{
+			// Must not be the last step: post-test destroy reuses the final config, which would fail validation.
+			{
+				Config:      ConfigAlertStatsAccountWide(name, maxLength+"a", "status_5xx", "above_threshold", "5m", 10),
+				ExpectError: regexp.MustCompile(`string length must be at most 4075`),
+			},
+			{
+				Config: ConfigAlertStatsAccountWide(name, whitespaceHCL, "status_5xx", "above_threshold", "5m", 10),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("fastly_alert.test", "description", whitespace),
+					CheckAlertRemoteDescription("fastly_alert.test", whitespace),
+				),
+			},
+			{
+				ResourceName:      "fastly_alert.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: ConfigAlertStatsAccountWide(name, maxLength, "status_5xx", "above_threshold", "5m", 10),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("fastly_alert.test", "description", maxLength),
+					CheckAlertRemoteDescription("fastly_alert.test", maxLength),
+				),
 			},
 		},
 	})

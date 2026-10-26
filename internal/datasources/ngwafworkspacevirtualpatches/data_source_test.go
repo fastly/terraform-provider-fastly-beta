@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/require"
 
-	vp "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/virtualpatches"
+	vp "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/virtualpatches"
 )
 
 func TestMetadata(t *testing.T) {

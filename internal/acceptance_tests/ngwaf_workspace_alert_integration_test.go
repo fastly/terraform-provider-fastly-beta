@@ -10,15 +10,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	"github.com/fastly/go-fastly/v17/fastly"
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/alerts/datadog"
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/alerts/jira"
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/alerts/mailinglist"
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/alerts/microsoftteams"
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/alerts/opsgenie"
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/alerts/pagerduty"
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/alerts/slack"
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/alerts/webhook"
+	"github.com/fastly/go-fastly/v18/fastly"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/alerts/datadog"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/alerts/jira"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/alerts/mailinglist"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/alerts/microsoftteams"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/alerts/opsgenie"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/alerts/pagerduty"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/alerts/slack"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/alerts/webhook"
 )
 
 type ngwafWorkspaceAlertIntegrationAcceptanceCase struct {

@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
+	fastly "github.com/fastly/go-fastly/v18/fastly"
 )
 
 // flatten converts the API response into Model state, keeping prior's headers when they match

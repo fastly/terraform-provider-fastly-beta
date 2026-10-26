@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/rules"
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/scope"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/rules"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/scope"
 )
 
 // ngwafWorkspaceRuleTypes are the resource types CheckNGWAFWorkspaceRuleDestroy

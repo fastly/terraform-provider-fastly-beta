@@ -11,9 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/rules"
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/scope"
-	ws "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/rules"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/scope"
+	ws "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces"
 )
 
 func TestAccFastlyNGWAFWorkspaceTemplatedSignalRule_lifecycle(t *testing.T) {

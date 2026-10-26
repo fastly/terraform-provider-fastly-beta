@@ -12,7 +12,7 @@ import (
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 
-	"github.com/fastly/go-fastly/v17/fastly/dns/v1/tsigkeys"
+	"github.com/fastly/go-fastly/v18/fastly/dns/v1/tsigkeys"
 )
 
 func testTSIGKeyName(t *testing.T) string {

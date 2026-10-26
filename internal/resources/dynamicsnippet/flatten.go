@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
+	fastly "github.com/fastly/go-fastly/v18/fastly"
 )
 
 func FlattenToNestedModel(api *fastly.Snippet) (NestedModel, error) {

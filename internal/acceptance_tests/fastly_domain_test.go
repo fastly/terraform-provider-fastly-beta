@@ -13,7 +13,7 @@ import (
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 
-	"github.com/fastly/go-fastly/v17/fastly/domainmanagement/v1/domains"
+	"github.com/fastly/go-fastly/v18/fastly/domainmanagement/v1/domains"
 )
 
 func testDomainFQDN(t *testing.T) string {

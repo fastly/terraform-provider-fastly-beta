@@ -20,7 +20,7 @@ import (
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 
-	"github.com/fastly/go-fastly/v17/fastly"
+	"github.com/fastly/go-fastly/v18/fastly"
 )
 
 func testTLSActivationDomain(t *testing.T) string {

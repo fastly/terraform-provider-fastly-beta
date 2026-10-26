@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
+	fastly "github.com/fastly/go-fastly/v18/fastly"
 )
 
 func TestAccFastlyCustomDashboard_lifecycle(t *testing.T) {

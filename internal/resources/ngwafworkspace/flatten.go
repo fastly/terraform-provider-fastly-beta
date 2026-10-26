@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	ws "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces"
+	ws "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces"
 )
 
 // FlattenToModel populates state from the API response. The API returns a

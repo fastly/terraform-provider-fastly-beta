@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	fastly "github.com/fastly/go-fastly/v17/fastly"
-	th "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/thresholds"
+	fastly "github.com/fastly/go-fastly/v18/fastly"
+	th "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/thresholds"
 )
 
 var _ datasource.DataSource = &DataSource{}

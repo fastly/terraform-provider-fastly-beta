@@ -3,17 +3,21 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
+	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/list"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/fastly/go-fastly/v17/fastly"
+	"github.com/fastly/go-fastly/v18/fastly"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/computepackageupload"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/versionactivate"
@@ -183,7 +187,26 @@ import (
 type fastlyProvider struct{}
 
 type fastlyProviderModel struct {
-	APIToken types.String `tfsdk:"api_token"`
+	APIToken    types.String `tfsdk:"api_token"`
+	APIEndpoint types.String `tfsdk:"api_endpoint"`
+}
+
+var httpsURLPattern = regexp.MustCompile(`^https://`)
+
+func resolveAPIEndpoint(configured types.String, env string) (string, error) {
+	endpoint := fastly.DefaultEndpoint
+	if env != "" {
+		endpoint = env
+	}
+	if !configured.IsNull() && configured.ValueString() != "" {
+		endpoint = configured.ValueString()
+	}
+
+	u, err := url.Parse(endpoint)
+	if err != nil || u.Scheme != "https" || u.Host == "" {
+		return "", fmt.Errorf("API endpoint %q must be an absolute https:// URL", endpoint)
+	}
+	return endpoint, nil
 }
 
 func New() provider.Provider {
@@ -201,6 +224,13 @@ func (p *fastlyProvider) Schema(_ context.Context, _ provider.SchemaRequest, res
 				Optional:    true,
 				Sensitive:   true,
 				Description: "The Fastly API token. Can also be set via the FASTLY_API_TOKEN environment variable.",
+			},
+			"api_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: "The Fastly API server URL. Must use https. Defaults to https://api.fastly.com. Can also be set via the FASTLY_API_URL environment variable; this argument takes precedence over it.",
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(httpsURLPattern, "must start with https://"),
+				},
 			},
 		},
 	}
@@ -226,7 +256,13 @@ func (p *fastlyProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		return
 	}
 
-	client, err := fastly.NewClient(apiToken)
+	endpoint, err := resolveAPIEndpoint(config.APIEndpoint, os.Getenv("FASTLY_API_URL"))
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid API endpoint", err.Error())
+		return
+	}
+
+	client, err := fastly.NewClientForEndpoint(apiToken, endpoint)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to create Fastly client", err.Error())
 		return

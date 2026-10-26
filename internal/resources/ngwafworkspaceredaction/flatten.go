@@ -3,7 +3,7 @@ package ngwafworkspaceredaction
 import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/redactions"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/redactions"
 )
 
 func FlattenToModel(workspaceID string, redaction *redactions.Redaction) Model {

@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/require"
 
-	th "github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/workspaces/thresholds"
+	th "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/thresholds"
 )
 
 func TestMetadata(t *testing.T) {

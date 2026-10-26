@@ -3,8 +3,8 @@ package dnszone
 import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
-	"github.com/fastly/go-fastly/v17/fastly"
-	"github.com/fastly/go-fastly/v17/fastly/dns/v1/dnszones"
+	"github.com/fastly/go-fastly/v18/fastly"
+	"github.com/fastly/go-fastly/v18/fastly/dns/v1/dnszones"
 )
 
 // zoneType is the only value the API accepts for a zone's type.

@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 
-	"github.com/fastly/go-fastly/v17/fastly/objectstorage/accesskeys"
+	"github.com/fastly/go-fastly/v18/fastly/objectstorage/accesskeys"
 )
 
 func buildCreateInput(ctx context.Context, plan Model) (*accesskeys.CreateInput, diag.Diagnostics) {

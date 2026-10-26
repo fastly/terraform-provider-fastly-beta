@@ -3,8 +3,8 @@ package tsigkey
 import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
-	"github.com/fastly/go-fastly/v17/fastly"
-	"github.com/fastly/go-fastly/v17/fastly/dns/v1/tsigkeys"
+	"github.com/fastly/go-fastly/v18/fastly"
+	"github.com/fastly/go-fastly/v18/fastly/dns/v1/tsigkeys"
 )
 
 func BuildCreateInput(plan Model) *tsigkeys.CreateInput {

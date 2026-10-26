@@ -3,7 +3,7 @@ package tlsplatformcertificate
 import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
-	"github.com/fastly/go-fastly/v17/fastly"
+	"github.com/fastly/go-fastly/v18/fastly"
 )
 
 func BuildCreateInput(plan Model) *fastly.CreateBulkCertificateInput {

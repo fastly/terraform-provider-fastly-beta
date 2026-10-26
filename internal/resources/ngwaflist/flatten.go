@@ -6,8 +6,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/lists"
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/scope"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/lists"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/scope"
 )
 
 // FlattenToModel converts an API list response to workspace-scoped Terraform state.

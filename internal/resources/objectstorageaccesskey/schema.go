@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/fastly/go-fastly/v17/fastly/objectstorage/accesskeys"
+	"github.com/fastly/go-fastly/v18/fastly/objectstorage/accesskeys"
 )
 
 type Model struct {

@@ -17,9 +17,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/fastly/go-fastly/v17/fastly"
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/rules"
-	"github.com/fastly/go-fastly/v17/fastly/ngwaf/v1/scope"
+	"github.com/fastly/go-fastly/v18/fastly"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/rules"
+	"github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/scope"
 )
 
 var _ datasource.DataSource = &DataSource{}
@@ -131,7 +131,7 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		return
 	}
 
-	listVal, ids, diags := flattenRules(ctx, remoteState.Data)
+	listVal, ids, diags := flattenRules(ctx, remoteState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

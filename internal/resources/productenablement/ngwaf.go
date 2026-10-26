@@ -19,8 +19,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/fastly/go-fastly/v17/fastly"
-	ngwafproduct "github.com/fastly/go-fastly/v17/fastly/products/ngwaf"
+	"github.com/fastly/go-fastly/v18/fastly"
+	ngwafproduct "github.com/fastly/go-fastly/v18/fastly/products/ngwaf"
 )
 
 var (
