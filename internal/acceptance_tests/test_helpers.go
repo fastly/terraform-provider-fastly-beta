@@ -11303,6 +11303,20 @@ func ConfigFastlyRoutingConfigUpdated(serviceName, routingConfigName string) str
 	return joinBlocks(service, rc)
 }
 
+// ConfigFastlyRoutingConfigOrdering returns a CDN service and a fastly_routing_config_auto with
+// paths deliberately out of alphabetical order and two header-conditioned rules, in the given
+// order, ahead of a default rule.
+func ConfigFastlyRoutingConfigOrdering(serviceName, routingConfigName, firstHeader, secondHeader string) string {
+	service := ConfigServiceCDNBasic(serviceName)
+	rc := RenderBlock("internal/acceptance_tests/blocks/fastly_routing_config_auto_ordering.tf", map[string]string{
+		"ROUTING_CONFIG_NAME": routingConfigName,
+		"SERVICE_ID_REF":      "fastly_service_cdn.test.id",
+		"FIRST_HEADER":        firstHeader,
+		"SECOND_HEADER":       secondHeader,
+	})
+	return joinBlocks(service, rc)
+}
+
 // ConfigFastlyRoutingConfigDefaultFirst returns a CDN service and a fastly_routing_config_auto whose
 // default rule is listed before its conditional rule.
 func ConfigFastlyRoutingConfigDefaultFirst(serviceName, routingConfigName string) string {

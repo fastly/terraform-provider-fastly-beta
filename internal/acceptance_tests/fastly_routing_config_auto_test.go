@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -58,8 +59,116 @@ func TestAccFastlyRoutingConfigAuto_basic(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
+			{
+				Config: ConfigFastlyRoutingConfigOrdering(serviceName, routingConfigName, "X-A", "X-B"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("fastly_routing_config_auto.test", "path.0.path", "/z"),
+					resource.TestCheckResourceAttr("fastly_routing_config_auto.test", "path.0.rule.0.condition.0.key", "X-A"),
+					resource.TestCheckResourceAttr("fastly_routing_config_auto.test", "path.0.rule.1.condition.0.key", "X-B"),
+					resource.TestCheckResourceAttr("fastly_routing_config_auto.test", "path.0.rule.2.is_default", "true"),
+				),
+			},
+			{
+				// Rules are evaluated in order, so swapping them must be applied and converge.
+				Config: ConfigFastlyRoutingConfigOrdering(serviceName, routingConfigName, "X-B", "X-A"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("fastly_routing_config_auto.test", "path.0.rule.0.condition.0.key", "X-B"),
+					resource.TestCheckResourceAttr("fastly_routing_config_auto.test", "path.0.rule.1.condition.0.key", "X-A"),
+					resource.TestCheckResourceAttr("fastly_routing_config_auto.test", "path.0.rule.2.is_default", "true"),
+				),
+			},
+			{
+				// Config order is /z then /a; ImportStateVerify can't compare that
+				// positionally, so assert import sorts paths instead.
+				ResourceName:     "fastly_routing_config_auto.test",
+				ImportState:      true,
+				ImportStateCheck: checkImportedRoutingConfigPathsSorted,
+			},
+			{
+				// Shrinking exercises path and rule deletion in Update.
+				Config: ConfigFastlyRoutingConfig(serviceName, routingConfigName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("fastly_routing_config_auto.test", "path.#", "1"),
+					resource.TestCheckResourceAttr("fastly_routing_config_auto.test", "path.0.path", "/"),
+					resource.TestCheckResourceAttr("fastly_routing_config_auto.test", "path.0.rule.#", "1"),
+				),
+			},
 		},
 	})
+}
+
+func checkImportedRoutingConfigPathsSorted(states []*terraform.InstanceState) error {
+	if len(states) != 1 {
+		return fmt.Errorf("expected 1 imported instance, got %d", len(states))
+	}
+	attrs := states[0].Attributes
+	if first, second := attrs["path.0.path"], attrs["path.1.path"]; first != "/a" || second != "/z" {
+		return fmt.Errorf("expected imported paths sorted as /a, /z; got %q, %q", first, second)
+	}
+	return nil
+}
+
+func TestAccFastlyRoutingConfigAuto_invalidConfig(t *testing.T) {
+	t.Parallel()
+
+	rule := func(conditions string) string {
+		return fmt.Sprintf(`
+    rule {
+      action_type  = "service"
+      action_value = "svc"
+%s    }
+`, conditions)
+	}
+	condition := func(key string) string {
+		keyLine := ""
+		if key != "" {
+			keyLine = fmt.Sprintf("        key      = %q\n", key)
+		}
+		return fmt.Sprintf(`
+      condition {
+        type     = "header"
+%s        operator = "equals"
+        value    = "true"
+      }
+`, keyLine)
+	}
+	config := func(name, paths string) string {
+		return fmt.Sprintf("resource \"fastly_routing_config_auto\" \"test\" {\n  name = %q\n%s}\n", name, paths)
+	}
+	path := func(p, rules string) string {
+		return fmt.Sprintf("  path {\n    path = %q\n%s  }\n", p, rules)
+	}
+
+	sixConditions := ""
+	for i := 0; i < 6; i++ {
+		sixConditions += condition(fmt.Sprintf("X-%d", i))
+	}
+
+	tests := map[string]struct {
+		config string
+		expect string
+	}{
+		"no path":             {config("rc", ""), `Missing Routing Config Path`},
+		"no rule":             {config("rc", path("/", "")), `Missing Routing Config Rule`},
+		"no default rule":     {config("rc", path("/", rule(condition("X-A")))), `Missing Default Routing Config Rule`},
+		"header without key":  {config("rc", path("/", rule(condition(""))+rule(""))), `Missing Condition Key`},
+		"too many conditions": {config("rc", path("/", rule(sixConditions)+rule(""))), `at most 5`},
+		"path without slash":  {config("rc", path("nope", rule(""))), `must start with`},
+		"name too long":       {config(strings.Repeat("a", 256), path("/", rule(""))), `at most 255`},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			resource.Test(t, resource.TestCase{
+				PreCheck:                 func() { PreCheck(t) },
+				ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+				Steps: []resource.TestStep{{
+					Config:      tc.config,
+					PlanOnly:    true,
+					ExpectError: regexp.MustCompile(tc.expect),
+				}},
+			})
+		})
+	}
 }
 
 func TestAccFastlyRoutingConfigAuto_defaultFirstRejected(t *testing.T) {
