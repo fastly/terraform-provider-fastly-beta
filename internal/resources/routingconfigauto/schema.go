@@ -121,7 +121,7 @@ func RuleBlock() schema.ListNestedBlock {
 				},
 				"rule_id": schema.StringAttribute{
 					Computed:    true,
-					Description: "The rule identifier.",
+					Description: "Alphanumeric string identifying the rule.",
 				},
 			},
 			Blocks: map[string]schema.Block{

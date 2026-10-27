@@ -100,7 +100,7 @@ Optional:
 Read-Only:
 
 - `is_default` (Boolean) Whether this is the catch-all rule for its path (i.e. it has no conditions).
-- `rule_id` (String) The rule identifier.
+- `rule_id` (String) Alphanumeric string identifying the rule.
 
 <a id="nestedblock--path--rule--condition"></a>
 ### Nested Schema for `path.rule.condition`
