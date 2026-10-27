@@ -4,12 +4,16 @@
 
 ### ENHANCEMENTS:
 
-- feat(ngwafworkspace): add support for automated virtual patching ([#190](https://github.com/fastly/terraform-provider-fastly-beta/pull/190))
-- feat(service_cdn_auto): add a proof-of-concept state migration path from legacy `fastly_service_vcl` resources ([#180](https://github.com/fastly/terraform-provider-fastly-beta/pull/180))
-
 ### BUG FIXES:
 
 ### Dependencies:
+
+## 0.2.6 (October 27, 2026)
+
+### ENHANCEMENTS:
+
+- feat(ngwafworkspace): add support for automated virtual patching ([#190](https://github.com/fastly/terraform-provider-fastly-beta/pull/190))
+- feat(service_cdn_auto): add a proof-of-concept state migration path from legacy `fastly_service_vcl` resources ([#180](https://github.com/fastly/terraform-provider-fastly-beta/pull/180))
 
 ## 0.2.5 (October 22, 2026)
 
