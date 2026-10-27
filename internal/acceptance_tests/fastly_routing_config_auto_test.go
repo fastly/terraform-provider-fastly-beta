@@ -3,6 +3,7 @@ package acceptancetests
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -56,6 +57,24 @@ func TestAccFastlyRoutingConfigAuto_basic(t *testing.T) {
 				ResourceName:      "fastly_routing_config_auto.test",
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccFastlyRoutingConfigAuto_defaultFirstRejected(t *testing.T) {
+	t.Parallel()
+	serviceName := fmt.Sprintf("tf-test-%s", acctest.RandString(10))
+	routingConfigName := testRoutingConfigName(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckFastlyRoutingConfigDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigFastlyRoutingConfigDefaultFirst(serviceName, routingConfigName),
+				ExpectError: regexp.MustCompile(`Default Routing Config Rule Must Be Last`),
 			},
 		},
 	})

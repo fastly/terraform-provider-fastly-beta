@@ -3,6 +3,7 @@ package routingconfigauto
 import (
 	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -101,7 +102,7 @@ func PathBlock() schema.ListNestedBlock {
 
 func RuleBlock() schema.ListNestedBlock {
 	return schema.ListNestedBlock{
-		Description: "A conditional routing rule for this path; each `path` requires at least one, including a default rule. Rules are evaluated in the order listed and the first match wins, so order matters. A rule with no `condition` blocks is the default (catch-all) rule for the path.",
+		Description: "A conditional routing rule for this path; each `path` requires at least one, including a default rule. Rules are evaluated in the order listed and the first match wins, so order matters. A rule with no `condition` blocks is the default (catch-all) rule for the path, and must be the last rule.",
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"action_type": schema.StringAttribute{
@@ -133,7 +134,10 @@ func RuleBlock() schema.ListNestedBlock {
 
 func ConditionBlock() schema.ListNestedBlock {
 	return schema.ListNestedBlock{
-		Description: "A matching criterion evaluated against the incoming request. Omit to make this the default (catch-all) rule for the path.",
+		Description: "A matching criterion evaluated against the incoming request (max 5 per rule). Omit to make this the default (catch-all) rule for the path.",
+		Validators: []validator.List{
+			listvalidator.SizeAtMost(5),
+		},
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"key": schema.StringAttribute{

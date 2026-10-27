@@ -79,7 +79,7 @@ Required:
 
 Optional:
 
-- `rule` (Block List) A conditional routing rule for this path; each `path` requires at least one, including a default rule. Rules are evaluated in the order listed and the first match wins, so order matters. A rule with no `condition` blocks is the default (catch-all) rule for the path. (see [below for nested schema](#nestedblock--path--rule))
+- `rule` (Block List) A conditional routing rule for this path; each `path` requires at least one, including a default rule. Rules are evaluated in the order listed and the first match wins, so order matters. A rule with no `condition` blocks is the default (catch-all) rule for the path, and must be the last rule. (see [below for nested schema](#nestedblock--path--rule))
 
 Read-Only:
 
@@ -95,7 +95,7 @@ Required:
 
 Optional:
 
-- `condition` (Block List) A matching criterion evaluated against the incoming request. Omit to make this the default (catch-all) rule for the path. (see [below for nested schema](#nestedblock--path--rule--condition))
+- `condition` (Block List) A matching criterion evaluated against the incoming request (max 5 per rule). Omit to make this the default (catch-all) rule for the path. (see [below for nested schema](#nestedblock--path--rule--condition))
 
 Read-Only:
 

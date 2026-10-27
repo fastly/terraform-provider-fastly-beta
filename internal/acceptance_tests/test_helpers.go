@@ -11303,6 +11303,17 @@ func ConfigFastlyRoutingConfigUpdated(serviceName, routingConfigName string) str
 	return joinBlocks(service, rc)
 }
 
+// ConfigFastlyRoutingConfigDefaultFirst returns a CDN service and a fastly_routing_config_auto whose
+// default rule is listed before its conditional rule.
+func ConfigFastlyRoutingConfigDefaultFirst(serviceName, routingConfigName string) string {
+	service := ConfigServiceCDNBasic(serviceName)
+	rc := RenderBlock("internal/acceptance_tests/blocks/fastly_routing_config_auto_default_first.tf", map[string]string{
+		"ROUTING_CONFIG_NAME": routingConfigName,
+		"SERVICE_ID_REF":      "fastly_service_cdn.test.id",
+	})
+	return joinBlocks(service, rc)
+}
+
 // ConfigFastlyRoutingConfigWithDomainLink returns a CDN service, a fastly_routing_config_auto, a
 // fastly_domain, and a link between the domain and routing config.
 func ConfigFastlyRoutingConfigWithDomainLink(serviceName, routingConfigName, fqdn string) string {

@@ -456,6 +456,15 @@ func validateRules(pathIdx int, pm PathModel, diags *diag.Diagnostics) {
 	for ri, rm := range pm.Rule {
 		if len(rm.Condition) == 0 {
 			hasDefault = true
+			// The API always keeps the default rule last, so a default listed
+			// earlier would be reordered on read and plan a perpetual diff.
+			if ri != len(pm.Rule)-1 {
+				diags.AddAttributeError(
+					pathAttr.AtName("rule").AtListIndex(ri),
+					"Default Routing Config Rule Must Be Last",
+					"the default rule (a `rule` block with no `condition` blocks) must be the last `rule` in its `path`, and there can be only one",
+				)
+			}
 		}
 		for ci, cm := range rm.Condition {
 			if cm.Type.IsUnknown() || cm.Key.IsUnknown() {
