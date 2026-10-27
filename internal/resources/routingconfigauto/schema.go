@@ -89,7 +89,7 @@ func PathBlock() schema.ListNestedBlock {
 				},
 				"path_id": schema.StringAttribute{
 					Computed:    true,
-					Description: "The path identifier.",
+					Description: "Alphanumeric string identifying the path.",
 				},
 			},
 			Blocks: map[string]schema.Block{

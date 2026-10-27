@@ -83,7 +83,7 @@ Optional:
 
 Read-Only:
 
-- `path_id` (String) The path identifier.
+- `path_id` (String) Alphanumeric string identifying the path.
 
 <a id="nestedblock--path--rule"></a>
 ### Nested Schema for `path.rule`
