@@ -19,11 +19,10 @@ var (
 )
 
 type Model struct {
-	ID              types.String `tfsdk:"id"`
-	RoutingConfigID types.String `tfsdk:"routing_config_id"`
-	Name            types.String `tfsdk:"name"`
-	ActivatedAt     types.String `tfsdk:"activated_at"`
-	Path            []PathModel  `tfsdk:"path"`
+	ID          types.String `tfsdk:"id"`
+	Name        types.String `tfsdk:"name"`
+	ActivatedAt types.String `tfsdk:"activated_at"`
+	Path        []PathModel  `tfsdk:"path"`
 }
 
 type PathModel struct {
@@ -51,14 +50,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"id": schema.StringAttribute{
 			Computed:    true,
-			Description: "The ID of this resource (identical to `routing_config_id`).",
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.UseStateForUnknown(),
-			},
-		},
-		"routing_config_id": schema.StringAttribute{
-			Computed:    true,
-			Description: "The routing config identifier.",
+			Description: "Alphanumeric string identifying the routing config.",
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.UseStateForUnknown(),
 			},

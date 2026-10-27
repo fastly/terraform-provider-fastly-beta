@@ -34,7 +34,7 @@ func TestAccFastlyRoutingConfigAuto_basic(t *testing.T) {
 				Config: ConfigFastlyRoutingConfig(serviceName, routingConfigName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("fastly_routing_config_auto.test", "name", routingConfigName),
-					resource.TestCheckResourceAttrSet("fastly_routing_config_auto.test", "routing_config_id"),
+					resource.TestCheckResourceAttrSet("fastly_routing_config_auto.test", "id"),
 					resource.TestCheckResourceAttr("fastly_routing_config_auto.test", "path.#", "1"),
 					resource.TestCheckResourceAttr("fastly_routing_config_auto.test", "path.0.path", "/"),
 					resource.TestCheckResourceAttr("fastly_routing_config_auto.test", "path.0.rule.#", "1"),
@@ -79,7 +79,7 @@ func TestAccFastlyRoutingConfigDomainLink_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					captureResourceID("fastly_domain.test", &domainID),
 					resource.TestCheckResourceAttrSet("fastly_routing_config_domain_link.test", "domain_id"),
-					resource.TestCheckResourceAttrPair("fastly_routing_config_domain_link.test", "routing_config_id", "fastly_routing_config_auto.test", "routing_config_id"),
+					resource.TestCheckResourceAttrPair("fastly_routing_config_domain_link.test", "routing_config_id", "fastly_routing_config_auto.test", "id"),
 				),
 			},
 			{

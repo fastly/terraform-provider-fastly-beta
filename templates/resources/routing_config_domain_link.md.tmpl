@@ -32,7 +32,7 @@ resource "fastly_routing_config_auto" "example" {
 
 resource "fastly_routing_config_domain_link" "example" {
   domain_id         = fastly_domain.example.id
-  routing_config_id = fastly_routing_config_auto.example.routing_config_id
+  routing_config_id = fastly_routing_config_auto.example.id
 }
 ```
 

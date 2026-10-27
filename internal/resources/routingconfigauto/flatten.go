@@ -14,7 +14,6 @@ import (
 // applyTopLevel copies a routing config's own (non-path) attributes onto m.
 func applyTopLevel(m *Model, d *routingconfigs.Data) {
 	m.ID = types.StringValue(d.RoutingConfigID)
-	m.RoutingConfigID = types.StringValue(d.RoutingConfigID)
 	m.Name = types.StringValue(d.Name)
 
 	activatedAt := ""
