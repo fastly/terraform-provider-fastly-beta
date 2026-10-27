@@ -57,7 +57,10 @@ func ResourceAttributes() map[string]schema.Attribute {
 		},
 		"name": schema.StringAttribute{
 			Required:    true,
-			Description: "The user-defined name of the routing config. Can be created, but not updated.",
+			Description: "The user-defined name of the routing config (max 255 characters). Can be created, but not updated.",
+			Validators: []validator.String{
+				stringvalidator.LengthAtMost(255),
+			},
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
 			},

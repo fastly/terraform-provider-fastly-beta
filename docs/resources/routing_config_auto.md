@@ -59,7 +59,7 @@ resource "fastly_routing_config_auto" "example" {
 
 ### Required
 
-- `name` (String) The user-defined name of the routing config. Can be created, but not updated.
+- `name` (String) The user-defined name of the routing config (max 255 characters). Can be created, but not updated.
 
 ### Optional
 
