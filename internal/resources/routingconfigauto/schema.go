@@ -67,7 +67,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 		},
 		"activated_at": schema.StringAttribute{
 			Computed:    true,
-			Description: "The date and time the routing config's active version was last activated, in ISO 8601 format.",
+			Description: "The date and time the routing config's active version was most recently activated, in ISO 8601 format.",
 		},
 	}
 }

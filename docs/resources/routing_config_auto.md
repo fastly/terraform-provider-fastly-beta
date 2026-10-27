@@ -67,7 +67,7 @@ resource "fastly_routing_config_auto" "example" {
 
 ### Read-Only
 
-- `activated_at` (String) The date and time the routing config's active version was last activated, in ISO 8601 format.
+- `activated_at` (String) The date and time the routing config's active version was most recently activated, in ISO 8601 format.
 - `id` (String) Alphanumeric string identifying the routing config.
 
 <a id="nestedblock--path"></a>
