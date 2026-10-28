@@ -165,6 +165,8 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/requestsetting"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/resourcelink"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/responseobject"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/routingconfigauto"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/routingconfigdomainlink"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/secretstore"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecdn"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/servicecdnauto"
@@ -381,6 +383,8 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		requestsetting.NewResource,
 		responseobject.NewResource,
 		resourcelink.NewResource,
+		routingconfigauto.NewResource,
+		routingconfigdomainlink.NewResource,
 		secretstore.NewResource,
 		servicecdn.NewResource,
 		servicecdnauto.NewResource,

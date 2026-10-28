@@ -11281,6 +11281,75 @@ func ConfigFastlyDomainWithServiceLink(serviceName, fqdn string) string {
 	return joinBlocks(service, link)
 }
 
+// ConfigFastlyRoutingConfig returns a CDN service and a fastly_routing_config_auto with a single
+// catch-all rule routing to it.
+func ConfigFastlyRoutingConfig(serviceName, routingConfigName string) string {
+	service := ConfigServiceCDNBasic(serviceName)
+	rc := RenderBlock("internal/acceptance_tests/blocks/fastly_routing_config_auto_basic.tf", map[string]string{
+		"ROUTING_CONFIG_NAME": routingConfigName,
+		"SERVICE_ID_REF":      "fastly_service_cdn.test.id",
+	})
+	return joinBlocks(service, rc)
+}
+
+// ConfigFastlyRoutingConfigUpdated returns a CDN service and a fastly_routing_config_auto with two
+// paths - one with a conditional rule plus a default rule, the other with a single catch-all rule.
+func ConfigFastlyRoutingConfigUpdated(serviceName, routingConfigName string) string {
+	service := ConfigServiceCDNBasic(serviceName)
+	rc := RenderBlock("internal/acceptance_tests/blocks/fastly_routing_config_auto_updated.tf", map[string]string{
+		"ROUTING_CONFIG_NAME": routingConfigName,
+		"SERVICE_ID_REF":      "fastly_service_cdn.test.id",
+	})
+	return joinBlocks(service, rc)
+}
+
+// ConfigFastlyRoutingConfigOrdering returns a CDN service and a fastly_routing_config_auto with
+// paths deliberately out of alphabetical order and two header-conditioned rules, in the given
+// order, ahead of a default rule.
+func ConfigFastlyRoutingConfigOrdering(serviceName, routingConfigName, firstHeader, secondHeader string) string {
+	service := ConfigServiceCDNBasic(serviceName)
+	rc := RenderBlock("internal/acceptance_tests/blocks/fastly_routing_config_auto_ordering.tf", map[string]string{
+		"ROUTING_CONFIG_NAME": routingConfigName,
+		"SERVICE_ID_REF":      "fastly_service_cdn.test.id",
+		"FIRST_HEADER":        firstHeader,
+		"SECOND_HEADER":       secondHeader,
+	})
+	return joinBlocks(service, rc)
+}
+
+// ConfigFastlyRoutingConfigDefaultFirst returns a CDN service and a fastly_routing_config_auto whose
+// default rule is listed before its conditional rule.
+func ConfigFastlyRoutingConfigDefaultFirst(serviceName, routingConfigName string) string {
+	service := ConfigServiceCDNBasic(serviceName)
+	rc := RenderBlock("internal/acceptance_tests/blocks/fastly_routing_config_auto_default_first.tf", map[string]string{
+		"ROUTING_CONFIG_NAME": routingConfigName,
+		"SERVICE_ID_REF":      "fastly_service_cdn.test.id",
+	})
+	return joinBlocks(service, rc)
+}
+
+// ConfigFastlyRoutingConfigWithDomainLink returns a CDN service, a fastly_routing_config_auto, a
+// fastly_domain, and a link between the domain and routing config.
+func ConfigFastlyRoutingConfigWithDomainLink(serviceName, routingConfigName, fqdn string) string {
+	rc := ConfigFastlyRoutingConfig(serviceName, routingConfigName)
+	link := RenderBlock("internal/acceptance_tests/blocks/fastly_routing_config_domain_link.tf", map[string]string{
+		"DOMAIN_FQDN": fqdn,
+	})
+	return joinBlocks(rc, link)
+}
+
+// ConfigFastlyRoutingConfigWithUnlinkedDomain returns the same resources as
+// ConfigFastlyRoutingConfigWithDomainLink but without the link resource, so a
+// step transitioning between the two exercises the link's Delete without
+// destroying the domain or routing config themselves.
+func ConfigFastlyRoutingConfigWithUnlinkedDomain(serviceName, routingConfigName, fqdn string) string {
+	rc := ConfigFastlyRoutingConfig(serviceName, routingConfigName)
+	domain := RenderBlock("internal/acceptance_tests/blocks/fastly_domain_minimal.tf", map[string]string{
+		"DOMAIN_FQDN": fqdn,
+	})
+	return joinBlocks(rc, domain)
+}
+
 // ConfigFastlyDomainsDataSource returns three fastly_domain resources plus a fastly_domains data source.
 func ConfigFastlyDomainsDataSource(fqdn1, fqdn2, fqdn3 string) string {
 	return RenderBlock("internal/acceptance_tests/blocks/fastly_domain_three_with_datasource.tf", map[string]string{
