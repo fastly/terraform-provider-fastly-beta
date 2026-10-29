@@ -11745,3 +11745,35 @@ func ConfigCDNAutoWithLoggingElasticsearch(serviceName, domainName, loggerName s
 		"internal/acceptance_tests/blocks/logging_elasticsearch_nested.tf",
 	)
 }
+
+// ConfigAuditLogEventMapping returns a webhook fastly_integration plus a
+// fastly_audit_log_event_mapping that notifies it. scopeIDsExpr and eventTypesExpr are raw HCL
+// expressions (e.g. `[]` or `["address.create"]`).
+func ConfigAuditLogEventMapping(integrationName, name, description, scopeType, scopeIDsExpr, eventTypesExpr string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/audit_log_event_mapping_basic.tf", map[string]string{
+		"INTEGRATION_NAME": integrationName,
+		"NAME":             name,
+		"DESCRIPTION":      description,
+		"SCOPE_TYPE":       scopeType,
+		"SCOPE_IDS":        scopeIDsExpr,
+		"EVENT_TYPES":      eventTypesExpr,
+	})
+}
+
+// ConfigAuditLogEventMappingInvalid returns a fastly_audit_log_event_mapping with a scope_type /
+// scope_ids combination for config-validation testing.
+func ConfigAuditLogEventMappingInvalid(name, scopeType, scopeIDsExpr string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/audit_log_event_mapping_invalid.tf", map[string]string{
+		"NAME":       name,
+		"SCOPE_TYPE": scopeType,
+		"SCOPE_IDS":  scopeIDsExpr,
+	})
+}
+
+// ConfigAuditLogEventMappingDataSource returns a fastly_audit_log_event_mapping data source with
+// the given raw HCL lookup arguments.
+func ConfigAuditLogEventMappingDataSource(lookup string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/audit_log_event_mapping_data_source.tf", map[string]string{
+		"LOOKUP": lookup,
+	})
+}

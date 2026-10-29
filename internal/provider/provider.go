@@ -28,6 +28,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/apisecuritydiscoveredoperations"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/apisecurityoperations"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/apisecurityoperationtags"
+	auditlogeventmappingdatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/auditlogeventmapping"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/configstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/datacenters"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/dictionaries"
@@ -79,6 +80,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/alert"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/apisecurityoperation"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/apisecurityoperationtag"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/auditlogeventmapping"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/backend"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cachesetting"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cdnacl"
@@ -332,6 +334,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		loggingsumologic.NewResource,
 		loggingsyslog.NewResource,
 		integration.NewResource,
+		auditlogeventmapping.NewResource,
 		kvstore.NewResource,
 		customvcl.NewResource,
 		snippet.NewResource,
@@ -437,6 +440,7 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		ngwafworkspacevirtualpatches.NewDataSource,
 		packagehash.NewDataSource,
 		secretstores.NewDataSource,
+		auditlogeventmappingdatasource.NewDataSource,
 		services.NewDataSource,
 		serviceversion.NewDataSource,
 		stagingips.NewDataSource,
