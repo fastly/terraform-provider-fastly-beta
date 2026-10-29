@@ -1,0 +1,33 @@
+---
+page_title: "fastly_audit_log_event_mapping Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to get the details of an Audit Log Event Mapping, by ID or by other lookup criteria.
+---
+
+# fastly_audit_log_event_mapping (Data Source)
+
+Use this data source to get the details of an Audit Log Event Mapping, by ID or by other lookup
+criteria.
+
+The filters are applied using an **AND** boolean operator, so depending on the combination of
+filters, they may become mutually exclusive. `id` must not be specified in combination with any of
+the others.
+
+If more or less than a single match is returned by the search, the read fails. Ensure that your
+search is specific enough to return a single result.
+
+## Example Usage
+
+```terraform
+data "fastly_audit_log_event_mapping" "by_id" {
+  id = "abc123"
+}
+
+data "fastly_audit_log_event_mapping" "by_name" {
+  name       = "example service backend changes"
+  scope_type = "vcl"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

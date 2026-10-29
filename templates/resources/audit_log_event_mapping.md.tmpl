@@ -1,0 +1,58 @@
+---
+page_title: "fastly_audit_log_event_mapping Resource - fastly"
+subcategory: ""
+description: |-
+  Provides a Fastly Audit Log Event Mapping, which routes audit log events of the given types to one or more integrations.
+---
+
+# fastly_audit_log_event_mapping (Resource)
+
+Provides a Fastly Audit Log Event Mapping, which routes audit log events of the given types to one
+or more `fastly_integration` notification channels.
+
+Event mappings are versionless and independent of any service-version lifecycle. The event types
+valid for a mapping depend on its `scope_type`; see the
+[Fastly Event Mappings API](https://www.fastly.com/documentation/reference/api/observability/event-mappings/)
+for the full list.
+
+## Example Usage
+
+```terraform
+resource "fastly_integration" "slack" {
+  name = "audit-log-alerts"
+  type = "slack"
+
+  authentication = {
+    webhook = "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+  }
+}
+
+# Notify on account-level audit events. `scope_ids` must be empty for the
+# `account` scope type.
+resource "fastly_audit_log_event_mapping" "account" {
+  name            = "account audit events"
+  description     = "Send address changes to Slack"
+  scope_type      = "account"
+  event_types     = ["address.create", "address.update", "address.delete"]
+  integration_ids = [fastly_integration.slack.id]
+}
+
+# Scope a mapping to specific services of a given type.
+resource "fastly_audit_log_event_mapping" "service" {
+  name            = "example service backend changes"
+  scope_type      = "vcl"
+  scope_ids       = [fastly_service_cdn_auto.example.id]
+  event_types     = ["backend.delete"]
+  integration_ids = [fastly_integration.slack.id]
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Fastly Audit Log Event Mappings can be imported using their mapping ID, e.g.
+
+```shell
+terraform import fastly_audit_log_event_mapping.example <mapping_id>
+```
