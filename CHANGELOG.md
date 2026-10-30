@@ -7,6 +7,7 @@
 - feat(service_cdn_auto): support legacy simple product enablement state during VCL-to-CDN Auto migration ([#191](https://github.com/fastly/terraform-provider-fastly-beta/pull/191))
 - feat(audit-log-event-mapping): add `fastly_audit_log_event_mapping` resource and data source for routing audit log events to integrations ([#196](https://github.com/fastly/terraform-provider-fastly-beta/pull/196))
 - feat(routing-config): add `fastly_routing_config_auto` and `fastly_routing_config_domain_link` resources for domain management routing configs, using automatic versioning ([#176](https://github.com/fastly/terraform-provider-fastly-beta/pull/176))
+- feat(migration): add a typed legacy-to-_auto compatibility registry for Terraform migration analysis ([#197](https://github.com/fastly/terraform-provider-fastly-beta/pull/197))
 
 ### BUG FIXES:
 
