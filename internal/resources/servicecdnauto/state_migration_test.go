@@ -146,18 +146,26 @@ func TestMoveLegacyServiceVCLStateRejectsNilSourceState(t *testing.T) {
 func TestMoveLegacyServiceVCLStateAllowsSimpleProductEnablement(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
+	tests := make([]struct {
 		name     string
 		products map[string]bool
-	}{
-		{name: "API Discovery", products: map[string]bool{"api_discovery": true}},
-		{name: "Brotli Compression", products: map[string]bool{"brotli_compression": true}},
-		{name: "Domain Inspector", products: map[string]bool{"domain_inspector": true}},
-		{name: "Image Optimizer", products: map[string]bool{"image_optimizer": true}},
-		{name: "Log Explorer Insights", products: map[string]bool{"log_explorer_insights": true}},
-		{name: "Origin Inspector", products: map[string]bool{"origin_inspector": true}},
-		{name: "WebSockets", products: map[string]bool{"websockets": true}},
-		{
+	}, 0, len(legacyServiceVCLSimpleProductNames)+3)
+
+	for _, productName := range legacyServiceVCLSimpleProductNames {
+		tests = append(tests, struct {
+			name     string
+			products map[string]bool
+		}{
+			name:     productName,
+			products: map[string]bool{productName: true},
+		})
+	}
+
+	tests = append(tests,
+		struct {
+			name     string
+			products map[string]bool
+		}{
 			name: "multiple simple products",
 			products: map[string]bool{
 				"domain_inspector": true,
@@ -165,9 +173,21 @@ func TestMoveLegacyServiceVCLStateAllowsSimpleProductEnablement(t *testing.T) {
 				"websockets":       true,
 			},
 		},
-		{name: "explicitly disabled simple product", products: map[string]bool{"domain_inspector": false}},
-		{name: "product block with no simple product values", products: map[string]bool{}},
-	}
+		struct {
+			name     string
+			products map[string]bool
+		}{
+			name:     "explicitly disabled simple product",
+			products: map[string]bool{"domain_inspector": false},
+		},
+		struct {
+			name     string
+			products map[string]bool
+		}{
+			name:     "product block with no simple product values",
+			products: map[string]bool{},
+		},
+	)
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
