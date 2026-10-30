@@ -69,6 +69,9 @@ func TestMoveLegacyServiceVCLState(t *testing.T) {
 	if resp.Diagnostics.HasError() {
 		t.Fatalf("state mover returned diagnostics: %v", resp.Diagnostics)
 	}
+	if got := len(resp.Diagnostics); got != 0 {
+		t.Fatalf("state mover returned %d diagnostics for service without product_enablement, want 0: %v", got, resp.Diagnostics)
+	}
 
 	var gotID types.String
 	if diags := resp.TargetState.GetAttribute(ctx, path.Root("id"), &gotID); diags.HasError() {
@@ -147,78 +150,84 @@ func TestMoveLegacyServiceVCLStateRejectsNilSourceState(t *testing.T) {
 func TestMoveLegacyServiceVCLStateAllowsSimpleProductEnablement(t *testing.T) {
 	t.Parallel()
 
-	tests := make([]struct {
-		name     string
-		products map[string]bool
-	}, 0, len(legacyServiceVCLSimpleProductNames)+3)
-
 	for _, productName := range legacyServiceVCLSimpleProductNames {
-		tests = append(tests, struct {
-			name     string
-			products map[string]bool
-		}{
-			name:     productName,
-			products: map[string]bool{productName: true},
+		t.Run(productName, func(t *testing.T) {
+			testMoveLegacyServiceVCLStateWithSimpleProducts(
+				t,
+				map[string]bool{productName: true},
+				1,
+			)
 		})
 	}
 
-	tests = append(tests,
-		struct {
-			name     string
-			products map[string]bool
-		}{
+	tests := []struct {
+		name            string
+		products        map[string]bool
+		wantDiagnostics int
+	}{
+		{
 			name: "multiple simple products",
 			products: map[string]bool{
 				"domain_inspector": true,
 				"origin_inspector": true,
 				"websockets":       true,
 			},
+			wantDiagnostics: 1,
 		},
-		struct {
-			name     string
-			products map[string]bool
-		}{
-			name:     "explicitly disabled simple product",
-			products: map[string]bool{"domain_inspector": false},
+		{
+			name:            "explicitly disabled simple product",
+			products:        map[string]bool{"domain_inspector": false},
+			wantDiagnostics: 1,
 		},
-		struct {
-			name     string
-			products map[string]bool
-		}{
-			name:     "product block with no simple product values",
-			products: map[string]bool{},
+		{
+			name:            "product block with no simple product values",
+			products:        map[string]bool{},
+			wantDiagnostics: 0,
 		},
-	)
+	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ctx := context.Background()
-			r := NewResource().(*Resource)
-			mover := legacyServiceVCLSchemaV1Mover(ctx, t, r)
-
-			req := resource.MoveStateRequest{
-				SourceProviderAddress: legacyFastlyProviderAddress,
-				SourceSchemaVersion:   legacyServiceVCLSchemaV1,
-				SourceState:           newLegacyMoveSourceStateWithSimpleProducts(t, mover, test.products),
-				SourceTypeName:        legacyServiceVCLTypeName,
-			}
-			resp := resource.MoveStateResponse{
-				TargetState: newCDNAutoTargetState(ctx, t, r),
-			}
-
-			mover.StateMover(ctx, req, &resp)
-			if resp.Diagnostics.HasError() {
-				t.Fatalf("state mover rejected supported simple product_enablement: %v", resp.Diagnostics)
-			}
-
-			var gotID types.String
-			if diags := resp.TargetState.GetAttribute(ctx, path.Root("id"), &gotID); diags.HasError() {
-				t.Fatalf("GetAttribute(id) returned diagnostics: %v", diags)
-			}
-			if gotID.ValueString() != "SID123" {
-				t.Errorf("id = %q, want SID123", gotID.ValueString())
-			}
+			testMoveLegacyServiceVCLStateWithSimpleProducts(t, test.products, test.wantDiagnostics)
 		})
+	}
+}
+
+func testMoveLegacyServiceVCLStateWithSimpleProducts(
+	t *testing.T,
+	products map[string]bool,
+	wantDiagnostics int,
+) {
+	t.Helper()
+
+	ctx := context.Background()
+	r := NewResource().(*Resource)
+	mover := legacyServiceVCLSchemaV1Mover(ctx, t, r)
+
+	req := resource.MoveStateRequest{
+		SourceProviderAddress: legacyFastlyProviderAddress,
+		SourceSchemaVersion:   legacyServiceVCLSchemaV1,
+		SourceState:           newLegacyMoveSourceStateWithSimpleProducts(t, mover, products),
+		SourceTypeName:        legacyServiceVCLTypeName,
+	}
+	resp := resource.MoveStateResponse{
+		TargetState: newCDNAutoTargetState(ctx, t, r),
+	}
+
+	mover.StateMover(ctx, req, &resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("state mover rejected supported simple product_enablement: %v", resp.Diagnostics)
+	}
+	if got := len(resp.Diagnostics); got != wantDiagnostics {
+		t.Fatalf("state mover returned %d diagnostics, want %d: %v", got, wantDiagnostics, resp.Diagnostics)
+	}
+
+	var gotID types.String
+	if diags := resp.TargetState.GetAttribute(ctx, path.Root("id"), &gotID); diags.HasError() {
+		t.Fatalf("GetAttribute(id) returned diagnostics: %v", diags)
+	}
+	if gotID.ValueString() != "SID123" {
+		t.Errorf("id = %q, want SID123", gotID.ValueString())
 	}
 }
 
@@ -281,7 +290,7 @@ func TestMoveLegacyServiceVCLStateRejectsMultipleProductEnablementElements(t *te
 	}
 }
 
-func TestSupportsLegacySimpleProductAttributesRejectsUnknownProduct(t *testing.T) {
+func TestInspectLegacySimpleProductAttributesRejectsUnknownProduct(t *testing.T) {
 	t.Parallel()
 
 	attributes := make(map[string]attr.Value, len(legacyServiceVCLSimpleProductNames)+len(legacyServiceVCLConfigurableProductNames)+2)
@@ -296,7 +305,8 @@ func TestSupportsLegacySimpleProductAttributesRejectsUnknownProduct(t *testing.T
 
 	attributes["future_product"] = types.BoolValue(true)
 
-	if supportsLegacySimpleProductAttributes(attributes) {
+	supported, _ := inspectLegacySimpleProductAttributes(attributes)
+	if supported {
 		t.Fatal("legacy product enablement inspection accepted an unknown product attribute, want rejection")
 	}
 }
