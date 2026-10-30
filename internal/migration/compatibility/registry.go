@@ -115,8 +115,12 @@ func validateRules(rules []Rule) error {
 
 	for index, rule := range rules {
 		prefix := fmt.Sprintf("rule[%d]", index)
-		if rule.ID == "" {
+
+		trimmedID := strings.TrimSpace(rule.ID)
+		if trimmedID == "" {
 			errs = append(errs, fmt.Errorf("%s: id is required", prefix))
+		} else if rule.ID != trimmedID {
+			errs = append(errs, fmt.Errorf("%s: id must not contain leading or trailing whitespace", prefix))
 		} else if _, exists := ids[rule.ID]; exists {
 			errs = append(errs, fmt.Errorf("%s: duplicate id %q", prefix, rule.ID))
 		} else {
@@ -130,8 +134,17 @@ func validateRules(rules []Rule) error {
 		if !validFamily(rule.Family) {
 			errs = append(errs, fmt.Errorf("%s: invalid family %q", prefix, rule.Family))
 		}
-		if strings.TrimSpace(rule.Legacy) == "" {
+		trimmedLegacy := strings.TrimSpace(rule.Legacy)
+		if trimmedLegacy == "" {
 			errs = append(errs, fmt.Errorf("%s: legacy construct is required", prefix))
+		} else if rule.Legacy != trimmedLegacy {
+			errs = append(errs, fmt.Errorf("%s: legacy construct must not contain leading or trailing whitespace", prefix))
+		}
+		if rule.Selector != strings.TrimSpace(rule.Selector) {
+			errs = append(errs, fmt.Errorf("%s: selector must not contain leading or trailing whitespace", prefix))
+		}
+		if rule.Target != strings.TrimSpace(rule.Target) {
+			errs = append(errs, fmt.Errorf("%s: target must not contain leading or trailing whitespace", prefix))
 		}
 		if !validSupport(rule.Support) {
 			errs = append(errs, fmt.Errorf("%s: invalid support status %q", prefix, rule.Support))

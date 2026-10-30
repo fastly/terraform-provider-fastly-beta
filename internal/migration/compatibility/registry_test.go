@@ -236,6 +236,72 @@ func TestNewRegistryRejectsInvalidRules(t *testing.T) {
 	}
 }
 
+func TestNewRegistryRejectsNonCanonicalRoutingFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		mutate func(*Rule)
+	}{
+		{
+			name: "id leading whitespace",
+			mutate: func(rule *Rule) {
+				rule.ID = " test"
+			},
+		},
+		{
+			name: "id trailing whitespace",
+			mutate: func(rule *Rule) {
+				rule.ID = "test "
+			},
+		},
+		{
+			name: "legacy leading whitespace",
+			mutate: func(rule *Rule) {
+				rule.Legacy = " fastly_legacy"
+			},
+		},
+		{
+			name: "legacy trailing whitespace",
+			mutate: func(rule *Rule) {
+				rule.Legacy = "fastly_legacy "
+			},
+		},
+		{
+			name: "selector leading whitespace",
+			mutate: func(rule *Rule) {
+				rule.Selector = " type=request"
+			},
+		},
+		{
+			name: "selector trailing whitespace",
+			mutate: func(rule *Rule) {
+				rule.Selector = "type=request "
+			},
+		},
+		{
+			name: "target leading whitespace",
+			mutate: func(rule *Rule) {
+				rule.Target = " fastly_target"
+			},
+		},
+		{
+			name: "target trailing whitespace",
+			mutate: func(rule *Rule) {
+				rule.Target = "fastly_target "
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if _, err := NewRegistry([]Rule{validTestRule(test.mutate)}); err == nil {
+				t.Fatal("NewRegistry() accepted a rule with non-canonical routing fields")
+			}
+		})
+	}
+}
+
 func TestNewRegistryRejectsAmbiguousRoutes(t *testing.T) {
 	t.Parallel()
 
