@@ -58,11 +58,9 @@ func (r *Resource) upsert(ctx context.Context, domainID string, serviceID *strin
 	}
 
 	input := &domains.UpdateInput{
-		DomainID:  &domainID,
-		ServiceID: serviceID,
-	}
-	if current.Description != "" {
-		input.Description = &current.Description
+		DomainID:    &domainID,
+		Description: &current.Description,
+		ServiceID:   serviceID,
 	}
 
 	return domains.Update(ctx, r.client, input)

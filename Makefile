@@ -105,7 +105,9 @@ BASELINE_TEST_NAMES := \
 	TestAccFastlyServiceCDNAuto_withLoggingS3 \
 	TestAccFastlyProductEnablement_cdnBasic \
 	TestAccFastlyProductEnablement_computeBasic \
-	TestAccFastlyServiceResourceLink_ACL
+	TestAccFastlyServiceResourceLink_ACL \
+	TestAccFastlyRoutingConfigAuto_basic \
+	TestAccFastlyRoutingConfigDomainLink_basic
 
 BASELINE_TESTS := $(subst $(space),|,$(addsuffix $$,$(BASELINE_TEST_NAMES)))
 
