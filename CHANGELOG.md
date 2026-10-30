@@ -5,8 +5,6 @@
 ### ENHANCEMENTS:
 
 - feat(service_cdn_auto): support legacy simple product enablement state during VCL-to-CDN Auto migration ([#191](https://github.com/fastly/terraform-provider-fastly-beta/pull/191))
-- feat(ngwafworkspace): add support for automated virtual patching ([#190](https://github.com/fastly/terraform-provider-fastly-beta/pull/190))
-- feat(service_cdn_auto): add a proof-of-concept state migration path from legacy `fastly_service_vcl` resources ([#180](https://github.com/fastly/terraform-provider-fastly-beta/pull/180))
 - feat(audit-log-event-mapping): add `fastly_audit_log_event_mapping` resource and data source for routing audit log events to integrations ([#196](https://github.com/fastly/terraform-provider-fastly-beta/pull/196))
 - feat(routing-config): add `fastly_routing_config_auto` and `fastly_routing_config_domain_link` resources for domain management routing configs, using automatic versioning ([#176](https://github.com/fastly/terraform-provider-fastly-beta/pull/176))
 
