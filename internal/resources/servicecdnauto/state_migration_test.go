@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -248,6 +249,58 @@ func TestMoveLegacyServiceVCLStateRejectsConfigurableProductEnablement(t *testin
 	}
 }
 
+func TestMoveLegacyServiceVCLStateRejectsMultipleProductEnablementElements(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	r := NewResource().(*Resource)
+	mover := legacyServiceVCLSchemaV1Mover(ctx, t, r)
+
+	req := resource.MoveStateRequest{
+		SourceProviderAddress: legacyFastlyProviderAddress,
+		SourceSchemaVersion:   legacyServiceVCLSchemaV1,
+		SourceState: newLegacyMoveSourceStateWithProductEnablement(
+			t,
+			mover,
+			func(productType tftypes.Object, values map[string]tftypes.Value) {
+				setLegacySimpleProductValue(t, productType, values, "domain_inspector", true)
+			},
+			func(productType tftypes.Object, values map[string]tftypes.Value) {
+				setLegacySimpleProductValue(t, productType, values, "origin_inspector", true)
+			},
+		),
+		SourceTypeName: legacyServiceVCLTypeName,
+	}
+	resp := resource.MoveStateResponse{
+		TargetState: newCDNAutoTargetState(ctx, t, r),
+	}
+
+	mover.StateMover(ctx, req, &resp)
+	if !resp.Diagnostics.HasError() {
+		t.Fatal("state mover accepted multiple legacy product_enablement elements, want an error")
+	}
+}
+
+func TestSupportsLegacySimpleProductAttributesRejectsUnknownProduct(t *testing.T) {
+	t.Parallel()
+
+	attributes := make(map[string]attr.Value, len(legacyServiceVCLSimpleProductNames)+len(legacyServiceVCLConfigurableProductNames)+2)
+	attributes["name"] = types.StringValue("products")
+
+	for _, name := range legacyServiceVCLSimpleProductNames {
+		attributes[name] = types.BoolNull()
+	}
+	for _, name := range legacyServiceVCLConfigurableProductNames {
+		attributes[name] = types.ListNull(types.StringType)
+	}
+
+	attributes["future_product"] = types.BoolValue(true)
+
+	if supportsLegacySimpleProductAttributes(attributes) {
+		t.Fatal("legacy product enablement inspection accepted an unknown product attribute, want rejection")
+	}
+}
+
 func TestMoveLegacyServiceVCLStateIgnoresUnrelatedSource(t *testing.T) {
 	t.Parallel()
 
@@ -472,16 +525,28 @@ func newLegacyMoveSourceStateWithSimpleProducts(
 
 	return newLegacyMoveSourceStateWithProductEnablement(t, mover, func(productType tftypes.Object, values map[string]tftypes.Value) {
 		for name, enabled := range products {
-			attrType, ok := productType.AttributeTypes[name]
-			if !ok {
-				t.Fatalf("legacy product_enablement has no %q attribute", name)
-			}
-			if !reflect.DeepEqual(attrType, tftypes.Bool) {
-				t.Fatalf("legacy product_enablement.%s type = %T, want tftypes.Bool", name, attrType)
-			}
-			values[name] = tftypes.NewValue(attrType, enabled)
+			setLegacySimpleProductValue(t, productType, values, name, enabled)
 		}
 	})
+}
+
+func setLegacySimpleProductValue(
+	t *testing.T,
+	productType tftypes.Object,
+	values map[string]tftypes.Value,
+	name string,
+	enabled bool,
+) {
+	t.Helper()
+
+	attrType, ok := productType.AttributeTypes[name]
+	if !ok {
+		t.Fatalf("legacy product_enablement has no %q attribute", name)
+	}
+	if !reflect.DeepEqual(attrType, tftypes.Bool) {
+		t.Fatalf("legacy product_enablement.%s type = %T, want tftypes.Bool", name, attrType)
+	}
+	values[name] = tftypes.NewValue(attrType, enabled)
 }
 
 func newLegacyMoveSourceStateWithConfiguredProduct(
@@ -519,7 +584,7 @@ func newLegacyMoveSourceStateWithConfiguredProduct(
 func newLegacyMoveSourceStateWithProductEnablement(
 	t *testing.T,
 	mover resource.StateMover,
-	configure func(productType tftypes.Object, values map[string]tftypes.Value),
+	configures ...func(productType tftypes.Object, values map[string]tftypes.Value),
 ) *tfsdk.State {
 	t.Helper()
 
@@ -540,16 +605,20 @@ func newLegacyMoveSourceStateWithProductEnablement(
 		t.Fatalf("product_enablement element type = %T, want tftypes.Object", productSetType.ElementType)
 	}
 
-	productValues := make(map[string]tftypes.Value, len(productObjectType.AttributeTypes))
-	for name, attrType := range productObjectType.AttributeTypes {
-		if _, ok := attrType.(tftypes.List); ok {
-			productValues[name] = tftypes.NewValue(attrType, []tftypes.Value{})
-			continue
+	productElements := make([]tftypes.Value, 0, len(configures))
+	for _, configure := range configures {
+		productValues := make(map[string]tftypes.Value, len(productObjectType.AttributeTypes))
+		for name, attrType := range productObjectType.AttributeTypes {
+			if _, ok := attrType.(tftypes.List); ok {
+				productValues[name] = tftypes.NewValue(attrType, []tftypes.Value{})
+				continue
+			}
+			productValues[name] = tftypes.NewValue(attrType, nil)
 		}
-		productValues[name] = tftypes.NewValue(attrType, nil)
+		productValues["name"] = tftypes.NewValue(tftypes.String, "products")
+		configure(productObjectType, productValues)
+		productElements = append(productElements, tftypes.NewValue(productObjectType, productValues))
 	}
-	productValues["name"] = tftypes.NewValue(tftypes.String, "products")
-	configure(productObjectType, productValues)
 
 	rootValues := make(map[string]tftypes.Value, len(rootType.AttributeTypes))
 	for name, attrType := range rootType.AttributeTypes {
@@ -558,10 +627,7 @@ func newLegacyMoveSourceStateWithProductEnablement(
 	rootValues["id"] = tftypes.NewValue(tftypes.String, "SID123")
 	rootValues["force_destroy"] = tftypes.NewValue(tftypes.Bool, true)
 	rootValues["reuse"] = tftypes.NewValue(tftypes.Bool, false)
-	rootValues["product_enablement"] = tftypes.NewValue(
-		productSetType,
-		[]tftypes.Value{tftypes.NewValue(productObjectType, productValues)},
-	)
+	rootValues["product_enablement"] = tftypes.NewValue(productSetType, productElements)
 
 	return &tfsdk.State{
 		Raw:    tftypes.NewValue(rootType, rootValues),
