@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -88,7 +89,19 @@ func supportsLegacySimpleProductEnablement(products types.Set) bool {
 		return false
 	}
 
-	attributes := product.Attributes()
+	return supportsLegacySimpleProductAttributes(product.Attributes())
+}
+
+func supportsLegacySimpleProductAttributes(attributes map[string]attr.Value) bool {
+	for name := range attributes {
+		if name == "name" {
+			continue
+		}
+		if !legacyServiceVCLProductNameIn(name, legacyServiceVCLSimpleProductNames) &&
+			!legacyServiceVCLProductNameIn(name, legacyServiceVCLConfigurableProductNames) {
+			return false
+		}
+	}
 
 	for _, name := range legacyServiceVCLSimpleProductNames {
 		value, ok := attributes[name].(types.Bool)
@@ -108,6 +121,15 @@ func supportsLegacySimpleProductEnablement(products types.Set) bool {
 	}
 
 	return true
+}
+
+func legacyServiceVCLProductNameIn(name string, names []string) bool {
+	for _, candidate := range names {
+		if candidate == name {
+			return true
+		}
+	}
+	return false
 }
 
 func moveLegacyServiceVCLState(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
