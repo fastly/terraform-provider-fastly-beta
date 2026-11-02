@@ -40,10 +40,12 @@ func NewCommand(config Config) *urfavecli.Command {
 
 func newVersionCommand(config Config) *urfavecli.Command {
 	return &urfavecli.Command{
-		Name:  "version",
-		Usage: "Print the fastly-tf-migrate version",
-		Action: func(_ context.Context, _ *urfavecli.Command) error {
-			_, err := fmt.Fprintln(config.Writer, config.Version)
+		Name:      "version",
+		Usage:     "Print the fastly-tf-migrate version",
+		Writer:    config.Writer,
+		ErrWriter: config.ErrWriter,
+		Action: func(_ context.Context, command *urfavecli.Command) error {
+			_, err := fmt.Fprintln(command.Writer, config.Version)
 			return err
 		},
 	}

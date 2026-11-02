@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"io"
 	"strings"
 	"testing"
 )
@@ -50,6 +51,32 @@ func TestVersionCommand(t *testing.T) {
 	}
 	if got := stderr.String(); got != "" {
 		t.Fatalf("stderr = %q, want empty", got)
+	}
+}
+
+func TestVersionCommandUsesRuntimeWriter(t *testing.T) {
+	t.Parallel()
+
+	var configuredStdout bytes.Buffer
+	var runtimeStdout bytes.Buffer
+
+	command := NewCommand(Config{
+		Version:   "v1.2.3",
+		Writer:    &configuredStdout,
+		ErrWriter: io.Discard,
+	})
+
+	versionCommand := command.Commands[0]
+	versionCommand.Writer = &runtimeStdout
+
+	if err := versionCommand.Action(context.Background(), versionCommand); err != nil {
+		t.Fatalf("Action() returned error: %v", err)
+	}
+	if got := runtimeStdout.String(); got != "v1.2.3\n" {
+		t.Fatalf("runtime stdout = %q, want %q", got, "v1.2.3\n")
+	}
+	if got := configuredStdout.String(); got != "" {
+		t.Fatalf("configured stdout = %q, want empty", got)
 	}
 }
 
