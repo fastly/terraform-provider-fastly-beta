@@ -10,7 +10,6 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/importutil"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resourceidentity"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
-	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -79,25 +78,8 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		"name":       service.StringValue(plan.Name),
 	})
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_logging_newrelic", service.TypeVCL, service.TypeCompute); err != nil {
-		resp.Diagnostics.AddError("Unsupported service type", err.Error())
-		return
-	}
-
-	serviceType, err := r.providerData.TypeChecker.GetType(ctx, plan.Service.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Error determining service type", err.Error())
-		return
-	}
-	if serviceType == service.TypeCompute {
-		resp.Diagnostics.Append(logging.ValidateNoVCLOnlyAttributesForCompute(ctx, req.Config)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	resp.Diagnostics.Append(r.providerData.VersionChecker.EnsureMutable(ctx, plan.Service.ValueString(), int(plan.Version.ValueInt64()))...)
-	if resp.Diagnostics.HasError() {
+	serviceType, ok := logging.PrepareWrite(ctx, r.providerData, "fastly_service_logging_newrelic", plan.Service.ValueString(), int(plan.Version.ValueInt64()), req.Config, &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
@@ -117,9 +99,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		ResetVCLOnlyToDefaults(&plan.NestedModel)
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-	if !resp.Diagnostics.HasError() && resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, resourceidentity.NamedVersioned(plan.Service, plan.Name))...)
-	}
+	logging.SetIdentity(ctx, resp.Identity, plan.Service, plan.Name, &resp.Diagnostics)
 }
 
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -166,9 +146,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		ResetVCLOnlyToDefaults(&state.NestedModel)
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	if !resp.Diagnostics.HasError() && resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, resourceidentity.NamedVersioned(state.Service, state.Name))...)
-	}
+	logging.SetIdentity(ctx, resp.Identity, state.Service, state.Name, &resp.Diagnostics)
 }
 
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -181,25 +159,8 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, plan.Service.ValueString(), "fastly_service_logging_newrelic", service.TypeVCL, service.TypeCompute); err != nil {
-		resp.Diagnostics.AddError("Unsupported service type", err.Error())
-		return
-	}
-
-	serviceType, err := r.providerData.TypeChecker.GetType(ctx, plan.Service.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Error determining service type", err.Error())
-		return
-	}
-	if serviceType == service.TypeCompute {
-		resp.Diagnostics.Append(logging.ValidateNoVCLOnlyAttributesForCompute(ctx, req.Config)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	resp.Diagnostics.Append(r.providerData.VersionChecker.EnsureMutable(ctx, plan.Service.ValueString(), int(plan.Version.ValueInt64()))...)
-	if resp.Diagnostics.HasError() {
+	serviceType, ok := logging.PrepareWrite(ctx, r.providerData, "fastly_service_logging_newrelic", plan.Service.ValueString(), int(plan.Version.ValueInt64()), req.Config, &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
@@ -225,9 +186,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		ResetVCLOnlyToDefaults(&plan.NestedModel)
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-	if !resp.Diagnostics.HasError() && resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, resourceidentity.NamedVersioned(plan.Service, plan.Name))...)
-	}
+	logging.SetIdentity(ctx, resp.Identity, plan.Service, plan.Name, &resp.Diagnostics)
 }
 
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -243,14 +202,7 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 		"name":       state.Name.ValueString(),
 	})
 
-	if err := validation.EnsureServiceTypeSupported(ctx, r.providerData.TypeChecker, state.Service.ValueString(), "fastly_service_logging_newrelic", service.TypeVCL, service.TypeCompute); err != nil {
-		resp.Diagnostics.AddError("Unsupported service type", err.Error())
-		return
-	}
-
-	notFound, diags := r.providerData.VersionChecker.EnsureMutableForDelete(ctx, state.Service.ValueString(), int(state.Version.ValueInt64()))
-	resp.Diagnostics.Append(diags...)
-	if notFound || resp.Diagnostics.HasError() {
+	if !logging.PrepareDelete(ctx, r.providerData, "fastly_service_logging_newrelic", state.Service.ValueString(), int(state.Version.ValueInt64()), &resp.Diagnostics) {
 		return
 	}
 
@@ -315,7 +267,5 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	if !resp.Diagnostics.HasError() && resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, resourceidentity.NamedVersioned(state.Service, state.Name))...)
-	}
+	logging.SetIdentity(ctx, resp.Identity, state.Service, state.Name, &resp.Diagnostics)
 }
