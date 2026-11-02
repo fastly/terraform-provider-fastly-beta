@@ -4,6 +4,8 @@ A Terraform provider for the [Fastly](https://www.fastly.com/) API, built on the
 
 Full design spec: `docs/dual-model-provider-design.md`. Query support design: `docs/terraform-query.md`.
 
+Before reporting security or correctness findings, read `security/known-findings.md` and don't re-report listed items.
+
 ## Core architecture
 
 Two resource families encoded in the resource type name (never a `mode`/`type` field):
