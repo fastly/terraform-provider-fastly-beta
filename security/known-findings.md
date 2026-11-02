@@ -7,8 +7,6 @@ Each entry has one of two dispositions:
 - **Won't fix** — the behavior is understood and accepted; no code change is planned.
 - **Intended behavior** — the code works as designed. Re-check the entry if the referenced code changes materially.
 
-Add findings from other triaged issues in this epic here as they are closed.
-
 ## Entries
 
 ### Debug mode exposes sensitive API bodies
