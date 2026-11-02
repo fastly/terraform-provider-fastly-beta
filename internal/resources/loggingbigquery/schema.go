@@ -395,26 +395,30 @@ func ComputeNestedBlockSchema() schema.ListNestedBlock {
 	}
 }
 
-type ops struct{}
+// endpointOps holds the reconcile.Ops methods that are identical for the VCL
+// and Compute models.
+type endpointOps struct{}
 
-func (o ops) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.BigQuery, error) {
+func (o endpointOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.BigQuery, error) {
 	return client.ListBigQueries(ctx, &fastly.ListBigQueriesInput{
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 	})
 }
 
-func (o ops) GetName(api *fastly.BigQuery) string {
+func (o endpointOps) GetName(api *fastly.BigQuery) string {
 	return fastly.ToValue(api.Name)
 }
 
-func (o ops) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
+func (o endpointOps) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
 	return client.DeleteBigQuery(ctx, &fastly.DeleteBigQueryInput{
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 		Name:           name,
 	})
 }
+
+type ops struct{ endpointOps }
 
 func (o ops) Create(ctx context.Context, client *fastly.Client, serviceID string, version int, desired NestedModel) (*fastly.BigQuery, error) {
 	input := BuildCreateInput(serviceID, version, desired)
@@ -469,26 +473,7 @@ func ValidateConditionReferences(endpoints []NestedModel, conditionNames map[str
 		conditionNames)
 }
 
-type computeOps struct{}
-
-func (o computeOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.BigQuery, error) {
-	return client.ListBigQueries(ctx, &fastly.ListBigQueriesInput{
-		ServiceID:      serviceID,
-		ServiceVersion: version,
-	})
-}
-
-func (o computeOps) GetName(api *fastly.BigQuery) string {
-	return fastly.ToValue(api.Name)
-}
-
-func (o computeOps) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
-	return client.DeleteBigQuery(ctx, &fastly.DeleteBigQueryInput{
-		ServiceID:      serviceID,
-		ServiceVersion: version,
-		Name:           name,
-	})
-}
+type computeOps struct{ endpointOps }
 
 func (o computeOps) Create(ctx context.Context, client *fastly.Client, serviceID string, version int, desired ComputeNestedModel) (*fastly.BigQuery, error) {
 	input := BuildComputeCreateInput(serviceID, version, desired)

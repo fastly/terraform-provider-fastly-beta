@@ -366,26 +366,30 @@ func ComputeNestedBlockSchema() schema.ListNestedBlock {
 	}
 }
 
-type ops struct{}
+// endpointOps holds the reconcile.Ops methods that are identical for the VCL
+// and Compute models.
+type endpointOps struct{}
 
-func (o ops) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.FTP, error) {
+func (o endpointOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.FTP, error) {
 	return client.ListFTPs(ctx, &fastly.ListFTPsInput{
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 	})
 }
 
-func (o ops) GetName(api *fastly.FTP) string {
+func (o endpointOps) GetName(api *fastly.FTP) string {
 	return fastly.ToValue(api.Name)
 }
 
-func (o ops) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
+func (o endpointOps) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
 	return client.DeleteFTP(ctx, &fastly.DeleteFTPInput{
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 		Name:           name,
 	})
 }
+
+type ops struct{ endpointOps }
 
 func (o ops) Create(ctx context.Context, client *fastly.Client, serviceID string, version int, desired NestedModel) (*fastly.FTP, error) {
 	input := BuildCreateInput(serviceID, version, desired)
@@ -443,26 +447,7 @@ func MatchOrder(items, order []NestedModel) []NestedModel {
 	return result
 }
 
-type computeOps struct{}
-
-func (o computeOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.FTP, error) {
-	return client.ListFTPs(ctx, &fastly.ListFTPsInput{
-		ServiceID:      serviceID,
-		ServiceVersion: version,
-	})
-}
-
-func (o computeOps) GetName(api *fastly.FTP) string {
-	return fastly.ToValue(api.Name)
-}
-
-func (o computeOps) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
-	return client.DeleteFTP(ctx, &fastly.DeleteFTPInput{
-		ServiceID:      serviceID,
-		ServiceVersion: version,
-		Name:           name,
-	})
-}
+type computeOps struct{ endpointOps }
 
 func (o computeOps) Create(ctx context.Context, client *fastly.Client, serviceID string, version int, desired ComputeNestedModel) (*fastly.FTP, error) {
 	input := BuildComputeCreateInput(serviceID, version, desired)
