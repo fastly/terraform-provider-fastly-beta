@@ -463,14 +463,10 @@ func MatchOrder(items, order []NestedModel) []NestedModel {
 
 // ValidateConditionReferences rejects a response_condition naming a condition block absent from config.
 func ValidateConditionReferences(endpoints []NestedModel, conditionNames map[string]struct{}) error {
-	return validation.References(endpoints, "BigQuery logging endpoint", func(m NestedModel) types.String { return m.Name }, "response_condition",
-		func(m NestedModel) []string {
-			if m.ResponseCondition.IsUnknown() || m.ResponseCondition.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.ResponseCondition)}
-		},
-		"condition", conditionNames)
+	return logging.ValidateConditionReferences(endpoints, "BigQuery logging endpoint",
+		func(m NestedModel) types.String { return m.Name },
+		func(m NestedModel) types.String { return m.ResponseCondition },
+		conditionNames)
 }
 
 type computeOps struct{}
