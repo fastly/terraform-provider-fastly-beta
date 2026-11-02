@@ -111,7 +111,7 @@ func CommonAttributes() map[string]schema.Attribute {
 		"headers": schema.SetAttribute{
 			ElementType: types.StringType,
 			Optional:    true,
-			Description: "Custom health check HTTP headers (e.g. if your health check requires an API key to be provided).",
+			Description: "Custom health check HTTP headers, each in `Name: value` form. This attribute is not marked sensitive, so values are shown in plan output and stored in state; avoid placing secrets such as API keys or bearer tokens here.",
 		},
 		"http_version": schema.StringAttribute{
 			Optional:    true,
