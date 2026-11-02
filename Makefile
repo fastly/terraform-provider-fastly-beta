@@ -8,21 +8,24 @@ VERSION_SHORT := $(shell git describe --tags --always --abbrev=0 2>/dev/null || 
 DOCS_PROVIDER_VERSION := $(subst v,,$(VERSION_SHORT))
 BIN_DIR := $(CURDIR)/bin
 BINARY := $(BIN_DIR)/terraform-provider-$(PKG_NAME)-beta_$(VERSION)
+MIGRATOR_BINARY := $(BIN_DIR)/fastly-tf-migrate
 OVERRIDES_FILE := $(BIN_DIR)/developer_overrides.tfrc
 
 GOLANGCI_LINT_VERSION := v2.12.2
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 
-.PHONY: fmt build dev-overrides clean test-unit test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle lint install-linter check-linter-version release-check help
+.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle lint install-linter check-linter-version release-check help
 
 help:
 	@echo "Available targets:"
 	@echo "  make build                  - Format code and build provider binary"
+	@echo "  make build-migrator         - Format code and build fastly-tf-migrate"
 	@echo "  make fmt                    - Format Go code"
 	@echo "  make lint                   - Run golangci-lint"
 	@echo "  make clean                  - Remove build artifacts"
 	@echo "  make docs                   - Generate and validate provider documentation from templates"
 	@echo "  make test-unit              - Run unit tests"
+	@echo "  make test-migrator          - Run migration CLI and migration package unit tests"
 	@echo "  make test-acc               - Run acceptance tests without Go test caching (requires FASTLY_API_TOKEN)"
 	@echo "                                Add KEYWORD=<word> to only run tests whose name matches <word>"
 	@echo "                                (KEYWORD is passed through to 'go test -run' as a regular expression,"
@@ -44,6 +47,11 @@ build: fmt
 	@mkdir -p $(BIN_DIR)
 	@$(GO_BIN) build -ldflags="-X $(FULL_PKG_NAME)/internal/$(VERSION_PLACEHOLDER)=$(VERSION)" -o $(BINARY)
 	@$(MAKE) --no-print-directory dev-overrides
+
+build-migrator: fmt
+	@echo "==> Building fastly-tf-migrate..."
+	@mkdir -p $(BIN_DIR)
+	@$(GO_BIN) build -ldflags="-X $(FULL_PKG_NAME)/internal/$(VERSION_PLACEHOLDER)=$(VERSION)" -o $(MIGRATOR_BINARY) ./cmd/fastly-tf-migrate
 
 dev-overrides:
 	@echo "==> Generating Terraform CLI development overrides..."
@@ -75,6 +83,10 @@ check-linter-version:
 test-unit:
 	@echo "==> Running unit tests..."
 	@$(GO_BIN) test ./internal/...
+
+test-migrator:
+	@echo "==> Running migration CLI unit tests..."
+	@$(GO_BIN) test ./cmd/fastly-tf-migrate ./internal/migration/...
 
 TIMEOUT ?= 30m
 

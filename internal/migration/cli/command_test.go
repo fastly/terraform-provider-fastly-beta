@@ -1,0 +1,134 @@
+package cli
+
+import (
+	"bytes"
+	"context"
+	"io"
+	"strings"
+	"testing"
+)
+
+func TestNewCommand(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	command := NewCommand(Config{
+		Version:   "v1.2.3",
+		Writer:    &stdout,
+		ErrWriter: &stderr,
+	})
+
+	if command.Name != commandName {
+		t.Fatalf("Name = %q, want %q", command.Name, commandName)
+	}
+	if command.Version != "v1.2.3" {
+		t.Fatalf("Version = %q, want v1.2.3", command.Version)
+	}
+	var hasVersion bool
+	for _, command := range command.Commands {
+		if command.Name == "version" {
+			hasVersion = true
+			break
+		}
+	}
+	if !hasVersion {
+		t.Fatalf("Commands = %#v, want a version command", command.Commands)
+	}
+}
+
+func TestVersionCommand(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	command := NewCommand(Config{
+		Version:   "v1.2.3",
+		Writer:    &stdout,
+		ErrWriter: &stderr,
+	})
+
+	if err := command.Run(context.Background(), []string{commandName, "version"}); err != nil {
+		t.Fatalf("Run() returned error: %v", err)
+	}
+	if got := stdout.String(); got != "v1.2.3\n" {
+		t.Fatalf("stdout = %q, want %q", got, "v1.2.3\\n")
+	}
+	if got := stderr.String(); got != "" {
+		t.Fatalf("stderr = %q, want empty", got)
+	}
+}
+
+func TestVersionCommandUsesRuntimeWriter(t *testing.T) {
+	t.Parallel()
+
+	var configuredStdout bytes.Buffer
+	var runtimeStdout bytes.Buffer
+
+	command := NewCommand(Config{
+		Version:   "v1.2.3",
+		Writer:    &configuredStdout,
+		ErrWriter: io.Discard,
+	})
+
+	versionCommand := command.Commands[0]
+	versionCommand.Writer = &runtimeStdout
+
+	if err := versionCommand.Action(context.Background(), versionCommand); err != nil {
+		t.Fatalf("Action() returned error: %v", err)
+	}
+	if got := runtimeStdout.String(); got != "v1.2.3\n" {
+		t.Fatalf("runtime stdout = %q, want %q", got, "v1.2.3\n")
+	}
+	if got := configuredStdout.String(); got != "" {
+		t.Fatalf("configured stdout = %q, want empty", got)
+	}
+}
+
+func TestVersionFlag(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	command := NewCommand(Config{
+		Version:   "v1.2.3",
+		Writer:    &stdout,
+		ErrWriter: &stderr,
+	})
+
+	if err := command.Run(context.Background(), []string{commandName, "--version"}); err != nil {
+		t.Fatalf("Run() returned error: %v", err)
+	}
+	if got := stdout.String(); !strings.Contains(got, "v1.2.3") {
+		t.Fatalf("stdout = %q, want version output containing v1.2.3", got)
+	}
+	if got := stderr.String(); got != "" {
+		t.Fatalf("stderr = %q, want empty", got)
+	}
+}
+
+func TestHelp(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	command := NewCommand(Config{
+		Version:   "v1.2.3",
+		Writer:    &stdout,
+		ErrWriter: &stderr,
+	})
+
+	if err := command.Run(context.Background(), []string{commandName, "--help"}); err != nil {
+		t.Fatalf("Run() returned error: %v", err)
+	}
+	if got := stdout.String(); !strings.Contains(got, commandUsage) {
+		t.Fatalf("stdout = %q, want help output containing %q", got, commandUsage)
+	}
+	if got := stderr.String(); got != "" {
+		t.Fatalf("stderr = %q, want empty", got)
+	}
+}
