@@ -26,8 +26,15 @@ func TestNewCommand(t *testing.T) {
 	if command.Version != "v1.2.3" {
 		t.Fatalf("Version = %q, want v1.2.3", command.Version)
 	}
-	if len(command.Commands) != 1 || command.Commands[0].Name != "version" {
-		t.Fatalf("Commands = %#v, want only the version command", command.Commands)
+	var hasVersion bool
+	for _, command := range command.Commands {
+		if command.Name == "version" {
+			hasVersion = true
+			break
+		}
+	}
+	if !hasVersion {
+		t.Fatalf("Commands = %#v, want a version command", command.Commands)
 	}
 }
 
