@@ -4,6 +4,8 @@ import (
 	"context"
 	"maps"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/logging"
+
 	"github.com/fastly/terraform-provider-fastly-beta/internal/constants"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
@@ -39,11 +41,6 @@ const (
 	DefaultPassword          = ""
 	DefaultUseTLS            = false
 	DefaultTLSHostname       = ""
-
-	// maximumFormatLength is the maximum length the Fastly API accepts for a
-	// logging endpoint `format` string. Exceeding it is only rejected by the
-	// API at apply time, so it is enforced at plan/validate time instead.
-	maximumFormatLength = 12288
 )
 
 // commonModel holds the Kafka logging attributes shared by VCL and Compute
@@ -360,7 +357,7 @@ func vclOnlyAttributes() map[string]schema.Attribute {
 			Computed: true,
 			Default:  stringdefault.StaticString(constants.LoggingKafkaDefaultFormat),
 			Validators: []validator.String{
-				stringvalidator.LengthAtMost(maximumFormatLength),
+				stringvalidator.LengthAtMost(logging.MaximumFormatLength),
 				validation.NotBlank("format"),
 			},
 			Description: "A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/).",

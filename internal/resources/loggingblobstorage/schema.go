@@ -4,6 +4,8 @@ import (
 	"context"
 	"maps"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/logging"
+
 	"github.com/fastly/terraform-provider-fastly-beta/internal/constants"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/defaults"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
@@ -49,11 +51,6 @@ const (
 	// accepts; 0 itself means "no limit". Exceeding it is only rejected by the
 	// API at apply time, so it is enforced at plan/validate time instead.
 	minimumFileMaxBytes = 1048576
-
-	// maximumFormatLength is the maximum length the Fastly API accepts for a
-	// logging endpoint `format` string. Exceeding it is only rejected by the
-	// API at apply time, so it is enforced at plan/validate time instead.
-	maximumFormatLength = 12288
 )
 
 // commonModel holds the Blob Storage logging attributes shared by VCL and
@@ -143,27 +140,12 @@ func envStringDefault(ctx context.Context, envVar string) types.String {
 	return resp.PlanValue
 }
 
-func authenticationValue(auth types.Object, name string) types.String {
-	if auth.IsNull() || auth.IsUnknown() {
-		return types.StringValue("")
-	}
-	value, ok := auth.Attributes()[name]
-	if !ok || value == nil || value.IsNull() || value.IsUnknown() {
-		return types.StringValue("")
-	}
-	stringValue, ok := value.(types.String)
-	if !ok {
-		return types.StringValue("")
-	}
-	return stringValue
-}
-
 func (n commonModel) AccountName() types.String {
-	return authenticationValue(n.Authentication, "account_name")
+	return logging.AuthenticationValue(n.Authentication, "account_name")
 }
 
 func (n commonModel) SASToken() types.String {
-	return authenticationValue(n.Authentication, "sas_token")
+	return logging.AuthenticationValue(n.Authentication, "sas_token")
 }
 
 func (n commonModel) equal(other commonModel) bool {
@@ -347,7 +329,7 @@ func vclOnlyAttributes() map[string]schema.Attribute {
 			Computed: true,
 			Default:  stringdefault.StaticString(constants.LoggingBlobStorageDefaultFormat),
 			Validators: []validator.String{
-				stringvalidator.LengthAtMost(maximumFormatLength),
+				stringvalidator.LengthAtMost(logging.MaximumFormatLength),
 				validation.NotBlank("format"),
 			},
 			Description: "A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/).",

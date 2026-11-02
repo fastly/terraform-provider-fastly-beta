@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 )
@@ -91,50 +90,6 @@ func TestHTTPSURL(t *testing.T) {
 			}, resp)
 
 			assert.Equal(t, tt.wantError, resp.Diagnostics.HasError())
-		})
-	}
-}
-
-func TestValidateNoVCLOnlyAttributesForCompute(t *testing.T) {
-	s := resourceschema.Schema{Attributes: CommonAttributes()}
-
-	tests := []struct {
-		name      string
-		format    types.String
-		placement types.String
-		wantError bool
-	}{
-		{"no VCL-only attributes configured", types.StringNull(), types.StringNull(), false},
-		{"format configured", types.StringValue("some-format"), types.StringNull(), true},
-		{"placement configured", types.StringNull(), types.StringValue("none"), true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			vals := map[string]tftypes.Value{}
-			tfType := s.Type().TerraformType(context.Background())
-			for name, attrType := range tfType.(tftypes.Object).AttributeTypes {
-				switch name {
-				case "format":
-					if tt.format.IsNull() {
-						vals[name] = tftypes.NewValue(attrType, nil)
-					} else {
-						vals[name] = tftypes.NewValue(attrType, tt.format.ValueString())
-					}
-				case "placement":
-					if tt.placement.IsNull() {
-						vals[name] = tftypes.NewValue(attrType, nil)
-					} else {
-						vals[name] = tftypes.NewValue(attrType, tt.placement.ValueString())
-					}
-				default:
-					vals[name] = tftypes.NewValue(attrType, nil)
-				}
-			}
-
-			cfg := tfsdk.Config{Raw: tftypes.NewValue(tfType, vals), Schema: s}
-			diags := ValidateNoVCLOnlyAttributesForCompute(context.Background(), cfg)
-			require.Equal(t, tt.wantError, diags.HasError())
 		})
 	}
 }

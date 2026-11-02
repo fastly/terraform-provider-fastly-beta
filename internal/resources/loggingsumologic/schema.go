@@ -3,7 +3,8 @@ package loggingsumologic
 import (
 	"context"
 	"maps"
-	"strings"
+
+	"github.com/fastly/terraform-provider-fastly-beta/internal/logging"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/constants"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
@@ -14,15 +15,12 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -31,11 +29,6 @@ const (
 	DefaultMessageType       = "blank"
 	DefaultResponseCondition = ""
 	DefaultProcessingRegion  = "none"
-
-	// maximumFormatLength is the maximum length the Fastly API accepts for a
-	// logging endpoint `format` string. Exceeding it is only rejected by the
-	// API at apply time, so it is enforced at plan/validate time instead.
-	maximumFormatLength = 12288
 )
 
 // commonModel holds the Sumo Logic logging attributes shared by VCL and
@@ -152,7 +145,7 @@ func vclOnlyAttributes() map[string]schema.Attribute {
 			Computed: true,
 			Default:  stringdefault.StaticString(constants.LoggingSumologicDefaultFormat),
 			Validators: []validator.String{
-				stringvalidator.LengthAtMost(maximumFormatLength),
+				stringvalidator.LengthAtMost(logging.MaximumFormatLength),
 				validation.NotBlank("format"),
 			},
 			Description: "A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/). Must produce valid content for the configured `message_type`.",
@@ -247,53 +240,6 @@ func ComputeNestedBlockSchema() schema.ListNestedBlock {
 			Attributes: ComputeAttributes(),
 		},
 	}
-}
-
-// ValidateNoVCLOnlyAttributesForCompute returns an error diagnostic if format,
-// format_version, placement, or response_condition are explicitly configured
-// on a Compute service. The standalone fastly_service_logging_sumologic
-// resource has one schema shared by both service types — unlike the nested
-// blocks, which have distinct VCL (NestedBlockSchema) and Compute
-// (ComputeNestedBlockSchema) schemas — so this is the only way to catch the
-// mistake before it silently sends unsupported VCL-only attributes to a
-// Compute service.
-func ValidateNoVCLOnlyAttributesForCompute(ctx context.Context, cfg tfsdk.Config) diag.Diagnostics {
-	var diags diag.Diagnostics
-
-	var format, placement, responseCondition types.String
-	var formatVersion types.Int64
-
-	diags.Append(cfg.GetAttribute(ctx, path.Root("format"), &format)...)
-	diags.Append(cfg.GetAttribute(ctx, path.Root("format_version"), &formatVersion)...)
-	diags.Append(cfg.GetAttribute(ctx, path.Root("placement"), &placement)...)
-	diags.Append(cfg.GetAttribute(ctx, path.Root("response_condition"), &responseCondition)...)
-	if diags.HasError() {
-		return diags
-	}
-
-	var configured []string
-	if !format.IsNull() {
-		configured = append(configured, "format")
-	}
-	if !formatVersion.IsNull() {
-		configured = append(configured, "format_version")
-	}
-	if !placement.IsNull() {
-		configured = append(configured, "placement")
-	}
-	if !responseCondition.IsNull() {
-		configured = append(configured, "response_condition")
-	}
-
-	if len(configured) > 0 {
-		diags.AddError(
-			"VCL-only attributes not supported on Compute services",
-			"The following attributes only affect generated VCL and are not supported when `service_id` refers to a Compute service: "+
-				strings.Join(configured, ", ")+". Remove them from this configuration.",
-		)
-	}
-
-	return diags
 }
 
 type ops struct{}

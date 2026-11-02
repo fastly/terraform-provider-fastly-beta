@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/logging"
+
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -625,8 +627,8 @@ func TestSchemaValidators(t *testing.T) {
 		{"placement none", "placement", "none", true},
 		{"placement rejects other VCL subroutines", "placement", "waf_debug", false},
 		{"placement rejects empty", "placement", "", false},
-		{"format at max length", "format", strings.Repeat("x", maximumFormatLength), true},
-		{"format over max length", "format", strings.Repeat("x", maximumFormatLength+1), false},
+		{"format at max length", "format", strings.Repeat("x", logging.MaximumFormatLength), true},
+		{"format over max length", "format", strings.Repeat("x", logging.MaximumFormatLength+1), false},
 		{"url accepts https", "url", "https://collectors.sumologic.com/receiver/v1/http/token", true},
 		{"url accepts http", "url", "http://collectors.sumologic.com/receiver/v1/http/token", true},
 		{"url rejects missing scheme", "url", "collectors.sumologic.com/receiver/v1/http/token", false},

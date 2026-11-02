@@ -3,6 +3,8 @@ package loggingnewrelic
 import (
 	"context"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/logging"
+
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/importutil"
@@ -88,7 +90,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 	if serviceType == service.TypeCompute {
-		resp.Diagnostics.Append(ValidateNoVCLOnlyAttributesForCompute(ctx, req.Config)...)
+		resp.Diagnostics.Append(logging.ValidateNoVCLOnlyAttributesForCompute(ctx, req.Config)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -190,7 +192,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		return
 	}
 	if serviceType == service.TypeCompute {
-		resp.Diagnostics.Append(ValidateNoVCLOnlyAttributesForCompute(ctx, req.Config)...)
+		resp.Diagnostics.Append(logging.ValidateNoVCLOnlyAttributesForCompute(ctx, req.Config)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}

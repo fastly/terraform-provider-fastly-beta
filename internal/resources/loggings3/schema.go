@@ -4,6 +4,8 @@ import (
 	"context"
 	"maps"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/logging"
+
 	"github.com/fastly/terraform-provider-fastly-beta/internal/constants"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/defaults"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
@@ -47,11 +49,6 @@ const (
 	DefaultProcessingRegion             = "none"
 	DefaultPublicKey                    = ""
 	DefaultFileMaxBytes                 = 0
-
-	// maximumFormatLength is the maximum length the Fastly API accepts for a
-	// logging endpoint `format` string. Exceeding it is only rejected by the
-	// API at apply time, so it is enforced at plan/validate time instead.
-	maximumFormatLength = 12288
 )
 
 // commonModel holds the S3 logging attributes shared by VCL and Compute
@@ -147,31 +144,16 @@ func envStringDefault(ctx context.Context, envVar string) types.String {
 	return resp.PlanValue
 }
 
-func authenticationValue(auth types.Object, name string) types.String {
-	if auth.IsNull() || auth.IsUnknown() {
-		return types.StringValue("")
-	}
-	value, ok := auth.Attributes()[name]
-	if !ok || value == nil || value.IsNull() || value.IsUnknown() {
-		return types.StringValue("")
-	}
-	stringValue, ok := value.(types.String)
-	if !ok {
-		return types.StringValue("")
-	}
-	return stringValue
-}
-
 func (n commonModel) AccessKey() types.String {
-	return authenticationValue(n.Authentication, "access_key")
+	return logging.AuthenticationValue(n.Authentication, "access_key")
 }
 
 func (n commonModel) SecretKey() types.String {
-	return authenticationValue(n.Authentication, "secret_key")
+	return logging.AuthenticationValue(n.Authentication, "secret_key")
 }
 
 func (n commonModel) IAMRole() types.String {
-	return authenticationValue(n.Authentication, "iam_role")
+	return logging.AuthenticationValue(n.Authentication, "iam_role")
 }
 
 func (n commonModel) equal(other commonModel) bool {
@@ -422,7 +404,7 @@ func vclOnlyAttributes() map[string]schema.Attribute {
 			Computed: true,
 			Default:  stringdefault.StaticString(constants.LoggingS3DefaultFormat),
 			Validators: []validator.String{
-				stringvalidator.LengthAtMost(maximumFormatLength),
+				stringvalidator.LengthAtMost(logging.MaximumFormatLength),
 				validation.NotBlank("format"),
 			},
 			Description: "A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/).",

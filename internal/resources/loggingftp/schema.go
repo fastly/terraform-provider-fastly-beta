@@ -4,6 +4,8 @@ import (
 	"context"
 	"maps"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/logging"
+
 	"github.com/fastly/terraform-provider-fastly-beta/internal/constants"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
@@ -42,11 +44,6 @@ const (
 	DefaultResponseCondition = ""
 	DefaultProcessingRegion  = "none"
 	DefaultPublicKey         = ""
-
-	// maximumFormatLength is the maximum length the Fastly API accepts for a
-	// logging endpoint `format` string. Exceeding it is only rejected by the
-	// API at apply time, so it is enforced at plan/validate time instead.
-	maximumFormatLength = 12288
 )
 
 // commonModel holds the FTP logging attributes shared by VCL and Compute
@@ -101,27 +98,12 @@ func NewAuthenticationObject(user, password types.String) types.Object {
 	)
 }
 
-func authenticationValue(auth types.Object, name string) types.String {
-	if auth.IsNull() || auth.IsUnknown() {
-		return types.StringValue("")
-	}
-	value, ok := auth.Attributes()[name]
-	if !ok || value == nil || value.IsNull() || value.IsUnknown() {
-		return types.StringValue("")
-	}
-	stringValue, ok := value.(types.String)
-	if !ok {
-		return types.StringValue("")
-	}
-	return stringValue
-}
-
 func (n commonModel) User() types.String {
-	return authenticationValue(n.Authentication, "user")
+	return logging.AuthenticationValue(n.Authentication, "user")
 }
 
 func (n commonModel) Password() types.String {
-	return authenticationValue(n.Authentication, "password")
+	return logging.AuthenticationValue(n.Authentication, "password")
 }
 
 func (n commonModel) equal(other commonModel) bool {
@@ -289,7 +271,7 @@ func vclOnlyAttributes() map[string]schema.Attribute {
 			Computed: true,
 			Default:  stringdefault.StaticString(constants.LoggingFTPDefaultFormat),
 			Validators: []validator.String{
-				stringvalidator.LengthAtMost(maximumFormatLength),
+				stringvalidator.LengthAtMost(logging.MaximumFormatLength),
 				validation.NotBlank("format"),
 			},
 			Description: "A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/).",
