@@ -404,9 +404,9 @@ PreConfig: func() {
 
 ### "FASTLY_API_TOKEN must be set"
 
-Verify token is exported:
+Verify token is exported (prints only whether it is set, never the value):
 ```bash
-echo $FASTLY_API_TOKEN
+[ -n "${FASTLY_API_TOKEN:-}" ] && echo "FASTLY_API_TOKEN is set" || echo "FASTLY_API_TOKEN is empty"
 ```
 
 If empty, export it:

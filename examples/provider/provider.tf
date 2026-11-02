@@ -10,7 +10,7 @@ terraform {
 
 # Configure the Fastly Provider
 provider "fastly" {
-  api_token = "test"
+  # Authenticates via the FASTLY_API_TOKEN environment variable.
 }
 
 # Create a Service

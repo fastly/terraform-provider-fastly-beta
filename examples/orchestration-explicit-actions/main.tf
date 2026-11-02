@@ -7,7 +7,7 @@ terraform {
 }
 
 provider "fastly" {
-  api_token = var.fastly_api_token
+  # Authenticates via the FASTLY_API_TOKEN environment variable.
 }
 
 # Service 1 (shared + unique backend)

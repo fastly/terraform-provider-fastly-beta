@@ -7,7 +7,7 @@ terraform {
 }
 
 provider "fastly" {
-  api_token = var.fastly_api_token
+  # Authenticates via the FASTLY_API_TOKEN environment variable.
 }
 
 resource "fastly_service_cdn" "service_1" {

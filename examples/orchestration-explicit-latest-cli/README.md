@@ -13,6 +13,7 @@ to activate only the services that changed.
 
 ```bash
 cd examples/orchestration-explicit-latest-cli
+export FASTLY_API_TOKEN="<your_token>"
 terraform init
 terraform apply
 ```

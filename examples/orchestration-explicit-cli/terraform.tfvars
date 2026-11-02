@@ -1,5 +1,3 @@
-fastly_api_token = "<your_token>"
-
 # Service 1 (new service)
 service_1_name    = "service-1"
 service_1_version = 1
