@@ -1,8 +1,3 @@
-variable "fastly_api_token" {
-  description = "Fastly API token."
-  type        = string
-}
-
 # Service 1
 variable "service_1_name" {
   description = "Name of Fastly service 1."

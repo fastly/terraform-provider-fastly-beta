@@ -57,13 +57,13 @@ The `pkg/` directory is intentionally empty except for `.gitkeep`.
 
 ```bash
 cd examples/compute-explicit-package
+export FASTLY_API_TOKEN="<your_token>"
 cp terraform.tfvars.example terraform.tfvars
 terraform init
 ```
 
 Edit `terraform.tfvars` and set:
 
-- `fastly_api_token`
 - `service_name`
 - `domain_name`
 - `backend`

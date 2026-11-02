@@ -36,6 +36,7 @@ examples/orchestration-explicit-actions/
 ## Local engineer workflow
 
 ```bash
+export FASTLY_API_TOKEN="<your_token>"
 terraform fmt -recursive
 terraform validate
 terraform plan -out=tfplan
