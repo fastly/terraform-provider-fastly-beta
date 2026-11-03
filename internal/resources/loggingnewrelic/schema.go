@@ -265,8 +265,6 @@ func ComputeNestedBlockSchema() schema.ListNestedBlock {
 	}
 }
 
-// endpointOps holds the reconcile.Ops methods that are identical for the VCL
-// and Compute models.
 type endpointOps struct{}
 
 func (o endpointOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.NewRelic, error) {

@@ -2,8 +2,8 @@ package logging
 
 import "github.com/hashicorp/terraform-plugin-framework/types"
 
-// AuthenticationValue returns the named string attribute of an `authentication`
-// object, or an empty string when the object or attribute is null or unknown.
+// AuthenticationValue returns "" rather than null/unknown so callers can compare
+// credentials without nil checks.
 func AuthenticationValue(auth types.Object, name string) types.String {
 	if auth.IsNull() || auth.IsUnknown() {
 		return types.StringValue("")

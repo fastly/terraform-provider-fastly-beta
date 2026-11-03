@@ -13,11 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// PrepareWrite runs the checks shared by the Create and Update of every
-// standalone logging resource: the service must be a supported type, VCL-only
-// attributes must not be configured on a Compute service, and the target
-// version must be mutable. It returns the service type, and false when a
-// diagnostic was added and the caller must stop.
+// PrepareWrite runs the checks shared by every standalone logging resource's
+// Create and Update. It returns false when a diagnostic was added.
 func PrepareWrite(ctx context.Context, data *fastlyclient.Data, resourceName, serviceID string, version int, cfg tfsdk.Config, diags *diag.Diagnostics) (string, bool) {
 	if err := validation.EnsureServiceTypeSupported(ctx, data.TypeChecker, serviceID, resourceName, service.TypeVCL, service.TypeCompute); err != nil {
 		diags.AddError("Unsupported service type", err.Error())
@@ -43,9 +40,8 @@ func PrepareWrite(ctx context.Context, data *fastlyclient.Data, resourceName, se
 	return serviceType, true
 }
 
-// PrepareDelete runs the checks shared by the Delete of every standalone
-// logging resource. It returns false when the caller must stop, either because
-// a diagnostic was added or because the service or version is already gone.
+// PrepareDelete returns false when the caller must stop: a diagnostic was added,
+// or the service or version is already gone.
 func PrepareDelete(ctx context.Context, data *fastlyclient.Data, resourceName, serviceID string, version int, diags *diag.Diagnostics) bool {
 	if err := validation.EnsureServiceTypeSupported(ctx, data.TypeChecker, serviceID, resourceName, service.TypeVCL, service.TypeCompute); err != nil {
 		diags.AddError("Unsupported service type", err.Error())
@@ -57,7 +53,6 @@ func PrepareDelete(ctx context.Context, data *fastlyclient.Data, resourceName, s
 	return !notFound && !diags.HasError()
 }
 
-// SetIdentity records the resource identity unless an earlier step failed.
 func SetIdentity(ctx context.Context, identity *tfsdk.ResourceIdentity, serviceID, name types.String, diags *diag.Diagnostics) {
 	if !diags.HasError() && identity != nil {
 		diags.Append(identity.Set(ctx, resourceidentity.NamedVersioned(serviceID, name))...)
