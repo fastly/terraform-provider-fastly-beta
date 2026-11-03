@@ -245,7 +245,7 @@ resource "aws_instance" "unrelated" {}
 	}
 }
 
-func TestAnalyzeAmbiguousProductValueDoesNotInventAction(t *testing.T) {
+func TestAnalyzeProductExpressionPreservesMigrationAction(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -253,19 +253,52 @@ func TestAnalyzeAmbiguousProductValueDoesNotInventAction(t *testing.T) {
 variable "enable_domain_inspector" {
   type = bool
 }
+locals {
+  enable_websockets = var.enable_domain_inspector
+}
 resource "fastly_service_vcl" "demo" {
   name = "migration-demo"
   product_enablement {
     domain_inspector = var.enable_domain_inspector
+    websockets       = local.enable_websockets
   }
 }
 `)
 	result := analyzeDir(t, dir)
-	if result.Migratable() || !containsFinding(result, "must resolve to a boolean or null") {
-		t.Fatalf("unknown product value must block, findings = %#v", result.Findings)
+	if !result.Migratable() {
+		t.Fatalf("variable-backed product settings must not block migration: %#v", result.Findings)
+	}
+	for _, ruleID := range []string{"cdn-product-domain-inspector", "cdn-product-websockets"} {
+		if !hasAction(result, ruleID) {
+			t.Errorf("missing product migration action for %q: %#v", ruleID, result.Actions)
+		}
+	}
+	if result.WarningCount() != 2 {
+		t.Fatalf("WarningCount() = %d, want 2 null-safety warnings: %#v", result.WarningCount(), result.Findings)
+	}
+	if !containsFinding(result, "defaults enabled to true for null") {
+		t.Fatalf("missing null-safety guidance: %#v", result.Findings)
+	}
+}
+
+func TestAnalyzeInvalidLiteralProductEnablementBlocksMigration(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeFile(t, dir, "main.tf", `
+resource "fastly_service_vcl" "demo" {
+  name = "migration-demo"
+  product_enablement {
+    domain_inspector = "enabled"
+  }
+}
+`)
+	result := analyzeDir(t, dir)
+	if result.Migratable() || !containsFinding(result, "must be a boolean or null") {
+		t.Fatalf("invalid literal product value must block migration: %#v", result.Findings)
 	}
 	if hasAction(result, "cdn-product-domain-inspector") {
-		t.Fatalf("unexpected standalone product action: %#v", result.Actions)
+		t.Fatalf("invalid literal must not produce product migration action: %#v", result.Actions)
 	}
 }
 

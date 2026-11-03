@@ -624,23 +624,6 @@ func (a *Analyzer) analyzeNestedBlock(
 		if block.Type == "product_enablement" {
 			productRules := filterKind(a.registry.RulesForLegacy(legacy), compatibility.ConstructProduct)
 			if len(productRules) > 0 {
-				// Product fields can be explicitly null (absent). A value
-				// that cannot be resolved statically might also be null, so
-				// do not invent a standalone product action for it.
-				value, diags := attr.Expr.Value(nil)
-				if diags.HasErrors() || !value.IsKnown() ||
-					(!value.IsNull() && value.Type() != cty.Bool) {
-					state.result.Findings = append(state.result.Findings, Finding{
-						Severity:    SeverityError,
-						Range:       attr.SrcRange,
-						Message:     fmt.Sprintf("Product enablement field %q must resolve to a boolean or null.", legacy),
-						Remediation: "Resolve the product value to true, false, or null before automatic migration.",
-					})
-					continue
-				}
-				if value.IsNull() {
-					continue
-				}
 				if len(productRules) != 1 {
 					a.appendAmbiguousRuleFinding(
 						state,
@@ -649,6 +632,38 @@ func (a *Analyzer) analyzeNestedBlock(
 						fmt.Sprintf("Multiple compatibility rules match product field %q.", legacy),
 					)
 					continue
+				}
+
+				// Literal and statically known null values are absent; they
+				// must not produce a standalone product resource or import.
+				// Other expressions can be preserved by the HCL migration writer
+				// without resolving their value during static analysis.
+				value, diags := attr.Expr.Value(nil)
+				if !diags.HasErrors() && value.IsKnown() {
+					if value.IsNull() {
+						continue
+					}
+					if value.Type() != cty.Bool {
+						state.result.Findings = append(state.result.Findings, Finding{
+							Severity:    SeverityError,
+							Range:       attr.SrcRange,
+							Message:     fmt.Sprintf("Product enablement field %q must be a boolean or null.", legacy),
+							Remediation: "Use a boolean or null expression for product enablement.",
+						})
+						continue
+					}
+				} else {
+					state.result.Findings = append(state.result.Findings, Finding{
+						Severity: SeverityWarning,
+						Range:    attr.SrcRange,
+						Message: fmt.Sprintf(
+							"Product enablement field %q uses an expression whose value cannot be determined statically; its migration action preserves the expression.",
+							legacy,
+						),
+						Remediation: "Verify that the expression does not evaluate to null when migrated: " +
+							"the standalone product resource defaults enabled to true for null. " +
+							"Review the generated HCL and Terraform plan before applying.",
+					})
 				}
 				a.applyRule(state, productRules[0], attr.SrcRange, resourceType, resourceName)
 				continue
