@@ -50,3 +50,15 @@ Each entry has one of two dispositions:
 - **Disposition:** Intended behavior
 - **Area:** `internal/resources/healthcheck/schema.go` (`headers`)
 - **Why:** `healthcheck.headers` is deliberately not marked sensitive: bearer-token health checks are niche, and masking the whole set would hide ordinary headers too. The attribute description warns that values appear in plan output and state.
+
+### Removing the zone transfer block is ignored
+
+- **Disposition:** Won't fix
+- **Area:** `internal/resources/dnszone/expand.go` (`BuildUpdateInput`, `xfr_config_inbound`)
+- **Why:** The DNS zone PATCH has no representation that clears the whole `xfr_config_inbound` object, so removing the block cannot be expressed. The apply fails with an inconsistent-result error rather than silently succeeding, and the workaround is to clear `inbound_tsig_key_id` inside a retained block or replace the zone. Forcing zone replacement on block removal was rejected: it deletes and recreates a live DNS zone and can change nameservers, which is worse than the stale trust it addresses. Revisit if the API gains a clear operation.
+
+### Removing client IP headers is ignored
+
+- **Disposition:** Won't fix
+- **Area:** `internal/resources/ngwafworkspace/expand.go` (`BuildUpdateInput`, `client_ip_headers`)
+- **Why:** Neither explicit null nor an empty array reliably clears the list on the NGWAF workspace API, so removal cannot be expressed. Forcing workspace replacement was rejected: it recreates every workspace-scoped NGWAF object and briefly drops protection. Revisit if the API gains a clear representation.

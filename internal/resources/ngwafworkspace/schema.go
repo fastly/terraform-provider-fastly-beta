@@ -93,7 +93,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 			ElementType: types.StringType,
 			Optional:    true,
 			Computed:    true,
-			Description: "The request headers containing the client IP address. Maximum of 10 header names.",
+			Description: "The request headers containing the client IP address. Maximum of 10 header names. The list cannot be cleared entirely once set; at least one header must remain.",
 			Validators: []validator.List{
 				listvalidator.SizeAtMost(10),
 				listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),

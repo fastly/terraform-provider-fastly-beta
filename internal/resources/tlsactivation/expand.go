@@ -24,10 +24,8 @@ func buildUpdateInput(id string, plan Model) *fastly.UpdateTLSActivationInput {
 	input := &fastly.UpdateTLSActivationInput{
 		ID:          id,
 		Certificate: &fastly.CustomTLSCertificate{ID: service.StringValue(plan.CertificateID)},
-	}
-
-	if mtlsID := service.StringValue(plan.MutualAuthenticationID); mtlsID != "" {
-		input.MutualAuthentication = &fastly.TLSMutualAuthentication{ID: mtlsID}
+		// An empty ID is the only representation that clears an existing relationship; omitting it leaves it in place.
+		MutualAuthentication: &fastly.TLSMutualAuthentication{ID: service.StringValue(plan.MutualAuthenticationID)},
 	}
 
 	return input
