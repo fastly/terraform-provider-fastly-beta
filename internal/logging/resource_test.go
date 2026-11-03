@@ -50,19 +50,22 @@ func newTestData(t *testing.T, serviceType string, locked bool) *fastlyclient.Da
 	}
 }
 
-func vclOnlyConfig(t *testing.T, format types.String) (attrs map[string]schema.Attribute, values map[string]attr.Value) {
+func vclOnlyConfig(t *testing.T, format types.String) (map[string]schema.Attribute, map[string]attr.Value) {
 	t.Helper()
-	return map[string]schema.Attribute{
+
+	attrs := map[string]schema.Attribute{
 		"format":             schema.StringAttribute{Optional: true},
 		"format_version":     schema.Int64Attribute{Optional: true},
 		"placement":          schema.StringAttribute{Optional: true},
 		"response_condition": schema.StringAttribute{Optional: true},
-	}, map[string]attr.Value{
+	}
+	values := map[string]attr.Value{
 		"format":             format,
 		"format_version":     types.Int64Null(),
 		"placement":          types.StringNull(),
 		"response_condition": types.StringNull(),
 	}
+	return attrs, values
 }
 
 func TestPrepareWrite(t *testing.T) {
