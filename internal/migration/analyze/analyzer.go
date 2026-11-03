@@ -702,10 +702,18 @@ func selectAttributeRule(
 
 	value, diags := expression.Value(nil)
 	if !diags.HasErrors() && value.IsKnown() && value.IsNull() {
+		var omittedRule compatibility.Rule
+		omittedMatches := 0
 		for _, rule := range rules {
 			if strings.Contains(rule.Selector, "omitted") {
-				return rule, true
+				omittedRule = rule
+				omittedMatches++
 			}
+		}
+		// Explicit null uses omitted semantics only when the registry
+		// supplies exactly one matching rule; never rely on rule ordering.
+		if omittedMatches == 1 {
+			return omittedRule, true
 		}
 		return compatibility.Rule{}, false
 	}

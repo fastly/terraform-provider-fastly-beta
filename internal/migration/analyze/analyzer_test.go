@@ -176,6 +176,40 @@ resource "fastly_service_vcl" "demo" {
 	}
 }
 
+func TestAnalyzeNullSelectorWithMultipleOmittedRulesIsAmbiguous(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeFile(t, dir, "main.tf", `
+resource "fastly_service_vcl" "demo" {
+  name     = "migration-demo"
+  activate = null
+}
+`)
+	rules := append(compatibility.Default().All(), compatibility.Rule{
+		ID:             "test-activate-second-omitted",
+		Kind:           compatibility.ConstructAttribute,
+		Family:         compatibility.FamilyCDN,
+		Legacy:         "fastly_service_vcl.activate",
+		Selector:       "false or omitted",
+		Support:        compatibility.SupportUnsupported,
+		HCL:            compatibility.HCLReject,
+		State:          compatibility.StateNone,
+		ImportIdentity: compatibility.ImportNone,
+	})
+	registry, err := compatibility.NewRegistry(rules)
+	if err != nil {
+		t.Fatalf("NewRegistry(): %v", err)
+	}
+	result, err := New(registry).Analyze(context.Background(), dir)
+	if err != nil {
+		t.Fatalf("Analyze(): %v", err)
+	}
+	if result.Migratable() || !containsFinding(result, "cannot be classified statically") {
+		t.Fatalf("expected ambiguous null selector blocker, findings = %#v", result.Findings)
+	}
+}
+
 func TestAnalyzeAmbiguousSelector(t *testing.T) {
 	t.Parallel()
 
