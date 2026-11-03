@@ -206,62 +206,6 @@ func TestNotTrimmed(t *testing.T) {
 	}
 }
 
-func TestValidateNoVCLOnlyAttributesForCompute(t *testing.T) {
-	tests := []struct {
-		name      string
-		format    types.String
-		version   types.Int64
-		placement types.String
-		respCond  types.String
-		wantError bool
-	}{
-		{
-			name:      "no VCL-only attributes configured",
-			format:    types.StringNull(),
-			version:   types.Int64Null(),
-			placement: types.StringNull(),
-			respCond:  types.StringNull(),
-			wantError: false,
-		},
-		{
-			name:      "format configured",
-			format:    types.StringValue("custom-format"),
-			version:   types.Int64Null(),
-			placement: types.StringNull(),
-			respCond:  types.StringNull(),
-			wantError: true,
-		},
-		{
-			name:      "all VCL-only attributes configured",
-			format:    types.StringValue("custom-format"),
-			version:   types.Int64Value(2),
-			placement: types.StringValue("none"),
-			respCond:  types.StringValue("cond"),
-			wantError: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := buildTestConfig(t, map[string]schema.Attribute{
-				"format":             schema.StringAttribute{Optional: true},
-				"format_version":     schema.Int64Attribute{Optional: true},
-				"placement":          schema.StringAttribute{Optional: true},
-				"response_condition": schema.StringAttribute{Optional: true},
-			}, map[string]attr.Value{
-				"format":             tt.format,
-				"format_version":     tt.version,
-				"placement":          tt.placement,
-				"response_condition": tt.respCond,
-			})
-
-			result := ValidateNoVCLOnlyAttributesForCompute(context.Background(), cfg)
-
-			assert.Equal(t, tt.wantError, result.HasError())
-		})
-	}
-}
-
 // buildTestConfig builds a minimal tfsdk.Config for validators that read
 // sibling attributes via Config.GetAttribute. Only the attributes needed by
 // the validator under test are included in the schema.

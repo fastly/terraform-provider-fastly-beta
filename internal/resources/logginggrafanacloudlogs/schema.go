@@ -3,7 +3,8 @@ package logginggrafanacloudlogs
 import (
 	"context"
 	"maps"
-	"strings"
+
+	"github.com/fastly/terraform-provider-fastly-beta/internal/logging"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/constants"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
@@ -13,15 +14,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	fastly "github.com/fastly/go-fastly/v18/fastly"
@@ -31,11 +29,6 @@ const (
 	DefaultFormatVersion     = 2
 	DefaultResponseCondition = ""
 	DefaultProcessingRegion  = "none"
-
-	// maximumFormatLength is the maximum length the Fastly API accepts for a
-	// logging endpoint `format` string. Exceeding it is only rejected by the
-	// API at apply time, so it is enforced at plan/validate time instead.
-	maximumFormatLength = 12288
 )
 
 // commonModel holds the Grafana Cloud Logs logging attributes shared by VCL
@@ -84,23 +77,8 @@ func NewAuthenticationObject(token types.String) types.Object {
 	)
 }
 
-func authenticationValue(auth types.Object, name string) types.String {
-	if auth.IsNull() || auth.IsUnknown() {
-		return types.StringValue("")
-	}
-	value, ok := auth.Attributes()[name]
-	if !ok || value == nil || value.IsNull() || value.IsUnknown() {
-		return types.StringValue("")
-	}
-	stringValue, ok := value.(types.String)
-	if !ok {
-		return types.StringValue("")
-	}
-	return stringValue
-}
-
 func (n commonModel) Token() types.String {
-	return authenticationValue(n.Authentication, "token")
+	return logging.AuthenticationValue(n.Authentication, "token")
 }
 
 func (n commonModel) equal(other commonModel) bool {
@@ -202,7 +180,7 @@ func vclOnlyAttributes() map[string]schema.Attribute {
 			Computed: true,
 			Default:  stringdefault.StaticString(constants.LoggingGrafanaCloudLogsDefaultFormat),
 			Validators: []validator.String{
-				stringvalidator.LengthAtMost(maximumFormatLength),
+				stringvalidator.LengthAtMost(logging.MaximumFormatLength),
 				validation.NotBlank("format"),
 			},
 			Description: "A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/). Omit this attribute to use the default format; an explicit empty string is rejected.",
@@ -300,73 +278,28 @@ func ComputeNestedBlockSchema() schema.ListNestedBlock {
 	}
 }
 
-// ValidateNoVCLOnlyAttributesForCompute returns an error diagnostic if
-// format, format_version, placement, or response_condition are explicitly
-// configured on a Compute service. The standalone
-// fastly_service_logging_grafanacloudlogs resource has one schema shared by
-// both service types — unlike the nested blocks, which have distinct VCL
-// (NestedBlockSchema) and Compute (ComputeNestedBlockSchema) schemas — so
-// this is the only way to catch the mistake before it silently sends
-// unsupported VCL-only attributes to a Compute service.
-func ValidateNoVCLOnlyAttributesForCompute(ctx context.Context, cfg tfsdk.Config) diag.Diagnostics {
-	var diags diag.Diagnostics
+type endpointOps struct{}
 
-	var format, placement, responseCondition types.String
-	var formatVersion types.Int64
-
-	diags.Append(cfg.GetAttribute(ctx, path.Root("format"), &format)...)
-	diags.Append(cfg.GetAttribute(ctx, path.Root("format_version"), &formatVersion)...)
-	diags.Append(cfg.GetAttribute(ctx, path.Root("placement"), &placement)...)
-	diags.Append(cfg.GetAttribute(ctx, path.Root("response_condition"), &responseCondition)...)
-	if diags.HasError() {
-		return diags
-	}
-
-	var configured []string
-	if !format.IsNull() {
-		configured = append(configured, "format")
-	}
-	if !formatVersion.IsNull() {
-		configured = append(configured, "format_version")
-	}
-	if !placement.IsNull() {
-		configured = append(configured, "placement")
-	}
-	if !responseCondition.IsNull() {
-		configured = append(configured, "response_condition")
-	}
-
-	if len(configured) > 0 {
-		diags.AddError(
-			"VCL-only attributes not supported on Compute services",
-			"The following attributes only affect generated VCL and are not supported when `service_id` refers to a Compute service: "+
-				strings.Join(configured, ", ")+". Remove them from this configuration.",
-		)
-	}
-
-	return diags
-}
-
-type ops struct{}
-
-func (o ops) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.GrafanaCloudLogs, error) {
+func (o endpointOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.GrafanaCloudLogs, error) {
 	return client.ListGrafanaCloudLogs(ctx, &fastly.ListGrafanaCloudLogsInput{
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 	})
 }
 
-func (o ops) GetName(api *fastly.GrafanaCloudLogs) string {
+func (o endpointOps) GetName(api *fastly.GrafanaCloudLogs) string {
 	return fastly.ToValue(api.Name)
 }
 
-func (o ops) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
+func (o endpointOps) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
 	return client.DeleteGrafanaCloudLogs(ctx, &fastly.DeleteGrafanaCloudLogsInput{
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 		Name:           name,
 	})
 }
+
+type ops struct{ endpointOps }
 
 func (o ops) Create(ctx context.Context, client *fastly.Client, serviceID string, version int, desired NestedModel) (*fastly.GrafanaCloudLogs, error) {
 	input := BuildCreateInput(serviceID, version, desired)
@@ -408,40 +341,17 @@ func Equal(a, b []NestedModel) bool {
 
 // ValidateConditionReferences rejects a response_condition naming a condition block absent from config.
 func ValidateConditionReferences(endpoints []NestedModel, conditionNames map[string]struct{}) error {
-	return validation.References(endpoints, "GrafanaCloudLogs logging endpoint", func(m NestedModel) types.String { return m.Name }, "response_condition",
-		func(m NestedModel) []string {
-			if m.ResponseCondition.IsUnknown() || m.ResponseCondition.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.ResponseCondition)}
-		},
-		"condition", conditionNames)
+	return logging.ValidateConditionReferences(endpoints, "GrafanaCloudLogs logging endpoint",
+		func(m NestedModel) types.String { return m.Name },
+		func(m NestedModel) types.String { return m.ResponseCondition },
+		conditionNames)
 }
 
 func MatchOrder(items, order []NestedModel) []NestedModel {
 	return reconcile.MatchOrder(items, order, func(m NestedModel) string { return service.StringValue(m.Name) })
 }
 
-type computeOps struct{}
-
-func (o computeOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.GrafanaCloudLogs, error) {
-	return client.ListGrafanaCloudLogs(ctx, &fastly.ListGrafanaCloudLogsInput{
-		ServiceID:      serviceID,
-		ServiceVersion: version,
-	})
-}
-
-func (o computeOps) GetName(api *fastly.GrafanaCloudLogs) string {
-	return fastly.ToValue(api.Name)
-}
-
-func (o computeOps) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
-	return client.DeleteGrafanaCloudLogs(ctx, &fastly.DeleteGrafanaCloudLogsInput{
-		ServiceID:      serviceID,
-		ServiceVersion: version,
-		Name:           name,
-	})
-}
+type computeOps struct{ endpointOps }
 
 func (o computeOps) Create(ctx context.Context, client *fastly.Client, serviceID string, version int, desired ComputeNestedModel) (*fastly.GrafanaCloudLogs, error) {
 	input := BuildComputeCreateInput(serviceID, version, desired)

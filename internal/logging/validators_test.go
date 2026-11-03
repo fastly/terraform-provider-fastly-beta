@@ -1,4 +1,4 @@
-package logginghoneycomb
+package logging
 
 import (
 	"context"

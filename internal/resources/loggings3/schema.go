@@ -4,6 +4,8 @@ import (
 	"context"
 	"maps"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/logging"
+
 	"github.com/fastly/terraform-provider-fastly-beta/internal/constants"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/defaults"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
@@ -47,11 +49,6 @@ const (
 	DefaultProcessingRegion             = "none"
 	DefaultPublicKey                    = ""
 	DefaultFileMaxBytes                 = 0
-
-	// maximumFormatLength is the maximum length the Fastly API accepts for a
-	// logging endpoint `format` string. Exceeding it is only rejected by the
-	// API at apply time, so it is enforced at plan/validate time instead.
-	maximumFormatLength = 12288
 )
 
 // commonModel holds the S3 logging attributes shared by VCL and Compute
@@ -147,31 +144,16 @@ func envStringDefault(ctx context.Context, envVar string) types.String {
 	return resp.PlanValue
 }
 
-func authenticationValue(auth types.Object, name string) types.String {
-	if auth.IsNull() || auth.IsUnknown() {
-		return types.StringValue("")
-	}
-	value, ok := auth.Attributes()[name]
-	if !ok || value == nil || value.IsNull() || value.IsUnknown() {
-		return types.StringValue("")
-	}
-	stringValue, ok := value.(types.String)
-	if !ok {
-		return types.StringValue("")
-	}
-	return stringValue
-}
-
 func (n commonModel) AccessKey() types.String {
-	return authenticationValue(n.Authentication, "access_key")
+	return logging.AuthenticationValue(n.Authentication, "access_key")
 }
 
 func (n commonModel) SecretKey() types.String {
-	return authenticationValue(n.Authentication, "secret_key")
+	return logging.AuthenticationValue(n.Authentication, "secret_key")
 }
 
 func (n commonModel) IAMRole() types.String {
-	return authenticationValue(n.Authentication, "iam_role")
+	return logging.AuthenticationValue(n.Authentication, "iam_role")
 }
 
 func (n commonModel) equal(other commonModel) bool {
@@ -422,7 +404,7 @@ func vclOnlyAttributes() map[string]schema.Attribute {
 			Computed: true,
 			Default:  stringdefault.StaticString(constants.LoggingS3DefaultFormat),
 			Validators: []validator.String{
-				stringvalidator.LengthAtMost(maximumFormatLength),
+				stringvalidator.LengthAtMost(logging.MaximumFormatLength),
 				validation.NotBlank("format"),
 			},
 			Description: "A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/).",
@@ -518,26 +500,28 @@ func ComputeNestedBlockSchema() schema.ListNestedBlock {
 	}
 }
 
-type ops struct{}
+type endpointOps struct{}
 
-func (o ops) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.S3, error) {
+func (o endpointOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.S3, error) {
 	return client.ListS3s(ctx, &fastly.ListS3sInput{
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 	})
 }
 
-func (o ops) GetName(api *fastly.S3) string {
+func (o endpointOps) GetName(api *fastly.S3) string {
 	return fastly.ToValue(api.Name)
 }
 
-func (o ops) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
+func (o endpointOps) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
 	return client.DeleteS3(ctx, &fastly.DeleteS3Input{
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 		Name:           name,
 	})
 }
+
+type ops struct{ endpointOps }
 
 func (o ops) Create(ctx context.Context, client *fastly.Client, serviceID string, version int, desired NestedModel) (*fastly.S3, error) {
 	input := BuildCreateInput(serviceID, version, desired)
@@ -581,14 +565,10 @@ func Equal(a, b []NestedModel) bool {
 
 // ValidateConditionReferences rejects a response_condition naming a condition block absent from config.
 func ValidateConditionReferences(endpoints []NestedModel, conditionNames map[string]struct{}) error {
-	return validation.References(endpoints, "S3 logging endpoint", func(m NestedModel) types.String { return m.Name }, "response_condition",
-		func(m NestedModel) []string {
-			if m.ResponseCondition.IsUnknown() || m.ResponseCondition.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.ResponseCondition)}
-		},
-		"condition", conditionNames)
+	return logging.ValidateConditionReferences(endpoints, "S3 logging endpoint",
+		func(m NestedModel) types.String { return m.Name },
+		func(m NestedModel) types.String { return m.ResponseCondition },
+		conditionNames)
 }
 
 func MatchOrder(items, order []NestedModel) []NestedModel {
@@ -599,26 +579,7 @@ func MatchOrder(items, order []NestedModel) []NestedModel {
 	return result
 }
 
-type computeOps struct{}
-
-func (o computeOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.S3, error) {
-	return client.ListS3s(ctx, &fastly.ListS3sInput{
-		ServiceID:      serviceID,
-		ServiceVersion: version,
-	})
-}
-
-func (o computeOps) GetName(api *fastly.S3) string {
-	return fastly.ToValue(api.Name)
-}
-
-func (o computeOps) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
-	return client.DeleteS3(ctx, &fastly.DeleteS3Input{
-		ServiceID:      serviceID,
-		ServiceVersion: version,
-		Name:           name,
-	})
-}
+type computeOps struct{ endpointOps }
 
 func (o computeOps) Create(ctx context.Context, client *fastly.Client, serviceID string, version int, desired ComputeNestedModel) (*fastly.S3, error) {
 	input := BuildComputeCreateInput(serviceID, version, desired)
