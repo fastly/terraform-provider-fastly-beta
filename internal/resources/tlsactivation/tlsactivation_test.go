@@ -45,7 +45,9 @@ func TestBuildUpdateInput_alwaysSendsCertificate(t *testing.T) {
 	if assert.NotNil(t, input.Certificate) {
 		assert.Equal(t, "cert-123", input.Certificate.ID)
 	}
-	assert.Nil(t, input.MutualAuthentication)
+	if assert.NotNil(t, input.MutualAuthentication) {
+		assert.Empty(t, input.MutualAuthentication.ID)
+	}
 }
 
 func TestBuildUpdateInput_withMutualAuthentication(t *testing.T) {
