@@ -658,15 +658,32 @@ func (a *Analyzer) analyzeNestedBlock(
 			}
 		}
 
-		if len(rules) == 0 {
+		// A rule for a different construct kind does not establish that this
+		// nested block can be migrated. Fail closed rather than reporting READY.
+		blockRules := filterKind(rules, compatibility.ConstructServiceBlock)
+		if len(blockRules) == 0 {
 			state.result.Findings = append(state.result.Findings, Finding{
 				Severity: SeverityError,
 				Range:    nested.TypeRange,
-				Message:  fmt.Sprintf("Nested legacy construct %q has no compatibility rule.", legacy),
+				Message:  fmt.Sprintf("Nested legacy construct %q has no service-block compatibility rule.", legacy),
 				Remediation: "Flatten, remove, or migrate this nested construct manually before " +
 					"automatic migration.",
 			})
+			continue
 		}
+
+		// Nested service-block selectors are not currently supported. A
+		// selector must be resolved, not silently treated as an unconditional rule.
+		if len(blockRules) != 1 || blockRules[0].Selector != "" {
+			a.appendAmbiguousRuleFinding(
+				state,
+				nested.TypeRange,
+				blockRules,
+				fmt.Sprintf("Nested block %q cannot be classified unambiguously.", legacy),
+			)
+			continue
+		}
+		a.applyRule(state, blockRules[0], nested.TypeRange, resourceType, resourceName)
 	}
 }
 

@@ -247,6 +247,107 @@ resource "fastly_service_vcl" "demo" {
 	}
 }
 
+func TestAnalyzeNestedServiceBlockAppliesRegisteredRules(t *testing.T) {
+	t.Parallel()
+
+	const legacy = "fastly_service_vcl.backend.authentication"
+	dir := t.TempDir()
+	writeFile(t, dir, "main.tf", `
+resource "fastly_service_vcl" "demo" {
+  name = "migration-demo"
+
+  backend {
+    name    = "origin"
+    address = "origin.example.com"
+
+    authentication {}
+  }
+}
+`)
+
+	tests := []struct {
+		name      string
+		support   compatibility.SupportStatus
+		wantBlock bool
+	}{
+		{name: "automatic", support: compatibility.SupportAutomatic},
+		{name: "blocked", support: compatibility.SupportBlocked, wantBlock: true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rules := append(compatibility.Default().All(), compatibility.Rule{
+				ID:                   "test-nested-authentication",
+				Kind:                 compatibility.ConstructServiceBlock,
+				Family:               compatibility.FamilyCDN,
+				Legacy:               legacy,
+				Target:               "fastly_service_cdn_auto.backend.authentication",
+				Support:              tc.support,
+				HCL:                  compatibility.HCLReshape,
+				State:                compatibility.StateMove,
+				ImportIdentity:       compatibility.ImportNone,
+				ProviderPrerequisite: "Nested block migration requires provider support.",
+			})
+			registry, err := compatibility.NewRegistry(rules)
+			if err != nil {
+				t.Fatalf("NewRegistry(): %v", err)
+			}
+			result, err := New(registry).Analyze(context.Background(), dir)
+			if err != nil {
+				t.Fatalf("Analyze(): %v", err)
+			}
+			if got := !result.Migratable(); got != tc.wantBlock {
+				t.Fatalf("blocked = %t, want %t; findings = %#v", got, tc.wantBlock, result.Findings)
+			}
+			if tc.wantBlock {
+				if _, ok := findingByRuleID(result, "test-nested-authentication"); !ok {
+					t.Fatalf("missing nested block finding: %#v", result.Findings)
+				}
+			} else if !hasAction(result, "test-nested-authentication") {
+				t.Fatalf("missing nested block action: %#v", result.Actions)
+			}
+		})
+	}
+}
+
+func TestAnalyzeNestedServiceBlockSelectorsFailClosed(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeFile(t, dir, "main.tf", `
+resource "fastly_service_vcl" "demo" {
+  name = "migration-demo"
+  backend {
+    name    = "origin"
+    address = "origin.example.com"
+    authentication {}
+  }
+}
+`)
+	rules := append(compatibility.Default().All(), compatibility.Rule{
+		ID:             "test-selected-nested-block",
+		Kind:           compatibility.ConstructServiceBlock,
+		Family:         compatibility.FamilyCDN,
+		Legacy:         "fastly_service_vcl.backend.authentication",
+		Target:         "fastly_service_cdn_auto.backend.authentication",
+		Selector:       `mode = "required"`,
+		Support:        compatibility.SupportAutomatic,
+		HCL:            compatibility.HCLReshape,
+		State:          compatibility.StateMove,
+		ImportIdentity: compatibility.ImportNone,
+	})
+	registry, err := compatibility.NewRegistry(rules)
+	if err != nil {
+		t.Fatalf("NewRegistry(): %v", err)
+	}
+	result, err := New(registry).Analyze(context.Background(), dir)
+	if err != nil {
+		t.Fatalf("Analyze(): %v", err)
+	}
+	if result.Migratable() || !containsFinding(result, "cannot be classified unambiguously") {
+		t.Fatalf("expected nested selector blocker, findings = %#v", result.Findings)
+	}
+}
+
 func TestAnalyzeRenamedVersionlessResourceParityBlocker(t *testing.T) {
 	t.Parallel()
 
