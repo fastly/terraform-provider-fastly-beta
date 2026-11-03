@@ -106,7 +106,11 @@ func (l *listResource[API]) List(ctx context.Context, req list.ListRequest, stre
 			}
 
 			for _, api := range loggers {
-				if api == nil || l.cfg.Name(api) == nil {
+				if api == nil {
+					continue
+				}
+				namePtr := l.cfg.Name(api)
+				if namePtr == nil {
 					continue
 				}
 				if req.Limit > 0 && count >= req.Limit {
@@ -114,7 +118,7 @@ func (l *listResource[API]) List(ctx context.Context, req list.ListRequest, stre
 				}
 				count++
 
-				name := *l.cfg.Name(api)
+				name := *namePtr
 				result := req.NewListResult(ctx)
 				result.DisplayName = service.ToGeneratedResourceName(fastly.ToValue(svc.Name), serviceID, name)
 				result.Diagnostics.Append(result.Identity.Set(ctx, resourceidentity.NamedVersioned(types.StringValue(serviceID), types.StringValue(name)))...)
