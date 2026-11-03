@@ -56,3 +56,17 @@ func References[T any](items []T, kind string, getName func(T) types.String, att
 
 	return nil
 }
+
+// SingleRef is References for an optional string attribute naming at most one referenced item;
+// an unknown or null attribute is skipped.
+func SingleRef[T any](items []T, kind string, getName, getRef func(T) types.String, attrLabel, refKind string, validNames map[string]struct{}) error {
+	return References(items, kind, getName, attrLabel,
+		func(item T) []string {
+			ref := getRef(item)
+			if ref.IsUnknown() || ref.IsNull() {
+				return nil
+			}
+			return []string{ref.ValueString()}
+		},
+		refKind, validNames)
+}

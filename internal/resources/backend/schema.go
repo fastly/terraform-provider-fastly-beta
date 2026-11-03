@@ -468,24 +468,14 @@ func MatchOrder(items, order []NestedModel) []NestedModel {
 func ValidateHealthcheckReferences(backends []NestedModel, healthchecks []healthcheck.NestedModel) error {
 	healthcheckNames := validation.NameSet(healthchecks, func(h healthcheck.NestedModel) types.String { return h.Name })
 
-	return validation.References(backends, "backend", func(m NestedModel) types.String { return m.Name }, "healthcheck",
-		func(m NestedModel) []string {
-			if m.HealthCheck.IsUnknown() || m.HealthCheck.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.HealthCheck)}
-		},
-		"healthcheck", healthcheckNames)
+	return validation.SingleRef(backends, "backend", func(m NestedModel) types.String { return m.Name },
+		func(m NestedModel) types.String { return m.HealthCheck },
+		"healthcheck", "healthcheck", healthcheckNames)
 }
 
 // ValidateConditionReferences rejects a request_condition naming a condition block absent from config.
 func ValidateConditionReferences(backends []NestedModel, conditionNames map[string]struct{}) error {
-	return validation.References(backends, "backend", func(m NestedModel) types.String { return m.Name }, "request_condition",
-		func(m NestedModel) []string {
-			if m.RequestCondition.IsUnknown() || m.RequestCondition.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.RequestCondition)}
-		},
-		"condition", conditionNames)
+	return validation.SingleRef(backends, "backend", func(m NestedModel) types.String { return m.Name },
+		func(m NestedModel) types.String { return m.RequestCondition },
+		"request_condition", "condition", conditionNames)
 }

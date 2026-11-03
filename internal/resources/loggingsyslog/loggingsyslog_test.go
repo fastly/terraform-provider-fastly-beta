@@ -540,22 +540,21 @@ func TestComputeModelsEqualIgnoresVCLOnlyFields(t *testing.T) {
 	desired := fullComputeNestedModel()
 
 	remote := &fastly.Syslog{
-		Name:             new("test-syslog"),
-		Address:          new("syslog.example.com"),
-		Port:             new(9000),
-		Token:            new("syslog-token"),
-		TLSCACert:        new("ca-cert"),
-		TLSClientCert:    new("client-cert"),
-		TLSClientKey:     new("client-key"),
-		TLSHostname:      new("syslog.example.com"),
-		UseTLS:           new(true),
-		MessageType:      new("loggly"),
-		ProcessingRegion: new("eu"),
-		Format:           new("something-else-entirely"),
-		FormatVersion:    new(1),
-		Placement:        new("none"),
-		ResponseCondition: new(
-			"some-condition"),
+		Name:              new("test-syslog"),
+		Address:           new("syslog.example.com"),
+		Port:              new(9000),
+		Token:             new("syslog-token"),
+		TLSCACert:         new("ca-cert"),
+		TLSClientCert:     new("client-cert"),
+		TLSClientKey:      new("client-key"),
+		TLSHostname:       new("syslog.example.com"),
+		UseTLS:            new(true),
+		MessageType:       new("loggly"),
+		ProcessingRegion:  new("eu"),
+		Format:            new("something-else-entirely"),
+		FormatVersion:     new(1),
+		Placement:         new("none"),
+		ResponseCondition: new("some-condition"),
 	}
 
 	assert.True(t, desired.ModelsEqual(FlattenToComputeNestedModel(remote)))
