@@ -226,6 +226,68 @@ func TestAnalyzeAmbiguousSelector(t *testing.T) {
 	}
 }
 
+func TestAnalyzeUnknownFastlyResourceFailsClosed(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeFile(t, dir, "main.tf", `
+resource "fastly_unrecognized_legacy" "demo" {}
+resource "fastly_service_cdn_auto" "already_migrated" {}
+resource "fastly_service_product_domain_inspector" "already_migrated" {}
+resource "aws_instance" "unrelated" {}
+`)
+	result := analyzeDir(t, dir)
+	if result.Migratable() || !containsFinding(result, `Fastly resource type "fastly_unrecognized_legacy"`) {
+		t.Fatalf("unknown Fastly type must block, findings = %#v", result.Findings)
+	}
+	if result.BlockingCount() != 1 {
+		t.Fatalf("BlockingCount() = %d, want 1; findings = %#v", result.BlockingCount(), result.Findings)
+	}
+}
+
+func TestAnalyzeAmbiguousProductValueDoesNotInventAction(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeFile(t, dir, "main.tf", `
+variable "enable_domain_inspector" {
+  type = bool
+}
+resource "fastly_service_vcl" "demo" {
+  name = "migration-demo"
+  product_enablement {
+    domain_inspector = var.enable_domain_inspector
+  }
+}
+`)
+	result := analyzeDir(t, dir)
+	if result.Migratable() || !containsFinding(result, "must resolve to a boolean or null") {
+		t.Fatalf("unknown product value must block, findings = %#v", result.Findings)
+	}
+	if hasAction(result, "cdn-product-domain-inspector") {
+		t.Fatalf("unexpected standalone product action: %#v", result.Actions)
+	}
+}
+
+func TestAnalyzeUnknownDynamicServiceBlockFailsClosed(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeFile(t, dir, "main.tf", `
+resource "fastly_service_vcl" "demo" {
+  name = "migration-demo"
+  dynamic "unrecognized" {
+    for_each = []
+    content {}
+  }
+}
+`)
+	result := analyzeDir(t, dir)
+	if result.Migratable() || !containsFinding(result, "No compatibility rule exists for dynamic legacy service block") {
+		t.Fatalf("unknown dynamic service block must block, findings = %#v", result.Findings)
+	}
+}
+
 func TestAnalyzeTargetParityBlocker(t *testing.T) {
 	t.Parallel()
 

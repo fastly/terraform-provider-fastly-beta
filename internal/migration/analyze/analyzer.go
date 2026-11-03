@@ -383,6 +383,18 @@ func (a *Analyzer) analyzeResource(
 	resourceType, resourceName := block.Labels[0], block.Labels[1]
 	resourceRules := filterKind(a.registry.RulesForLegacy(resourceType), compatibility.ConstructResource)
 	if len(resourceRules) == 0 {
+		// Target-model resources require no migration, and non-Fastly
+		// resources are outside this CLI's scope. Unknown Fastly resources
+		// must not be silently classified as READY.
+		if strings.HasPrefix(resourceType, "fastly_") && !a.isKnownTargetResource(resourceType) {
+			state.result.Findings = append(state.result.Findings, Finding{
+				Severity: SeverityError,
+				Range:    block.TypeRange,
+				Message:  fmt.Sprintf("No compatibility rule exists for Fastly resource type %q.", resourceType),
+				Remediation: "Verify that this resource is supported by the target provider, or add a " +
+					"reviewed compatibility rule before automatic migration.",
+			})
+		}
 		return
 	}
 
@@ -404,6 +416,18 @@ func (a *Analyzer) analyzeResource(
 	}
 
 	a.analyzeServiceBody(state, block.Body, resourceType, resourceName)
+}
+
+// isKnownTargetResource identifies resources that already use a target-model
+// type. These do not need legacy-to-target compatibility rules.
+func (a *Analyzer) isKnownTargetResource(resourceType string) bool {
+	for _, rule := range a.registry.All() {
+		if (rule.Kind == compatibility.ConstructResource || rule.Kind == compatibility.ConstructProduct) &&
+			rule.Target == resourceType {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *Analyzer) selectResourceRule(
@@ -568,6 +592,12 @@ func (a *Analyzer) analyzeDynamicServiceBlock(
 	legacy := resourceType + "." + block.Labels[0]
 	rules := filterKind(a.registry.RulesForLegacy(legacy), compatibility.ConstructServiceBlock)
 	if len(rules) == 0 {
+		state.result.Findings = append(state.result.Findings, Finding{
+			Severity:    SeverityError,
+			Range:       block.TypeRange,
+			Message:     fmt.Sprintf("No compatibility rule exists for dynamic legacy service block %q.", legacy),
+			Remediation: "Remove or migrate this construct manually before automatic migration.",
+		})
 		return
 	}
 	state.result.Findings = append(state.result.Findings, Finding{
@@ -594,7 +624,21 @@ func (a *Analyzer) analyzeNestedBlock(
 		if block.Type == "product_enablement" {
 			productRules := filterKind(a.registry.RulesForLegacy(legacy), compatibility.ConstructProduct)
 			if len(productRules) > 0 {
-				if isStaticallyNull(attr.Expr) {
+				// Product fields can be explicitly null (absent). A value
+				// that cannot be resolved statically might also be null, so
+				// do not invent a standalone product action for it.
+				value, diags := attr.Expr.Value(nil)
+				if diags.HasErrors() || !value.IsKnown() ||
+					(!value.IsNull() && value.Type() != cty.Bool) {
+					state.result.Findings = append(state.result.Findings, Finding{
+						Severity:    SeverityError,
+						Range:       attr.SrcRange,
+						Message:     fmt.Sprintf("Product enablement field %q must resolve to a boolean or null.", legacy),
+						Remediation: "Resolve the product value to true, false, or null before automatic migration.",
+					})
+					continue
+				}
+				if value.IsNull() {
 					continue
 				}
 				if len(productRules) != 1 {
@@ -685,11 +729,6 @@ func (a *Analyzer) analyzeNestedBlock(
 		}
 		a.applyRule(state, blockRules[0], nested.TypeRange, resourceType, resourceName)
 	}
-}
-
-func isStaticallyNull(expression hclsyntax.Expression) bool {
-	value, diags := expression.Value(nil)
-	return !diags.HasErrors() && value.IsKnown() && value.IsNull()
 }
 
 func selectAttributeRule(
