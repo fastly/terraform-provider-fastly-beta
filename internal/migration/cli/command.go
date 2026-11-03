@@ -18,22 +18,25 @@ type Config struct {
 	Version   string
 	Writer    io.Writer
 	ErrWriter io.Writer
+	Analyze   AnalyzeFunc
 }
 
 // NewCommand constructs the fastly-tf-migrate root command.
 //
-// Migration behavior intentionally lives outside this package. Follow-up
-// commands such as analyze and migrate should delegate to ordinary Go packages
-// and keep urfave/cli confined to this command layer.
+// Migration behavior intentionally lives outside this package. Subcommands
+// delegate to ordinary Go packages and keep urfave/cli confined to this
+// command layer.
 func NewCommand(config Config) *urfavecli.Command {
 	return &urfavecli.Command{
-		Name:      commandName,
-		Usage:     commandUsage,
-		Version:   config.Version,
-		Writer:    config.Writer,
-		ErrWriter: config.ErrWriter,
+		Name:           commandName,
+		Usage:          commandUsage,
+		Version:        config.Version,
+		Writer:         config.Writer,
+		ErrWriter:      config.ErrWriter,
+		ExitErrHandler: returnExitErrorToCaller,
 		Commands: []*urfavecli.Command{
 			newVersionCommand(config),
+			newAnalyzeCommand(config),
 		},
 	}
 }
@@ -50,3 +53,9 @@ func newVersionCommand(config Config) *urfavecli.Command {
 		},
 	}
 }
+
+// returnExitErrorToCaller overrides urfave/cli's default exit-code handler,
+// which can terminate the process when an Action returns an ExitCoder.
+// The executable's main function is responsible for printing the error and
+// selecting the process exit status; tests can inspect errors from Run().
+func returnExitErrorToCaller(_ context.Context, _ *urfavecli.Command, _ error) {}
