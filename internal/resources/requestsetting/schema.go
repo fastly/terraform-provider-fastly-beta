@@ -319,12 +319,7 @@ func MatchOrder(items, order []NestedModel) []NestedModel {
 
 // ValidateConditionReferences rejects a request_condition naming a condition block absent from config.
 func ValidateConditionReferences(requestSettings []NestedModel, conditionNames map[string]struct{}) error {
-	return validation.References(requestSettings, "request setting", func(m NestedModel) types.String { return m.Name }, "request_condition",
-		func(m NestedModel) []string {
-			if m.RequestCondition.IsUnknown() || m.RequestCondition.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.RequestCondition)}
-		},
-		"condition", conditionNames)
+	return validation.SingleRef(requestSettings, "request setting", func(m NestedModel) types.String { return m.Name },
+		func(m NestedModel) types.String { return m.RequestCondition },
+		"request_condition", "condition", conditionNames)
 }

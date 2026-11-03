@@ -231,23 +231,13 @@ func MatchOrder(items, order []NestedModel) []NestedModel {
 func ValidateConditionReferences(responseObjects []NestedModel, conditionNames map[string]struct{}) error {
 	getName := func(m NestedModel) types.String { return m.Name }
 
-	if err := validation.References(responseObjects, "response object", getName, "cache_condition",
-		func(m NestedModel) []string {
-			if m.CacheCondition.IsUnknown() || m.CacheCondition.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.CacheCondition)}
-		},
-		"condition", conditionNames); err != nil {
+	if err := validation.SingleRef(responseObjects, "response object", getName,
+		func(m NestedModel) types.String { return m.CacheCondition },
+		"cache_condition", "condition", conditionNames); err != nil {
 		return err
 	}
 
-	return validation.References(responseObjects, "response object", getName, "request_condition",
-		func(m NestedModel) []string {
-			if m.RequestCondition.IsUnknown() || m.RequestCondition.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.RequestCondition)}
-		},
-		"condition", conditionNames)
+	return validation.SingleRef(responseObjects, "response object", getName,
+		func(m NestedModel) types.String { return m.RequestCondition },
+		"request_condition", "condition", conditionNames)
 }

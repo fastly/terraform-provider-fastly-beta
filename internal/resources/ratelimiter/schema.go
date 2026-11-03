@@ -555,14 +555,9 @@ func ValidateConfig(rateLimiters []NestedModel) error {
 func ValidateDictionaryReferences(rateLimiters []NestedModel, dictionaries []dictionary.NestedModel) error {
 	dictionaryNames := validation.NameSet(dictionaries, func(d dictionary.NestedModel) types.String { return d.Name })
 
-	return validation.References(rateLimiters, "rate limiter", func(m NestedModel) types.String { return m.Name }, "uri_dictionary_name",
-		func(m NestedModel) []string {
-			if m.URIDictionaryName.IsUnknown() || m.URIDictionaryName.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.URIDictionaryName)}
-		},
-		"dictionary", dictionaryNames)
+	return validation.SingleRef(rateLimiters, "rate limiter", func(m NestedModel) types.String { return m.Name },
+		func(m NestedModel) types.String { return m.URIDictionaryName },
+		"uri_dictionary_name", "dictionary", dictionaryNames)
 }
 
 // ValidateResponseObjectReferences rejects a response_object_name naming a response_object block
@@ -570,12 +565,7 @@ func ValidateDictionaryReferences(rateLimiters []NestedModel, dictionaries []dic
 func ValidateResponseObjectReferences(rateLimiters []NestedModel, responseObjects []responseobject.NestedModel) error {
 	responseObjectNames := validation.NameSet(responseObjects, func(r responseobject.NestedModel) types.String { return r.Name })
 
-	return validation.References(rateLimiters, "rate limiter", func(m NestedModel) types.String { return m.Name }, "response_object_name",
-		func(m NestedModel) []string {
-			if m.ResponseObjectName.IsUnknown() || m.ResponseObjectName.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.ResponseObjectName)}
-		},
-		"response object", responseObjectNames)
+	return validation.SingleRef(rateLimiters, "rate limiter", func(m NestedModel) types.String { return m.Name },
+		func(m NestedModel) types.String { return m.ResponseObjectName },
+		"response_object_name", "response object", responseObjectNames)
 }

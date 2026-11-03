@@ -27,6 +27,5 @@ This example demonstrates managing a Fastly ACL and its entries using the `fastl
 ## Important Notes
 
 - `fastly_acl` is versionless: it is not tied to a service version
-- The `manage_entries` attribute controls whether Terraform should detect and reconcile drift in ACL entries
-- Set `manage_entries = false` (the default) if entries are managed externally (e.g., via API or other tools)
+- Terraform manages only the entries declared in `entries`; entries created outside Terraform (via the API, CLI, or control panel) are left untouched
 - Entries are keyed by CIDR prefix; each value must be `ALLOW` or `BLOCK`

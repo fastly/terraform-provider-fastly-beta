@@ -338,12 +338,7 @@ func MatchOrder(items, order []NestedModel) []NestedModel {
 
 // ValidateConditionReferences rejects a cache_condition naming a condition block absent from config.
 func ValidateConditionReferences(gzips []NestedModel, conditionNames map[string]struct{}) error {
-	return validation.References(gzips, "gzip", func(m NestedModel) types.String { return m.Name }, "cache_condition",
-		func(m NestedModel) []string {
-			if m.CacheCondition.IsUnknown() || m.CacheCondition.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.CacheCondition)}
-		},
-		"condition", conditionNames)
+	return validation.SingleRef(gzips, "gzip", func(m NestedModel) types.String { return m.Name },
+		func(m NestedModel) types.String { return m.CacheCondition },
+		"cache_condition", "condition", conditionNames)
 }

@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     fastly = {
-      source  = "fastly/fastly-beta"
+      source = "fastly/fastly-beta"
     }
   }
 }
@@ -12,11 +12,13 @@ provider "fastly" {
 
 resource "fastly_service_cdn" "example" {
   name = "example-acl-entries"
+}
 
-  backend {
-    address = "http-me.fastly.dev"
-    name    = "backend"
-  }
+resource "fastly_service_backend" "example" {
+  service_id = fastly_service_cdn.example.id
+  version    = 1
+  name       = "backend"
+  address    = "http-me.fastly.dev"
 }
 
 resource "fastly_service_cdn_acl" "example" {
