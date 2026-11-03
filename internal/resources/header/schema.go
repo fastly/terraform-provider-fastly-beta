@@ -334,34 +334,19 @@ func MatchOrder(items, order []NestedModel) []NestedModel {
 func ValidateConditionReferences(headers []NestedModel, conditionNames map[string]struct{}) error {
 	getName := func(m NestedModel) types.String { return m.Name }
 
-	if err := validation.References(headers, "header", getName, "cache_condition",
-		func(m NestedModel) []string {
-			if m.CacheCondition.IsUnknown() || m.CacheCondition.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.CacheCondition)}
-		},
-		"condition", conditionNames); err != nil {
+	if err := validation.SingleRef(headers, "header", getName,
+		func(m NestedModel) types.String { return m.CacheCondition },
+		"cache_condition", "condition", conditionNames); err != nil {
 		return err
 	}
 
-	if err := validation.References(headers, "header", getName, "request_condition",
-		func(m NestedModel) []string {
-			if m.RequestCondition.IsUnknown() || m.RequestCondition.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.RequestCondition)}
-		},
-		"condition", conditionNames); err != nil {
+	if err := validation.SingleRef(headers, "header", getName,
+		func(m NestedModel) types.String { return m.RequestCondition },
+		"request_condition", "condition", conditionNames); err != nil {
 		return err
 	}
 
-	return validation.References(headers, "header", getName, "response_condition",
-		func(m NestedModel) []string {
-			if m.ResponseCondition.IsUnknown() || m.ResponseCondition.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.ResponseCondition)}
-		},
-		"condition", conditionNames)
+	return validation.SingleRef(headers, "header", getName,
+		func(m NestedModel) types.String { return m.ResponseCondition },
+		"response_condition", "condition", conditionNames)
 }
