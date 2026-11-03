@@ -4,6 +4,8 @@ import (
 	"context"
 	"maps"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/logging"
+
 	"github.com/fastly/terraform-provider-fastly-beta/internal/constants"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
@@ -28,11 +30,6 @@ const (
 	DefaultRegion            = "US"
 	DefaultResponseCondition = ""
 	DefaultProcessingRegion  = "none"
-
-	// maximumFormatLength is the maximum length the Fastly API accepts for a
-	// logging endpoint `format` string. Exceeding it is only rejected by the
-	// API at apply time, so it is enforced at plan/validate time instead.
-	maximumFormatLength = 12288
 )
 
 // commonModel holds the New Relic logging attributes shared by VCL and
@@ -78,23 +75,8 @@ func NewAuthenticationObject(token types.String) types.Object {
 	)
 }
 
-func authenticationValue(auth types.Object, name string) types.String {
-	if auth.IsNull() || auth.IsUnknown() {
-		return types.StringValue("")
-	}
-	value, ok := auth.Attributes()[name]
-	if !ok || value == nil || value.IsNull() || value.IsUnknown() {
-		return types.StringValue("")
-	}
-	stringValue, ok := value.(types.String)
-	if !ok {
-		return types.StringValue("")
-	}
-	return stringValue
-}
-
 func (n commonModel) Token() types.String {
-	return authenticationValue(n.Authentication, "token")
+	return logging.AuthenticationValue(n.Authentication, "token")
 }
 
 func (n commonModel) equal(other commonModel) bool {
@@ -186,7 +168,7 @@ func vclOnlyAttributes() map[string]schema.Attribute {
 			Computed: true,
 			Default:  stringdefault.StaticString(constants.LoggingNewRelicDefaultFormat),
 			Validators: []validator.String{
-				stringvalidator.LengthAtMost(maximumFormatLength),
+				stringvalidator.LengthAtMost(logging.MaximumFormatLength),
 				validation.NotBlank("format"),
 			},
 			Description: "A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/). Must produce valid JSON that New Relic Logs can ingest.",
@@ -283,26 +265,28 @@ func ComputeNestedBlockSchema() schema.ListNestedBlock {
 	}
 }
 
-type ops struct{}
+type endpointOps struct{}
 
-func (o ops) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.NewRelic, error) {
+func (o endpointOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.NewRelic, error) {
 	return client.ListNewRelic(ctx, &fastly.ListNewRelicInput{
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 	})
 }
 
-func (o ops) GetName(api *fastly.NewRelic) string {
+func (o endpointOps) GetName(api *fastly.NewRelic) string {
 	return fastly.ToValue(api.Name)
 }
 
-func (o ops) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
+func (o endpointOps) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
 	return client.DeleteNewRelic(ctx, &fastly.DeleteNewRelicInput{
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 		Name:           name,
 	})
 }
+
+type ops struct{ endpointOps }
 
 func (o ops) Create(ctx context.Context, client *fastly.Client, serviceID string, version int, desired NestedModel) (*fastly.NewRelic, error) {
 	input := BuildCreateInput(serviceID, version, desired)
@@ -344,40 +328,17 @@ func Equal(a, b []NestedModel) bool {
 
 // ValidateConditionReferences rejects a response_condition naming a condition block absent from config.
 func ValidateConditionReferences(endpoints []NestedModel, conditionNames map[string]struct{}) error {
-	return validation.References(endpoints, "New Relic logging endpoint", func(m NestedModel) types.String { return m.Name }, "response_condition",
-		func(m NestedModel) []string {
-			if m.ResponseCondition.IsUnknown() || m.ResponseCondition.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.ResponseCondition)}
-		},
-		"condition", conditionNames)
+	return logging.ValidateConditionReferences(endpoints, "New Relic logging endpoint",
+		func(m NestedModel) types.String { return m.Name },
+		func(m NestedModel) types.String { return m.ResponseCondition },
+		conditionNames)
 }
 
 func MatchOrder(items, order []NestedModel) []NestedModel {
 	return reconcile.MatchOrder(items, order, func(m NestedModel) string { return service.StringValue(m.Name) })
 }
 
-type computeOps struct{}
-
-func (o computeOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.NewRelic, error) {
-	return client.ListNewRelic(ctx, &fastly.ListNewRelicInput{
-		ServiceID:      serviceID,
-		ServiceVersion: version,
-	})
-}
-
-func (o computeOps) GetName(api *fastly.NewRelic) string {
-	return fastly.ToValue(api.Name)
-}
-
-func (o computeOps) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
-	return client.DeleteNewRelic(ctx, &fastly.DeleteNewRelicInput{
-		ServiceID:      serviceID,
-		ServiceVersion: version,
-		Name:           name,
-	})
-}
+type computeOps struct{ endpointOps }
 
 func (o computeOps) Create(ctx context.Context, client *fastly.Client, serviceID string, version int, desired ComputeNestedModel) (*fastly.NewRelic, error) {
 	input := BuildComputeCreateInput(serviceID, version, desired)

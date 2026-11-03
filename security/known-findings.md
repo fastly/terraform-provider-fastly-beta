@@ -44,3 +44,9 @@ Each entry has one of two dispositions:
 - **Disposition:** Won't fix
 - **Area:** `internal/validation/refs.go` (`NameSet`, `References`)
 - **Why:** Appears only when a reference is known while the target it names is unknown, which means the operator already knows the name. The shape is uncommon and the workaround is trivial; no security impact.
+
+### Health-check authorization headers are visible
+
+- **Disposition:** Intended behavior
+- **Area:** `internal/resources/healthcheck/schema.go` (`headers`)
+- **Why:** `healthcheck.headers` is deliberately not marked sensitive: bearer-token health checks are niche, and masking the whole set would hide ordinary headers too. The attribute description warns that values appear in plan output and state.

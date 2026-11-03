@@ -1,4 +1,4 @@
-package loggingloggly
+package logging
 
 import (
 	"context"
@@ -10,13 +10,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// ValidateNoVCLOnlyAttributesForCompute returns an error diagnostic if format,
-// format_version, placement, or response_condition are explicitly configured on
-// a Compute service. The standalone fastly_service_logging_loggly resource has
-// one schema shared by both service types — unlike the nested blocks, which have
-// distinct VCL (NestedBlockSchema) and Compute (ComputeNestedBlockSchema)
-// schemas — so this is the only way to catch the mistake before it silently
-// sends unsupported VCL-only attributes to a Compute service.
+// MaximumFormatLength is the API's limit on a `format` string, enforced at plan
+// time rather than left to fail at apply.
+const MaximumFormatLength = 12288
+
+// ValidateNoVCLOnlyAttributesForCompute rejects format, format_version,
+// placement, and response_condition on a Compute service. The standalone
+// resources share one schema across service types, so unlike the nested blocks
+// this can't be caught at schema level.
 func ValidateNoVCLOnlyAttributesForCompute(ctx context.Context, cfg tfsdk.Config) diag.Diagnostics {
 	var diags diag.Diagnostics
 

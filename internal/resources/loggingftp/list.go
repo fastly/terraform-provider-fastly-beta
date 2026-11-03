@@ -4,114 +4,29 @@ import (
 	"context"
 	"fmt"
 
-	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
-	"github.com/fastly/terraform-provider-fastly-beta/internal/resourceidentity"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/logging"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/list"
-	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/fastly/go-fastly/v18/fastly"
 )
 
-var (
-	_ list.ListResource              = &ListResource{}
-	_ list.ListResourceWithConfigure = &ListResource{}
-)
-
-type ListResource struct {
-	client *fastly.Client
-}
-
 func NewListResource() list.ListResource {
-	return &ListResource{}
-}
-
-func (l *ListResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_service_logging_ftp"
-}
-
-func (l *ListResource) ListResourceConfigSchema(_ context.Context, _ list.ListResourceSchemaRequest, resp *list.ListResourceSchemaResponse) {
-	resp.Schema = service.QueryListResourceConfigSchema("List all FTP logging endpoints across all Fastly CDN and Compute services at their active version, or latest version when no active version exists.")
-}
-
-func (l *ListResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	data, diags := fastlyclient.FromProviderData(req.ProviderData)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() || data == nil {
-		return
-	}
-
-	l.client = data.Client
-}
-
-func (l *ListResource) List(ctx context.Context, req list.ListRequest, stream *list.ListResultsStream) {
-	tflog.Debug(ctx, "Listing Fastly FTP logging endpoints")
-
-	services, diags := service.ListServicesForQuery(ctx, l.client, req)
-	if diags.HasError() {
-		stream.Results = list.ListResultsStreamDiagnostics(diags)
-		return
-	}
-
-	stream.Results = func(push func(list.ListResult) bool) {
-		var count int64
-		for _, svc := range services {
-			if svc == nil || svc.Type == nil || !service.TypeSupported(*svc.Type, service.TypeVCL, service.TypeCompute) {
-				continue
-			}
-			serviceID := fastly.ToValue(svc.ServiceID)
-			if serviceID == "" {
-				continue
-			}
-
-			version, _, err := service.SelectReadVersionFromServiceSummary(ctx, l.client, svc)
-			if err != nil {
-				tflog.Warn(ctx, "Error selecting service version for query", map[string]any{
-					"service_id": serviceID,
-					"error":      err.Error(),
-				})
-				continue
-			}
-
-			loggers, err := l.client.ListFTPs(ctx, &fastly.ListFTPsInput{
+	return logging.NewListResource(logging.ListConfig[fastly.FTP]{
+		TypeSuffix: "_service_logging_ftp",
+		Label:      "FTP",
+		List: func(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.FTP, error) {
+			return client.ListFTPs(ctx, &fastly.ListFTPsInput{
 				ServiceID:      serviceID,
 				ServiceVersion: version,
 			})
-			if err != nil {
-				tflog.Warn(ctx, "Error listing FTP logging endpoints for service", map[string]any{
-					"service_id": serviceID,
-					"error":      err.Error(),
-				})
-				continue
-			}
-
-			for _, f := range loggers {
-				if f == nil || f.Name == nil {
-					continue
-				}
-				if req.Limit > 0 && count >= req.Limit {
-					return
-				}
-				count++
-
-				result := req.NewListResult(ctx)
-				result.DisplayName = service.ToGeneratedResourceName(fastly.ToValue(svc.Name), serviceID, *f.Name)
-				result.Diagnostics.Append(result.Identity.Set(ctx, resourceidentity.NamedVersioned(types.StringValue(serviceID), types.StringValue(fastly.ToValue(f.Name))))...)
-
-				if req.IncludeResource {
-					result.Diagnostics.Append(setResourceAttrs(ctx, &result, f, serviceID, version, fastly.ToValue(svc.Type))...)
-				}
-
-				if !push(result) {
-					return
-				}
-			}
-		}
-	}
+		},
+		Name:     func(a *fastly.FTP) *string { return a.Name },
+		SetAttrs: setResourceAttrs,
+	})
 }
 
 // setResourceAttrs sets the listed resource's attributes on result. serviceType

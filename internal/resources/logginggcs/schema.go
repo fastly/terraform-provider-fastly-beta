@@ -5,6 +5,8 @@ import (
 	"maps"
 	"os"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/logging"
+
 	"github.com/fastly/terraform-provider-fastly-beta/internal/constants"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/defaults"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
@@ -45,11 +47,6 @@ const (
 	DefaultProcessingRegion  = "none"
 	DefaultProjectID         = ""
 	DefaultPublicKey         = ""
-
-	// maximumFormatLength is the maximum length the Fastly API accepts for a
-	// logging endpoint `format` string. Exceeding it is only rejected by the
-	// API at apply time, so it is enforced at plan/validate time instead.
-	maximumFormatLength = 12288
 
 	// googleServiceAccountNameEnvVar is the shared account_name environment
 	// variable across Fastly's GCS, BigQuery, and Pub/Sub logging endpoints
@@ -180,31 +177,16 @@ func envStringDefault(ctx context.Context, envVar string) types.String {
 	return resp.PlanValue
 }
 
-func authenticationValue(auth types.Object, name string) types.String {
-	if auth.IsNull() || auth.IsUnknown() {
-		return types.StringValue("")
-	}
-	value, ok := auth.Attributes()[name]
-	if !ok || value == nil || value.IsNull() || value.IsUnknown() {
-		return types.StringValue("")
-	}
-	stringValue, ok := value.(types.String)
-	if !ok {
-		return types.StringValue("")
-	}
-	return stringValue
-}
-
 func (n commonModel) AccountName() types.String {
-	return authenticationValue(n.Authentication, "account_name")
+	return logging.AuthenticationValue(n.Authentication, "account_name")
 }
 
 func (n commonModel) Email() types.String {
-	return authenticationValue(n.Authentication, "email")
+	return logging.AuthenticationValue(n.Authentication, "email")
 }
 
 func (n commonModel) SecretKey() types.String {
-	return authenticationValue(n.Authentication, "secret_key")
+	return logging.AuthenticationValue(n.Authentication, "secret_key")
 }
 
 func (n commonModel) equal(other commonModel) bool {
@@ -394,7 +376,7 @@ func vclOnlyAttributes() map[string]schema.Attribute {
 			Computed: true,
 			Default:  stringdefault.StaticString(constants.LoggingGCSDefaultFormat),
 			Validators: []validator.String{
-				stringvalidator.LengthAtMost(maximumFormatLength),
+				stringvalidator.LengthAtMost(logging.MaximumFormatLength),
 				validation.NotBlank("format"),
 			},
 			Description: "A Fastly [log format string](https://www.fastly.com/documentation/guides/integrations/streaming-logs/custom-log-formats/).",
@@ -490,26 +472,28 @@ func ComputeNestedBlockSchema() schema.ListNestedBlock {
 	}
 }
 
-type ops struct{}
+type endpointOps struct{}
 
-func (o ops) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.GCS, error) {
+func (o endpointOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.GCS, error) {
 	return client.ListGCSs(ctx, &fastly.ListGCSsInput{
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 	})
 }
 
-func (o ops) GetName(api *fastly.GCS) string {
+func (o endpointOps) GetName(api *fastly.GCS) string {
 	return fastly.ToValue(api.Name)
 }
 
-func (o ops) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
+func (o endpointOps) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
 	return client.DeleteGCS(ctx, &fastly.DeleteGCSInput{
 		ServiceID:      serviceID,
 		ServiceVersion: version,
 		Name:           name,
 	})
 }
+
+type ops struct{ endpointOps }
 
 func (o ops) Create(ctx context.Context, client *fastly.Client, serviceID string, version int, desired NestedModel) (*fastly.GCS, error) {
 	input := BuildCreateInput(serviceID, version, desired)
@@ -556,14 +540,10 @@ func Equal(a, b []NestedModel) bool {
 
 // ValidateConditionReferences rejects a response_condition naming a condition block absent from config.
 func ValidateConditionReferences(endpoints []NestedModel, conditionNames map[string]struct{}) error {
-	return validation.References(endpoints, "GCS logging endpoint", func(m NestedModel) types.String { return m.Name }, "response_condition",
-		func(m NestedModel) []string {
-			if m.ResponseCondition.IsUnknown() || m.ResponseCondition.IsNull() {
-				return nil
-			}
-			return []string{service.StringValue(m.ResponseCondition)}
-		},
-		"condition", conditionNames)
+	return logging.ValidateConditionReferences(endpoints, "GCS logging endpoint",
+		func(m NestedModel) types.String { return m.Name },
+		func(m NestedModel) types.String { return m.ResponseCondition },
+		conditionNames)
 }
 
 func MatchOrder(items, order []NestedModel) []NestedModel {
@@ -574,26 +554,7 @@ func MatchOrder(items, order []NestedModel) []NestedModel {
 	return result
 }
 
-type computeOps struct{}
-
-func (o computeOps) List(ctx context.Context, client *fastly.Client, serviceID string, version int) ([]*fastly.GCS, error) {
-	return client.ListGCSs(ctx, &fastly.ListGCSsInput{
-		ServiceID:      serviceID,
-		ServiceVersion: version,
-	})
-}
-
-func (o computeOps) GetName(api *fastly.GCS) string {
-	return fastly.ToValue(api.Name)
-}
-
-func (o computeOps) Delete(ctx context.Context, client *fastly.Client, serviceID string, version int, name string) error {
-	return client.DeleteGCS(ctx, &fastly.DeleteGCSInput{
-		ServiceID:      serviceID,
-		ServiceVersion: version,
-		Name:           name,
-	})
-}
+type computeOps struct{ endpointOps }
 
 func (o computeOps) Create(ctx context.Context, client *fastly.Client, serviceID string, version int, desired ComputeNestedModel) (*fastly.GCS, error) {
 	input := BuildComputeCreateInput(serviceID, version, desired)
