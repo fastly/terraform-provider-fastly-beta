@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     fastly = {
-      source  = "fastly/fastly-beta"
+      source = "fastly/fastly-beta"
     }
   }
 }
@@ -45,8 +45,8 @@ resource "terraform_data" "compute_package" {
 
   lifecycle {
     action_trigger {
-      action = action.fastly_service_compute_package_upload.this
-      events = ["create", "update"]
+      events  = [after_create, after_update]
+      actions = [action.fastly_service_compute_package_upload.this]
     }
   }
 }

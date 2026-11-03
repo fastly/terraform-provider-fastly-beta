@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     fastly = {
-      source  = "fastly/fastly-beta"
+      source = "fastly/fastly-beta"
     }
   }
 }
@@ -16,8 +16,7 @@ resource "fastly_acl" "example" {
 
 # Manage ACL entries with explicit resource
 resource "fastly_acl_entries" "example" {
-  acl_id         = fastly_acl.example.id
-  manage_entries = true
+  acl_id = fastly_acl.example.id
 
   entries = {
     "192.0.2.0/24"    = "ALLOW"

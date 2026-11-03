@@ -21,7 +21,7 @@ This example demonstrates managing ACL entries for a Fastly service using the `f
 
 ## Features
 
-- Creates a VCL service with a domain and backend
+- Creates a VCL service with a backend
 - Creates an ACL on version 1 of the service
 - Manages multiple ACL entries with different configurations:
   - Single IP addresses
