@@ -4,6 +4,7 @@
 
 ### ENHANCEMENTS:
 
+- feat(migration): add read-only `fastly-tf-migrate analyze` preflight reporting for legacy-to-`_auto` migration ([#203](https://github.com/fastly/terraform-provider-fastly-beta/pull/203))
 - feat(migration): add the initial `fastly-tf-migrate` CLI foundation with `urfave/cli/v3`, version reporting, and dedicated build/test targets ([#198](https://github.com/fastly/terraform-provider-fastly-beta/pull/198))
 - feat(service_cdn_auto): support legacy simple product enablement state during VCL-to-CDN Auto migration ([#191](https://github.com/fastly/terraform-provider-fastly-beta/pull/191))
 - feat(audit-log-event-mapping): add `fastly_audit_log_event_mapping` resource and data source for routing audit log events to integrations ([#196](https://github.com/fastly/terraform-provider-fastly-beta/pull/196))
