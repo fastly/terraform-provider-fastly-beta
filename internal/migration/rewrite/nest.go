@@ -212,9 +212,11 @@ func reindentAttribute(segment []byte, oldIndent, newIndent, newName, oldName st
 	output := strings.Join(lines, "")
 	// Rename only the attribute identifier on its own declaration line,
 	// not occurrences within comments or its expression.
-	for i, line := range strings.SplitAfter(output, "\n") {
+	offset := 0
+	for _, line := range strings.SplitAfter(output, "\n") {
 		t := strings.TrimSpace(line)
 		if strings.HasPrefix(t, "#") || strings.HasPrefix(t, "//") {
+			offset += len(line)
 			continue
 		}
 		prefix := newIndent + oldName
@@ -226,12 +228,9 @@ func reindentAttribute(segment []byte, oldIndent, newIndent, newName, oldName st
 			return nil, fmt.Errorf("unexpected attribute syntax")
 		}
 		original := newIndent + oldName
-		// Replace only the first line containing the actual attribute key.
-		index := 0
-		for j := 0; j < i; j++ {
-			index += len(strings.SplitAfter(output, "\n")[j])
-		}
-		return []byte(output[:index] + newIndent + newName + line[len(original):] + output[index+len(line):]), nil
+		// Replace only the attribute declaration, not identifiers in comments
+		// or expression tokens. The byte offset is tracked during this pass.
+		return []byte(output[:offset] + newIndent + newName + line[len(original):] + output[offset+len(line):]), nil
 	}
 	return nil, fmt.Errorf("missing attribute declaration")
 }

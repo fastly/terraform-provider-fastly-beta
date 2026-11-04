@@ -450,6 +450,40 @@ func TestNestAttributeUnderNestedParent(t *testing.T) {
 	}
 }
 
+func TestNestAttributeRenamesAfterMultipleComments(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	before := []byte(`resource "fastly_service_vcl" "demo" {
+  # version_note appears in the first comment.
+  // Keep this second comment with the expression.
+  version_note = format("%s", var.version_note) # version_note in the value
+}
+`)
+	want := []byte(`resource "fastly_service_vcl" "demo" {
+  settings {
+    # version_note appears in the first comment.
+    // Keep this second comment with the expression.
+    note = format("%s", var.version_note) # version_note in the value
+  }
+}
+`)
+	if err := os.WriteFile(filepath.Join(dir, "main.tf"), before, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := Build(context.Background(), dir, NestAttribute{
+		File: "main.tf", ResourceType: "fastly_service_vcl", ResourceName: "demo",
+		Attribute: "version_note", TargetBlock: "settings", TargetAttribute: "note",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	changes := plan.Changes()
+	if len(changes) != 1 || !bytes.Equal(changes[0].After, want) {
+		t.Fatalf("comments and expression not preserved:\ngot:\n%#v\nwant:\n%s", changes, want)
+	}
+}
+
 func TestNestAttributeRejectsInlineClosingBrace(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
