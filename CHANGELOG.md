@@ -5,6 +5,7 @@
 ### ENHANCEMENTS:
 
 - feat(migration): add read-only `fastly-tf-migrate analyze` preflight reporting for legacy-to-`_auto` migration ([#203](https://github.com/fastly/terraform-provider-fastly-beta/pull/203))
+- feat(migration): add deterministic, source-preserving HCL rewrite planning primitives and Terraform-native migration block generation ([#xxx](https://github.com/fastly/terraform-provider-fastly-beta/pull/xxx))
 
 ### BUG FIXES:
 
