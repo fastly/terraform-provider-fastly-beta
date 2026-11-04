@@ -26,16 +26,8 @@ func TestNewCommand(t *testing.T) {
 	if command.Version != "v1.2.3" {
 		t.Fatalf("Version = %q, want v1.2.3", command.Version)
 	}
-	var hasVersion bool
-	for _, command := range command.Commands {
-		if command.Name == "version" {
-			hasVersion = true
-			break
-		}
-	}
-	if !hasVersion {
-		t.Fatalf("Commands = %#v, want a version command", command.Commands)
-	}
+	findSubcommand(t, command, "version")
+	findSubcommand(t, command, "analyze")
 }
 
 func TestVersionCommand(t *testing.T) {
@@ -73,7 +65,7 @@ func TestVersionCommandUsesRuntimeWriter(t *testing.T) {
 		ErrWriter: io.Discard,
 	})
 
-	versionCommand := command.Commands[0]
+	versionCommand := findSubcommand(t, command, "version")
 	versionCommand.Writer = &runtimeStdout
 
 	if err := versionCommand.Action(context.Background(), versionCommand); err != nil {
