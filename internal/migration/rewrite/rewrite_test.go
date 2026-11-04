@@ -232,6 +232,23 @@ func TestConflictAndMalformedHCLLeaveFilesUntouched(t *testing.T) {
 	}
 }
 
+func TestStageContentsWritesCompleteFile(t *testing.T) {
+	t.Parallel()
+
+	contents := bytes.Repeat([]byte("terraform-file-content\n"), 65536)
+	path, err := stageContents(t.TempDir(), contents, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, contents) {
+		t.Fatalf("staged file size = %d, want %d bytes without truncation", len(got), len(contents))
+	}
+}
+
 func TestApplyDetectsModifiedSource(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

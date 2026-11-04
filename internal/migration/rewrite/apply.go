@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -136,7 +137,10 @@ func stageContents(directory string, contents []byte, mode fs.FileMode) (string,
 		return "", err
 	}
 	path := file.Name()
-	_, writeErr := file.Write(contents)
+	written, writeErr := file.Write(contents)
+	if writeErr == nil && written != len(contents) {
+		writeErr = io.ErrShortWrite
+	}
 	if writeErr == nil {
 		writeErr = file.Chmod(mode)
 	}
