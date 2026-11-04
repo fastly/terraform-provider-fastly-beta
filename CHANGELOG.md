@@ -9,7 +9,11 @@
 
 ### BUG FIXES:
 
+- fix(api_security_operation): an empty `tag_ids` set now clears all tags from an operation on update ([#211](https://github.com/fastly/terraform-provider-fastly-beta/pull/211))
+
 ### Dependencies:
+
+- chore(deps): upgrade `go-fastly` to v19 ([#211](https://github.com/fastly/terraform-provider-fastly-beta/pull/211))
 
 ## 0.2.7 (November 03, 2026)
 
