@@ -1,24 +1,47 @@
 # Preserve this header and all unmodified formatting.
+terraform {
+  required_providers {
+    fastly = {
+      source = "fastly/fastly"
+    }
+  }
+}
+
+provider "fastly" {
+  alias = "edge"
+}
+
+variable "service_count" {
+  type    = number
+  default = 1
+}
+
+variable "origin" {
+  type = string
+}
+
+variable "description" {
+  type = string
+}
+
 locals {
   service_name = "edge"
 }
 
 resource "fastly_service_cdn_auto" "demo" {
-  count = var.count
+  count = var.service_count
   name  = local.service_name
   provider = fastly.edge
 
-  origin {
+  backend {
     name    = "origin"
-    hostname = var.origin
+    address = var.origin
   }
 
-  settings {
-    # Keep this comment with the attribute.
-    note = "${var.version}" # preserve trailing comment
-  }
+  # Keep this comment with the service description.
+  comment = "${var.description}" # preserve trailing comment
 }
 
-output "service_id" {
-  value = fastly_service_vcl.demo[0].id
+output "service_name" {
+  value = local.service_name
 }

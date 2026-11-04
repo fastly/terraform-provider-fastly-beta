@@ -11,14 +11,13 @@ import (
 	"testing"
 )
 
+// fixtureEdits uses only the legacy-to-auto service rename established by the
+// compatibility registry. Generic block/attribute edits and imports have their
+// own tests with explicitly synthetic resource names, not invented Fastly schema.
 func fixtureEdits() []Edit {
 	return []Edit{
 		RenameResource{File: "main.tf", FromType: "fastly_service_vcl", ToType: "fastly_service_cdn_auto", Name: "demo"},
-		RenameBlock{File: "main.tf", ResourceType: "fastly_service_cdn_auto", ResourceName: "demo", From: "backend", To: "origin"},
-		RenameAttribute{File: "main.tf", ResourceType: "fastly_service_cdn_auto", ResourceName: "demo", Parents: []string{"origin"}, From: "address", To: "hostname"},
-		NestAttribute{File: "main.tf", ResourceType: "fastly_service_cdn_auto", ResourceName: "demo", Attribute: "version_note", TargetBlock: "settings", TargetAttribute: "note"},
 		AddMoved{File: "migration.tf", From: "fastly_service_vcl.demo", To: "fastly_service_cdn_auto.demo"},
-		AddImport{File: "migration.tf", To: "fastly_service_product_domain_inspector.demo", IDExpression: "fastly_service_cdn_auto.demo.id"},
 	}
 }
 
@@ -121,6 +120,92 @@ func TestApplyAndSecondBuildAreIdempotent(t *testing.T) {
 	}
 	if err := repeat.Apply(context.Background()); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// TestGenericHCLPrimitives uses an intentionally synthetic resource so that
+// primitive-level transformations cannot be mistaken for Fastly schema mappings.
+func TestGenericHCLPrimitives(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	before := []byte(`resource "example_object" "demo" {
+  item {
+    field = var.value
+  }
+
+  # Keep the attached comment.
+  display = "${var.description}" # keep the inline comment
+}
+`)
+	want := []byte(`resource "example_object" "demo" {
+  entry {
+    value = var.value
+  }
+
+  metadata {
+    # Keep the attached comment.
+    title = "${var.description}" # keep the inline comment
+  }
+}
+`)
+	if err := os.WriteFile(filepath.Join(dir, "main.tf"), before, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	edits := []Edit{
+		RenameBlock{File: "main.tf", ResourceType: "example_object", ResourceName: "demo", From: "item", To: "entry"},
+		RenameAttribute{File: "main.tf", ResourceType: "example_object", ResourceName: "demo", Parents: []string{"entry"}, From: "field", To: "value"},
+		NestAttribute{File: "main.tf", ResourceType: "example_object", ResourceName: "demo", Attribute: "display", TargetBlock: "metadata", TargetAttribute: "title"},
+	}
+	plan, err := Build(context.Background(), dir, edits...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	changes := plan.Changes()
+	if len(changes) != 1 || !bytes.Equal(changes[0].After, want) {
+		t.Fatalf("unexpected generic rewrite:\nGOT: %#v\nWANT:\n%s", changes, want)
+	}
+	if err := plan.Apply(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	repeat, err := Build(context.Background(), dir, edits...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(repeat.Changes()) != 0 {
+		t.Fatalf("generic rewrite is not idempotent: %#v", repeat.Changes())
+	}
+}
+
+// TestAddImportUsesUnmodifiedExpression tests syntax generation independently
+// from any provider-specific product or import-identity migration.
+func TestAddImportUsesUnmodifiedExpression(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	edit := AddImport{
+		File:         "migration.tf",
+		To:           "example_product.demo",
+		IDExpression: "example_service.demo.id",
+	}
+	want := []byte("import {\n  to = example_product.demo\n  id = example_service.demo.id\n}\n")
+	plan, err := Build(context.Background(), dir, edit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	changes := plan.Changes()
+	if len(changes) != 1 || changes[0].Exists || !bytes.Equal(changes[0].After, want) {
+		t.Fatalf("unexpected import generation: %#v", changes)
+	}
+	if err := plan.Apply(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	repeat, err := Build(context.Background(), dir, edit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(repeat.Changes()) != 0 {
+		t.Fatalf("import generation is not idempotent: %#v", repeat.Changes())
 	}
 }
 
