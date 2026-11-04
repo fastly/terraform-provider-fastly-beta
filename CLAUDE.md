@@ -109,7 +109,7 @@ See `internal/resources/servicecdnauto/resource.go` for the exact pattern.
 
 ## Dependencies
 
-- `github.com/fastly/go-fastly/v18` — Fastly API client  
+- `github.com/fastly/go-fastly/v19` — Fastly API client  
 - `github.com/hashicorp/terraform-plugin-framework v1.17.0` — includes `action` and `list` packages
 
 ## Related

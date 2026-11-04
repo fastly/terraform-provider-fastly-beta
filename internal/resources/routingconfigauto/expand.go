@@ -8,7 +8,7 @@ import (
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
-	"github.com/fastly/go-fastly/v18/fastly/domainmanagement/v1/routingconfigs/paths/rules"
+	"github.com/fastly/go-fastly/v19/fastly/domainmanagement/v1/routingconfigs/paths/rules"
 )
 
 func expandRule(rm RuleModel) (rules.Action, []rules.Condition) {

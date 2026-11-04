@@ -1,7 +1,7 @@
 package condition
 
 import (
-	fastly "github.com/fastly/go-fastly/v18/fastly"
+	fastly "github.com/fastly/go-fastly/v19/fastly"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 )

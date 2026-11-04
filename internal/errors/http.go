@@ -3,7 +3,7 @@ package errors
 import (
 	"errors"
 
-	fastly "github.com/fastly/go-fastly/v18/fastly"
+	fastly "github.com/fastly/go-fastly/v19/fastly"
 )
 
 func IsNotFound(err error) bool {

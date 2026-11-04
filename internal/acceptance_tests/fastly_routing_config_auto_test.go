@@ -13,8 +13,8 @@ import (
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 
-	"github.com/fastly/go-fastly/v18/fastly/domainmanagement/v1/domains"
-	"github.com/fastly/go-fastly/v18/fastly/domainmanagement/v1/routingconfigs"
+	"github.com/fastly/go-fastly/v19/fastly/domainmanagement/v1/domains"
+	"github.com/fastly/go-fastly/v19/fastly/domainmanagement/v1/routingconfigs"
 )
 
 func testRoutingConfigName(t *testing.T) string {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/fastly/go-fastly/v18/fastly"
+	"github.com/fastly/go-fastly/v19/fastly"
 )
 
 type TypeChecker struct {

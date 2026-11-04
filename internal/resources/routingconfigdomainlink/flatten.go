@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/fastly/go-fastly/v18/fastly/domainmanagement/v1/domains"
+	"github.com/fastly/go-fastly/v19/fastly/domainmanagement/v1/domains"
 )
 
 func FlattenToModel(d *domains.Data) Model {
