@@ -24,7 +24,8 @@ type stagedFile struct {
 // place. Existing modes are preserved. If a later rename fails, previously
 // installed files are restored from staged backups (best-effort rollback).
 //
-// Individual renames are atomic on ordinary local filesystems. Multi-file
+// On Unix-like local filesystems individual replacement renames are usually
+// atomic; Go does not guarantee atomic Rename on Windows. Multi-file
 // replacements are NOT a single filesystem transaction: interruptions and
 // concurrent writers still require recovery or a higher-level lock.
 func (p *Plan) Apply(ctx context.Context) error {
@@ -90,6 +91,9 @@ func (p *Plan) Apply(ctx context.Context) error {
 		if err := matchesSnapshot(entry.target, entry.change); err != nil {
 			return rollback(staged, err)
 		}
+		// Go's os.Rename replaces an existing regular file on Windows
+		// (MoveFileEx with MOVEFILE_REPLACE_EXISTING) as well as on Unix.
+		// A locked Windows destination can still reject replacement.
 		if err := os.Rename(entry.after, entry.target); err != nil {
 			return rollback(staged, fmt.Errorf("install %q: %w", entry.change.Path, err))
 		}

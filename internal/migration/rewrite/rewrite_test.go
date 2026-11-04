@@ -124,6 +124,36 @@ func TestApplyAndSecondBuildAreIdempotent(t *testing.T) {
 	}
 }
 
+// TestApplyReplacesExistingFile exercises replacing an existing Terraform file,
+// including on Windows where os.Rename uses MoveFileEx replacement semantics.
+func TestApplyReplacesExistingFile(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "main.tf")
+	before := []byte(`resource "fastly_service_vcl" "demo" {}` + "\n")
+	if err := os.WriteFile(path, before, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := Build(context.Background(), dir, RenameResource{
+		File: "main.tf", FromType: "fastly_service_vcl", ToType: "fastly_service_cdn_auto", Name: "demo",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := plan.Apply(context.Background()); err != nil {
+		t.Fatalf("Apply could not replace existing file: %v", err)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(got, []byte(`resource "fastly_service_cdn_auto" "demo"`)) ||
+		bytes.Contains(got, []byte(`resource "fastly_service_vcl" "demo"`)) {
+		t.Fatalf("existing file was not replaced: %s", got)
+	}
+}
+
 func TestBuildMultiFileDeterministicOrder(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
