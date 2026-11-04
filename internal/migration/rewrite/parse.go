@@ -8,8 +8,8 @@ import (
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 )
 
-func parseBody(source []byte) (*hclsyntax.Body, error) {
-	file, diagnostics := hclsyntax.ParseConfig(source, "configuration.tf", hcl.Pos{Line: 1, Column: 1})
+func parseBody(source []byte, filename string) (*hclsyntax.Body, error) {
+	file, diagnostics := hclsyntax.ParseConfig(source, filename, hcl.Pos{Line: 1, Column: 1})
 	if diagnostics.HasErrors() {
 		return nil, fmt.Errorf("parse native HCL: %s", diagnostics.Error())
 	}
@@ -76,8 +76,8 @@ func replace(source []byte, changes []replacement) ([]byte, error) {
 	return source, nil
 }
 
-func requireResource(source []byte, typ, name string) (*hclsyntax.Block, error) {
-	body, err := parseBody(source)
+func requireResource(source []byte, filename, typ, name string) (*hclsyntax.Block, error) {
+	body, err := parseBody(source, filename)
 	if err != nil {
 		return nil, err
 	}

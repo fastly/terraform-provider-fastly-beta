@@ -18,14 +18,14 @@ type RenameResource struct {
 func (e RenameResource) file() string    { return e.File }
 func (e RenameResource) canCreate() bool { return false }
 
-func (e RenameResource) apply(source []byte) ([]byte, error) {
+func (e RenameResource) apply(source []byte, filename string) ([]byte, error) {
 	if err := validateIdentifier(e.ToType); err != nil {
 		return nil, err
 	}
 	if e.FromType == e.ToType {
 		return source, nil
 	}
-	body, err := parseBody(source)
+	body, err := parseBody(source, filename)
 	if err != nil {
 		return nil, err
 	}
@@ -61,14 +61,14 @@ type RenameBlock struct {
 func (e RenameBlock) file() string    { return e.File }
 func (e RenameBlock) canCreate() bool { return false }
 
-func (e RenameBlock) apply(source []byte) ([]byte, error) {
+func (e RenameBlock) apply(source []byte, filename string) ([]byte, error) {
 	if err := validateIdentifier(e.To); err != nil {
 		return nil, err
 	}
 	if e.From == e.To {
 		return source, nil
 	}
-	resource, err := requireResource(source, e.ResourceType, e.ResourceName)
+	resource, err := requireResource(source, filename, e.ResourceType, e.ResourceName)
 	if err != nil {
 		return nil, err
 	}
@@ -112,14 +112,14 @@ type RenameAttribute struct {
 func (e RenameAttribute) file() string    { return e.File }
 func (e RenameAttribute) canCreate() bool { return false }
 
-func (e RenameAttribute) apply(source []byte) ([]byte, error) {
+func (e RenameAttribute) apply(source []byte, filename string) ([]byte, error) {
 	if err := validateIdentifier(e.To); err != nil {
 		return nil, err
 	}
 	if e.From == e.To {
 		return source, nil
 	}
-	resource, err := requireResource(source, e.ResourceType, e.ResourceName)
+	resource, err := requireResource(source, filename, e.ResourceType, e.ResourceName)
 	if err != nil {
 		return nil, err
 	}

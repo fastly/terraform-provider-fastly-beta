@@ -20,14 +20,14 @@ type AddMoved struct {
 func (e AddMoved) file() string    { return e.File }
 func (e AddMoved) canCreate() bool { return true }
 
-func (e AddMoved) apply(source []byte) ([]byte, error) {
+func (e AddMoved) apply(source []byte, filename string) ([]byte, error) {
 	if err := checkTraversal(e.From); err != nil {
 		return nil, fmt.Errorf("moved.from: %w", err)
 	}
 	if err := checkTraversal(e.To); err != nil {
 		return nil, fmt.Errorf("moved.to: %w", err)
 	}
-	body, err := parseBody(source)
+	body, err := parseBody(source, filename)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ type AddImport struct {
 func (e AddImport) file() string    { return e.File }
 func (e AddImport) canCreate() bool { return true }
 
-func (e AddImport) apply(source []byte) ([]byte, error) {
+func (e AddImport) apply(source []byte, filename string) ([]byte, error) {
 	if err := checkTraversal(e.To); err != nil {
 		return nil, fmt.Errorf("import.to: %w", err)
 	}
@@ -73,7 +73,7 @@ func (e AddImport) apply(source []byte) ([]byte, error) {
 	if diags.HasErrors() {
 		return nil, fmt.Errorf("invalid import.id expression: %s", diags.Error())
 	}
-	body, err := parseBody(source)
+	body, err := parseBody(source, filename)
 	if err != nil {
 		return nil, err
 	}

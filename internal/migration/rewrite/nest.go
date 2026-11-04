@@ -26,7 +26,7 @@ type NestAttribute struct {
 func (e NestAttribute) file() string    { return e.File }
 func (e NestAttribute) canCreate() bool { return false }
 
-func (e NestAttribute) apply(source []byte) ([]byte, error) {
+func (e NestAttribute) apply(source []byte, filename string) ([]byte, error) {
 	if err := validateIdentifier(e.TargetBlock); err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (e NestAttribute) apply(source []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	resource, err := requireResource(source, e.ResourceType, e.ResourceName)
+	resource, err := requireResource(source, filename, e.ResourceType, e.ResourceName)
 	if err != nil {
 		return nil, err
 	}

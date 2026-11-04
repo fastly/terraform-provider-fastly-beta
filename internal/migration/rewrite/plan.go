@@ -20,7 +20,7 @@ import (
 // this package; a failed edit leaves the entire in-memory plan unmodified.
 type Edit interface {
 	file() string
-	apply([]byte) ([]byte, error)
+	apply([]byte, string) ([]byte, error)
 	canCreate() bool
 }
 
@@ -128,11 +128,11 @@ func Build(ctx context.Context, root string, edits ...Edit) (*Plan, error) {
 			staged[name] = change
 		}
 
-		next, err := edit.apply(change.After)
+		next, err := edit.apply(change.After, name)
 		if err != nil {
 			return nil, fmt.Errorf("edit %d on %q: %w", index, name, err)
 		}
-		if _, err := parseBody(next); err != nil {
+		if _, err := parseBody(next, name); err != nil {
 			return nil, fmt.Errorf("edit %d produces invalid HCL in %q: %w", index, name, err)
 		}
 		change.After = next

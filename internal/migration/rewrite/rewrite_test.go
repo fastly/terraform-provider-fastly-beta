@@ -184,6 +184,30 @@ func TestBuildMultiFileDeterministicOrder(t *testing.T) {
 	}
 }
 
+func TestParseDiagnosticIncludesRealRelativeFilename(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	moduleDir := filepath.Join(dir, "modules", "service")
+	if err := os.MkdirAll(moduleDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	const filename = "modules/service/main.tf"
+	if err := os.WriteFile(filepath.Join(moduleDir, "main.tf"),
+		[]byte(`resource "fastly_service_vcl" "demo" {`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := Build(context.Background(), dir, RenameResource{
+		File: filename, FromType: "fastly_service_vcl", ToType: "fastly_service_cdn_auto", Name: "demo",
+	})
+	if err == nil {
+		t.Fatal("expected malformed HCL error")
+	}
+	if !strings.Contains(err.Error(), filename+":") || strings.Contains(err.Error(), "configuration.tf") {
+		t.Fatalf("HCL diagnostic does not use source path %q: %v", filename, err)
+	}
+}
+
 func TestConflictAndMalformedHCLLeaveFilesUntouched(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
