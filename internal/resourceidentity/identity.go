@@ -7,9 +7,11 @@ import (
 	fastly "github.com/fastly/go-fastly/v19/fastly"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -49,6 +51,25 @@ type ResourceLinkModel struct {
 type ACLCollectionModel struct {
 	ServiceID types.String `tfsdk:"service_id"`
 	ACLID     types.String `tfsdk:"acl_id"`
+}
+
+// NGWAFWorkspaceModel identifies a Next-Gen WAF workspace by its workspace ID.
+// The resource stores the same value in its computed "id" state attribute.
+type NGWAFWorkspaceModel struct {
+	WorkspaceID types.String `tfsdk:"workspace_id"`
+}
+
+// NGWAFAccountObjectModel identifies an account-scoped Next-Gen WAF object by
+// its Fastly-generated ID.
+type NGWAFAccountObjectModel struct {
+	ID types.String `tfsdk:"id"`
+}
+
+// NGWAFWorkspaceObjectModel identifies a Next-Gen WAF object that lives inside
+// a workspace by the workspace ID and the object's Fastly-generated ID.
+type NGWAFWorkspaceObjectModel struct {
+	WorkspaceID types.String `tfsdk:"workspace_id"`
+	ID          types.String `tfsdk:"id"`
 }
 
 func ServiceSchema() identityschema.Schema {
@@ -116,6 +137,55 @@ func ACLCollectionSchema() identityschema.Schema {
 			},
 		},
 	}
+}
+
+func NGWAFWorkspaceSchema() identityschema.Schema {
+	return identityschema.Schema{
+		Attributes: map[string]identityschema.Attribute{
+			"workspace_id": identityschema.StringAttribute{
+				RequiredForImport: true,
+				Description:       "Fastly Next-Gen WAF workspace ID.",
+			},
+		},
+	}
+}
+
+func NGWAFAccountObjectSchema() identityschema.Schema {
+	return identityschema.Schema{
+		Attributes: map[string]identityschema.Attribute{
+			"id": identityschema.StringAttribute{
+				RequiredForImport: true,
+				Description:       "Fastly Next-Gen WAF object ID.",
+			},
+		},
+	}
+}
+
+func NGWAFWorkspaceObjectSchema() identityschema.Schema {
+	return identityschema.Schema{
+		Attributes: map[string]identityschema.Attribute{
+			"workspace_id": identityschema.StringAttribute{
+				RequiredForImport: true,
+				Description:       "Fastly Next-Gen WAF workspace ID.",
+			},
+			"id": identityschema.StringAttribute{
+				RequiredForImport: true,
+				Description:       "Fastly Next-Gen WAF object ID.",
+			},
+		},
+	}
+}
+
+func NGWAFAccountObject(id types.String) *NGWAFAccountObjectModel {
+	return &NGWAFAccountObjectModel{ID: id}
+}
+
+func NGWAFWorkspaceObject(workspaceID, id types.String) *NGWAFWorkspaceObjectModel {
+	return &NGWAFWorkspaceObjectModel{WorkspaceID: workspaceID, ID: id}
+}
+
+func NGWAFWorkspace(id types.String) *NGWAFWorkspaceModel {
+	return &NGWAFWorkspaceModel{WorkspaceID: id}
 }
 
 func Service(id types.String) *ServiceModel {
@@ -324,4 +394,93 @@ func ImportACLCollection(ctx context.Context, req resource.ImportStateRequest, r
 		return
 	}
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, &identity)...)
+}
+
+// ImportNGWAFWorkspace seeds the workspace ID so the resource's normal Read
+// operation can finish an identity-based import.
+func ImportNGWAFWorkspace(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if !requireImportIdentity(req, resp) {
+		return
+	}
+
+	var identity NGWAFWorkspaceModel
+	resp.Diagnostics.Append(req.Identity.Get(ctx, &identity)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if identity.WorkspaceID.IsNull() || identity.WorkspaceID.IsUnknown() || identity.WorkspaceID.ValueString() == "" {
+		resp.Diagnostics.AddError("Invalid resource identity", "The workspace identity must contain a non-empty workspace_id.")
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), identity.WorkspaceID)...)
+	if resp.Diagnostics.HasError() || resp.Identity == nil {
+		return
+	}
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, &identity)...)
+}
+
+// ImportNGWAFAccountObject seeds the object ID so the resource's normal Read
+// operation can finish an identity-based import.
+func ImportNGWAFAccountObject(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if !requireImportIdentity(req, resp) {
+		return
+	}
+
+	var identity NGWAFAccountObjectModel
+	resp.Diagnostics.Append(req.Identity.Get(ctx, &identity)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if identity.ID.IsNull() || identity.ID.IsUnknown() || identity.ID.ValueString() == "" {
+		resp.Diagnostics.AddError("Invalid resource identity", "The resource identity must contain a non-empty id.")
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), identity.ID)...)
+	if resp.Diagnostics.HasError() || resp.Identity == nil {
+		return
+	}
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, &identity)...)
+}
+
+// ImportNGWAFWorkspaceObject seeds workspace_id and id so the resource's
+// normal Read operation can finish an identity-based import.
+func ImportNGWAFWorkspaceObject(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if !requireImportIdentity(req, resp) {
+		return
+	}
+
+	var identity NGWAFWorkspaceObjectModel
+	resp.Diagnostics.Append(req.Identity.Get(ctx, &identity)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if identity.WorkspaceID.IsNull() || identity.WorkspaceID.IsUnknown() || identity.WorkspaceID.ValueString() == "" {
+		resp.Diagnostics.AddError("Invalid resource identity", "The resource identity must contain a non-empty workspace_id.")
+		return
+	}
+	if identity.ID.IsNull() || identity.ID.IsUnknown() || identity.ID.ValueString() == "" {
+		resp.Diagnostics.AddError("Invalid resource identity", "The resource identity must contain a non-empty id.")
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("workspace_id"), identity.WorkspaceID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), identity.ID)...)
+	if resp.Diagnostics.HasError() || resp.Identity == nil {
+		return
+	}
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, &identity)...)
+}
+
+// Set records identity on a create, read or update response. identity is nil
+// when Terraform doesn't request one, and nothing is recorded after an error.
+func Set(ctx context.Context, identity *tfsdk.ResourceIdentity, diags *diag.Diagnostics, model any) {
+	if identity == nil || diags.HasError() {
+		return
+	}
+	diags.Append(identity.Set(ctx, model)...)
 }

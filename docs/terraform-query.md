@@ -64,6 +64,36 @@ It is not used for the automatic compatibility resource family.
 - `fastly_service_logging_splunk`
 - `fastly_service_logging_sumologic`
 - `fastly_service_logging_syslog`
+- `fastly_ngwaf_workspace`
+- `fastly_ngwaf_country_list`
+- `fastly_ngwaf_ip_list`
+- `fastly_ngwaf_signal_list`
+- `fastly_ngwaf_string_list`
+- `fastly_ngwaf_wildcard_list`
+- `fastly_ngwaf_workspace_country_list`
+- `fastly_ngwaf_workspace_ip_list`
+- `fastly_ngwaf_workspace_signal_list`
+- `fastly_ngwaf_workspace_string_list`
+- `fastly_ngwaf_workspace_wildcard_list`
+- `fastly_ngwaf_workspace_alert_datadog_integration`
+- `fastly_ngwaf_workspace_alert_jira_integration`
+- `fastly_ngwaf_workspace_alert_mailinglist_integration`
+- `fastly_ngwaf_workspace_alert_microsoftteams_integration`
+- `fastly_ngwaf_workspace_alert_opsgenie_integration`
+- `fastly_ngwaf_workspace_alert_pagerduty_integration`
+- `fastly_ngwaf_workspace_alert_slack_integration`
+- `fastly_ngwaf_workspace_alert_webhook_integration`
+- `fastly_ngwaf_request_rule`
+- `fastly_ngwaf_signal_rule`
+- `fastly_ngwaf_workspace_request_rule`
+- `fastly_ngwaf_workspace_signal_rule`
+- `fastly_ngwaf_workspace_templated_signal_rule`
+- `fastly_ngwaf_workspace_rate_limit_rule`
+- `fastly_ngwaf_signal`
+- `fastly_ngwaf_workspace_signal`
+- `fastly_ngwaf_workspace_redaction`
+- `fastly_ngwaf_workspace_threshold`
+- `fastly_ngwaf_workspace_virtual_patch`
 
 These resources are first-class Terraform resources, so they can be discovered
 independently and generated as separate resource blocks.

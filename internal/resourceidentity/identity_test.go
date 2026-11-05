@@ -17,6 +17,18 @@ func TestIdentitySchemasAreStable(t *testing.T) {
 			want:   map[string]bool{"service_id": true},
 			schema: ServiceSchema(),
 		},
+		"ngwaf workspace": {
+			want:   map[string]bool{"workspace_id": true},
+			schema: NGWAFWorkspaceSchema(),
+		},
+		"ngwaf account object": {
+			want:   map[string]bool{"id": true},
+			schema: NGWAFAccountObjectSchema(),
+		},
+		"ngwaf workspace object": {
+			want:   map[string]bool{"workspace_id": true, "id": true},
+			schema: NGWAFWorkspaceObjectSchema(),
+		},
 		"named versioned": {
 			want:   map[string]bool{"service_id": true, "name": true},
 			schema: NamedVersionedSchema(),
