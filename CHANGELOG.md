@@ -4,6 +4,14 @@
 
 ### ENHANCEMENTS:
 
+### BUG FIXES:
+
+### Dependencies:
+
+## 0.2.8 (November 05, 2026)
+
+### ENHANCEMENTS:
+
 - feat(migration): add read-only `fastly-tf-migrate analyze` preflight reporting for legacy-to-`_auto` migration ([#203](https://github.com/fastly/terraform-provider-fastly-beta/pull/203))
 - feat(migration): add deterministic, source-preserving HCL rewrite planning primitives and Terraform-native migration block generation ([#210](https://github.com/fastly/terraform-provider-fastly-beta/pull/210))
 - feat(ngwaf): add `terraform query` support (list resources and resource identities) for all NGWAF resources, including workspaces, account and workspace lists, alert integrations, rules, signals, redactions, thresholds, and virtual patches ([#212](https://github.com/fastly/terraform-provider-fastly-beta/pull/212))
