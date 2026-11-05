@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/fastly/go-fastly/v18/fastly/apisecurity/operations"
+	"github.com/fastly/go-fastly/v19/fastly/apisecurity/operations"
 )
 
 func expandTagIDs(ctx context.Context, s types.Set) []string {
@@ -37,15 +37,21 @@ func buildCreateInput(ctx context.Context, serviceID string, plan Model) *operat
 }
 
 // Always resends description and tag_ids: PATCH doesn't merge partial input,
-// so an omitted field is cleared rather than left alone. Note tag_ids still
-// can't be cleared to empty, since its `omitempty` tag drops empty slices.
+// so an omitted field is cleared rather than left alone. A non-null empty
+// tag_ids is sent as [] (not omitted) so it clears all tags.
 func buildUpdateInput(ctx context.Context, serviceID, operationID string, plan Model) *operations.UpdateInput {
 	description := plan.Description.ValueString()
+
+	var tagIDs *[]string
+	if !plan.TagIDs.IsNull() && !plan.TagIDs.IsUnknown() {
+		ids := append([]string{}, expandTagIDs(ctx, plan.TagIDs)...)
+		tagIDs = &ids
+	}
 
 	return &operations.UpdateInput{
 		ServiceID:   &serviceID,
 		OperationID: &operationID,
 		Description: &description,
-		TagIDs:      expandTagIDs(ctx, plan.TagIDs),
+		TagIDs:      tagIDs,
 	}
 }

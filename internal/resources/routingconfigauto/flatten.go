@@ -7,8 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/fastly/go-fastly/v18/fastly/domainmanagement/v1/routingconfigs"
-	"github.com/fastly/go-fastly/v18/fastly/domainmanagement/v1/routingconfigs/paths/rules"
+	"github.com/fastly/go-fastly/v19/fastly/domainmanagement/v1/routingconfigs"
+	"github.com/fastly/go-fastly/v19/fastly/domainmanagement/v1/routingconfigs/paths/rules"
 )
 
 // applyTopLevel copies a routing config's own (non-path) attributes onto m.

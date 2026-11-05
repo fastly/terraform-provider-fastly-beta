@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/fastly/go-fastly/v18/fastly"
+	"github.com/fastly/go-fastly/v19/fastly"
 )
 
 type Action struct {

@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/fastly/go-fastly/v18/fastly"
+	"github.com/fastly/go-fastly/v19/fastly"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/computepackageupload"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/versionactivate"

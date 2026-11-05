@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/fastly/go-fastly/v18/fastly/notifications/v1/eventmappings"
+	"github.com/fastly/go-fastly/v19/fastly/notifications/v1/eventmappings"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 )
 

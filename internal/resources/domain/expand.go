@@ -1,7 +1,7 @@
 package domain
 
 import (
-	fastly "github.com/fastly/go-fastly/v18/fastly"
+	fastly "github.com/fastly/go-fastly/v19/fastly"
 )
 
 func expandCreate(m Model) *fastly.CreateDomainInput {

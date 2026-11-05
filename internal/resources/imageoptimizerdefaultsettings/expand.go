@@ -5,7 +5,7 @@ import (
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
-	fastly "github.com/fastly/go-fastly/v18/fastly"
+	fastly "github.com/fastly/go-fastly/v19/fastly"
 )
 
 func parseResizeFilter(v string) (*fastly.ImageOptimizerResizeFilter, error) {

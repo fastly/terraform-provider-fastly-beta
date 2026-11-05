@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fastly/go-fastly/v18/fastly/apisecurity/operations"
+	"github.com/fastly/go-fastly/v19/fastly/apisecurity/operations"
 )
 
 func TestMetadata(t *testing.T) {
@@ -117,8 +117,16 @@ func TestBuildUpdateInput(t *testing.T) {
 	require.False(t, diags.HasError())
 	plan.TagIDs = set
 	in = buildUpdateInput(ctx, "service-1", "op-1", plan)
-	require.Equal(t, []string{"tag-1"}, in.TagIDs)
+	require.Equal(t, []string{"tag-1"}, *in.TagIDs)
 	require.Equal(t, "old", *in.Description)
+
+	empty, diags := types.SetValueFrom(ctx, types.StringType, []string{})
+	require.False(t, diags.HasError())
+	plan.TagIDs = empty
+	in = buildUpdateInput(ctx, "service-1", "op-1", plan)
+	require.NotNil(t, in.TagIDs)
+	require.Empty(t, *in.TagIDs)
+	plan.TagIDs = set
 
 	plan.Description = types.StringValue("new")
 	in = buildUpdateInput(ctx, "service-1", "op-1", plan)

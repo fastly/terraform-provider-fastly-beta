@@ -16,10 +16,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/fastly/go-fastly/v18/fastly"
-	"github.com/fastly/go-fastly/v18/fastly/domainmanagement/v1/routingconfigs"
-	"github.com/fastly/go-fastly/v18/fastly/domainmanagement/v1/routingconfigs/paths"
-	"github.com/fastly/go-fastly/v18/fastly/domainmanagement/v1/routingconfigs/paths/rules"
+	"github.com/fastly/go-fastly/v19/fastly"
+	"github.com/fastly/go-fastly/v19/fastly/domainmanagement/v1/routingconfigs"
+	"github.com/fastly/go-fastly/v19/fastly/domainmanagement/v1/routingconfigs/paths"
+	"github.com/fastly/go-fastly/v19/fastly/domainmanagement/v1/routingconfigs/paths/rules"
 )
 
 var (

@@ -14,8 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/fastly/go-fastly/v18/fastly"
-	vp "github.com/fastly/go-fastly/v18/fastly/ngwaf/v1/workspaces/virtualpatches"
+	"github.com/fastly/go-fastly/v19/fastly"
+	vp "github.com/fastly/go-fastly/v19/fastly/ngwaf/v1/workspaces/virtualpatches"
 )
 
 var _ datasource.DataSource = &DataSource{}
@@ -127,15 +127,10 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func flattenVirtualPatches(virtualPatches *vp.VirtualPatches) (types.List, []string, diag.Diagnostics) {
+func flattenVirtualPatches(virtualPatches []vp.VirtualPatch) (types.List, []string, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	var data []vp.VirtualPatch
-	if virtualPatches != nil {
-		data = virtualPatches.Data
-	}
-
-	sorted := append([]vp.VirtualPatch(nil), data...)
+	sorted := append([]vp.VirtualPatch(nil), virtualPatches...)
 	sort.SliceStable(sorted, func(i, j int) bool {
 		return sorted[i].ID < sorted[j].ID
 	})
