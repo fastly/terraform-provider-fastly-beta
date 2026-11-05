@@ -5,6 +5,7 @@ import (
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resourceidentity"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -19,6 +20,7 @@ var (
 	_ resource.Resource                = &Resource{}
 	_ resource.ResourceWithConfigure   = &Resource{}
 	_ resource.ResourceWithImportState = &Resource{}
+	_ resource.ResourceWithIdentity    = &Resource{}
 )
 
 type Resource struct {
@@ -38,6 +40,10 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 		Description: "Manages a Fastly Next-Gen WAF custom signal scoped to a single workspace.",
 		Attributes:  ResourceAttributes(),
 	}
+}
+
+func (r *Resource) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	resp.IdentitySchema = resourceidentity.NGWAFWorkspaceObjectSchema()
 }
 
 func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -77,6 +83,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resourceidentity.Set(ctx, resp.Identity, &resp.Diagnostics, resourceidentity.NGWAFWorkspaceObject(state.WorkspaceID, state.ID))
 }
 
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -115,6 +122,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
+	resourceidentity.Set(ctx, resp.Identity, &resp.Diagnostics, resourceidentity.NGWAFWorkspaceObject(newState.WorkspaceID, newState.ID))
 }
 
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -146,6 +154,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
+	resourceidentity.Set(ctx, resp.Identity, &resp.Diagnostics, resourceidentity.NGWAFWorkspaceObject(newState.WorkspaceID, newState.ID))
 }
 
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -170,6 +179,11 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 }
 
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if req.ID == "" {
+		resourceidentity.ImportNGWAFWorkspaceObject(ctx, req, resp)
+		return
+	}
+
 	workspaceID, signalID, err := ParseImportID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError("Invalid Import ID", err.Error())

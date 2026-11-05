@@ -5,6 +5,7 @@ import (
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resourceidentity"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafrule"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
@@ -20,6 +21,7 @@ var (
 	_ resource.Resource                   = &Resource{}
 	_ resource.ResourceWithConfigure      = &Resource{}
 	_ resource.ResourceWithImportState    = &Resource{}
+	_ resource.ResourceWithIdentity       = &Resource{}
 	_ resource.ResourceWithValidateConfig = &Resource{}
 )
 
@@ -41,6 +43,10 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 		Attributes:  resourceAttributes(),
 		Blocks:      resourceBlocks(),
 	}
+}
+
+func (r *Resource) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	resp.IdentitySchema = resourceidentity.NGWAFWorkspaceObjectSchema()
 }
 
 func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -79,6 +85,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 	state := FlattenToModel(rule)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	ngwafrule.SetWorkspaceIdentity(ctx, resp.Identity, &resp.Diagnostics, state.WorkspaceID, state.ID)
 }
 
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -113,6 +120,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 
 	newState := FlattenToModel(rule)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
+	ngwafrule.SetWorkspaceIdentity(ctx, resp.Identity, &resp.Diagnostics, newState.WorkspaceID, newState.ID)
 }
 
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -134,6 +142,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 
 	newState := FlattenToModel(rule)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
+	ngwafrule.SetWorkspaceIdentity(ctx, resp.Identity, &resp.Diagnostics, newState.WorkspaceID, newState.ID)
 }
 
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -158,5 +167,10 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 
 // ImportState accepts "workspace_id/rule_id".
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if req.ID == "" {
+		resourceidentity.ImportNGWAFWorkspaceObject(ctx, req, resp)
+		return
+	}
+
 	ngwafrule.ImportWorkspaceState(ctx, req, resp)
 }

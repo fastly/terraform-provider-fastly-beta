@@ -7,10 +7,12 @@ import (
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resourceidentity"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/fastly/go-fastly/v19/fastly"
@@ -21,6 +23,7 @@ var (
 	_ resource.Resource                = &Resource{}
 	_ resource.ResourceWithConfigure   = &Resource{}
 	_ resource.ResourceWithImportState = &Resource{}
+	_ resource.ResourceWithIdentity    = &Resource{}
 )
 
 type Resource struct {
@@ -40,6 +43,10 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 		Description: "Manages an existing Fastly Next-Gen WAF virtual patch within a workspace. Virtual patches are created by Fastly; this resource configures the action and enabled state for an existing patch.",
 		Attributes:  ResourceAttributes(),
 	}
+}
+
+func (r *Resource) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	resp.IdentitySchema = resourceidentity.NGWAFWorkspaceObjectSchema()
 }
 
 func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -76,6 +83,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resourceidentity.Set(ctx, resp.Identity, &resp.Diagnostics, resourceidentity.NGWAFWorkspaceObject(state.WorkspaceID, state.ID))
 }
 
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -108,6 +116,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
+	resourceidentity.Set(ctx, resp.Identity, &resp.Diagnostics, resourceidentity.NGWAFWorkspaceObject(newState.WorkspaceID, newState.ID))
 }
 
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -137,6 +146,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
+	resourceidentity.Set(ctx, resp.Identity, &resp.Diagnostics, resourceidentity.NGWAFWorkspaceObject(newState.WorkspaceID, newState.ID))
 }
 
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -160,6 +170,16 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 // ImportState populates workspace_id, id, and virtual_patch_id from a
 // "workspace_id/virtual_patch_id" import identifier.
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if req.ID == "" {
+		resourceidentity.ImportNGWAFWorkspaceObject(ctx, req, resp)
+		if !resp.Diagnostics.HasError() {
+			var id types.String
+			resp.Diagnostics.Append(resp.State.GetAttribute(ctx, path.Root("id"), &id)...)
+			resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("virtual_patch_id"), id)...)
+		}
+		return
+	}
+
 	parts := strings.Split(req.ID, "/")
 	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		resp.Diagnostics.AddError(

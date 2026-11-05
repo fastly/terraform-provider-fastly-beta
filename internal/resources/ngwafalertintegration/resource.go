@@ -6,9 +6,12 @@ import (
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resourceidentity"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	fastly "github.com/fastly/go-fastly/v19/fastly"
@@ -18,6 +21,7 @@ var (
 	_ resource.Resource                = &Resource{}
 	_ resource.ResourceWithConfigure   = &Resource{}
 	_ resource.ResourceWithImportState = &Resource{}
+	_ resource.ResourceWithIdentity    = &Resource{}
 )
 
 type Resource struct {
@@ -38,6 +42,17 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 		Description: r.def.Description,
 		Attributes:  Attributes(r.def),
 	}
+}
+
+func (r *Resource) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	resp.IdentitySchema = resourceidentity.NGWAFWorkspaceObjectSchema()
+}
+
+func (r *Resource) setIdentity(ctx context.Context, resp *tfsdk.ResourceIdentity, diags *diag.Diagnostics, m Model) {
+	if resp == nil || diags.HasError() {
+		return
+	}
+	diags.Append(resp.Set(ctx, resourceidentity.NGWAFWorkspaceObject(m.WorkspaceID, m.ID))...)
 }
 
 func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -75,6 +90,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 
 	resp.Diagnostics.Append(SetModelState(ctx, &resp.State, r.def, state)...)
+	r.setIdentity(ctx, resp.Identity, &resp.Diagnostics, state)
 }
 
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -115,6 +131,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 
 	resp.Diagnostics.Append(SetModelState(ctx, &resp.State, r.def, newState)...)
+	r.setIdentity(ctx, resp.Identity, &resp.Diagnostics, newState)
 }
 
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -148,6 +165,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	resp.Diagnostics.Append(SetModelState(ctx, &resp.State, r.def, newState)...)
+	r.setIdentity(ctx, resp.Identity, &resp.Diagnostics, newState)
 }
 
 func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -173,5 +191,9 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 }
 
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	if req.ID == "" {
+		resourceidentity.ImportNGWAFWorkspaceObject(ctx, req, resp)
+		return
+	}
 	ImportState(ctx, req, resp)
 }

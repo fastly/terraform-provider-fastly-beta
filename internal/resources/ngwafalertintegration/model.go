@@ -118,7 +118,13 @@ func readConfigAttributesFromState(ctx context.Context, state tfsdk.State, def D
 	return diags
 }
 
-func SetModelState(ctx context.Context, state *tfsdk.State, def Definition, m Model) diag.Diagnostics {
+// attributeSetter is satisfied by both tfsdk.State and tfsdk.Resource, so the
+// same flattening serves the resource and its list resource.
+type attributeSetter interface {
+	SetAttribute(ctx context.Context, path path.Path, val any) diag.Diagnostics
+}
+
+func SetModelState(ctx context.Context, state attributeSetter, def Definition, m Model) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	diags.Append(state.SetAttribute(ctx, path.Root("id"), m.ID)...)
