@@ -25,7 +25,9 @@ import (
 
 func testTLSActivationDomain(t *testing.T) string {
 	t.Helper()
-	return fmt.Sprintf("%s.fastly-example.com", acctest.RandString(10))
+	fqdn := fmt.Sprintf("%s.fastly-example.com", acctest.RandString(10))
+	registerDomainManagementCleanup(t, fqdn)
+	return fqdn
 }
 
 // generateTLSKey creates a self-signed RSA private key, returning both the key itself (for

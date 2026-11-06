@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/fastly/go-fastly/v19/fastly"
+	"github.com/fastly/go-fastly/v19/fastly/domainmanagement/v1/domains"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/provider"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/imageoptimizerdefaultsettings"
@@ -45,6 +46,38 @@ func NewFastlyClient() (*fastly.Client, error) {
 		return nil, fmt.Errorf("FASTLY_API_TOKEN environment variable must be set")
 	}
 	return fastly.NewClient(apiToken)
+}
+
+// registerDomainManagementCleanup deletes fqdn from Domain Management when the test ends. TLS
+// subscriptions register their domains there on create, but destroying the subscription leaves
+// the record behind, so without this every run leaks one.
+func registerDomainManagementCleanup(t *testing.T, fqdn string) {
+	t.Helper()
+	t.Cleanup(func() {
+		if os.Getenv("TF_ACC") == "" {
+			return
+		}
+		client, err := NewFastlyClient()
+		if err != nil {
+			t.Logf("skipping Domain Management cleanup of %s: %v", fqdn, err)
+			return
+		}
+		ctx := context.Background()
+		list, err := domains.List(ctx, client, &domains.ListInput{FQDN: &fqdn})
+		if err != nil {
+			t.Logf("listing Domain Management domains for %s: %v", fqdn, err)
+			return
+		}
+		for _, d := range list.Data {
+			if d.FQDN != fqdn {
+				continue
+			}
+			id := d.DomainID
+			if err := domains.Delete(ctx, client, &domains.DeleteInput{DomainID: &id}); err != nil && !errors.IsNotFound(err) {
+				t.Logf("deleting Domain Management domain %s (%s): %v", fqdn, id, err)
+			}
+		}
+	})
 }
 
 // serviceDestroyCheckAttempts and serviceDestroyCheckInterval bound the retry loop in
