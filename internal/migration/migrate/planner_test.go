@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/analyze"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/compatibility"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/rewrite"
 )
@@ -548,6 +549,15 @@ func TestPlanDoesNotClaimRemoteModuleCoverage(t *testing.T) {
 	result := newPlan(t, dir)
 	if !result.Blocked() || len(result.Changes) != 0 {
 		t.Fatalf("remote module internals were treated as migrated: %#v", result)
+	}
+	foundCode := false
+	for _, finding := range result.Analysis.Findings {
+		if finding.Code == analyze.FindingCodeRemoteModuleSource {
+			foundCode = true
+		}
+	}
+	if !foundCode {
+		t.Fatalf("remote module diagnostic has no stable code: %#v", result.Analysis.Findings)
 	}
 	var output bytes.Buffer
 	if err := WriteText(&output, result); err != nil {

@@ -771,6 +771,18 @@ module "remote" {
 	if !containsFinding(result, "Remote module source") {
 		t.Fatalf("Findings = %#v, want remote-module warning", result.Findings)
 	}
+	foundCode := false
+	for _, finding := range result.Findings {
+		if finding.Code == FindingCodeRemoteModuleSource {
+			if finding.Severity != SeverityWarning {
+				t.Fatalf("remote-module finding has severity %q, want warning", finding.Severity)
+			}
+			foundCode = true
+		}
+	}
+	if !foundCode {
+		t.Fatalf("Findings = %#v, want structured remote-module code", result.Findings)
+	}
 }
 
 func TestAnalyzeDoesNotTouchTerraformState(t *testing.T) {

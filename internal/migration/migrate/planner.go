@@ -97,7 +97,7 @@ func (p *Planner) Plan(ctx context.Context, path string) (Result, error) {
 	for _, finding := range analysis.Findings {
 		// Remote module internals were not inspected by the analyzer.
 		if finding.Severity == analyze.SeverityWarning &&
-			strings.HasPrefix(finding.Message, "Remote module source ") {
+			finding.Code == analyze.FindingCodeRemoteModuleSource {
 			result.Issues = append(result.Issues, Issue{
 				File:        displayPath(analysis.Root, finding.Range.Filename),
 				Message:     "remote module contents cannot be verified by the migration planner",
