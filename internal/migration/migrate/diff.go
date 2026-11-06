@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"sort"
@@ -25,7 +26,7 @@ func WriteDiff(writer io.Writer, changes []rewrite.Change) error {
 	ordered := append([]rewrite.Change(nil), changes...)
 	sort.Slice(ordered, func(i, j int) bool { return ordered[i].Path < ordered[j].Path })
 	for _, change := range ordered {
-		if string(change.Before) == string(change.After) {
+		if bytes.Equal(change.Before, change.After) {
 			continue
 		}
 		before := splitLines(string(change.Before))

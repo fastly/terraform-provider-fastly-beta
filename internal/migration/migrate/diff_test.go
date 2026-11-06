@@ -101,3 +101,22 @@ func TestWriteDiffHandlesLargeUnchangedFileWithLocalizedEdit(t *testing.T) {
 		t.Fatalf("large file localized edit yielded %d changes, want 2", edits)
 	}
 }
+
+// TestWriteDiffSkipsUnchangedBytes verifies that byte-identical file contents
+// produce no diff even when held in separately allocated byte slices.
+func TestWriteDiffSkipsUnchangedBytes(t *testing.T) {
+	t.Parallel()
+
+	before := []byte("resource \"fastly_service_vcl\" \"demo\" {}\n")
+	after := bytes.Clone(before)
+	var output bytes.Buffer
+	err := WriteDiff(&output, []rewrite.Change{
+		{Path: "main.tf", Exists: true, Before: before, After: after},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if output.Len() != 0 {
+		t.Fatalf("unchanged bytes produced a diff:\n%s", output.String())
+	}
+}
