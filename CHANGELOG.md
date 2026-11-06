@@ -4,6 +4,8 @@
 
 ### ENHANCEMENTS:
 
+- feat(migration): add conservative, read-only `fastly-tf-migrate migrate --dry-run` with registry-checked HCL previews (CDTOOL-1906)
+
 ### BUG FIXES:
 
 ### Dependencies:

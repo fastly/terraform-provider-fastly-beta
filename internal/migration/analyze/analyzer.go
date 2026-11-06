@@ -186,6 +186,7 @@ func (a *Analyzer) discover(ctx context.Context, state *analysisState) error {
 				if !isLocalModuleSource(child.source) {
 					state.result.Findings = append(state.result.Findings, Finding{
 						Severity: SeverityWarning,
+						Code:     FindingCodeRemoteModuleSource,
 						Range:    child.sourceRange,
 						Message: fmt.Sprintf(
 							"Remote module source %q is outside the selected local module tree.",

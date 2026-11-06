@@ -18,9 +18,20 @@ const (
 	SeverityError Severity = "error"
 )
 
+// FindingCode identifies analyzer diagnostics that callers must interpret
+// independently of the human-readable message or compatibility rule.
+type FindingCode string
+
+const (
+	// FindingCodeRemoteModuleSource identifies a remote module whose contents
+	// were not inspected by the local configuration analyzer.
+	FindingCodeRemoteModuleSource FindingCode = "remote-module-source"
+)
+
 // Finding is an actionable diagnostic produced while analyzing Terraform configuration.
 type Finding struct {
 	Severity    Severity
+	Code        FindingCode
 	RuleID      string
 	Range       hcl.Range
 	Message     string

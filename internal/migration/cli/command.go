@@ -15,10 +15,11 @@ const (
 
 // Config contains the process-level dependencies needed by the CLI shell.
 type Config struct {
-	Version   string
-	Writer    io.Writer
-	ErrWriter io.Writer
-	Analyze   AnalyzeFunc
+	Version       string
+	Writer        io.Writer
+	ErrWriter     io.Writer
+	Analyze       AnalyzeFunc
+	MigrateDryRun MigrateDryRunFunc
 }
 
 // NewCommand constructs the fastly-tf-migrate root command.
@@ -37,6 +38,7 @@ func NewCommand(config Config) *urfavecli.Command {
 		Commands: []*urfavecli.Command{
 			newVersionCommand(config),
 			newAnalyzeCommand(config),
+			newMigrateCommand(config),
 		},
 	}
 }
