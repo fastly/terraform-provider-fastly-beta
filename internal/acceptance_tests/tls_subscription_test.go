@@ -62,7 +62,7 @@ func TestAccFastlyTLSSubscription_basic(t *testing.T) {
 				// automatic post-apply plan check fails because the diff reappears on refresh.
 				Config: ConfigTLSSubscriptionWithConfigurationID(serviceName, domain1, domain2, backendName, domain2),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "configuration_id"),
+					resource.TestCheckResourceAttrPair(resourceName, "configuration_id", "data.fastly_tls_configuration.secondary", "id"),
 					testAccCheckTLSSubscriptionExists(),
 				),
 			},

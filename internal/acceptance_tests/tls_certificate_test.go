@@ -18,7 +18,9 @@ import (
 
 func testTLSCertificateDomain(t *testing.T) string {
 	t.Helper()
-	return fmt.Sprintf("%s.fastly-example.com", acctest.RandString(10))
+	fqdn := fmt.Sprintf("%s.fastly-example.com", acctest.RandString(10))
+	registerDomainManagementCleanup(t, fqdn)
+	return fqdn
 }
 
 func TestAccFastlyTLSCertificate_withName(t *testing.T) {
