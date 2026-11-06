@@ -64,7 +64,8 @@ func WriteText(writer io.Writer, result Result) error {
 		}
 	}
 	for _, finding := range result.Analysis.Findings {
-		if _, err := fmt.Fprintf(writer, "  WARNING %s: %s\n",
+		if _, err := fmt.Fprintf(writer, "  %s %s: %s\n",
+			strings.ToUpper(string(finding.Severity)),
 			displayPath(result.Analysis.Root, finding.Range.Filename), finding.Message); err != nil {
 			return err
 		}
