@@ -2,6 +2,7 @@ package rewrite
 
 import (
 	"fmt"
+	"strings"
 )
 
 // RemoveAttribute removes a proven-unnecessary attribute (and its immediately
@@ -26,7 +27,7 @@ func (e RemoveAttribute) apply(source []byte, filename string) ([]byte, error) {
 	}
 	bodies := matchingBodies(resource.Body, e.Parents)
 	if len(bodies) == 0 {
-		return nil, fmt.Errorf("attribute parent path %q not found", e.Parents)
+		return nil, fmt.Errorf("attribute parent path %q not found", strings.Join(e.Parents, "."))
 	}
 	var edits []replacement
 	for _, body := range bodies {

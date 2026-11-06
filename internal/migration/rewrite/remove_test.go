@@ -87,3 +87,35 @@ EOT
 		t.Fatal("failed rewrite changed source")
 	}
 }
+
+func TestRemoveAttributeMissingParentPath(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	source := []byte(`resource "fastly_service_vcl" "demo" {
+  name = "demo"
+}
+`)
+	path := filepath.Join(dir, "main.tf")
+	if err := os.WriteFile(path, source, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Build(context.Background(), dir, RemoveAttribute{
+		File:         "main.tf",
+		ResourceType: "fastly_service_vcl",
+		ResourceName: "demo",
+		Parents:      []string{"backend", "settings"},
+		Attribute:    "activate",
+	})
+	if err == nil || !strings.Contains(err.Error(), `attribute parent path "backend.settings" not found`) {
+		t.Fatalf("expected readable missing-parent path, got %v", err)
+	}
+	actual, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(actual, source) {
+		t.Fatal("failed edit modified original source")
+	}
+}
