@@ -28,6 +28,7 @@ func TestNewCommand(t *testing.T) {
 	}
 	findSubcommand(t, command, "version")
 	findSubcommand(t, command, "analyze")
+	findSubcommand(t, command, "migrate")
 }
 
 func TestVersionCommand(t *testing.T) {
