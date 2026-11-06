@@ -1,0 +1,113 @@
+name: Upgrade Go point release
+
+on:
+  schedule:
+    # Runs daily at 06:00 UTC so a security-fix point release reaches go.mod
+    # within a day of being published.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: go-point-release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  upgrade:
+    name: Open PR for newer Go point release
+    runs-on: ubuntu-24.04-arm
+    steps:
+      # A GitHub App token is used instead of GITHUB_TOKEN because PRs opened
+      # with GITHUB_TOKEN do not trigger the pull_request workflows.
+      - name: Generate a GitHub token
+        id: github-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.repository }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.github-token.outputs.token }}
+          persist-credentials: false
+
+      - name: Install Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Find latest point release
+        id: latest
+        run: |
+          current=$(go mod edit -json | jq -r '.Go')
+          minor=${current%.*}
+
+          latest=$(curl --fail --silent --show-error --location 'https://go.dev/dl/?mode=json' \
+            | jq -r --arg minor "go${minor}." \
+                '[.[] | select(.stable) | .version | select(startswith($minor)) | ltrimstr("go")][0] // empty')
+
+          if [[ -z "${latest}" ]]; then
+            echo "::error::No stable ${minor}.x release found at go.dev/dl"
+            exit 1
+          fi
+
+          newest=$(printf '%s\n%s\n' "${current}" "${latest}" | sort -V | tail -n1)
+          if [[ "${newest}" == "${current}" ]]; then
+            echo "go.mod is on ${current}; latest ${minor}.x is ${latest}. Nothing to do."
+            echo "upgrade=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          echo "Upgrading Go ${current} -> ${latest}"
+          {
+            echo "upgrade=true"
+            echo "current=${current}"
+            echo "latest=${latest}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Open pull request
+        if: steps.latest.outputs.upgrade == 'true'
+        env:
+          GH_TOKEN: ${{ steps.github-token.outputs.token }}
+          CURRENT: ${{ steps.latest.outputs.current }}
+          LATEST: ${{ steps.latest.outputs.latest }}
+        run: |
+          branch="automation/go-${LATEST}"
+
+          if [[ -n "$(git ls-remote --heads origin "${branch}")" ]]; then
+            echo "Branch ${branch} already exists; a PR is already open or was closed deliberately."
+            exit 0
+          fi
+
+          go mod edit -go="${LATEST}"
+          go mod tidy
+
+          entry="- build(deps): upgrade Go from ${CURRENT} to ${LATEST}"
+          ENTRY="${entry}" perl -0pi -e 's/^### Dependencies:\n/### Dependencies:\n\n$ENV{ENTRY}\n/m' CHANGELOG.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${branch}"
+          git add go.mod go.sum CHANGELOG.md
+          git commit --message "build(deps): upgrade Go from ${CURRENT} to ${LATEST}"
+
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin "${branch}"
+
+          gh pr create \
+            --title "build(deps): upgrade Go from ${CURRENT} to ${LATEST}" \
+            --body "Automated upgrade of the \`go\` directive in \`go.mod\` to the latest ${LATEST%.*}.x point release. The directive sets the minimum toolchain, so keeping it current prevents builds on releases with known \`cmd/go\` vulnerabilities. CI and release workflows read the version from \`go.mod\`." \
+            --base main \
+            --head "${branch}" \
+            --label dependencies \
+            --label go
