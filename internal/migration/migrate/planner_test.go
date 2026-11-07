@@ -40,6 +40,12 @@ func writeFixtureConfig(dir, file, source string) error {
 	if !filepath.IsLocal(relative) {
 		return fmt.Errorf("fixture path must be local: %q", file)
 	}
+	// Some fixtures use a new module directory under t.TempDir(). Create
+	// that trusted root before opening it; all paths supplied by the
+	// fixture remain confined to the root by os.Root.
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("create fixture root: %w", err)
+	}
 	root, err := os.OpenRoot(dir)
 	if err != nil {
 		return err
@@ -57,6 +63,21 @@ func writeFixtureConfig(dir, file, source string) error {
 		return err
 	}
 	return f.Close()
+}
+
+func TestWriteFixtureConfigCreatesMissingRoot(t *testing.T) {
+	t.Parallel()
+	dir := filepath.Join(t.TempDir(), "root")
+	if err := writeFixtureConfig(dir, "main.tf", "name = \"demo\"\n"); err != nil {
+		t.Fatal(err)
+	}
+	contents, err := os.ReadFile(filepath.Join(dir, "main.tf"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(contents), "name = \"demo\"\n"; got != want {
+		t.Fatalf("fixture contents = %q, want %q", got, want)
+	}
 }
 
 // A symlinked parent must not let even a test fixture write escape its root.
