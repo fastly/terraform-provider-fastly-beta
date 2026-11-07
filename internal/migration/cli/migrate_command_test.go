@@ -313,7 +313,7 @@ func TestMigrateWritePreviewOutputFailureDoesNotWrite(t *testing.T) {
 	}
 }
 
-func TestMigrateCheckExitCodesAndFlagConflicts(t *testing.T) {
+func TestMigrateFlagConflicts(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "main.tf")
@@ -325,10 +325,8 @@ func TestMigrateCheckExitCodesAndFlagConflicts(t *testing.T) {
 		args []string
 		code int
 	}{
-		{"changes needed", []string{commandName, "migrate", "--dry-run", "--check", dir}, exitCodeChangesNeeded},
-		{"dry-run preserves zero", []string{commandName, "migrate", "--dry-run", dir}, 0},
+		{"dry-run succeeds even when changes are needed", []string{commandName, "migrate", "--dry-run", dir}, 0},
 		{"conflicting modes", []string{commandName, "migrate", "--dry-run", "--write", dir}, exitCodeUsage},
-		{"check without dry-run", []string{commandName, "migrate", "--write", "--check", dir}, exitCodeUsage},
 		{"backup with dry-run", []string{commandName, "migrate", "--dry-run", "--backup-dir", t.TempDir(), dir}, exitCodeUsage},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -351,6 +349,22 @@ func TestMigrateCheckExitCodesAndFlagConflicts(t *testing.T) {
 
 // countingOutputWriter ensures write mode emits preview chunks rather than
 // accumulating a second in-memory copy of the full diff.
+func TestMigrateDoesNotExposeCheckFlag(t *testing.T) {
+	t.Parallel()
+	var called bool
+	cmd := NewCommand(Config{
+		Writer: io.Discard, ErrWriter: io.Discard,
+		MigrateDryRun: func(context.Context, string) (migrationmigrate.Result, error) {
+			called = true
+			return migrationmigrate.Result{}, nil
+		},
+	})
+	err := cmd.Run(context.Background(), []string{commandName, "migrate", "--dry-run", "--check"})
+	if err == nil || called {
+		t.Fatalf("removed --check flag accepted: err=%v planner called=%t", err, called)
+	}
+}
+
 type countingOutputWriter struct {
 	bytes.Buffer
 	writes int

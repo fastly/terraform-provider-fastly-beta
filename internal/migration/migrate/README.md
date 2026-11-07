@@ -5,15 +5,14 @@ use the same compatibility-checked, immutable HCL rewrite plan.**
 
 ```console
 fastly-tf-migrate migrate --dry-run [PATH]
-fastly-tf-migrate migrate --dry-run --check [PATH]
 fastly-tf-migrate migrate --write [--backup-dir PATH] [PATH]
 ```
 
 `PATH` defaults to the current directory. `--dry-run` and `--write` are
 mutually exclusive. Without either flag, the command returns a usage error.
-Dry-run **never writes files**. `--check` is CI-friendly: it returns exit code
-4 when a complete, supported preview has changes to make, while a normal
-dry-run continues to return 0 for a successful preview (with or without changes).
+Dry-run **never writes files** and returns exit code 0 for a complete,
+supported preview whether or not it proposes changes. The initial GA CLI
+intentionally does not include a CI-specific `--check` mode.
 
 ## Migration scope
 
@@ -101,7 +100,6 @@ Terraform plan before applying.
 | `1` | I/O, backup, write, or internal failure |
 | `2` | Invalid arguments / flag combination |
 | `3` | Preflight blockers or incomplete transformation coverage |
-| `4` | `migrate --dry-run --check` found changes to make |
 
 The golden migration fixtures use actual supported Fastly schema fields;
 generic HCL editing primitives are tested separately in

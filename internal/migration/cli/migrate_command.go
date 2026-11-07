@@ -16,8 +16,6 @@ import (
 // without the original validated plan is rejected by migrate.Result.Apply.
 type MigrateDryRunFunc func(context.Context, string) (migrationmigrate.Result, error)
 
-const exitCodeChangesNeeded = 4
-
 func newMigrateCommand(config Config) *urfavecli.Command {
 	planner := config.MigrateDryRun
 	if planner == nil {
@@ -38,10 +36,6 @@ func newMigrateCommand(config Config) *urfavecli.Command {
 				Name:  "write",
 				Usage: "Apply the exact previewed HCL plan after writing private recovery backups",
 			},
-			&urfavecli.BoolFlag{
-				Name:  "check",
-				Usage: "With --dry-run, return exit code 4 if migration changes are needed",
-			},
 			&urfavecli.StringFlag{
 				Name:  "backup-dir",
 				Usage: "Private backup storage outside the Terraform tree (default: ~/.fastly-tf-migrate); only with --write",
@@ -54,7 +48,6 @@ func newMigrateCommand(config Config) *urfavecli.Command {
 			}
 			dryRun := command.Bool("dry-run")
 			write := command.Bool("write")
-			check := command.Bool("check")
 			backupDir := command.String("backup-dir")
 			if dryRun == write {
 				return exitError{
@@ -62,9 +55,9 @@ func newMigrateCommand(config Config) *urfavecli.Command {
 					code:    exitCodeUsage,
 				}
 			}
-			if (check && !dryRun) || (backupDir != "" && !write) {
+			if backupDir != "" && !write {
 				return exitError{
-					message: "--check requires --dry-run; --backup-dir requires --write",
+					message: "--backup-dir requires --write",
 					code:    exitCodeUsage,
 				}
 			}
@@ -100,12 +93,6 @@ func newMigrateCommand(config Config) *urfavecli.Command {
 				}
 			}
 			if !write {
-				if check && len(result.Changes) != 0 {
-					return exitError{
-						message: "migration changes are needed",
-						code:    exitCodeChangesNeeded,
-					}
-				}
 				return nil
 			}
 
