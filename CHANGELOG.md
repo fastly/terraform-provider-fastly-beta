@@ -4,6 +4,7 @@
 
 ### ENHANCEMENTS:
 
+- feat(migration): add explicitly authorized `fastly-tf-migrate migrate --write` with private recoverable HCL backups and stable CI change detection (CDTOOL-1881)
 - feat(migration): add conservative, read-only `fastly-tf-migrate migrate --dry-run` with registry-checked HCL previews (CDTOOL-1906)
 
 ### BUG FIXES:

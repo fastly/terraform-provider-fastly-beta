@@ -27,11 +27,29 @@ func fixture(t *testing.T, path string) []byte {
 
 func writeConfig(t *testing.T, dir, file, source string) {
 	t.Helper()
-	path := filepath.Join(dir, filepath.FromSlash(file))
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	// Use a root-confined file operation so even test-generated paths cannot
+	// escape the temporary Terraform project directory.
+	relative := filepath.FromSlash(file)
+	if !filepath.IsLocal(relative) {
+		t.Fatalf("fixture path must be relative: %q", file)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, filepath.Dir(relative)), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	f, err := root.OpenFile(relative, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString(source); err != nil {
+		_ = f.Close()
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
 		t.Fatal(err)
 	}
 }

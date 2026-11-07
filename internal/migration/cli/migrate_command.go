@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 
 	urfavecli "github.com/urfave/cli/v3"
 
@@ -10,25 +12,40 @@ import (
 	migrationmigrate "github.com/fastly/terraform-provider-fastly-beta/internal/migration/migrate"
 )
 
-// MigrateDryRunFunc builds a read-only preview without applying changes.
+// MigrateDryRunFunc builds an in-memory migration plan without applying changes.
+// The same plan is used by --dry-run and --write; applying a synthetic result
+// without the original validated plan is rejected by migrate.Result.Apply.
 type MigrateDryRunFunc func(context.Context, string) (migrationmigrate.Result, error)
 
+const exitCodeChangesNeeded = 4
+
 func newMigrateCommand(config Config) *urfavecli.Command {
-	dryRun := config.MigrateDryRun
-	if dryRun == nil {
-		planner := migrationmigrate.New(compatibility.Default())
-		dryRun = planner.Plan
+	planner := config.MigrateDryRun
+	if planner == nil {
+		planner = migrationmigrate.New(compatibility.Default()).Plan
 	}
 	return &urfavecli.Command{
 		Name:           "migrate",
-		Usage:          "Preview Terraform migration changes (writing is not yet supported)",
+		Usage:          "Preview or explicitly write supported Terraform migration changes",
 		Writer:         config.Writer,
 		ErrWriter:      config.ErrWriter,
 		ExitErrHandler: returnExitErrorToCaller,
 		Flags: []urfavecli.Flag{
 			&urfavecli.BoolFlag{
 				Name:  "dry-run",
-				Usage: "Print the proposed HCL diff without writing files or state",
+				Usage: "Print a deterministic HCL diff; never write configuration or state",
+			},
+			&urfavecli.BoolFlag{
+				Name:  "write",
+				Usage: "Apply the exact previewed HCL plan after writing private recovery backups",
+			},
+			&urfavecli.BoolFlag{
+				Name:  "check",
+				Usage: "With --dry-run, return exit code 4 if migration changes are needed",
+			},
+			&urfavecli.StringFlag{
+				Name:  "backup-dir",
+				Usage: "Private backup storage outside the Terraform tree (default: ~/.fastly-tf-migrate); only with --write",
 			},
 		},
 		Action: func(ctx context.Context, command *urfavecli.Command) error {
@@ -36,9 +53,19 @@ func newMigrateCommand(config Config) *urfavecli.Command {
 			if len(args) > 1 {
 				return exitError{message: "migrate accepts at most one PATH argument", code: exitCodeUsage}
 			}
-			if !command.Bool("dry-run") {
+			dryRun := command.Bool("dry-run")
+			write := command.Bool("write")
+			check := command.Bool("check")
+			backupDir := command.String("backup-dir")
+			if dryRun == write {
 				return exitError{
-					message: "migrate requires --dry-run; applying changes is not implemented yet",
+					message: "migrate requires exactly one of --dry-run or --write",
+					code:    exitCodeUsage,
+				}
+			}
+			if (check && !dryRun) || (backupDir != "" && !write) {
+				return exitError{
+					message: "--check requires --dry-run; --backup-dir requires --write",
 					code:    exitCodeUsage,
 				}
 			}
@@ -46,14 +73,29 @@ func newMigrateCommand(config Config) *urfavecli.Command {
 			if len(args) == 1 {
 				dir = args[0]
 			}
-			result, err := dryRun(ctx, dir)
+			result, err := planner(ctx, dir)
 			if err != nil {
 				return exitError{
-					message: fmt.Sprintf("migrate --dry-run %q: %v", dir, err),
+					message: fmt.Sprintf("plan migration %q: %v", dir, err),
 					code:    exitCodeFailure,
 				}
 			}
-			if err := migrationmigrate.WriteText(command.Writer, result); err != nil {
+			if write {
+				// Fully render the proposed plan before touching the filesystem,
+				// and reject short output writes as well as explicit errors.
+				var preview bytes.Buffer
+				err = migrationmigrate.WriteApplyPreview(&preview, result)
+				if err == nil {
+					var n int
+					n, err = command.Writer.Write(preview.Bytes())
+					if err == nil && n != preview.Len() {
+						err = io.ErrShortWrite
+					}
+				}
+			} else {
+				err = migrationmigrate.WriteText(command.Writer, result)
+			}
+			if err != nil {
 				return exitError{
 					message: fmt.Sprintf("write migration preview: %v", err),
 					code:    exitCodeFailure,
@@ -61,8 +103,39 @@ func newMigrateCommand(config Config) *urfavecli.Command {
 			}
 			if result.Blocked() {
 				return exitError{
-					message: "migration preview blocked by unsupported or incomplete transformations",
+					message: "migration blocked by unsupported or incomplete transformations",
 					code:    exitCodeAnalysisBlocked,
+				}
+			}
+			if !write {
+				if check && len(result.Changes) != 0 {
+					return exitError{
+						message: "migration changes are needed",
+						code:    exitCodeChangesNeeded,
+					}
+				}
+				return nil
+			}
+
+			applied, err := result.Apply(ctx, backupDir)
+			if err != nil {
+				return exitError{
+					message: fmt.Sprintf("apply migration %q: %v", dir, err),
+					code:    exitCodeFailure,
+				}
+			}
+			if applied.FilesWritten == 0 {
+				_, err = fmt.Fprintln(command.Writer, "Migration complete: no changes necessary.")
+			} else {
+				_, err = fmt.Fprintf(command.Writer,
+					"Migration complete: %d file(s) written.\nRecovery backups: %s\n"+
+						"Review and run terraform plan before applying state changes.\n",
+					applied.FilesWritten, applied.BackupDir)
+			}
+			if err != nil {
+				return exitError{
+					message: fmt.Sprintf("write migration completion report: %v", err),
+					code:    exitCodeFailure,
 				}
 			}
 			return nil
