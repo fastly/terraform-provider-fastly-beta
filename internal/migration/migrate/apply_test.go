@@ -128,6 +128,38 @@ func readManifest(t *testing.T, backupDir string) recoveryManifest {
 	return manifest
 }
 
+func TestApplyRequiresValidatedPreflightSnapshots(t *testing.T) {
+	t.Parallel()
+	dir, backups := t.TempDir(), privateBackupDir(t)
+	writeConfig(t, dir, "main.tf", simpleVCLConfiguration)
+	for _, tc := range []struct {
+		name   string
+		mutate func(*Result)
+	}{
+		{"nil snapshots", func(r *Result) { r.snapshots = nil }},
+		{"missing analyzed file", func(r *Result) { delete(r.snapshots, "main.tf") }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := newPlan(t, dir)
+			if r.Blocked() || r.rewritePlan == nil {
+				t.Fatalf("expected supported plan: %#v", r)
+			}
+			tc.mutate(&r)
+			if _, err := r.Apply(context.Background(), backups); err == nil ||
+				!strings.Contains(err.Error(), "validated preflight snapshot") {
+				t.Fatalf("missing snapshot accepted or incorrectly reported: %v", err)
+			}
+			if _, err := os.Stat(filepath.Join(backups, "backups")); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("invalid preflight created backup data: %v", err)
+			}
+			got, err := os.ReadFile(filepath.Join(dir, "main.tf"))
+			if err != nil || string(got) != simpleVCLConfiguration {
+				t.Fatalf("invalid preflight changed source: %v", err)
+			}
+		})
+	}
+}
+
 func TestApplyWritesNestedModuleInPlace(t *testing.T) {
 	t.Parallel()
 	dir, backups := t.TempDir(), privateBackupDir(t)

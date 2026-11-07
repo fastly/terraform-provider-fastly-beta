@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/rewrite"
 )
@@ -38,6 +39,20 @@ func (r Result) Apply(ctx context.Context, backupRoot string) (Applied, error) {
 	}
 	if r.rewritePlan == nil {
 		return Applied{}, errors.New("migration write requires the original validated rewrite plan")
+	}
+	// A valid rewrite plan alone is insufficient: the analyzer's original
+	// snapshots must be available to detect modifications to *all* inspected
+	// configuration files, not only files the plan would rewrite.
+	if r.snapshots == nil {
+		return Applied{}, errors.New("migration write requires validated preflight snapshots")
+	}
+	for _, file := range r.Analysis.Files {
+		if !strings.HasSuffix(file, ".tf") {
+			continue
+		}
+		if _, ok := r.snapshots[file]; !ok {
+			return Applied{}, fmt.Errorf("migration write missing validated preflight snapshot for %q", file)
+		}
 	}
 	root := r.rewritePlan.Root()
 	changes := r.rewritePlan.Changes()
