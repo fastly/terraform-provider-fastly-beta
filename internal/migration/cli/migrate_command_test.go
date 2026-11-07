@@ -349,6 +349,42 @@ func TestMigrateCheckExitCodesAndFlagConflicts(t *testing.T) {
 	}
 }
 
+// countingOutputWriter ensures write mode emits preview chunks rather than
+// accumulating a second in-memory copy of the full diff.
+type countingOutputWriter struct {
+	bytes.Buffer
+	writes int
+}
+
+func (w *countingOutputWriter) Write(p []byte) (int, error) {
+	w.writes++
+	return w.Buffer.Write(p)
+}
+
+func TestMigrateWriteStreamsPreviewBeforeApply(t *testing.T) {
+	t.Parallel()
+	dir, backups := t.TempDir(), privateBackupDir(t)
+	before := []byte(`resource "fastly_service_vcl" "demo" {
+  name = "demo"
+}
+`)
+	if err := os.WriteFile(filepath.Join(dir, "main.tf"), before, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	writer := &countingOutputWriter{}
+	cmd := NewCommand(Config{Writer: writer, ErrWriter: io.Discard})
+	if err := cmd.Run(context.Background(),
+		[]string{commandName, "migrate", "--write", "--backup-dir", backups, dir}); err != nil {
+		t.Fatal(err)
+	}
+	if writer.writes < 3 {
+		t.Fatalf("preview was not streamed: %d writes", writer.writes)
+	}
+	if !strings.Contains(writer.String(), "Migration complete: 2 file(s) written.") {
+		t.Fatalf("missing completion report: %s", writer.String())
+	}
+}
+
 type shortOutputWriter struct{}
 
 func (shortOutputWriter) Write(data []byte) (int, error) {

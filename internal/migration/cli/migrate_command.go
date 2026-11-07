@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -81,17 +80,10 @@ func newMigrateCommand(config Config) *urfavecli.Command {
 				}
 			}
 			if write {
-				// Fully render the proposed plan before touching the filesystem,
-				// and reject short output writes as well as explicit errors.
-				var preview bytes.Buffer
-				err = migrationmigrate.WriteApplyPreview(&preview, result)
-				if err == nil {
-					var n int
-					n, err = command.Writer.Write(preview.Bytes())
-					if err == nil && n != preview.Len() {
-						err = io.ErrShortWrite
-					}
-				}
+				// Stream the complete preview before touching Terraform files.
+				// A short write or output error prevents the migration from applying.
+				err = migrationmigrate.WriteApplyPreview(
+					strictOutputWriter{Writer: command.Writer}, result)
 			} else {
 				err = migrationmigrate.WriteText(command.Writer, result)
 			}
@@ -141,4 +133,18 @@ func newMigrateCommand(config Config) *urfavecli.Command {
 			return nil
 		},
 	}
+}
+
+// strictOutputWriter turns a short successful write into an error so the
+// migration cannot proceed after an incomplete preview was printed.
+type strictOutputWriter struct {
+	io.Writer
+}
+
+func (w strictOutputWriter) Write(p []byte) (int, error) {
+	n, err := w.Writer.Write(p)
+	if err == nil && n != len(p) {
+		err = io.ErrShortWrite
+	}
+	return n, err
 }
