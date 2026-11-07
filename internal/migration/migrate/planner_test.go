@@ -27,30 +27,54 @@ func fixture(t *testing.T, path string) []byte {
 
 func writeConfig(t *testing.T, dir, file, source string) {
 	t.Helper()
-	// Use a root-confined file operation so even test-generated paths cannot
-	// escape the temporary Terraform project directory.
+	if err := writeFixtureConfig(dir, file, source); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// writeFixtureConfig confines both directory creation and file writes to the
+// fixture root. The module requires Go 1.26.10, which provides os.OpenRoot
+// and os.Root.MkdirAll; do not weaken this to path validation plus os.OpenFile.
+func writeFixtureConfig(dir, file, source string) error {
 	relative := filepath.FromSlash(file)
 	if !filepath.IsLocal(relative) {
-		t.Fatalf("fixture path must be relative: %q", file)
-	}
-	if err := os.MkdirAll(filepath.Join(dir, filepath.Dir(relative)), 0o755); err != nil {
-		t.Fatal(err)
+		return fmt.Errorf("fixture path must be local: %q", file)
 	}
 	root, err := os.OpenRoot(dir)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	defer root.Close()
+	if err := root.MkdirAll(filepath.Dir(relative), 0o755); err != nil {
+		return err
+	}
 	f, err := root.OpenFile(relative, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	if _, err := f.WriteString(source); err != nil {
 		_ = f.Close()
-		t.Fatal(err)
+		return err
 	}
-	if err := f.Close(); err != nil {
-		t.Fatal(err)
+	return f.Close()
+}
+
+// A symlinked parent must not let even a test fixture write escape its root.
+func TestWriteFixtureConfigRejectsEscapes(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	outside := t.TempDir()
+	if err := writeFixtureConfig(dir, "../escape.tf", "unsafe"); err == nil {
+		t.Fatal("accepted a traversal path")
+	}
+	if err := os.Symlink(outside, filepath.Join(dir, "linked")); err != nil {
+		t.Skipf("symlinks unavailable on this platform: %v", err)
+	}
+	if err := writeFixtureConfig(dir, "linked/escape.tf", "unsafe"); err == nil {
+		t.Fatal("followed an escaping symlink")
+	}
+	if _, err := os.Stat(filepath.Join(outside, "escape.tf")); !os.IsNotExist(err) {
+		t.Fatalf("fixture escaped into symlink target: %v", err)
 	}
 }
 
