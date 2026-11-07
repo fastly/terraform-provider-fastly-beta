@@ -70,7 +70,17 @@ func resolveBackupRoot(root, requested string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve backup directory: %w", err)
 	}
-	if isWithinPath(root, path) {
+	// Compare canonical paths on both sides. In particular, a symlinked
+	// Terraform root must not make an in-tree backup look external.
+	canonicalRoot, err := filepath.Abs(root)
+	if err != nil {
+		return "", fmt.Errorf("resolve Terraform root for backup containment: %w", err)
+	}
+	canonicalRoot, err = filepath.EvalSymlinks(canonicalRoot)
+	if err != nil {
+		return "", fmt.Errorf("resolve Terraform root for backup containment: %w", err)
+	}
+	if isWithinPath(canonicalRoot, path) {
 		return "", fmt.Errorf("backup directory %q must be outside the Terraform root %q", path, root)
 	}
 	return path, nil

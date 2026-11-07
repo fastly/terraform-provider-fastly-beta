@@ -408,6 +408,36 @@ func TestApplyRefusesSymlinkedBackupIntoModule(t *testing.T) {
 	}
 }
 
+func TestResolveBackupRootRejectsBackupInsideSymlinkedTerraformRoot(t *testing.T) {
+	t.Parallel()
+	parent := t.TempDir()
+	actual := filepath.Join(parent, "real-module")
+	if err := os.Mkdir(actual, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(parent, "module-alias")
+	if err := os.Symlink(actual, alias); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	for _, backupPath := range []string{
+		filepath.Join(actual, "backups"),
+		filepath.Join(alias, "backups"),
+	} {
+		if _, err := resolveBackupRoot(alias, backupPath); err == nil ||
+			!strings.Contains(err.Error(), "outside the Terraform root") {
+			t.Fatalf("accepted in-tree backup %q for alias %q: %v", backupPath, alias, err)
+		}
+	}
+	outside := filepath.Join(parent, "outside-backups")
+	canonicalOutside, err := resolveExistingParents(outside)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if path, err := resolveBackupRoot(alias, outside); err != nil || path != canonicalOutside {
+		t.Fatalf("rejected an external backup: %q, %v", path, err)
+	}
+}
+
 func TestApplyCanceledContextDoesNotCreateBackup(t *testing.T) {
 	t.Parallel()
 	dir, backups := t.TempDir(), privateBackupDir(t)
