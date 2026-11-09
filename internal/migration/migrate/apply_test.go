@@ -294,9 +294,20 @@ func TestApplyRefusesBackupInsideModule(t *testing.T) {
 	}
 }
 
+// resolvedTempDir avoids platforms (macOS) where t.TempDir sits behind a symlink,
+// which Apply resolves before deriving the backup lock path.
+func resolvedTempDir(t *testing.T) string {
+	t.Helper()
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
 func TestApplyRefusesInterruptedBackup(t *testing.T) {
 	t.Parallel()
-	dir, backups := t.TempDir(), privateBackupDir(t)
+	dir, backups := resolvedTempDir(t), privateBackupDir(t)
 	writeConfig(t, dir, "main.tf", simpleVCLConfiguration)
 	result := newPlan(t, dir)
 	project, unlock, err := lockProject(backups, result.Analysis.Root)
@@ -326,7 +337,7 @@ func TestApplyRefusesInterruptedBackup(t *testing.T) {
 
 func TestApplyRefusesConcurrentWriterLock(t *testing.T) {
 	t.Parallel()
-	dir, backups := t.TempDir(), privateBackupDir(t)
+	dir, backups := resolvedTempDir(t), privateBackupDir(t)
 	writeConfig(t, dir, "main.tf", simpleVCLConfiguration)
 	result := newPlan(t, dir)
 	_, unlock, err := lockProject(backups, result.Analysis.Root)
