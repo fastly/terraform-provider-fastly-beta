@@ -53,50 +53,6 @@ Compatibility service resources:
 - `fastly_service_cdn_auto`
 - `fastly_service_compute_auto`
 
-### Explicit/default resources still under development
-
-Some resources in this provider can't be used with the automatic compatibility family: they
-belong to the explicit/default family, which is still under development and **not ready for
-testing**. Use their automatic family equivalents instead.
-
-Two of them are service resources, replaced one for one:
-
-| Explicit/default resource | Use instead |
-| --- | --- |
-| `fastly_service_cdn` | `fastly_service_cdn_auto` |
-| `fastly_service_compute` | `fastly_service_compute_auto` |
-
-The rest are configured on those two resources as nested blocks:
-
-| Explicit/default resource | Use instead | Available on |
-| --- | --- | --- |
-| `fastly_service_backend` | `backend` block | both |
-| `fastly_service_cache_setting` | `cache_setting` block | CDN |
-| `fastly_service_cdn_acl` | `acl` block | CDN |
-| `fastly_service_condition` | `condition` block | CDN |
-| `fastly_service_custom_vcl` | `custom_vcl` block | CDN |
-| `fastly_service_dictionary` | `dictionary` block | both |
-| `fastly_service_director` | `director` block | CDN |
-| `fastly_service_domain` | `domain` block \* | both |
-| `fastly_service_dynamic_vcl_snippet` | `dynamic_snippet` block | CDN |
-| `fastly_service_gzip` | `gzip` block | CDN |
-| `fastly_service_header` | `header` block | CDN |
-| `fastly_service_healthcheck` | `healthcheck` block | both |
-| `fastly_service_image_optimizer_default_settings` | `image_optimizer_default_settings` block | CDN |
-| `fastly_service_logging_*` | `logging_*` blocks | both |
-| `fastly_service_ratelimiter` | `rate_limiter` block | CDN |
-| `fastly_service_request_setting` | `request_setting` block | CDN |
-| `fastly_service_response_object` | `response_object` block | CDN |
-| `fastly_service_resource_link` | `resource_link` block | Compute |
-| `fastly_service_settings` | `settings` block | CDN |
-| `fastly_service_vcl_snippet` | `snippet` block | CDN |
-
-\* Both `fastly_service_domain` and the `domain` block configure classic domains, which are only
-available on accounts created before September 16, 2025. The versionless `fastly_domain` resource
-is recommended for all accounts, and works with either service resource.
-
-Every other resource is available for testing today.
-
 ### Explicit/default family
 
 ```hcl
@@ -125,6 +81,13 @@ Shared versioned resources include:
 - `fastly_service_domain`
 - `fastly_service_backend`
 - `fastly_service_dictionary`
+
+For the full set of explicit/default resources and how to test them, see "Test the
+Explicit family" in the [Beta Testing Guide](docs/guides/beta_testing.md).
+
+Classic domains (`fastly_service_domain` and the `domain` block in the automatic family) are only
+available on accounts created before September 16, 2025. The versionless `fastly_domain` resource
+is recommended for all accounts, and works with either service resource.
 
 ## Design documents
 

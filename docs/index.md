@@ -17,8 +17,7 @@ of `fastly/fastly`.
 
 This provider isn't a drop-in replacement for `fastly/fastly`. Resource names
 and HCL syntax have changed, so an existing configuration needs translation.
-The navigation also lists every resource in the provider, including some that
-aren't ready for testing. Read these first:
+Read these first:
 
 - [Beta Testing Guide](guides/beta_testing.md): how to use this provider
   during the beta testing period, and how to send us feedback.
