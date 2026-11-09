@@ -323,3 +323,33 @@ to reflect that they apply to a workspace, not the entire account.
 `fastly_ngwaf_thresholds` and `fastly_ngwaf_virtual_patches` also
 became singular, reflecting that each resource manages a single
 threshold or Virtual Patch.
+
+### Resources and Data Sources Not Available
+
+Some resources and data sources from the legacy provider have no
+counterpart in this provider.
+
+|Legacy resource or data source|Status|
+|---|---|
+|`fastly_user`|Not available|
+|`fastly_service_authorization`|Not available|
+|`logging_logentries` block of `fastly_service_vcl`|Not available|
+|`fastly_ai_runtime_control_provider_connection`|Not currently available|
+|`fastly_ai_runtime_control_virtual_key`|Not currently available|
+|`fastly_ai_runtime_control_provider_connections` data source|Not currently available|
+|`fastly_ai_runtime_control_providers` data source|Not currently available|
+|`fastly_ai_runtime_control_virtual_keys` data source|Not currently available|
+
+`fastly_user` is not available because user management through the
+Fastly API is no longer offered to all customers, so it can't be
+supported reliably in Terraform. `fastly_service_authorization` grants
+a user access to a service, so it isn't available either. Manage users
+and their service access in the Fastly Control Panel.
+
+The `logging_logentries` block has no equivalent in this provider. A
+configuration that uses it must remove the block before moving to
+`fastly_service_cdn_auto`.
+
+The AI Runtime Control resources and data sources are not yet part of
+this provider. Continue to use the legacy provider for them in the
+meantime.
