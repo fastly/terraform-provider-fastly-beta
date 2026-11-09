@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -33,7 +32,7 @@ resource "fastly_service_vcl" "demo" {
   activate = true
 }
 `
-	if err := os.WriteFile(filepath.Join(dir, "main.tf"), []byte(config), 0o600); err != nil {
+	if err := writeConfigFile(filepath.Join(dir, "main.tf"), []byte(config)); err != nil {
 		t.Fatalf("WriteFile(): %v", err)
 	}
 

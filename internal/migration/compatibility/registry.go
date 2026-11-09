@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/hashicorp/go-version"
 )
 
 // Registry provides immutable lookup access to the compatibility rules.
@@ -177,6 +179,12 @@ func validateRules(rules []Rule) error {
 		for _, version := range rule.SourceSchemaVersions {
 			if version < 0 {
 				errs = append(errs, fmt.Errorf("%s: source schema version must be non-negative", prefix))
+			}
+		}
+
+		if rule.MinSourceProviderVersion != "" {
+			if _, err := version.NewSemver(rule.MinSourceProviderVersion); err != nil {
+				errs = append(errs, fmt.Errorf("%s: invalid minimum source provider version %q", prefix, rule.MinSourceProviderVersion))
 			}
 		}
 

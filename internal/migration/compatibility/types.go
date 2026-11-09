@@ -104,6 +104,8 @@ type Rule struct {
 	State                StateStrategy
 	ImportIdentity       ImportIdentity
 	SourceSchemaVersions []int64
-	ProviderPrerequisite string
-	Notes                string
+	// MinSourceProviderVersion is the first legacy release that persists SourceSchemaVersions.
+	MinSourceProviderVersion string
+	ProviderPrerequisite     string
+	Notes                    string
 }

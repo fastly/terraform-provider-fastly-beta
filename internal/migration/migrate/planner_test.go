@@ -62,7 +62,24 @@ func writeFixtureConfig(dir, file, source string) error {
 		_ = f.Close()
 		return err
 	}
-	return f.Close()
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return seedLegacyLockfile(dir)
+}
+
+const testLegacyLockfile = `provider "registry.terraform.io/fastly/fastly" {
+  version = "9.1.0"
+}
+`
+
+// seedLegacyLockfile keeps tests unrelated to the source-version gate from being blocked by it.
+func seedLegacyLockfile(dir string) error {
+	path := filepath.Join(dir, ".terraform.lock.hcl")
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	}
+	return os.WriteFile(path, []byte(testLegacyLockfile), 0o600)
 }
 
 func TestWriteFixtureConfigCreatesMissingRoot(t *testing.T) {

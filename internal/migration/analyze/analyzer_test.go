@@ -870,6 +870,23 @@ func writeFile(t *testing.T, dir, name, content string) {
 	if err := os.WriteFile(path, []byte(strings.TrimSpace(content)+"\n"), 0o600); err != nil {
 		t.Fatalf("WriteFile(): %v", err)
 	}
+	if err := seedLegacyLockfile(dir); err != nil {
+		t.Fatalf("seedLegacyLockfile(): %v", err)
+	}
+}
+
+const testLegacyLockfile = `provider "registry.terraform.io/fastly/fastly" {
+  version = "9.1.0"
+}
+`
+
+// seedLegacyLockfile keeps tests unrelated to the source-version gate from being blocked by it.
+func seedLegacyLockfile(dir string) error {
+	path := filepath.Join(dir, ".terraform.lock.hcl")
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	}
+	return os.WriteFile(path, []byte(testLegacyLockfile), 0o600)
 }
 
 func hasAction(result Result, ruleID string) bool {
