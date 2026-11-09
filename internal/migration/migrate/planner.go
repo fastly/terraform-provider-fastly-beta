@@ -45,6 +45,11 @@ type Result struct {
 	Changes  []rewrite.Change
 	Moves    []Move
 	Issues   []Issue
+
+	// Keep the validated rewrite plan private: callers may inspect Changes,
+	// but a write must use the exact immutable plan built during preflight.
+	rewritePlan *rewrite.Plan
+	snapshots   map[string][]byte
 }
 
 // Blocked reports whether the preflight or planner found incomplete migration work.
@@ -208,6 +213,8 @@ func (p *Planner) Plan(ctx context.Context, path string) (Result, error) {
 	}
 	result.Changes = changes
 	result.Moves = moves
+	result.rewritePlan = plan
+	result.snapshots = index.snapshots
 	return result, nil
 }
 

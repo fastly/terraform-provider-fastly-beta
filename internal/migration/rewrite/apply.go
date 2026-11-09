@@ -30,6 +30,12 @@ type stagedFile struct {
 // replacements are NOT a single filesystem transaction: interruptions and
 // concurrent writers still require recovery or a higher-level lock.
 func (p *Plan) Apply(ctx context.Context) error {
+	return p.applyWithInstall(ctx, os.Rename)
+}
+
+// applyWithInstall permits failure injection in tests without a package-global
+// hook. Production always installs staged files using os.Rename.
+func (p *Plan) applyWithInstall(ctx context.Context, install func(string, string) error) error {
 	if p == nil {
 		return errors.New("nil rewrite plan")
 	}
@@ -95,7 +101,7 @@ func (p *Plan) Apply(ctx context.Context) error {
 		// Go's os.Rename replaces an existing regular file on Windows
 		// (MoveFileEx with MOVEFILE_REPLACE_EXISTING) as well as on Unix.
 		// A locked Windows destination can still reject replacement.
-		if err := os.Rename(entry.after, entry.target); err != nil {
+		if err := install(entry.after, entry.target); err != nil {
 			return rollback(staged, fmt.Errorf("install %q: %w", entry.change.Path, err))
 		}
 		entry.after = ""
