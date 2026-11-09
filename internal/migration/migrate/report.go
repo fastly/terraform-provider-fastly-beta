@@ -9,11 +9,25 @@ import (
 // WriteText reports blocking diagnostics or the full proposed HCL diff.
 // It never prints a partial diff when any required change is unsupported.
 func WriteText(writer io.Writer, result Result) error {
+	return writeText(writer, result, false)
+}
+
+// WriteApplyPreview renders the complete proposed plan before --write begins.
+// It never claims files were changed or prints partial diffs for blocked plans.
+func WriteApplyPreview(writer io.Writer, result Result) error {
+	return writeText(writer, result, true)
+}
+
+func writeText(writer io.Writer, result Result, applying bool) error {
 	status := "READY"
 	if result.Blocked() {
 		status = "BLOCKED"
 	}
-	if _, err := fmt.Fprintf(writer, "Migration dry-run: %s\n", status); err != nil {
+	mode := "dry-run"
+	if applying {
+		mode = "write"
+	}
+	if _, err := fmt.Fprintf(writer, "Migration %s: %s\n", mode, status); err != nil {
 		return err
 	}
 	if _, err := fmt.Fprintf(writer, "Analyzed files: %d\n", len(result.Analysis.Files)); err != nil {
@@ -77,6 +91,12 @@ func WriteText(writer io.Writer, result Result) error {
 		if err := WriteDiff(writer, result.Changes); err != nil {
 			return err
 		}
+	}
+	if applying {
+		_, err := fmt.Fprintln(writer,
+			"\nWrite requested: the validated HCL changes shown above will be applied after "+
+				"private recovery backups are saved. Terraform state and Fastly will not be changed.")
+		return err
 	}
 	_, err := fmt.Fprintln(writer,
 		"\nPreview only: no files or Terraform state were changed. "+
