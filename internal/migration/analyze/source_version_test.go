@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +19,13 @@ func lockfileFor(version string) string {
   version = "` + version + `"
 }
 `
+}
+
+func removeLockfile(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.Remove(filepath.Join(dir, lockfileName)); err != nil && !errors.Is(err, os.ErrNotExist) {
+		t.Fatal(err)
+	}
 }
 
 func sourceVersionFindings(result Result) []Finding {
@@ -79,7 +87,7 @@ func TestSourceProviderVersionLockfileProblems(t *testing.T) {
 			t.Parallel()
 			dir := t.TempDir()
 			writeFile(t, dir, "main.tf", vclService)
-			os.Remove(filepath.Join(dir, lockfileName))
+			removeLockfile(t, dir)
 			if lock != nil {
 				writeFile(t, dir, lockfileName, *lock)
 			}
@@ -111,7 +119,7 @@ terraform {
 `
 	dir := t.TempDir()
 	writeFile(t, dir, "main.tf", requirement+vclService)
-	os.Remove(filepath.Join(dir, lockfileName))
+	removeLockfile(t, dir)
 	if got := len(sourceVersionFindings(analyzeDir(t, dir))); got != 1 {
 		t.Fatalf("~> 9.0 without a lockfile produced %d prerequisite findings, want 1", got)
 	}
@@ -158,7 +166,7 @@ resource "fastly_service_cdn_auto" "demo" {
   name = "demo"
 }
 `)
-	os.Remove(filepath.Join(dir, lockfileName))
+	removeLockfile(t, dir)
 
 	result := analyzeDir(t, dir)
 	if got := sourceVersionFindings(result); len(got) != 0 {
@@ -173,7 +181,7 @@ func TestSourceProviderVersionDoesNotHideConfigurationFindings(t *testing.T) {
 	writeFile(t, dir, "main.tf", vclService+`
 resource "fastly_unknown_thing" "x" {}
 `)
-	os.Remove(filepath.Join(dir, lockfileName))
+	removeLockfile(t, dir)
 
 	result := analyzeDir(t, dir)
 	if len(sourceVersionFindings(result)) != 1 ||

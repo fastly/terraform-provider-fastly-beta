@@ -43,8 +43,9 @@ selected root.
 - Lockfile version `>= 20.0.0`: blocking finding; that release is the migration
   target, not a legacy source. Target-provider requirements are CDTOOL-1865.
 - Lockfile missing, unreadable, malformed, or without a usable legacy entry:
-  blocking prerequisite finding (initialize with the legacy provider, keep the
-  lockfile, do not use `terraform init -upgrade`).
+  blocking prerequisite finding (select a legacy release within `>= 9.1.0, < 20.0.0`
+  with `terraform init`, or `terraform init -upgrade` run by the user; the CLI
+  never upgrades the provider; keep the lockfile).
 - No legacy service resources (for example an already-migrated project): no check.
 
 `analyze` still prints all normal findings; dry-run and write return exit code 3

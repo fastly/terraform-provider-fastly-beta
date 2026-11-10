@@ -34,9 +34,10 @@ func (a *Analyzer) checkSourceProviderVersion(state *analysisState) {
 			RuleID:   rule,
 			Range:    fileStartRange(lockPath),
 			Message:  fmt.Sprintf("The legacy fastly/fastly provider version cannot be established: %s.", problem),
-			Remediation: fmt.Sprintf("Run terraform init with the legacy provider (%s) and keep the resulting %s "+
-				"before migrating. Do not use terraform init -upgrade for this check. Then run terraform apply -refresh-only "+
-				"so the state is persisted at the schema this migration requires.", versionRange(floor, ceiling), lockfileName),
+			Remediation: fmt.Sprintf("Select a legacy provider release within %s (run terraform init, or terraform init -upgrade "+
+				"yourself if needed; the migration CLI never upgrades the provider) and keep the resulting %s before migrating. "+
+				"Then run terraform apply -refresh-only so the state is persisted at the schema this migration requires.",
+				versionRange(floor, ceiling), lockfileName),
 		})
 	case selected.LessThan(floor):
 		state.result.Findings = append(state.result.Findings, Finding{
