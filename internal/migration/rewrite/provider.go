@@ -135,7 +135,12 @@ func (e EnsureProviderRequirement) apply(source []byte, filename string) ([]byte
 			return nil, fmt.Errorf("required_providers.fastly already exists")
 		}
 		pos, snippet, err := insertBlockLines(source, required.Range().End.Byte-1,
-			[]string{"fastly = {", "  source = \"fastly/fastly\"", "  version = \">= 20.0.0\"", "}"})
+			[]string{
+				"fastly = {",
+				"  source = " + strconv.Quote(gaFastlySource),
+				"  version = " + strconv.Quote(gaFastlyVersion),
+				"}",
+			})
 		if err != nil {
 			return nil, err
 		}
@@ -143,15 +148,23 @@ func (e EnsureProviderRequirement) apply(source []byte, filename string) ([]byte
 	}
 	if terraform != nil {
 		pos, snippet, err := insertBlockLines(source, terraform.Range().End.Byte-1,
-			[]string{"required_providers {", "  fastly = {", "    source = \"fastly/fastly\"", "    version = \">= 20.0.0\"", "  }", "}"})
+			[]string{
+				"required_providers {",
+				"  fastly = {",
+				"    source = " + strconv.Quote(gaFastlySource),
+				"    version = " + strconv.Quote(gaFastlyVersion),
+				"  }",
+				"}",
+			})
 		if err != nil {
 			return nil, err
 		}
 		return replace(source, []replacement{{pos, pos, []byte(snippet)}})
 	}
-	return appendBlock(source, "terraform {\n  required_providers {\n    fastly = {\n"+
-		"      source  = \"fastly/fastly\"\n      version = \">= 20.0.0\"\n"+
-		"    }\n  }\n}\n"), nil
+	return appendBlock(source, fmt.Sprintf(
+		"terraform {\n  required_providers {\n    fastly = {\n"+
+			"      source  = %q\n      version = %q\n"+
+			"    }\n  }\n}\n", gaFastlySource, gaFastlyVersion)), nil
 }
 
 // RenameProviderArguments preserves the value expressions and aliases. It
