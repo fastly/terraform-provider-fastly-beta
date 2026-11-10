@@ -3,7 +3,7 @@ module github.com/fastly/terraform-provider-fastly-beta
 go 1.26.10
 
 require (
-	github.com/fastly/go-fastly/v19 v19.1.0
+	github.com/fastly/go-fastly/v19 v19.2.0
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/hashicorp/go-version v1.9.0
 	github.com/hashicorp/hcl/v2 v2.25.0

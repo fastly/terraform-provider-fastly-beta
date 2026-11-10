@@ -43,8 +43,8 @@ type simpleProductSpec struct {
 	// restrictTo is the only service type this product is valid for, or ""
 	// if it's supported on both CDN and Compute services.
 	restrictTo string
-	get        func(ctx context.Context, c *fastly.Client, serviceID string) (products.EnableOutput, error)
-	enable     func(ctx context.Context, c *fastly.Client, serviceID string) (products.EnableOutput, error)
+	get        func(ctx context.Context, c *fastly.Client, serviceID string) (products.ServiceEnableOutput, error)
+	enable     func(ctx context.Context, c *fastly.Client, serviceID string) (products.ServiceEnableOutput, error)
 	disable    func(ctx context.Context, c *fastly.Client, serviceID string) error
 }
 
