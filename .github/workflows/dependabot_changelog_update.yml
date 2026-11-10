@@ -18,7 +18,13 @@ defaults:
 
 jobs:
   dependabot-changelog-update:
-    if: contains(github.event.pull_request.labels.*.name, 'Auto-Changelog')
+    # Dependabot adds labels after opening the PR, so they are not in the
+    # 'opened' event payload; gate on the author and branch name instead.
+    # Skipped ecosystems mirror the Skip-Changelog entries in dependabot.yml.
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      !startsWith(github.head_ref, 'dependabot/github_actions/') &&
+      !startsWith(github.head_ref, 'dependabot/go_modules/tools/')
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Generate a GitHub token
