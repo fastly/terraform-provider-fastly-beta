@@ -4,7 +4,7 @@
 
 ### ENHANCEMENTS:
 
-- feat(account-product): add `fastly_account_product_ai_accelerator`, `fastly_account_product_ai_runtime_control`, `fastly_account_product_domain_research` and `fastly_account_product_object_storage` resources for enabling account-level products
+- feat(account-product): add `fastly_account_product_ai_accelerator`, `fastly_account_product_ai_runtime_control`, `fastly_account_product_domain_research` and `fastly_account_product_object_storage` resources for enabling account-level products ([#227](https://github.com/fastly/terraform-provider-fastly-beta/pull/227))
 
 ### BUG FIXES:
 
