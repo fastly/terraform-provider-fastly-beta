@@ -430,12 +430,18 @@ func TestProviderMigrationDetectsAmbiguousRequirements(t *testing.T) {
 			if !result.Blocked() || len(result.Changes) != 0 {
 				t.Fatalf("ambiguous requirements produced changes: %#v", result)
 			}
-			var joined string
-			for _, issue := range result.Issues {
-				joined += issue.Message
+			var matching *Issue
+			for i := range result.Issues {
+				if strings.Contains(result.Issues[i].Message, tc.want) {
+					matching = &result.Issues[i]
+					break
+				}
 			}
-			if !strings.Contains(joined, tc.want) {
+			if matching == nil {
 				t.Fatalf("missing diagnostic %q: %#v", tc.want, result.Issues)
+			}
+			if matching.File != "other.tf" {
+				t.Fatalf("issue file = %q, want second conflicting declaration other.tf", matching.File)
 			}
 		})
 	}

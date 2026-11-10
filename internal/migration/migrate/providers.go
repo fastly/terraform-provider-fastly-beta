@@ -173,12 +173,14 @@ func compileProviderMigration(analysis analyze.Result, index moduleIndex) ([]rew
 			continue
 		}
 		if len(info.required) > 1 {
-			addIssue(module, "module contains multiple required_providers blocks",
+			// Report the second declaration, which introduces the conflict.
+			addIssue(info.required[1].file, "module contains multiple required_providers blocks",
 				"Consolidate the declarations into one required_providers block before migrating.")
 			continue
 		}
 		if len(info.requirement) > 1 {
-			addIssue(module, "module contains multiple Fastly provider requirements",
+			addIssue(displayPath(analysis.Root, info.requirement[1].Range.Filename),
+				"module contains multiple Fastly provider requirements",
 				"Keep one unambiguous fastly/fastly requirement per module.")
 			continue
 		}
