@@ -4,7 +4,7 @@
 
 ### ENHANCEMENTS:
 
-- feat(migration): require legacy `fastly/fastly` 9.1.0 or newer, read from `.terraform.lock.hcl`, before `fastly-tf-migrate` analyzes or migrates `fastly_service_vcl` ([#](https://github.com/fastly/terraform-provider-fastly-beta/pull/))
+- feat(migration): require legacy `fastly/fastly` 9.1.0 or newer, read from `.terraform.lock.hcl`, before `fastly-tf-migrate` analyzes or migrates `fastly_service_vcl` ([#221](https://github.com/fastly/terraform-provider-fastly-beta/pull/221))
 - feat(migration): add explicitly authorized `fastly-tf-migrate migrate --write` with private recoverable HCL backups and stable CI change detection ([#218](https://github.com/fastly/terraform-provider-fastly-beta/pull/218))
 - feat(migration): add conservative, read-only `fastly-tf-migrate migrate --dry-run` with registry-checked HCL previews ([#215](https://github.com/fastly/terraform-provider-fastly-beta/pull/215))
 

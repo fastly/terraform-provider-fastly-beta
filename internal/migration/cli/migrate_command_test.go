@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	migrationmigrate "github.com/fastly/terraform-provider-fastly-beta/internal/migration/migrate"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/testutil"
 )
 
 // privateBackupDir makes backup root permissions explicit. Test temporary
@@ -432,25 +433,11 @@ func TestMigrateWriteRejectsShortPreviewOutputWithoutWriting(t *testing.T) {
 	}
 }
 
-const testLegacyLockfile = `provider "registry.terraform.io/fastly/fastly" {
-  version = "9.1.0"
-}
-`
-
-// seedLegacyLockfile keeps tests unrelated to the source-version gate from being blocked by it.
-func seedLegacyLockfile(dir string) error {
-	path := filepath.Join(dir, ".terraform.lock.hcl")
-	if _, err := os.Stat(path); err == nil {
-		return nil
-	}
-	return os.WriteFile(path, []byte(testLegacyLockfile), 0o600)
-}
-
 func writeConfigFile(path string, data []byte) error {
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return err
 	}
-	return seedLegacyLockfile(filepath.Dir(path))
+	return testutil.SeedLegacyLockfile(filepath.Dir(path))
 }
 
 func TestMigrateWriteBlockedByMissingLegacyLockfileWritesNothing(t *testing.T) {
