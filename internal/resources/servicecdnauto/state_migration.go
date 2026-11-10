@@ -28,11 +28,11 @@ const (
 // repopulates service metadata, managed/active versions, and API-readable nested
 // service configuration.
 //
-// Legacy simple product_enablement state can be split into standalone
-// fastly_service_product_* resources and imported separately. The nested product
-// state is intentionally not copied to the target service state. Configurable
-// products remain blocked until their standalone migration paths preserve their
-// additional configuration safely.
+// Legacy product_enablement state, including the configurable bot_management,
+// ddos_protection and ngwaf products, is intentionally not copied to the target
+// service state. Each product is instead split into a standalone
+// fastly_service_product_* resource whose configuration carries its settings,
+// and imported by service ID.
 func (r *Resource) MoveState(_ context.Context) []resource.StateMover {
 	sourceSchema := legacyServiceVCLMoveStateSchema()
 
@@ -60,15 +60,12 @@ var legacyServiceVCLConfigurableProductNames = []string{
 	"ngwaf",
 }
 
-// supportsLegacySimpleProductEnablement reports whether persisted legacy
+// inspectLegacyProductEnablement reports whether persisted legacy
 // product_enablement state can be safely omitted from the target service state.
 //
-// Simple on/off products have no configuration beyond their boolean enablement,
-// so the migration CLI can represent each managed product as a standalone
-// fastly_service_product_* resource and adopt its existing service-scoped state
-// through Terraform import. Configurable products are rejected here until their
-// additional settings have dedicated migration support.
-func inspectLegacySimpleProductEnablement(products types.Set) (supported bool, hasManagedSimpleProducts bool) {
+// Every known product, configurable or not, can be split into a standalone
+// fastly_service_product_* resource and imported by service ID.
+func inspectLegacyProductEnablement(products types.Set) (supported bool, hasManagedProducts bool) {
 	if products.IsNull() {
 		return true, false
 	}
@@ -89,10 +86,10 @@ func inspectLegacySimpleProductEnablement(products types.Set) (supported bool, h
 		return false, false
 	}
 
-	return inspectLegacySimpleProductAttributes(product.Attributes())
+	return inspectLegacyProductAttributes(product.Attributes())
 }
 
-func inspectLegacySimpleProductAttributes(attributes map[string]attr.Value) (supported bool, hasManagedSimpleProducts bool) {
+func inspectLegacyProductAttributes(attributes map[string]attr.Value) (supported bool, hasManagedProducts bool) {
 	for name := range attributes {
 		if name == "name" {
 			continue
@@ -109,7 +106,7 @@ func inspectLegacySimpleProductAttributes(attributes map[string]attr.Value) (sup
 			return false, false
 		}
 		if !value.IsNull() {
-			hasManagedSimpleProducts = true
+			hasManagedProducts = true
 		}
 	}
 
@@ -118,12 +115,19 @@ func inspectLegacySimpleProductAttributes(attributes map[string]attr.Value) (sup
 		if !ok || value.IsUnknown() {
 			return false, false
 		}
-		if !value.IsNull() && len(value.Elements()) > 0 {
+		if value.IsNull() {
+			continue
+		}
+		switch len(value.Elements()) {
+		case 0:
+		case 1:
+			hasManagedProducts = true
+		default:
 			return false, false
 		}
 	}
 
-	return true, hasManagedSimpleProducts
+	return true, hasManagedProducts
 }
 
 func legacyServiceVCLProductNameIn(name string, names []string) bool {
@@ -169,19 +173,19 @@ func moveLegacyServiceVCLState(ctx context.Context, req resource.MoveStateReques
 		return
 	}
 
-	supportedProductEnablement, hasManagedSimpleProducts := inspectLegacySimpleProductEnablement(sourceProductEnablement)
+	supportedProductEnablement, hasManagedProducts := inspectLegacyProductEnablement(sourceProductEnablement)
 	if !supportedProductEnablement {
 		resp.Diagnostics.AddError(
 			"Unsupported legacy product enablement state",
-			"fastly_service_vcl product_enablement state can currently be migrated only when it contains the known simple on/off products. Configurable, unknown, or malformed product state is blocked until it can be migrated safely.",
+			"fastly_service_vcl product_enablement state can be migrated only when it contains known products in a well-formed shape. Unknown or malformed product state is blocked.",
 		)
 		return
 	}
 
-	if hasManagedSimpleProducts {
+	if hasManagedProducts {
 		resp.Diagnostics.AddWarning(
-			"Legacy simple product enablement requires standalone resources",
-			"The fastly_service_vcl product_enablement block is not copied into fastly_service_cdn_auto state. The migration configuration must represent managed simple products as standalone fastly_service_product_* resources and import their existing service-scoped state using the Fastly service ID.",
+			"Legacy product enablement requires standalone resources",
+			"The fastly_service_vcl product_enablement block is not copied into fastly_service_cdn_auto state. The migration configuration must represent managed products as standalone fastly_service_product_* resources and import their existing service-scoped state using the Fastly service ID.",
 		)
 	}
 

@@ -37,7 +37,7 @@ planner can produce a complete diff:
   `null`, empty, and omitted settings do not create product resources.
 
 Any **unsupported** transformation blocks the *entire* plan without writing.
-This includes configurable or unknown-expression product enablements,
+This includes unknown-expression product enablements,
 direct references requiring rewrite, ambiguous/exclusionary provider constraints,
 unsupported provider arguments, remote module internals, and the current unsupported
 nested object-attribute targets (`authentication`, `tls`,
@@ -110,8 +110,11 @@ For legacy VCL services, the migrator splits statically known
 `product_enablement` booleans into standalone versionless resources.
 Supported products are Brotli Compression, Image Optimizer, Origin Inspector,
 Domain Inspector, WebSockets, Log Explorer & Insights, and API Discovery.
-Compute service migration and configurable products (Bot Management, DDoS
-Protection, NGWAF) remain blocked until their separate prerequisites are met.
+Configurable products are split too: Bot Management (`enabled`, `contentguard`),
+DDoS Protection (`enabled`, `mode`) and NGWAF (`enabled`, `workspace_id`,
+`traffic_ramp`) must use literal values, which are copied into the generated
+resource and adopted by import. Compute service migration remains blocked until
+its separate prerequisites are met.
 
 For example:
 
@@ -140,8 +143,8 @@ product resource. This requires Terraform with configuration-driven
 `null`, empty aggregate blocks, and omitted product fields generate no
 product resource. Unknown boolean expressions, indexed services (`count` or
 `for_each`), existing resource/import collisions, comments that would be
-discarded from the legacy aggregate, and unsupported/configurable products
-block migration without a partial diff or write.
+discarded from the legacy aggregate, and unsupported products or non-literal
+product settings block migration without a partial diff or write.
 
 **Critical:** The CLI does not read the actual product status or import the
 product into Terraform state. After GA provider v20.0.0 is available and the

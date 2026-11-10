@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/zclconf/go-cty/cty"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/compatibility"
@@ -73,8 +74,8 @@ func compileSimpleProducts(key resourceKey, actions []selectedAction, index modu
 		return nil, issues
 	}
 	product := products[0]
-	if len(product.Labels) != 0 || len(product.Body.Blocks) != 0 {
-		issue("product_enablement contains unsupported nested configuration", "Only simple literal boolean product settings can be split automatically.")
+	if len(product.Labels) != 0 {
+		issue("product_enablement must not have labels", "Remove the labels from the legacy product_enablement block.")
 	}
 
 	productRules := make(map[string]compatibility.Rule)
@@ -127,28 +128,7 @@ func compileSimpleProducts(key resourceKey, actions []selectedAction, index modu
 	module := moduleForFile(key.file)
 	migrationFile := migrationFileForModule(module)
 	var edits []rewrite.Edit
-	for _, name := range names {
-		attr := product.Body.Attributes[name]
-		value, ds := attr.Expr.Value(nil)
-		if ds.HasErrors() || !value.IsKnown() {
-			issue(fmt.Sprintf("product_enablement.%s cannot be determined statically", name),
-				"Use literal true, false or null before migrating; unknown values may enable products unexpectedly.")
-			continue
-		}
-		if value.IsNull() {
-			continue // Absent product: do not invent a resource or an import.
-		}
-		if value.Type() != cty.Bool {
-			issue(fmt.Sprintf("product_enablement.%s must be a boolean or null", name),
-				"Use a literal boolean or null before migrating.")
-			continue
-		}
-		rule, found := productRules[name]
-		if !found {
-			issue(fmt.Sprintf("product_enablement.%s has no automatic import action", name),
-				"Migrate the unsupported product manually before moving the service.")
-			continue
-		}
+	emit := func(rule compatibility.Rule, enabled bool, attrs []rewrite.ProductAttribute) {
 		target := rule.Target + "." + key.name
 		if file := index.resources[module][target]; file != "" {
 			issue(fmt.Sprintf("standalone product %s already exists in %s", target, file),
@@ -175,11 +155,67 @@ func compileSimpleProducts(key resourceKey, actions []selectedAction, index modu
 		}
 		edits = append(edits, rewrite.AddSimpleProduct{
 			File: migrationFile, TypeName: rule.Target, Name: key.name,
-			ServiceName: key.name, ProviderRef: providerRef, Enabled: value.True(),
+			ServiceName: key.name, ProviderRef: providerRef, Enabled: enabled, Attributes: attrs,
 		}, rewrite.AddImport{
 			File: migrationFile, To: target,
 			IDExpression: "fastly_service_cdn_auto." + key.name + ".id",
 		})
+	}
+
+	for _, name := range names {
+		attr := product.Body.Attributes[name]
+		value, ds := attr.Expr.Value(nil)
+		if ds.HasErrors() || !value.IsKnown() {
+			issue(fmt.Sprintf("product_enablement.%s cannot be determined statically", name),
+				"Use literal true, false or null before migrating; unknown values may enable products unexpectedly.")
+			continue
+		}
+		if value.IsNull() {
+			continue // Absent product: do not invent a resource or an import.
+		}
+		if value.Type() != cty.Bool {
+			issue(fmt.Sprintf("product_enablement.%s must be a boolean or null", name),
+				"Use a literal boolean or null before migrating.")
+			continue
+		}
+		rule, found := productRules[name]
+		if !found {
+			issue(fmt.Sprintf("product_enablement.%s has no automatic import action", name),
+				"Migrate the unsupported product manually before moving the service.")
+			continue
+		}
+		emit(rule, value.True(), nil)
+	}
+	seen := make(map[string]bool)
+	for _, nested := range product.Body.Blocks {
+		name := nested.Type
+		spec, known := configurableProducts[name]
+		if !known {
+			issue(fmt.Sprintf("product_enablement.%s has no automatic import action", name),
+				"Migrate the unsupported product manually before moving the service.")
+			continue
+		}
+		if seen[name] {
+			issue(fmt.Sprintf("product_enablement has multiple %s blocks", name), "Keep a single block per product.")
+			continue
+		}
+		seen[name] = true
+		if len(nested.Labels) != 0 || len(nested.Body.Blocks) != 0 {
+			issue(fmt.Sprintf("product_enablement.%s contains unsupported nested configuration", name),
+				"Use a plain block with literal attributes.")
+			continue
+		}
+		rule, found := productRules[name]
+		if !found {
+			issue(fmt.Sprintf("product_enablement.%s has no automatic import action", name),
+				"Migrate the unsupported product manually before moving the service.")
+			continue
+		}
+		enabled, attrs, ok := spec.literals(nested, name, issue)
+		if !ok {
+			continue
+		}
+		emit(rule, enabled, attrs)
 	}
 	// Even an empty/null-only aggregate block must go: _auto has no such block.
 	// The rewrite edit itself detects comments and other unsafe source shapes.
@@ -205,4 +241,63 @@ func migrationFileForModule(module string) string {
 		return "migration.tf"
 	}
 	return module + "/migration.tf"
+}
+
+// configurableProduct describes the settings, besides enabled, copied from a
+// legacy block to the standalone resource, in output order.
+type configurableProduct struct {
+	attrs []string
+	kinds map[string]cty.Type
+}
+
+var configurableProducts = map[string]configurableProduct{
+	"bot_management":  {attrs: []string{"contentguard"}, kinds: map[string]cty.Type{"contentguard": cty.String}},
+	"ddos_protection": {attrs: []string{"mode"}, kinds: map[string]cty.Type{"mode": cty.String}},
+	"ngwaf": {
+		attrs: []string{"workspace_id", "traffic_ramp"},
+		kinds: map[string]cty.Type{"workspace_id": cty.String, "traffic_ramp": cty.Number},
+	},
+}
+
+// literals returns the static settings of one configurable product block.
+// Anything not statically known is refused: guessing could enable, relink or
+// reconfigure a live product.
+func (c configurableProduct) literals(block *hclsyntax.Block, name string, issue func(message, remediation string)) (enabled bool, attrs []rewrite.ProductAttribute, ok bool) {
+	ok = true
+	for attrName := range block.Body.Attributes {
+		if _, known := c.kinds[attrName]; !known && attrName != "enabled" {
+			issue(fmt.Sprintf("product_enablement.%s.%s is not supported", name, attrName),
+				"Remove the attribute or migrate this product manually.")
+			ok = false
+		}
+	}
+	enabledAttr := block.Body.Attributes["enabled"]
+	if enabledAttr == nil {
+		issue(fmt.Sprintf("product_enablement.%s.enabled is required", name), "Set enabled to a literal boolean.")
+		return false, nil, false
+	}
+	value, ds := enabledAttr.Expr.Value(nil)
+	if ds.HasErrors() || !value.IsKnown() || value.IsNull() || value.Type() != cty.Bool {
+		issue(fmt.Sprintf("product_enablement.%s.enabled must be a literal boolean", name),
+			"Use literal true or false before migrating; unknown values may enable products unexpectedly.")
+		return false, nil, false
+	}
+	enabled = value.True()
+	for _, attrName := range c.attrs {
+		attr := block.Body.Attributes[attrName]
+		if attr == nil {
+			continue
+		}
+		value, ds := attr.Expr.Value(nil)
+		if ds.HasErrors() || !value.IsKnown() || value.IsNull() || value.Type() != c.kinds[attrName] {
+			issue(fmt.Sprintf("product_enablement.%s.%s must be a literal %s", name, attrName, c.kinds[attrName].FriendlyName()),
+				"Use a literal value before migrating so the setting is preserved exactly.")
+			ok = false
+			continue
+		}
+		attrs = append(attrs, rewrite.ProductAttribute{
+			Name: attrName, Value: strings.TrimSpace(string(hclwrite.TokensForValue(value).Bytes())),
+		})
+	}
+	return enabled, attrs, ok
 }

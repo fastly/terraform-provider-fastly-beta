@@ -231,7 +231,7 @@ func testMoveLegacyServiceVCLStateWithSimpleProducts(
 	}
 }
 
-func TestMoveLegacyServiceVCLStateRejectsConfigurableProductEnablement(t *testing.T) {
+func TestMoveLegacyServiceVCLStateAllowsConfigurableProductEnablement(t *testing.T) {
 	t.Parallel()
 
 	for _, productName := range legacyServiceVCLConfigurableProductNames {
@@ -251,8 +251,19 @@ func TestMoveLegacyServiceVCLStateRejectsConfigurableProductEnablement(t *testin
 			}
 
 			mover.StateMover(ctx, req, &resp)
-			if !resp.Diagnostics.HasError() {
-				t.Fatalf("state mover accepted legacy configurable product %q, want an error", productName)
+			if resp.Diagnostics.HasError() {
+				t.Fatalf("state mover rejected legacy configurable product %q: %v", productName, resp.Diagnostics)
+			}
+			if got := len(resp.Diagnostics); got != 1 {
+				t.Fatalf("state mover returned %d diagnostics, want 1 standalone-resource warning: %v", got, resp.Diagnostics)
+			}
+
+			var gotID types.String
+			if diags := resp.TargetState.GetAttribute(ctx, path.Root("id"), &gotID); diags.HasError() {
+				t.Fatalf("GetAttribute(id) returned diagnostics: %v", diags)
+			}
+			if gotID.ValueString() != "SID123" {
+				t.Errorf("id = %q, want SID123", gotID.ValueString())
 			}
 		})
 	}
@@ -290,7 +301,7 @@ func TestMoveLegacyServiceVCLStateRejectsMultipleProductEnablementElements(t *te
 	}
 }
 
-func TestInspectLegacySimpleProductAttributesRejectsUnknownProduct(t *testing.T) {
+func TestInspectLegacyProductAttributesRejectsUnknownProduct(t *testing.T) {
 	t.Parallel()
 
 	attributes := make(map[string]attr.Value, len(legacyServiceVCLSimpleProductNames)+len(legacyServiceVCLConfigurableProductNames)+2)
@@ -305,7 +316,7 @@ func TestInspectLegacySimpleProductAttributesRejectsUnknownProduct(t *testing.T)
 
 	attributes["future_product"] = types.BoolValue(true)
 
-	supported, _ := inspectLegacySimpleProductAttributes(attributes)
+	supported, _ := inspectLegacyProductAttributes(attributes)
 	if supported {
 		t.Fatal("legacy product enablement inspection accepted an unknown product attribute, want rejection")
 	}
