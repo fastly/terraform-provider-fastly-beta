@@ -14,6 +14,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/analyze"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/compatibility"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/rewrite"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/testutil"
 )
 
 func fixture(t *testing.T, path string) []byte {
@@ -62,7 +63,10 @@ func writeFixtureConfig(dir, file, source string) error {
 		_ = f.Close()
 		return err
 	}
-	return f.Close()
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return testutil.SeedLegacyLockfile(dir)
 }
 
 func TestWriteFixtureConfigCreatesMissingRoot(t *testing.T) {

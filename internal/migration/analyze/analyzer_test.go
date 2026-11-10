@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/compatibility"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/testutil"
 )
 
 func TestAnalyzeSupportedConfiguration(t *testing.T) {
@@ -869,6 +870,9 @@ func writeFile(t *testing.T, dir, name, content string) {
 	}
 	if err := os.WriteFile(path, []byte(strings.TrimSpace(content)+"\n"), 0o600); err != nil {
 		t.Fatalf("WriteFile(): %v", err)
+	}
+	if err := testutil.SeedLegacyLockfile(dir); err != nil {
+		t.Fatalf("SeedLegacyLockfile(): %v", err)
 	}
 }
 

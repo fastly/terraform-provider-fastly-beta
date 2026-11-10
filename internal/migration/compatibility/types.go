@@ -104,6 +104,10 @@ type Rule struct {
 	State                StateStrategy
 	ImportIdentity       ImportIdentity
 	SourceSchemaVersions []int64
-	ProviderPrerequisite string
-	Notes                string
+	// MinSourceProviderVersion is the first legacy provider release that writes state at one of SourceSchemaVersions.
+	MinSourceProviderVersion string
+	// MaxSourceProviderVersion is the exclusive upper bound: 20.0.0 is the first release of the dual-model provider, not a legacy source.
+	MaxSourceProviderVersion string
+	ProviderPrerequisite     string
+	Notes                    string
 }

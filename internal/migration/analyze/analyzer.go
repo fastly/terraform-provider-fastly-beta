@@ -91,6 +91,7 @@ func (a *Analyzer) Analyze(ctx context.Context, workingDir string) (Result, erro
 		a.analyzeFile(state, file)
 	}
 	a.findReferences(state)
+	a.checkSourceProviderVersion(state)
 
 	state.result.sort()
 	return state.result, nil

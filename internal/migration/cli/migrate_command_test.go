@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	migrationmigrate "github.com/fastly/terraform-provider-fastly-beta/internal/migration/migrate"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/testutil"
 )
 
 // privateBackupDir makes backup root permissions explicit. Test temporary
@@ -33,7 +34,7 @@ func TestMigrateDryRunCommandEndToEndDoesNotWrite(t *testing.T) {
 }
 `)
 	path := filepath.Join(dir, "main.tf")
-	if err := os.WriteFile(path, before, 0o600); err != nil {
+	if err := writeConfigFile(path, before); err != nil {
 		t.Fatal(err)
 	}
 	var stdout, stderr bytes.Buffer
@@ -75,7 +76,7 @@ func TestMigrateDryRunReturnsBlockerExitCodeWithoutPartialDiff(t *testing.T) {
   }
 }
 `)
-	if err := os.WriteFile(filepath.Join(dir, "main.tf"), input, 0o600); err != nil {
+	if err := writeConfigFile(filepath.Join(dir, "main.tf"), input); err != nil {
 		t.Fatal(err)
 	}
 	var stdout bytes.Buffer
@@ -210,7 +211,7 @@ func TestMigrateWriteEndToEndAndNoOpRerun(t *testing.T) {
 }
 `)
 	path := filepath.Join(dir, "main.tf")
-	if err := os.WriteFile(path, before, 0o600); err != nil {
+	if err := writeConfigFile(path, before); err != nil {
 		t.Fatal(err)
 	}
 	var stdout, stderr bytes.Buffer
@@ -264,7 +265,7 @@ func TestMigrateWriteBlockedNeverCreatesBackupOrWrites(t *testing.T) {
 }
 `)
 	path := filepath.Join(dir, "main.tf")
-	if err := os.WriteFile(path, input, 0o600); err != nil {
+	if err := writeConfigFile(path, input); err != nil {
 		t.Fatal(err)
 	}
 	var stdout bytes.Buffer
@@ -292,7 +293,7 @@ func TestMigrateWritePreviewOutputFailureDoesNotWrite(t *testing.T) {
 	dir, backups := t.TempDir(), privateBackupDir(t)
 	input := []byte("resource \"fastly_service_vcl\" \"demo\" {\n  name = \"demo\"\n}\n")
 	path := filepath.Join(dir, "main.tf")
-	if err := os.WriteFile(path, input, 0o600); err != nil {
+	if err := writeConfigFile(path, input); err != nil {
 		t.Fatal(err)
 	}
 	cmd := NewCommand(Config{Writer: failingWriter{}, ErrWriter: io.Discard})
@@ -317,7 +318,7 @@ func TestMigrateFlagConflicts(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "main.tf")
-	if err := os.WriteFile(path, []byte("resource \"fastly_service_vcl\" \"demo\" {\n  name = \"demo\"\n}\n"), 0o600); err != nil {
+	if err := writeConfigFile(path, []byte("resource \"fastly_service_vcl\" \"demo\" {\n  name = \"demo\"\n}\n")); err != nil {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct {
@@ -382,7 +383,7 @@ func TestMigrateWriteStreamsPreviewBeforeApply(t *testing.T) {
   name = "demo"
 }
 `)
-	if err := os.WriteFile(filepath.Join(dir, "main.tf"), before, 0o600); err != nil {
+	if err := writeConfigFile(filepath.Join(dir, "main.tf"), before); err != nil {
 		t.Fatal(err)
 	}
 	writer := &countingOutputWriter{}
@@ -413,7 +414,7 @@ func TestMigrateWriteRejectsShortPreviewOutputWithoutWriting(t *testing.T) {
 	dir, backups := t.TempDir(), privateBackupDir(t)
 	path := filepath.Join(dir, "main.tf")
 	before := []byte("resource \"fastly_service_vcl\" \"demo\" {\n  name = \"demo\"\n}\n")
-	if err := os.WriteFile(path, before, 0o600); err != nil {
+	if err := writeConfigFile(path, before); err != nil {
 		t.Fatal(err)
 	}
 	cmd := NewCommand(Config{Writer: shortOutputWriter{}, ErrWriter: io.Discard})
@@ -429,5 +430,44 @@ func TestMigrateWriteRejectsShortPreviewOutputWithoutWriting(t *testing.T) {
 	}
 	if _, statErr := os.Stat(filepath.Join(backups, "backups")); !errors.Is(statErr, os.ErrNotExist) {
 		t.Fatal("short preview output initialized backups")
+	}
+}
+
+func writeConfigFile(path string, data []byte) error {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return err
+	}
+	return testutil.SeedLegacyLockfile(filepath.Dir(path))
+}
+
+func TestMigrateWriteBlockedByMissingLegacyLockfileWritesNothing(t *testing.T) {
+	t.Parallel()
+	dir, backups := t.TempDir(), privateBackupDir(t)
+	path := filepath.Join(dir, "main.tf")
+	before := []byte("resource \"fastly_service_vcl\" \"demo\" {\n  name = \"demo\"\n}\n")
+	if err := os.WriteFile(path, before, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, mode := range []string{"--dry-run", "--write"} {
+		args := []string{commandName, "migrate", mode}
+		if mode == "--write" {
+			args = append(args, "--backup-dir", backups)
+		}
+		var stdout, stderr bytes.Buffer
+		err := NewCommand(Config{Writer: &stdout, ErrWriter: &stderr}).Run(context.Background(), append(args, dir))
+		var exit exitError
+		if !errors.As(err, &exit) || exit.code != exitCodeAnalysisBlocked {
+			t.Fatalf("%s error = %v, want exit code %d", mode, err, exitCodeAnalysisBlocked)
+		}
+		if !strings.Contains(stdout.String(), ".terraform.lock.hcl is missing") {
+			t.Fatalf("%s output missing prerequisite diagnostic:\n%s", mode, stdout.String())
+		}
+	}
+	after, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(after, before) {
+		t.Fatalf("configuration changed: %v\n%s", err, after)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "migration.tf")); !os.IsNotExist(err) {
+		t.Fatalf("migration.tf created: %v", err)
 	}
 }
