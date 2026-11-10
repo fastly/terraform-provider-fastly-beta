@@ -132,7 +132,7 @@ func (e EnsureProviderRequirement) apply(source []byte, filename string) ([]byte
 	}
 	if required != nil {
 		if required.Body.Attributes["fastly"] != nil {
-			return nil, fmt.Errorf("required_providers.fastly already exists")
+			return nil, fmt.Errorf("%s: required_providers.fastly already exists; review the existing declaration instead of inserting a duplicate", filename)
 		}
 		pos, snippet, err := insertBlockLines(source, required.Range().End.Byte-1,
 			[]string{

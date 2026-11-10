@@ -112,3 +112,25 @@ provider "aws" {
 		t.Fatalf("legacy provider attribute names remain:\n%s", after)
 	}
 }
+
+func TestEnsureProviderRequirementReportsExistingDeclarationFile(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	const existing = `terraform {
+  required_providers {
+    fastly = {
+      source  = "fastly/fastly"
+      version = "~> 9.0"
+    }
+  }
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "main.tf"), []byte(existing), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := Build(context.Background(), dir, EnsureProviderRequirement{File: "main.tf"})
+	if err == nil || !strings.Contains(err.Error(), "main.tf: required_providers.fastly already exists") ||
+		!strings.Contains(err.Error(), "review the existing declaration") {
+		t.Fatalf("expected contextual existing-requirement error, got %v", err)
+	}
+}
