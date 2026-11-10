@@ -23,7 +23,7 @@ v0, which the mover rejects, so **9.1.0 is a technically necessary floor** for
 Evidence is the released provider source at each tag (`gh api` against
 `fastly/terraform-provider-fastly`), not recorded state files. The boundary is
 exercised by `analyze/source_version_test.go` (`8.8.0`, `9.0.0` blocked;
-`9.1.0`, `9.8.0`, `10.1.0` accepted).
+`9.1.0`, `9.8.0`, `10.1.0`, `19.9.9` accepted; `20.0.0`, `20.1.0` blocked).
 
 `fastly_service_compute` is blocked separately in the registry and carries no
 source-release floor here.
@@ -36,9 +36,12 @@ One read-only check runs inside `analyze.Analyzer.Analyze`, which `analyze`,
 `registry.terraform.io/fastly/fastly` entry of `.terraform.lock.hcl` in the
 selected root.
 
-- Lockfile version `>= 9.1.0`: no finding.
+- Lockfile version `>= 9.1.0, < 20.0.0` (`MaxSourceProviderVersion` is exclusive;
+  20.0.0 is the first dual-model GA release): no finding.
 - Lockfile version `< 9.1.0`: blocking finding with upgrade remediation. If a
   `required_providers` constraint excludes 9.1.0 the remediation says to relax it.
+- Lockfile version `>= 20.0.0`: blocking finding; that release is the migration
+  target, not a legacy source. Target-provider requirements are CDTOOL-1865.
 - Lockfile missing, unreadable, malformed, or without a usable legacy entry:
   blocking prerequisite finding (initialize with the legacy provider, keep the
   lockfile, do not use `terraform init -upgrade`).

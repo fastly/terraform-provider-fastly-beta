@@ -20,7 +20,7 @@ const (
 // The lockfile is only a selection record: it does not prove which release last
 // wrote the state, and a required_providers range proves nothing.
 func (a *Analyzer) checkSourceProviderVersion(state *analysisState) {
-	floor, rule := a.sourceVersionFloor(state)
+	floor, ceiling, rule := a.sourceVersionRange(state)
 	if floor == nil {
 		return
 	}
@@ -34,9 +34,9 @@ func (a *Analyzer) checkSourceProviderVersion(state *analysisState) {
 			RuleID:   rule,
 			Range:    fileStartRange(lockPath),
 			Message:  fmt.Sprintf("The legacy fastly/fastly provider version cannot be established: %s.", problem),
-			Remediation: fmt.Sprintf("Run terraform init with the legacy provider (%s or newer) and keep the resulting %s "+
+			Remediation: fmt.Sprintf("Run terraform init with the legacy provider (%s) and keep the resulting %s "+
 				"before migrating. Do not use terraform init -upgrade for this check. Then run terraform apply -refresh-only "+
-				"so the state is persisted at the schema this migration requires.", floor, lockfileName),
+				"so the state is persisted at the schema this migration requires.", versionRange(floor, ceiling), lockfileName),
 		})
 	case selected.LessThan(floor):
 		state.result.Findings = append(state.result.Findings, Finding{
@@ -45,14 +45,29 @@ func (a *Analyzer) checkSourceProviderVersion(state *analysisState) {
 			Range:    fileStartRange(lockPath),
 			Message: fmt.Sprintf("The selected legacy fastly/fastly provider %s is older than %s, which is the first release "+
 				"that persists the fastly_service_vcl state schema this migration supports.", selected, floor),
-			Remediation: upgradeRemediation(state, floor),
+			Remediation: upgradeRemediation(state, floor, ceiling),
+		})
+	case ceiling != nil && !selected.LessThan(ceiling):
+		state.result.Findings = append(state.result.Findings, Finding{
+			Severity: SeverityError,
+			RuleID:   rule,
+			Range:    fileStartRange(lockPath),
+			Message: fmt.Sprintf("The selected fastly/fastly provider %s is not a legacy SDKv2 release: %s and newer is the "+
+				"dual-model provider, which is the migration target rather than a source.", selected, ceiling),
+			Remediation: fmt.Sprintf("Constrain the legacy provider to %s, run terraform init -upgrade intentionally to select it, "+
+				"run terraform apply -refresh-only, and keep the updated %s before migrating.", versionRange(floor, ceiling), lockfileName),
 		})
 	}
 }
 
-func (a *Analyzer) sourceVersionFloor(state *analysisState) (*version.Version, string) {
-	var floor *version.Version
-	var ruleID string
+func versionRange(floor, ceiling *version.Version) string {
+	if ceiling == nil {
+		return fmt.Sprintf("%s or newer", floor)
+	}
+	return fmt.Sprintf(">= %s, < %s", floor, ceiling)
+}
+
+func (a *Analyzer) sourceVersionRange(state *analysisState) (floor, ceiling *version.Version, ruleID string) {
 	for _, action := range state.result.Actions {
 		rule, ok := a.registry.RuleByID(action.RuleID)
 		if !ok || rule.MinSourceProviderVersion == "" {
@@ -65,13 +80,19 @@ func (a *Analyzer) sourceVersionFloor(state *analysisState) (*version.Version, s
 		if floor == nil || v.GreaterThan(floor) {
 			floor, ruleID = v, rule.ID
 		}
+		if rule.MaxSourceProviderVersion == "" {
+			continue
+		}
+		if m, err := version.NewSemver(rule.MaxSourceProviderVersion); err == nil && (ceiling == nil || m.LessThan(ceiling)) {
+			ceiling = m
+		}
 	}
-	return floor, ruleID
+	return floor, ceiling, ruleID
 }
 
-func upgradeRemediation(state *analysisState, floor *version.Version) string {
-	text := fmt.Sprintf("Upgrade to fastly/fastly %s or newer using the legacy provider, run terraform apply -refresh-only, "+
-		"and keep the updated %s before migrating.", floor, lockfileName)
+func upgradeRemediation(state *analysisState, floor, ceiling *version.Version) string {
+	text := fmt.Sprintf("Constrain the legacy fastly/fastly provider to %s, run terraform init -upgrade intentionally to select it, "+
+		"run terraform apply -refresh-only, and keep the updated %s before migrating.", versionRange(floor, ceiling), lockfileName)
 	for _, requirement := range state.result.ProviderRequirements {
 		if requirement.Version == "" {
 			continue

@@ -13,6 +13,7 @@ var resourceRules = []Rule{
 		ImportIdentity:           ImportNone,
 		SourceSchemaVersions:     []int64{1},
 		MinSourceProviderVersion: "9.1.0",
+		MaxSourceProviderVersion: "20.0.0",
 		Notes:                    "Validated with Terraform moved blocks and Framework ResourceWithMoveState. Schema v1 is the supported persisted legacy state.",
 	},
 	{

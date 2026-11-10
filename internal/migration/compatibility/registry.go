@@ -182,10 +182,23 @@ func validateRules(rules []Rule) error {
 			}
 		}
 
+		var minVersion, maxVersion *version.Version
 		if rule.MinSourceProviderVersion != "" {
-			if _, err := version.NewSemver(rule.MinSourceProviderVersion); err != nil {
+			v, err := version.NewSemver(rule.MinSourceProviderVersion)
+			if err != nil {
 				errs = append(errs, fmt.Errorf("%s: invalid minimum source provider version %q", prefix, rule.MinSourceProviderVersion))
 			}
+			minVersion = v
+		}
+		if rule.MaxSourceProviderVersion != "" {
+			v, err := version.NewSemver(rule.MaxSourceProviderVersion)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s: invalid maximum source provider version %q", prefix, rule.MaxSourceProviderVersion))
+			}
+			maxVersion = v
+		}
+		if minVersion != nil && maxVersion != nil && !maxVersion.GreaterThan(minVersion) {
+			errs = append(errs, fmt.Errorf("%s: maximum source provider version %q must be greater than minimum %q", prefix, rule.MaxSourceProviderVersion, rule.MinSourceProviderVersion))
 		}
 
 		routeKey := strings.Join([]string{

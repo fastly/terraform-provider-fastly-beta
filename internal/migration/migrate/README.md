@@ -42,12 +42,17 @@ the corresponding dedicated migration tickets. The write command does
 Before migrating `fastly_service_vcl`, prepare the project as follows. The same
 check runs for `analyze`, `migrate --dry-run` and `migrate --write`.
 
-1. Use legacy `fastly/fastly` **9.1.0 or newer** (the first release that persists
-   the supported `fastly_service_vcl` state schema 1).
+1. Use legacy `fastly/fastly` **`>= 9.1.0, < 20.0.0`**. 9.1.0 is the first
+   release that writes the supported `fastly_service_vcl` state schema 1;
+   20.0.0 is the first release of the dual-model provider, which is the
+   migration target, not a source.
 2. Run `terraform init` with the legacy provider and keep the resulting
-   `.terraform.lock.hcl` in the project root. Do not rely on a version range such
-   as `~> 9.0`, which can allow older releases, and do not run
-   `terraform init -upgrade` for this purpose.
+   `.terraform.lock.hcl` in the project root. If your lockfile selects a version
+   below 9.1.0, constrain the provider to `>= 9.1.0, < 20.0.0` in
+   `required_providers` and run `terraform init -upgrade` yourself to select a
+   supported release. The migration CLI never runs Terraform or upgrades the
+   provider for you. Do not rely on a loose range such as `~> 9.0`, which can
+   allow older releases.
 3. Run `terraform apply -refresh-only` with that provider so the state is
    persisted at schema 1.
 4. Then migrate; update the provider requirement to the target GA version
@@ -55,7 +60,7 @@ check runs for `analyze`, `migrate --dry-run` and `migrate --write`.
 
 The lockfile records the selected release only. It is **not** evidence of which
 provider version last wrote the state. If the lockfile is missing, malformed, or
-selects a release below 9.1.0, the check blocks with exit code 3 and no diff or
+selects a release outside that range, the check blocks with exit code 3 and no diff or
 files are written. See `docs/design/source-provider-version-compatibility.md`.
 
 ## Write safety and backups
