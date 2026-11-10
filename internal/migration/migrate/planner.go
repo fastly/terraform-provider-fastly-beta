@@ -110,16 +110,6 @@ func (p *Planner) Plan(ctx context.Context, path string) (Result, error) {
 			})
 		}
 	}
-	for _, requirement := range analysis.ProviderRequirements {
-		if len(analysis.Actions) > 0 && requirement.Version != "" {
-			result.Issues = append(result.Issues, Issue{
-				File:    displayPath(analysis.Root, requirement.Range.Filename),
-				Message: fmt.Sprintf("Fastly provider version constraint %q has not been migrated", requirement.Version),
-				Remediation: "Update the provider requirement to a validated dual-model version; " +
-					"automatic provider constraint rewriting is a separate migration task.",
-			})
-		}
-	}
 	for _, reference := range analysis.References {
 		result.Issues = append(result.Issues, Issue{
 			File:    displayPath(analysis.Root, reference.Range.Filename),
@@ -169,7 +159,12 @@ func (p *Planner) Plan(ctx context.Context, path string) (Result, error) {
 		return keys[i].name < keys[j].name
 	})
 
+	// Provider requirements and credentials are part of the same immutable
+	// rewrite plan as service conversion. Never offer a partial preview.
+	providerEdits, providerIssues := compileProviderMigration(analysis, index)
+	result.Issues = append(result.Issues, providerIssues...)
 	var edits []rewrite.Edit
+	edits = append(edits, providerEdits...)
 	var moves []Move
 	for _, key := range keys {
 		if err := ctx.Err(); err != nil {

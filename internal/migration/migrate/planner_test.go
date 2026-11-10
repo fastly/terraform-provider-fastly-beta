@@ -374,7 +374,7 @@ output "id" {
   required_providers {
     fastly = {
       source = "fastly/fastly"
-      version = "~> 5.0"
+      version = "!= 20.0.0"
     }
   }
 }
@@ -382,7 +382,7 @@ resource "fastly_service_vcl" "demo" {
   name = "demo"
 }
 `,
-			want: "provider version constraint",
+			want: "version exclusions require manual review",
 		},
 		{
 			name: "null product block",

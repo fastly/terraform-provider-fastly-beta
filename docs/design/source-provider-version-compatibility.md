@@ -41,7 +41,8 @@ selected root.
 - Lockfile version `< 9.1.0`: blocking finding with upgrade remediation. If a
   `required_providers` constraint excludes 9.1.0 the remediation says to relax it.
 - Lockfile version `>= 20.0.0`: blocking finding; that release is the migration
-  target, not a legacy source. Target-provider requirements are CDTOOL-1865.
+  target, not a legacy source. CDTOOL-1865 rewrites the target provider
+  requirement only after source preflight succeeds.
 - Lockfile missing, unreadable, malformed, or without a usable legacy entry:
   blocking prerequisite finding (select a legacy release within `>= 9.1.0, < 20.0.0`
   with `terraform init`, or `terraform init -upgrade` run by the user; the CLI

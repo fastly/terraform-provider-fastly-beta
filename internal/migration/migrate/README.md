@@ -27,11 +27,15 @@ planner can produce a complete diff:
 - Registry-defined automatic removals, safe block renames and settings
   nesting are compiled using the existing rewrite primitives.
 - Local child modules and multiple `.tf` files are planned deterministically.
+- Legacy `fastly/fastly` requirements are updated to `>= 20.0.0` without
+  changing their provider source address. Missing requirements are added.
+- Supported provider arguments are renamed without changing values, aliases,
+  provider references, or unrelated providers.
 
 Any **unsupported** transformation blocks the *entire* plan without writing.
 This includes product enablement splits (even explicit `null`), direct
-references requiring rewrite, non-migrated provider constraints, remote module
-internals, blocked/unsupported provider mappings, and the current unsupported
+references requiring rewrite, ambiguous/exclusionary provider constraints,
+unsupported provider arguments, remote module internals, and the current unsupported
 nested object-attribute targets (`authentication`, `tls`,
 `ssl_client_secrets`) and computed-only rate-limiter ID. These remain for
 the corresponding dedicated migration tickets. The write command does
@@ -55,13 +59,46 @@ check runs for `analyze`, `migrate --dry-run` and `migrate --write`.
    allow older releases.
 3. Run `terraform apply -refresh-only` with that provider so the state is
    persisted at schema 1.
-4. Then migrate; update the provider requirement to the target GA version
-   afterwards (provider-requirement rewriting is a separate task).
+4. Run `fastly-tf-migrate analyze`, review `migrate --dry-run`, then
+   `migrate --write`. The CLI rewrites supported requirements to
+   `fastly/fastly >= 20.0.0` together with the service configuration.
+5. After reviewing the output, run `terraform init -upgrade` yourself to select
+   the GA provider, then review `terraform plan` before any apply.
 
 The lockfile records the selected release only. It is **not** evidence of which
 provider version last wrote the state. If the lockfile is missing, malformed, or
 selects a release outside that range, the check blocks with exit code 3 and no diff or
 files are written. See `docs/design/source-provider-version-compatibility.md`.
+
+## GA provider requirement and configuration migration (CDTOOL-1865)
+
+The first production dual-model release is **`fastly/fastly` v20.0.0**;
+the old SDKv2 implementation is renamed to `fastly/fastly-legacy`.
+The CLI preserves existing `source = "fastly/fastly"` addresses and
+replaces supported legacy version constraints such as `~> 9.0` with
+`>= 20.0.0`. Requirements in local child modules are updated separately.
+Missing `required_providers.fastly` declarations are inserted in the
+corresponding module (or its generated `migration.tf`).
+
+For each `provider "fastly"` block, including aliases, the CLI renames:
+`api_key` to `api_token`, and **literal absolute HTTPS**
+`base_url` to `api_endpoint`. Value expressions and comments are preserved.
+A dynamic or HTTP `base_url`, conflicting old/new attributes, unknown
+arguments, and legacy-only `force_http2`/`no_auth` arguments block the
+entire preview/write. Explicit provider-version exclusions and already
+GA-only constraints with user restrictions require manual review rather
+than silently discarding those restrictions.
+
+**Environment variables:** SDKv2 `FASTLY_API_KEY` is **not** consumed by
+the new provider: move credentials to `FASTLY_API_TOKEN` yourself.
+`FASTLY_API_URL` is unchanged. The CLI cannot update shell/CI secrets.
+`api_token` expressions are not interpreted. Review aliases and module
+provider mappings in the generated diff.
+
+No Terraform commands are run by the CLI. It does not modify
+`.terraform.lock.hcl` or Terraform state. Keep a recovery copy of state,
+review the diff, install the GA provider with `terraform init -upgrade`,
+and verify the resulting `terraform plan` before applying changes.
 
 ## Write safety and backups
 
