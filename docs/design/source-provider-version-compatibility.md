@@ -1,4 +1,4 @@
-# Legacy SDKv2 source-version compatibility (CDTOOL-1914)
+# Legacy SDKv2 source-version compatibility
 
 ## Conclusion: go, with a minimum source release of `fastly/fastly` 9.1.0
 
@@ -41,7 +41,8 @@ selected root.
 - Lockfile version `< 9.1.0`: blocking finding with upgrade remediation. If a
   `required_providers` constraint excludes 9.1.0 the remediation says to relax it.
 - Lockfile version `>= 20.0.0`: blocking finding; that release is the migration
-  target, not a legacy source. Target-provider requirements are CDTOOL-1865.
+  target, not a legacy source. The migration CLI rewrites the target provider
+  requirement only after source preflight succeeds.
 - Lockfile missing, unreadable, malformed, or without a usable legacy entry:
   blocking prerequisite finding (select a legacy release within `>= 9.1.0, < 20.0.0`
   with `terraform init`, or `terraform init -upgrade` run by the user; the CLI
@@ -56,6 +57,6 @@ never treated as the selected version.
 
 The lockfile records the release Terraform selected at `init`. It does not prove
 which release last wrote the state, so a user who upgraded the lockfile without
-refreshing state still has v0 state. The persisted schema is checked by the
-separate safety-gates ticket. Remote state retrieval and state parsing are out of
-scope here.
+refreshing state can still leave v0 state. This lockfile check does not verify
+the persisted state schema; that requires a separate safety check. Remote state
+retrieval and state parsing are out of scope here.

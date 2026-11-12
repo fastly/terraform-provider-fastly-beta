@@ -254,6 +254,71 @@ func TestMigrateWriteEndToEndAndNoOpRerun(t *testing.T) {
 	}
 }
 
+func TestMigrateWriteUpgradesProviderRequirementsAndConfiguration(t *testing.T) {
+	t.Parallel()
+	dir, backups := t.TempDir(), privateBackupDir(t)
+	before := []byte(`terraform {
+  required_providers {
+    fastly = {
+      source  = "fastly/fastly"
+      version = "~> 9.0"
+    }
+  }
+}
+provider "fastly" {
+  alias = "edge"
+  api_key = var.legacy_key
+  base_url = "https://api.fastly.com"
+}
+resource "fastly_service_vcl" "demo" {
+  provider = fastly.edge
+  name = "demo"
+}
+`)
+	path := filepath.Join(dir, "main.tf")
+	if err := writeConfigFile(path, before); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	cmd := NewCommand(Config{Writer: &out, ErrWriter: io.Discard})
+	if err := cmd.Run(context.Background(),
+		[]string{commandName, "migrate", "--write", "--backup-dir", backups, dir}); err != nil {
+		t.Fatalf("write failed: %v\n%s", err, out.String())
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		`source  = "fastly/fastly"`,
+		`version = ">= 20.0.0"`,
+		`api_token = var.legacy_key`,
+		`api_endpoint = "https://api.fastly.com"`,
+		`provider = fastly.edge`,
+		`resource "fastly_service_cdn_auto"`,
+	} {
+		if !bytes.Contains(after, []byte(expected)) {
+			t.Errorf("missing %q in written configuration:\n%s", expected, after)
+		}
+	}
+	if bytes.Contains(after, []byte(`version = "~> 9.0"`)) ||
+		bytes.Contains(after, []byte(`api_key =`)) {
+		t.Fatalf("legacy provider settings remain:\n%s", after)
+	}
+	// The original lockfile is a read-only source prerequisite, never a
+	// target-version rewrite or a Terraform installation operation.
+	lock, err := os.ReadFile(filepath.Join(dir, ".terraform.lock.hcl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(lock, []byte(`version = "9.1.0"`)) {
+		t.Fatalf("legacy lockfile modified: %s", lock)
+	}
+	if !strings.Contains(out.String(), "Migration complete:") {
+		t.Fatalf("missing success report: %s", out.String())
+	}
+}
+
 func TestMigrateWriteBlockedNeverCreatesBackupOrWrites(t *testing.T) {
 	t.Parallel()
 	dir, backups := t.TempDir(), privateBackupDir(t)
