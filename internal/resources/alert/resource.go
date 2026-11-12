@@ -61,6 +61,18 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		return
 	}
 
+	if !config.Source.IsUnknown() && len(config.Dimensions) == 1 {
+		d := config.Dimensions[0]
+		if err := validateDimensionsForSource(config.Source.ValueString(), d); err != nil {
+			resp.Diagnostics.AddAttributeError(path.Root("dimensions"), "Invalid Alert Configuration", err.Error())
+		}
+		if !config.ServiceID.IsUnknown() {
+			if err := validateServicesWithServiceID(config.ServiceID.ValueString(), d); err != nil {
+				resp.Diagnostics.AddAttributeError(path.Root("service_id"), "Invalid Alert Configuration", err.Error())
+			}
+		}
+	}
+
 	if config.Source.IsUnknown() || config.ServiceID.IsUnknown() {
 		return
 	}
