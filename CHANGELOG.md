@@ -4,7 +4,7 @@
 
 ### ENHANCEMENTS:
 
-- feat(migration): generate standalone CDN simple-product resources and service-ID imports from legacy product enablement
+- feat(migration): generate standalone CDN simple-product resources and service-ID imports from legacy product enablement ([#230](https://github.com/fastly/terraform-provider-fastly-beta/pull/230))
 
 ### BUG FIXES:
 
