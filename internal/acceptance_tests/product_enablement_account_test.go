@@ -87,7 +87,7 @@ func TestAccFastlyAccountProductEnablement(t *testing.T) {
 			accountProductTestsRan.Store(true)
 			registerAccountProductReEnable(t, tc)
 
-			resourceName := fmt.Sprintf("fastly_%s.test", tc.name)
+			resourceName := fmt.Sprintf("fastly_product_%s.test", tc.name)
 			disabled := false
 			enabled := true
 

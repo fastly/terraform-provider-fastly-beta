@@ -4,7 +4,7 @@
 
 ### ENHANCEMENTS:
 
-- feat(product-enablement): add `fastly_ai_accelerator`, `fastly_ai_runtime_control`, `fastly_domain_research` and `fastly_object_storage` resources for enabling account-level products
+- feat(product-enablement): add `fastly_product_ai_accelerator`, `fastly_product_ai_runtime_control`, `fastly_product_domain_research` and `fastly_product_object_storage` resources for enabling account-level products
 
 ### BUG FIXES:
 
