@@ -90,7 +90,6 @@ jobs:
           fi
 
           go mod edit -go="${LATEST}"
-          go mod tidy
 
           entry="- build(deps): upgrade Go from ${CURRENT} to ${LATEST}"
           ENTRY="${entry}" perl -0pi -e 's/^### Dependencies:\n/### Dependencies:\n\n$ENV{ENTRY}\n/m' CHANGELOG.md
@@ -98,7 +97,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "${branch}"
-          git add go.mod go.sum CHANGELOG.md
+          git add go.mod CHANGELOG.md
           git commit --message "build(deps): upgrade Go from ${CURRENT} to ${LATEST}"
 
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
