@@ -72,7 +72,7 @@ func TestMigrateDryRunReturnsBlockerExitCodeWithoutPartialDiff(t *testing.T) {
 	input := []byte(`resource "fastly_service_vcl" "demo" {
   name = "demo"
   product_enablement {
-    domain_inspector = true
+    domain_inspector = var.enabled
   }
 }
 `)
@@ -319,13 +319,95 @@ resource "fastly_service_vcl" "demo" {
 	}
 }
 
+func TestMigrateProductImportDryRunAndWrite(t *testing.T) {
+	t.Parallel()
+	dir, backups := t.TempDir(), privateBackupDir(t)
+	before := []byte(`terraform {
+  required_providers {
+    fastly = {
+      source = "fastly/fastly"
+      version = "~> 9.0"
+    }
+  }
+}
+provider "fastly" {}
+resource "fastly_service_vcl" "demo_service" {
+  name = "demo"
+  product_enablement {
+    domain_inspector = true
+    websockets = false
+  }
+}
+`)
+	path := filepath.Join(dir, "main.tf")
+	if err := writeConfigFile(path, before); err != nil {
+		t.Fatal(err)
+	}
+	lockBefore, err := os.ReadFile(filepath.Join(dir, ".terraform.lock.hcl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	cmd := NewCommand(Config{Writer: &output, ErrWriter: io.Discard})
+	if err := cmd.Run(context.Background(), []string{commandName, "migrate", "--dry-run", dir}); err != nil {
+		t.Fatalf("dry-run failed: %v, output: %s", err, output.String())
+	}
+	for _, expected := range []string{`fastly_service_product_domain_inspector`, `fastly_service_product_websockets`, `import {`, `moved {`} {
+		if !strings.Contains(output.String(), expected) {
+			t.Errorf("missing dry-run diff fragment %q", expected)
+		}
+	}
+	unchanged, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(unchanged, before) {
+		t.Fatal("dry-run changed main.tf")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "migration.tf")); !os.IsNotExist(err) {
+		t.Fatalf("dry-run wrote migration.tf: %v", err)
+	}
+	output.Reset()
+	cmd = NewCommand(Config{Writer: &output, ErrWriter: io.Discard})
+	if err := cmd.Run(context.Background(), []string{commandName, "migrate", "--write", "--backup-dir", backups, dir}); err != nil {
+		t.Fatalf("write failed: %v, output: %s", err, output.String())
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(after, []byte("product_enablement")) ||
+		!bytes.Contains(after, []byte(`resource "fastly_service_cdn_auto"`)) {
+		t.Fatalf("invalid rewritten service: %s", after)
+	}
+	generated, err := os.ReadFile(filepath.Join(dir, "migration.tf"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Count(generated, []byte("import {")) != 2 ||
+		!bytes.Contains(generated, []byte(`enabled    = false`)) ||
+		!bytes.Contains(generated, []byte(`id = fastly_service_cdn_auto.demo_service.id`)) {
+		t.Fatalf("expected both products imported, with disabled state preserved: %s", generated)
+	}
+	lockAfter, err := os.ReadFile(filepath.Join(dir, ".terraform.lock.hcl"))
+	if err != nil || !bytes.Equal(lockAfter, lockBefore) {
+		t.Fatal("CLI changed legacy provider lockfile")
+	}
+
+	output.Reset()
+	cmd = NewCommand(Config{Writer: &output, ErrWriter: io.Discard})
+	if err := cmd.Run(context.Background(), []string{commandName, "migrate", "--write", "--backup-dir", backups, dir}); err != nil {
+		t.Fatalf("second write failed: %v", err)
+	}
+	if !strings.Contains(output.String(), "Migration complete: no changes necessary.") {
+		t.Fatalf("second write not idempotent: %s", output.String())
+	}
+}
+
 func TestMigrateWriteBlockedNeverCreatesBackupOrWrites(t *testing.T) {
 	t.Parallel()
 	dir, backups := t.TempDir(), privateBackupDir(t)
 	input := []byte(`resource "fastly_service_vcl" "demo" {
   name = "demo"
   product_enablement {
-    domain_inspector = true
+    domain_inspector = var.enabled
   }
 }
 `)

@@ -216,14 +216,14 @@ func TestApplyRejectsBlockedAndForgedResults(t *testing.T) {
 	source := `resource "fastly_service_vcl" "demo" {
   name = "demo"
   product_enablement {
-    domain_inspector = true
+    domain_inspector = var.enabled
   }
 }
 `
 	writeConfig(t, dir, "main.tf", source)
 	result := newPlan(t, dir)
 	if !result.Blocked() {
-		t.Fatal("expected unsupported product split to block")
+		t.Fatal("expected unknown product enablement to block")
 	}
 	if _, err := result.Apply(context.Background(), backups); err == nil {
 		t.Fatal("applied blocked migration")

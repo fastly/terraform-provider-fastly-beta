@@ -72,7 +72,10 @@ func compileResource(
 		return actions[i].rule.Legacy < actions[j].rule.Legacy
 	})
 
+	productEdits, productIssues := compileSimpleProducts(key, actions, index)
+	issues = append(issues, productIssues...)
 	var edits []rewrite.Edit
+	edits = append(edits, productEdits...)
 	foundResource := false
 	for _, a := range actions {
 		rule := a.rule
@@ -103,7 +106,7 @@ func compileResource(
 				File: key.file, FromType: key.typ, ToType: rule.Target, Name: key.name,
 			})
 		case compatibility.ConstructProduct:
-			issue(a, fmt.Sprintf("product migration %s requires standalone resource and import generation", rule.Legacy))
+			// Compiled together by compileSimpleProducts so the aggregate is removed exactly once.
 		default:
 			issue(a, fmt.Sprintf("unrecognized compatibility rule kind %q", rule.Kind))
 		}

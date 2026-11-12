@@ -4,6 +4,7 @@
 
 ### ENHANCEMENTS:
 
+- feat(migration): generate standalone CDN simple-product resources and service-ID imports from legacy product enablement ([#230](https://github.com/fastly/terraform-provider-fastly-beta/pull/230))
 - feat(product-enablement): add `fastly_product_ai_accelerator`, `fastly_product_ai_runtime_control`, `fastly_product_domain_research` and `fastly_product_object_storage` resources for enabling account-level products
 
 ### BUG FIXES:
