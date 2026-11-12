@@ -1,6 +1,6 @@
 # `fastly-tf-migrate migrate` — preview and explicit write mode
 
-CDTOOL-1881 builds on the CDTOOL-1906 read-only planner. **Both commands
+The write mode builds on the read-only migration planner. **Both commands
 use the same compatibility-checked, immutable HCL rewrite plan.**
 
 ```console
@@ -70,7 +70,7 @@ provider version last wrote the state. If the lockfile is missing, malformed, or
 selects a release outside that range, the check blocks with exit code 3 and no diff or
 files are written. See `docs/design/source-provider-version-compatibility.md`.
 
-## GA provider requirement and configuration migration (CDTOOL-1865)
+## GA provider requirement and configuration migration
 
 The first production dual-model release is **`fastly/fastly` v20.0.0**;
 the old SDKv2 implementation is renamed to `fastly/fastly-legacy`.
@@ -135,7 +135,7 @@ For files that were **created**, the manifest sets `"existed": false`.
 filesystem.** A process kill, crash, or power failure can leave some files
 replaced and others unchanged. On an ordinary failure, the rewrite engine
 attempts to roll back; persistent backups are the recovery fallback.
-CDTOOL-1881 does **not** guarantee all-or-nothing replacement during a hard
+The write mode does **not** guarantee all-or-nothing replacement during a hard
 crash, and does not automatically restore files that might have been edited
 by another process.
 
