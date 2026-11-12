@@ -38,7 +38,10 @@ func (e RemoveProductEnablement) apply(source []byte, filename string) ([]byte, 
 	}
 	start, end := product.Range().Start.Byte, product.Range().End.Byte
 	if start < 0 || end > len(source) || end <= start || source[end-1] != '}' {
-		return nil, fmt.Errorf("cannot locate product_enablement block boundaries")
+		return nil, fmt.Errorf(
+			"cannot locate product_enablement block boundaries in %s (fastly_service_vcl.%s) at byte range [%d,%d)",
+			filename, e.ResourceName, start, end,
+		)
 	}
 	// Do not discard comments, even when they occur inside an empty or
 	// null-only product block. They may describe user intent.
