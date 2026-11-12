@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -297,4 +298,89 @@ func mustSet(t *testing.T, values ...string) types.Set {
 	s, diags := types.SetValue(types.StringType, elements)
 	require.False(t, diags.HasError())
 	return s
+}
+
+func TestDimensionsMap_services(t *testing.T) {
+	data := dimensionsMap(context.Background(), []DimensionsModel{{
+		Domains:  types.SetNull(types.StringType),
+		Origins:  types.SetNull(types.StringType),
+		Services: mustSet(t, "svc1", "svc2"),
+	}}, &diag.Diagnostics{})
+	assert.Equal(t, map[string][]string{"services": {"svc1", "svc2"}}, data)
+}
+
+func TestDimensionsMap_emptyServicesSentAsEmptyList(t *testing.T) {
+	data := dimensionsMap(context.Background(), []DimensionsModel{{
+		Domains:  types.SetNull(types.StringType),
+		Origins:  types.SetNull(types.StringType),
+		Services: mustSet(t),
+	}}, &diag.Diagnostics{})
+	assert.Equal(t, map[string][]string{"services": {}}, data)
+}
+
+func TestValidateDimensionsForSource(t *testing.T) {
+	null := types.SetNull(types.StringType)
+	cases := []struct {
+		name    string
+		source  string
+		dims    DimensionsModel
+		wantErr string
+	}{
+		{"stats with services", "stats", DimensionsModel{Domains: null, Origins: null, Services: mustSet(t, "a")}, ""},
+		{"stats with empty services", "stats", DimensionsModel{Domains: null, Origins: null, Services: mustSet(t)}, ""},
+		{"stats with domains", "stats", DimensionsModel{Domains: mustSet(t, "a"), Origins: null, Services: null}, badAlertDimensionsForStats},
+		{"domains with services", "domains", DimensionsModel{Domains: null, Origins: null, Services: mustSet(t, "a")}, badAlertDimensionsForDomains},
+		{"origins with services", "origins", DimensionsModel{Domains: null, Origins: null, Services: mustSet(t, "a")}, badAlertDimensionsForOrigins},
+		{"domains with domains", "domains", DimensionsModel{Domains: mustSet(t, "a"), Origins: null, Services: null}, ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := validateDimensionsForSource(c.source, c.dims)
+			if c.wantErr == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, c.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateServicesWithServiceID(t *testing.T) {
+	null := types.SetNull(types.StringType)
+	assert.EqualError(t, validateServicesWithServiceID("svc1", DimensionsModel{Services: mustSet(t)}), badAlertServicesWithServiceID)
+	assert.NoError(t, validateServicesWithServiceID("", DimensionsModel{Services: mustSet(t, "a")}))
+	assert.NoError(t, validateServicesWithServiceID("svc1", DimensionsModel{Services: null}))
+}
+
+func TestFlattenToModel_servicesDimension(t *testing.T) {
+	ad := &fastly.AlertDefinition{
+		ID:         "def123",
+		Name:       "my alert",
+		Source:     "stats",
+		Metric:     "status_5xx",
+		Dimensions: map[string][]string{"services": {"svc1", "svc2"}},
+	}
+	m, diags := FlattenToModel(context.Background(), ad)
+	require.False(t, diags.HasError())
+	require.Len(t, m.Dimensions, 1)
+
+	var got []string
+	require.False(t, m.Dimensions[0].Services.ElementsAs(context.Background(), &got, false).HasError())
+	assert.ElementsMatch(t, []string{"svc1", "svc2"}, got)
+	assert.True(t, m.Dimensions[0].Domains.IsNull())
+}
+
+func TestFlattenToModel_emptyServicesDimensionIsEmptySet(t *testing.T) {
+	ad := &fastly.AlertDefinition{
+		ID:         "def123",
+		Name:       "my alert",
+		Source:     "stats",
+		Metric:     "status_5xx",
+		Dimensions: map[string][]string{"services": {}},
+	}
+	m, diags := FlattenToModel(context.Background(), ad)
+	require.False(t, diags.HasError())
+	require.Len(t, m.Dimensions, 1)
+	assert.False(t, m.Dimensions[0].Services.IsNull())
+	assert.Empty(t, m.Dimensions[0].Services.Elements())
 }

@@ -22,6 +22,10 @@ const (
 	maxConfiguredDescription = apiDescriptionLimit - len(managedByTerraform) - 1
 
 	badAlertSourceServiceIDConfig = "empty `service_id` is only supported for `stats` as a source"
+	badAlertDimensionsForDomains  = "only `dimensions.domains` is valid when `source` is `domains`"
+	badAlertDimensionsForOrigins  = "only `dimensions.origins` is valid when `source` is `origins`"
+	badAlertDimensionsForStats    = "only `dimensions.services` is valid when `source` is `stats`"
+	badAlertServicesWithServiceID = "`dimensions.services` cannot be combined with `service_id`; omit `service_id` to monitor a set of services individually"
 )
 
 var (
@@ -43,8 +47,9 @@ type Model struct {
 }
 
 type DimensionsModel struct {
-	Domains types.Set `tfsdk:"domains"`
-	Origins types.Set `tfsdk:"origins"`
+	Domains  types.Set `tfsdk:"domains"`
+	Origins  types.Set `tfsdk:"origins"`
+	Services types.Set `tfsdk:"services"`
 }
 
 type EvaluationStrategyModel struct {
@@ -81,7 +86,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 		},
 		"service_id": schema.StringAttribute{
 			Optional:    true,
-			Description: "The service which the alert monitors. Optional when using `stats` as the `source`.",
+			Description: "The service which the alert monitors. Optional when using `stats` as the `source`. Cannot be combined with `dimensions.services`.",
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
 			},
@@ -115,7 +120,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 // A singleton, exposed as a list block rather than a single nested attribute.
 func DimensionsBlock() schema.ListNestedBlock {
 	return schema.ListNestedBlock{
-		Description: "More filters depending on the source type.",
+		Description: "More filters depending on the source type. For `stats`, omit this block (or `service_id`) to monitor a single service or all services in aggregate; set `services` to monitor services individually.",
 		Validators: []validator.List{
 			listvalidator.SizeAtMost(1),
 		},
@@ -130,6 +135,11 @@ func DimensionsBlock() schema.ListNestedBlock {
 					ElementType: types.StringType,
 					Optional:    true,
 					Description: "Addresses of a subset of backends that the alert monitors.",
+				},
+				"services": schema.SetAttribute{
+					ElementType: types.StringType,
+					Optional:    true,
+					Description: "IDs of the services that the alert monitors individually, or an empty set to monitor all services individually. Only supported when `source` is `stats`, and cannot be combined with `service_id`.",
 				},
 			},
 		},
