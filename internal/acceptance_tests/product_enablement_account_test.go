@@ -80,14 +80,14 @@ func registerAccountProductReEnable(t *testing.T, tc accountProductTestCase) {
 	})
 }
 
-// The products are account-wide, so these subtests must not run in parallel.
 func TestAccFastlyAccountProductEnablement(t *testing.T) {
 	for _, tc := range accountProductTestCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			accountProductTestsRan.Store(true)
 			registerAccountProductReEnable(t, tc)
 
-			resourceName := fmt.Sprintf("fastly_account_product_%s.test", tc.name)
+			resourceName := fmt.Sprintf("fastly_%s.test", tc.name)
 			disabled := false
 			enabled := true
 

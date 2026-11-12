@@ -17,10 +17,10 @@ func TestAccountProductResources(t *testing.T) {
 		typeName    string
 		productID   string
 	}{
-		{NewAIAcceleratorResource, "fastly_account_product_ai_accelerator", "ai_accelerator"},
-		{NewAIRuntimeControlResource, "fastly_account_product_ai_runtime_control", "ai_runtime_control"},
-		{NewDomainResearchResource, "fastly_account_product_domain_research", "domain_research"},
-		{NewObjectStorageResource, "fastly_account_product_object_storage", "object_storage"},
+		{NewAIAcceleratorResource, "fastly_ai_accelerator", "ai_accelerator"},
+		{NewAIRuntimeControlResource, "fastly_ai_runtime_control", "ai_runtime_control"},
+		{NewDomainResearchResource, "fastly_domain_research", "domain_research"},
+		{NewObjectStorageResource, "fastly_object_storage", "object_storage"},
 	}
 
 	for _, tt := range tests {

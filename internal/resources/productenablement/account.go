@@ -22,8 +22,8 @@ import (
 	"github.com/fastly/go-fastly/v19/fastly/products/objectstorage"
 )
 
-// accountProductSpec describes a product enabled for the whole account, so its
-// API takes no service ID. productID doubles as the resource ID.
+// accountProductSpec describes a product enabled for the whole account.
+// productID doubles as the resource ID.
 type accountProductSpec struct {
 	attrName    string
 	displayName string
@@ -100,12 +100,12 @@ type accountProductResource struct {
 }
 
 func (r *accountProductResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_account_product_" + r.spec.attrName
+	resp.TypeName = req.ProviderTypeName + "_" + r.spec.attrName
 }
 
 func (r *accountProductResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: fmt.Sprintf("Enables %s for the Fastly account. This is an account-level product: it applies to every service on the account, takes no `service_id`, and is not tied to a service version. Destroying this resource disables the product for the whole account.", r.spec.displayName),
+		Description: fmt.Sprintf("Enables %s for the account. Destroying this resource disables the product.", r.spec.displayName),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
