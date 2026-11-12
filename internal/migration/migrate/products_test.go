@@ -202,6 +202,19 @@ func TestSimpleProductFailClosedWithoutPartialDiff(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct{ name, src, extra, expected string }{
 		{"unknown variable", `product_enablement { domain_inspector = var.enabled }`, "", "cannot be determined statically"},
+		{"dynamic product enablement", `dynamic "product_enablement" {
+  for_each = [1]
+  content {
+    domain_inspector = true
+  }
+}`, "", "Dynamic legacy service block"},
+		{"literal plus dynamic product enablement", `product_enablement { domain_inspector = true }
+dynamic "product_enablement" {
+  for_each = [1]
+  content {
+    websockets = true
+  }
+}`, "", "Dynamic legacy service block"},
 		{"invalid literal", `product_enablement { domain_inspector = "yes" }`, "", "must be a boolean or null"},
 		{"count on service", `count = 1
 product_enablement { domain_inspector = true }`, "", "indexed VCL service"},
@@ -293,5 +306,51 @@ import {
 	}
 	if !strings.Contains(strings.Join(messages, " "), "module-qualified import") {
 		t.Fatalf("missing nested import collision diagnostic: %#v", result.Issues)
+	}
+}
+
+// Test the compiler guard directly as well as the analyzer-driven planner
+// tests above. A dynamic aggregate must not escape the compiler if a caller
+// ever supplies a preselected resource action.
+func TestCompileSimpleProductsRejectsDynamicAggregate(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, aggregate string
+	}{
+		{
+			name: "dynamic only",
+			aggregate: `dynamic "product_enablement" {
+  for_each = [1]
+  content {
+    domain_inspector = true
+  }
+}`,
+		},
+		{
+			name: "literal and dynamic",
+			aggregate: `product_enablement { domain_inspector = true }
+dynamic "product_enablement" {
+  for_each = [1]
+  content {
+    websockets = false
+  }
+}`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			source := `resource "fastly_service_vcl" "demo" {
+  name = "demo"
+` + tc.aggregate + `
+}
+`
+			key := resourceKey{file: "main.tf", typ: "fastly_service_vcl", name: "demo"}
+			index := moduleIndex{snapshots: map[string][]byte{"main.tf": []byte(source)}}
+			edits, issues := compileSimpleProducts(key, nil, index)
+			if len(edits) != 0 || len(issues) != 1 ||
+				!strings.Contains(issues[0].Message, "dynamic product_enablement cannot be migrated safely") {
+				t.Fatalf("dynamic aggregate was not blocked: edits=%#v issues=%#v", edits, issues)
+			}
+		})
 	}
 }

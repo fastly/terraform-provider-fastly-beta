@@ -48,6 +48,14 @@ func compileSimpleProducts(key resourceKey, actions []selectedAction, index modu
 	}
 	var products []*hclsyntax.Block
 	for _, block := range resource.Body.Blocks {
+		// The analyzer already rejects dynamic service blocks. Keep the
+		// compiler fail-closed as well: a dynamic aggregate must never be
+		// left inside the renamed _auto resource.
+		if block.Type == "dynamic" && len(block.Labels) == 1 && block.Labels[0] == "product_enablement" {
+			issue("dynamic product_enablement cannot be migrated safely",
+				"Replace it with a static product_enablement block containing literal true, false or null values.")
+			return nil, issues
+		}
 		if block.Type == "product_enablement" {
 			products = append(products, block)
 		}
