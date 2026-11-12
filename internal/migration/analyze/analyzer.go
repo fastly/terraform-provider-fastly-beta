@@ -655,17 +655,20 @@ func (a *Analyzer) analyzeNestedBlock(
 						continue
 					}
 				} else {
+					// A null value means no standalone product resource,
+					// while true/false means a managed import. We cannot
+					// safely choose between them for an unknown expression.
 					state.result.Findings = append(state.result.Findings, Finding{
-						Severity: SeverityWarning,
+						Severity: SeverityError,
 						Range:    attr.SrcRange,
 						Message: fmt.Sprintf(
-							"Product enablement field %q uses an expression whose value cannot be determined statically; its migration action preserves the expression.",
+							"Product enablement field %q cannot be determined statically.",
 							legacy,
 						),
-						Remediation: "Verify that the expression does not evaluate to null when migrated: " +
-							"the standalone product resource defaults enabled to true for null. " +
-							"Review the generated HCL and Terraform plan before applying.",
+						Remediation: "Use a literal true, false or null before migrating; " +
+							"an unknown expression could change whether the product is managed.",
 					})
+					continue
 				}
 				a.applyRule(state, productRules[0], attr.SrcRange, resourceType, resourceName)
 				continue

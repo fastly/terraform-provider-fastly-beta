@@ -302,7 +302,7 @@ func TestAllNonautomaticResourceRulesBlock(t *testing.T) {
 	}
 }
 
-func TestAllAutomaticCdnProductsBlockUntilWriterExists(t *testing.T) {
+func TestAllAutomaticCdnProductsGenerateImports(t *testing.T) {
 	t.Parallel()
 	var products int
 	for _, rule := range compatibility.Default().All() {
@@ -324,9 +324,25 @@ func TestAllAutomaticCdnProductsBlockUntilWriterExists(t *testing.T) {
 }
 `, field))
 			result := newPlan(t, dir)
-			if !result.Blocked() || len(result.Changes) != 0 ||
-				len(result.Moves) != 0 {
-				t.Fatalf("product %q produced incomplete diff: %#v", field, result)
+			if result.Blocked() {
+				t.Fatalf("product %q blocked: %#v findings %#v", field, result.Issues, result.Analysis.Findings)
+			}
+			changed := changedFile(t, result, "migration.tf")
+			for _, expected := range []string{
+				`resource "` + rule.Target + `" "demo"`,
+				"enabled    = false",
+				"service_id = fastly_service_cdn_auto.demo.id",
+				"import {",
+				"to = " + rule.Target + ".demo",
+				"id = fastly_service_cdn_auto.demo.id",
+			} {
+				if !strings.Contains(changed, expected) {
+					t.Errorf("missing %q in product migration:\n%s", expected, changed)
+				}
+			}
+			main := changedFile(t, result, "main.tf")
+			if strings.Contains(main, "product_enablement") {
+				t.Errorf("legacy product block remains:\n%s", main)
 			}
 			if _, err := os.Stat(filepath.Join(dir, "migration.tf")); !os.IsNotExist(err) {
 				t.Fatalf("dry-run wrote migration.tf: %v", err)
@@ -385,15 +401,16 @@ resource "fastly_service_vcl" "demo" {
 			want: "version exclusions require manual review",
 		},
 		{
-			name: "null product block",
+			name: "product block comments cannot be discarded",
 			source: `resource "fastly_service_vcl" "demo" {
   name = "demo"
   product_enablement {
-    domain_inspector = null
+    # explains why this product is enabled
+    domain_inspector = true
   }
 }
 `,
-			want: "product_enablement",
+			want: "comments",
 		},
 		{
 			name: "unknown product expression",

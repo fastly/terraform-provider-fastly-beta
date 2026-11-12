@@ -4,6 +4,8 @@
 
 ### ENHANCEMENTS:
 
+- feat(migration): generate standalone CDN simple-product resources and service-ID imports from legacy product enablement
+
 ### BUG FIXES:
 
 ### Dependencies:

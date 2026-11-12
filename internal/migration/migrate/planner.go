@@ -81,6 +81,7 @@ type selectedAction struct {
 type moduleIndex struct {
 	resources map[string]map[string]string // module -> resource address -> file
 	moves     map[string]map[string]string // module -> moved.from -> moved.to
+	imports   map[string]map[string]string // module -> import.to -> file
 	snapshots map[string][]byte            // filename -> bytes read during preflight planning
 }
 
@@ -275,7 +276,7 @@ func actionKey(root string, action analyze.Action, rule compatibility.Rule) (res
 // individual analyzer actions (notably explicit-null product blocks), and
 // detects cross-file resource and moved-block collisions.
 func inspectFiles(ctx context.Context, analysis analyze.Result) (moduleIndex, []Issue, error) {
-	index := moduleIndex{resources: make(map[string]map[string]string), moves: make(map[string]map[string]string), snapshots: make(map[string][]byte)}
+	index := moduleIndex{resources: make(map[string]map[string]string), moves: make(map[string]map[string]string), imports: make(map[string]map[string]string), snapshots: make(map[string][]byte)}
 	var issues []Issue
 	for _, file := range analysis.Files {
 		if err := ctx.Err(); err != nil {
@@ -301,6 +302,7 @@ func inspectFiles(ctx context.Context, analysis analyze.Result) (moduleIndex, []
 		if index.resources[module] == nil {
 			index.resources[module] = make(map[string]string)
 			index.moves[module] = make(map[string]string)
+			index.imports[module] = make(map[string]string)
 		}
 		for _, block := range body.Blocks {
 			switch {
@@ -313,17 +315,23 @@ func inspectFiles(ctx context.Context, analysis analyze.Result) (moduleIndex, []
 					})
 				}
 				index.resources[module][addr] = file
-				if block.Labels[0] == "fastly_service_vcl" {
-					for _, child := range block.Body.Blocks {
-						if child.Type == "product_enablement" {
-							issues = append(issues, Issue{
-								File: file, Message: fmt.Sprintf("%s uses product_enablement, which cannot yet be split by dry-run", addr),
-								Remediation: "Wait for the standalone product resource/import HCL writer. " +
-									"Explicit null or an empty block must not be carried into the _auto service.",
-							})
-						}
-					}
+			case block.Type == "import":
+				to, ok := sourceExpression(source, block.Body, "to")
+				if !ok {
+					issues = append(issues, Issue{
+						File: file, Message: "existing import block cannot be classified",
+						Remediation: "Use a literal to resource address in existing imports.",
+					})
+					continue
 				}
+				if previous, exists := index.imports[module][to]; exists {
+					issues = append(issues, Issue{
+						File:        file,
+						Message:     fmt.Sprintf("multiple import blocks target %q (also in %s)", to, previous),
+						Remediation: "Keep only one import block per resource address.",
+					})
+				}
+				index.imports[module][to] = file
 			case block.Type == "moved":
 				from, okFrom := sourceExpression(source, block.Body, "from")
 				to, okTo := sourceExpression(source, block.Body, "to")

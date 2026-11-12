@@ -31,10 +31,14 @@ planner can produce a complete diff:
   changing their provider source address. Missing requirements are added.
 - Supported provider arguments are renamed without changing values, aliases,
   provider references, or unrelated providers.
+- Literal simple CDN product enablements are split into standalone
+  `fastly_service_product_*` resources and Terraform import blocks, using
+  the moved CDN Auto service ID. Explicit `false` remains managed as disabled;
+  `null`, empty, and omitted settings do not create product resources.
 
 Any **unsupported** transformation blocks the *entire* plan without writing.
-This includes product enablement splits (even explicit `null`), direct
-references requiring rewrite, ambiguous/exclusionary provider constraints,
+This includes configurable or unknown-expression product enablements,
+direct references requiring rewrite, ambiguous/exclusionary provider constraints,
 unsupported provider arguments, remote module internals, and the current unsupported
 nested object-attribute targets (`authentication`, `tls`,
 `ssl_client_secrets`) and computed-only rate-limiter ID. These remain for
@@ -99,6 +103,55 @@ No Terraform commands are run by the CLI. It does not modify
 `.terraform.lock.hcl` or Terraform state. Keep a recovery copy of state,
 review the diff, install the GA provider with `terraform init -upgrade`,
 and verify the resulting `terraform plan` before applying changes.
+
+## Simple product enablement migration
+
+For legacy VCL services, the migrator splits statically known
+`product_enablement` booleans into standalone versionless resources.
+Supported products are Brotli Compression, Image Optimizer, Origin Inspector,
+Domain Inspector, WebSockets, Log Explorer & Insights, and API Discovery.
+Compute service migration and configurable products (Bot Management, DDoS
+Protection, NGWAF) remain blocked until their separate prerequisites are met.
+
+For example:
+
+```hcl
+# Legacy VCL service contains product_enablement { domain_inspector = true }
+# After migration, the service is fastly_service_cdn_auto.demo, and
+# migration.tf contains:
+resource "fastly_service_product_domain_inspector" "demo" {
+  service_id = fastly_service_cdn_auto.demo.id
+  enabled    = true
+}
+
+import {
+  to = fastly_service_product_domain_inspector.demo
+  id = fastly_service_cdn_auto.demo.id
+}
+```
+
+The import adopts the existing product by **Fastly service ID**, rather than
+creating or enabling it. The moved service and import remain in the same
+Terraform module, and an explicit service provider alias is copied to the
+product resource. This requires Terraform with configuration-driven
+`import` block support (Terraform **1.5+**).
+
+`false` generates a managed standalone product with `enabled = false`;
+`null`, empty aggregate blocks, and omitted product fields generate no
+product resource. Unknown boolean expressions, indexed services (`count` or
+`for_each`), existing resource/import collisions, comments that would be
+discarded from the legacy aggregate, and unsupported/configurable products
+block migration without a partial diff or write.
+
+**Critical:** The CLI does not read the actual product status or import the
+product into Terraform state. After GA provider v20.0.0 is available and the
+legacy state-schema prerequisite is satisfied, review the generated HCL,
+run `terraform init -upgrade` yourself and inspect `terraform plan`.
+The import expression must evaluate to the already-existing service ID at plan
+time. Do **not** apply if Terraform proposes to create, re-enable, disable,
+delete or replace the service or product unexpectedly. Live adoption and no-op
+plan behavior require end-to-end acceptance testing; offline rewrite tests alone
+cannot prove them.
 
 ## Write safety and backups
 

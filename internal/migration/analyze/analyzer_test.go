@@ -246,7 +246,7 @@ resource "aws_instance" "unrelated" {}
 	}
 }
 
-func TestAnalyzeProductExpressionPreservesMigrationAction(t *testing.T) {
+func TestAnalyzeProductExpressionBlocksUnsafeMigration(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -266,19 +266,16 @@ resource "fastly_service_vcl" "demo" {
 }
 `)
 	result := analyzeDir(t, dir)
-	if !result.Migratable() {
-		t.Fatalf("variable-backed product settings must not block migration: %#v", result.Findings)
+	if result.Migratable() || result.BlockingCount() != 2 {
+		t.Fatalf("unknown product values should block: %#v", result.Findings)
 	}
 	for _, ruleID := range []string{"cdn-product-domain-inspector", "cdn-product-websockets"} {
-		if !hasAction(result, ruleID) {
-			t.Errorf("missing product migration action for %q: %#v", ruleID, result.Actions)
+		if hasAction(result, ruleID) {
+			t.Errorf("unsafe product migration action for %q: %#v", ruleID, result.Actions)
 		}
 	}
-	if result.WarningCount() != 2 {
-		t.Fatalf("WarningCount() = %d, want 2 null-safety warnings: %#v", result.WarningCount(), result.Findings)
-	}
-	if !containsFinding(result, "defaults enabled to true for null") {
-		t.Fatalf("missing null-safety guidance: %#v", result.Findings)
+	if !containsFinding(result, "cannot be determined statically") {
+		t.Fatalf("missing expression safety diagnostic: %#v", result.Findings)
 	}
 }
 
