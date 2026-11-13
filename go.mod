@@ -1,6 +1,6 @@
 module github.com/fastly/terraform-provider-fastly-beta
 
-go 1.26.10
+go 1.26.11
 
 require (
 	github.com/fastly/go-fastly/v19 v19.2.0
