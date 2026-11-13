@@ -239,11 +239,53 @@ product_enablement { websockets = false }`, "", "multiple product_enablement blo
   id = "another-service"
 }`, "already targeted by an import",
 		},
-		{"configurable product", `product_enablement {
+		{"configurable product non-literal enabled", `product_enablement {
  bot_management {
-  enabled = true
+  enabled = var.on
  }
-}`, "", "bot_management"},
+}`, "", "product_enablement.bot_management.enabled must be a literal boolean"},
+		{"configurable product non-literal setting", `product_enablement {
+ ngwaf {
+  enabled      = true
+  workspace_id = var.workspace
+ }
+}`, "", "product_enablement.ngwaf.workspace_id must be a literal string"},
+		{"configurable product unknown attribute", `product_enablement {
+ ddos_protection {
+  enabled = true
+  level   = "high"
+ }
+}`, "", "product_enablement.ddos_protection.level is not supported"},
+		{"configurable product duplicate block", `product_enablement {
+ bot_management { enabled = true }
+ bot_management { enabled = false }
+}`, "", "multiple bot_management blocks"},
+		{"bot_management missing contentguard", `product_enablement {
+ bot_management { enabled = true }
+}`, "", "product_enablement.bot_management.contentguard is required"},
+		{"ddos_protection missing mode", `product_enablement {
+ ddos_protection { enabled = true }
+}`, "", "product_enablement.ddos_protection.mode is required"},
+		{"ngwaf missing workspace_id", `product_enablement {
+ ngwaf {
+  enabled      = true
+  traffic_ramp = 25
+ }
+}`, "", "product_enablement.ngwaf.workspace_id is required"},
+		{"count on service with configurable-only product", `count = 1
+product_enablement {
+ bot_management {
+  enabled      = true
+  contentguard = "on"
+ }
+}`, "", "indexed VCL service"},
+		{"for_each on service with configurable-only product", `for_each = toset(["edge"])
+product_enablement {
+ ngwaf {
+  enabled      = true
+  workspace_id = "ws-123"
+ }
+}`, "", "indexed VCL service"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -352,5 +394,57 @@ dynamic "product_enablement" {
 				t.Fatalf("dynamic aggregate was not blocked: edits=%#v issues=%#v", edits, issues)
 			}
 		})
+	}
+}
+
+func TestConfigurableProductMigrationPreservesSettings(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeConfig(t, dir, "main.tf", `resource "fastly_service_vcl" "demo" {
+  name = "demo"
+  product_enablement {
+    websockets = true
+    bot_management {
+      enabled      = true
+      contentguard = "on"
+    }
+    ddos_protection {
+      enabled = false
+      mode    = "block"
+    }
+    ngwaf {
+      enabled      = true
+      workspace_id = "ws-123"
+      traffic_ramp = 25
+    }
+  }
+}
+`)
+	plan := newPlan(t, dir)
+	if plan.Blocked() {
+		t.Fatalf("blocked: %#v findings=%#v", plan.Issues, plan.Analysis.Findings)
+	}
+	main := changedFile(t, plan, "main.tf")
+	if strings.Contains(main, "product_enablement") {
+		t.Fatalf("legacy product block remains:\n%s", main)
+	}
+	generated := changedFile(t, plan, "migration.tf")
+	if got := strings.Count(generated, "import {"); got != 4 {
+		t.Errorf("imports = %d, want 4:\n%s", got, generated)
+	}
+	for _, expected := range []string{
+		`resource "fastly_service_product_bot_management" "demo"`,
+		`contentguard = "on"`,
+		`resource "fastly_service_product_ddos_protection" "demo"`,
+		`mode       = "block"`,
+		`enabled    = false`,
+		`resource "fastly_service_product_ngwaf" "demo"`,
+		`workspace_id = "ws-123"`,
+		`traffic_ramp = 25`,
+		`to = fastly_service_product_ngwaf.demo`,
+	} {
+		if !strings.Contains(generated, expected) {
+			t.Errorf("missing %q from migration.tf:\n%s", expected, generated)
+		}
 	}
 }
