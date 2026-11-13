@@ -43,8 +43,12 @@ func FlattenToModel(ctx context.Context, ad *fastly.AlertDefinition) (Model, dia
 	originsSet, d := flattenDimensionSet(ctx, origins, present)
 	diags.Append(d...)
 
+	services, present := ad.Dimensions["services"]
+	servicesSet, d := flattenDimensionSet(ctx, services, present)
+	diags.Append(d...)
+
 	if len(ad.Dimensions) > 0 {
-		m.Dimensions = []DimensionsModel{{Domains: domainsSet, Origins: originsSet}}
+		m.Dimensions = []DimensionsModel{{Domains: domainsSet, Origins: originsSet, Services: servicesSet}}
 	}
 
 	if len(ad.EvaluationStrategy) > 0 {

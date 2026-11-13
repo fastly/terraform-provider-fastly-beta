@@ -192,6 +192,57 @@ func TestAccFastlyAlert_missingServiceIDValidationError(t *testing.T) {
 	})
 }
 
+func TestAccFastlyAlert_statsMultipleServices(t *testing.T) {
+	t.Parallel()
+
+	name := fmt.Sprintf("tf-test-alert-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		CheckDestroy:             CheckAlertDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: ConfigAlertStatsServices(name, "[]"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr("fastly_alert.test", "service_id"),
+					resource.TestCheckResourceAttr("fastly_alert.test", "dimensions.0.services.#", "0"),
+				),
+			},
+			{
+				ResourceName:      "fastly_alert.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config:   ConfigAlertStatsServices(name, "[]"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func TestAccFastlyAlert_servicesValidationErrors(t *testing.T) {
+	t.Parallel()
+
+	name := fmt.Sprintf("tf-test-alert-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { PreCheck(t) },
+		ProtoV6ProviderFactories: ProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      ConfigAlertStatsServicesWithServiceID(name),
+				ExpectError: regexp.MustCompile("cannot be combined with `service_id`"),
+			},
+			{
+				Config:      ConfigAlertDomainsWithServices(name),
+				ExpectError: regexp.MustCompile("only `dimensions.domains` is valid when `source` is `domains`"),
+			},
+		},
+	})
+}
+
 func CheckAlertDestroy(s *terraform.State) error {
 	client, err := NewFastlyClient()
 	if err != nil {

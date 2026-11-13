@@ -18,7 +18,8 @@ An alert's `source` determines whether `service_id` is required:
 
 - `domains` and `origins` alerts monitor a specific service, so `service_id` is required.
 - `stats` alerts can either monitor a specific service (`service_id` set) or aggregate
-  across the whole account (`service_id` omitted).
+  across the whole account (`service_id` omitted), or monitor a set of services individually
+  (`dimensions { services = [...] }`, with `service_id` omitted).
 
 ## Example Usage
 
@@ -83,6 +84,32 @@ resource "fastly_alert" "domain_scoped" {
 
   dimensions {
     domains = ["checkout.example.com"]
+  }
+
+  evaluation_strategy {
+    type      = "above_threshold"
+    period    = "5m"
+    threshold = 10
+  }
+}
+```
+
+### Alert monitoring multiple services individually
+
+`dimensions.services` is only supported when `source` is `stats` and cannot be combined with
+`service_id`. Use an empty set to monitor all services individually:
+
+```terraform
+resource "fastly_alert" "multiple_services" {
+  name   = "5xx errors for selected services"
+  source = "stats"
+  metric = "status_5xx"
+
+  dimensions {
+    services = [
+      fastly_service_cdn.example.id,
+      fastly_service_cdn.other.id,
+    ]
   }
 
   evaluation_strategy {

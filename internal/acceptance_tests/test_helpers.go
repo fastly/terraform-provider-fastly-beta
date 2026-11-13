@@ -11201,6 +11201,29 @@ func ConfigAlertDomainsMissingServiceID(alertName, metric string) string {
 	})
 }
 
+// ConfigAlertStatsServices returns a "stats" fastly_alert monitoring services individually;
+// servicesHCL is an HCL list expression such as `[]` or `["abc"]`.
+func ConfigAlertStatsServices(alertName, servicesHCL string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/alert_stats_services.tf", map[string]string{
+		"ALERT_NAME": alertName,
+		"SERVICES":   servicesHCL,
+	})
+}
+
+// ConfigAlertStatsServicesWithServiceID returns a "stats" fastly_alert that sets both service_id and dimensions.services.
+func ConfigAlertStatsServicesWithServiceID(alertName string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/alert_stats_services_with_service_id.tf", map[string]string{
+		"ALERT_NAME": alertName,
+	})
+}
+
+// ConfigAlertDomainsWithServices returns a "domains" fastly_alert that sets dimensions.services.
+func ConfigAlertDomainsWithServices(alertName string) string {
+	return RenderBlock("internal/acceptance_tests/blocks/alert_domains_with_services.tf", map[string]string{
+		"ALERT_NAME": alertName,
+	})
+}
+
 // ConfigAlertPercentIncreaseWithIgnoreBelow returns a "stats" fastly_alert using the
 // percent_increase evaluation strategy with ignore_below set.
 func ConfigAlertPercentIncreaseWithIgnoreBelow(alertName string, threshold, ignoreBelow float64) string {

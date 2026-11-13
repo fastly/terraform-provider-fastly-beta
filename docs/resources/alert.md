@@ -18,7 +18,8 @@ An alert's `source` determines whether `service_id` is required:
 
 - `domains` and `origins` alerts monitor a specific service, so `service_id` is required.
 - `stats` alerts can either monitor a specific service (`service_id` set) or aggregate
-  across the whole account (`service_id` omitted).
+  across the whole account (`service_id` omitted), or monitor a set of services individually
+  (`dimensions { services = [...] }`, with `service_id` omitted).
 
 ## Example Usage
 
@@ -93,6 +94,32 @@ resource "fastly_alert" "domain_scoped" {
 }
 ```
 
+### Alert monitoring multiple services individually
+
+`dimensions.services` is only supported when `source` is `stats` and cannot be combined with
+`service_id`. Use an empty set to monitor all services individually:
+
+```terraform
+resource "fastly_alert" "multiple_services" {
+  name   = "5xx errors for selected services"
+  source = "stats"
+  metric = "status_5xx"
+
+  dimensions {
+    services = [
+      fastly_service_cdn.example.id,
+      fastly_service_cdn.other.id,
+    ]
+  }
+
+  evaluation_strategy {
+    type      = "above_threshold"
+    period    = "5m"
+    threshold = 10
+  }
+}
+```
+
 ## Schema
 
 ### Required
@@ -104,10 +131,10 @@ resource "fastly_alert" "domain_scoped" {
 ### Optional
 
 - `description` (String) Additional text that is included in the alert notification.
-- `dimensions` (Block List) More filters depending on the source type. (see [below for nested schema](#nestedblock--dimensions))
+- `dimensions` (Block List) More filters depending on the source type. For `stats`, omit this block (or `service_id`) to monitor a single service or all services in aggregate; set `services` to monitor services individually. (see [below for nested schema](#nestedblock--dimensions))
 - `evaluation_strategy` (Block List) Criteria on how to alert. Exactly one block is required. (see [below for nested schema](#nestedblock--evaluation_strategy))
 - `integration_ids` (Set of String) List of integrations used to notify when alert fires.
-- `service_id` (String) The service which the alert monitors. Optional when using `stats` as the `source`.
+- `service_id` (String) The service which the alert monitors. Optional when using `stats` as the `source`. Cannot be combined with `dimensions.services`.
 
 ### Read-Only
 
@@ -120,6 +147,7 @@ Optional:
 
 - `domains` (Set of String) Names of a subset of domains that the alert monitors.
 - `origins` (Set of String) Addresses of a subset of backends that the alert monitors.
+- `services` (Set of String) IDs of the services that the alert monitors individually, or an empty set to monitor all services individually. Only supported when `source` is `stats`, and cannot be combined with `service_id`.
 
 
 <a id="nestedblock--evaluation_strategy"></a>

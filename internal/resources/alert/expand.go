@@ -26,6 +26,33 @@ func validateSourceWithServiceID(source, serviceID string) error {
 	return nil
 }
 
+func validateDimensionsForSource(source string, d DimensionsModel) error {
+	has := func(s types.Set) bool { return !s.IsNull() }
+
+	switch source {
+	case "domains":
+		if has(d.Origins) || has(d.Services) {
+			return errors.New(badAlertDimensionsForDomains)
+		}
+	case "origins":
+		if has(d.Domains) || has(d.Services) {
+			return errors.New(badAlertDimensionsForOrigins)
+		}
+	case "stats":
+		if has(d.Domains) || has(d.Origins) {
+			return errors.New(badAlertDimensionsForStats)
+		}
+	}
+	return nil
+}
+
+func validateServicesWithServiceID(serviceID string, d DimensionsModel) error {
+	if serviceID != "" && !d.Services.IsNull() {
+		return errors.New(badAlertServicesWithServiceID)
+	}
+	return nil
+}
+
 func setToStringSlice(ctx context.Context, s types.Set, diags *diag.Diagnostics) []string {
 	if s.IsNull() || s.IsUnknown() {
 		return []string{}
@@ -49,6 +76,9 @@ func dimensionsMap(ctx context.Context, dimensions []DimensionsModel, diags *dia
 	}
 	if !d.Origins.IsNull() {
 		data["origins"] = setToStringSlice(ctx, d.Origins, diags)
+	}
+	if !d.Services.IsNull() {
+		data["services"] = setToStringSlice(ctx, d.Services, diags)
 	}
 	return data
 }
