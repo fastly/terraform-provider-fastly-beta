@@ -260,6 +260,32 @@ product_enablement { websockets = false }`, "", "multiple product_enablement blo
  bot_management { enabled = true }
  bot_management { enabled = false }
 }`, "", "multiple bot_management blocks"},
+		{"bot_management missing contentguard", `product_enablement {
+ bot_management { enabled = true }
+}`, "", "product_enablement.bot_management.contentguard is required"},
+		{"ddos_protection missing mode", `product_enablement {
+ ddos_protection { enabled = true }
+}`, "", "product_enablement.ddos_protection.mode is required"},
+		{"ngwaf missing workspace_id", `product_enablement {
+ ngwaf {
+  enabled      = true
+  traffic_ramp = 25
+ }
+}`, "", "product_enablement.ngwaf.workspace_id is required"},
+		{"count on service with configurable-only product", `count = 1
+product_enablement {
+ bot_management {
+  enabled      = true
+  contentguard = "on"
+ }
+}`, "", "indexed VCL service"},
+		{"for_each on service with configurable-only product", `for_each = toset(["edge"])
+product_enablement {
+ ngwaf {
+  enabled      = true
+  workspace_id = "ws-123"
+ }
+}`, "", "indexed VCL service"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()

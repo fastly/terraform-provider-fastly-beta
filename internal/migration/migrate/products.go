@@ -96,7 +96,7 @@ func compileSimpleProducts(key resourceKey, actions []selectedAction, index modu
 		productRules[name] = rule
 	}
 
-	if len(product.Body.Attributes) != 0 &&
+	if (len(product.Body.Attributes) != 0 || len(product.Body.Blocks) != 0) &&
 		(resource.Body.Attributes["count"] != nil || resource.Body.Attributes["for_each"] != nil) {
 		issue("product_enablement on an indexed VCL service cannot be split safely",
 			"Migrate count/for_each service instances explicitly with matching product addresses and import IDs.")
@@ -246,16 +246,18 @@ func migrationFileForModule(module string) string {
 // configurableProduct describes the settings, besides enabled, copied from a
 // legacy block to the standalone resource, in output order.
 type configurableProduct struct {
-	attrs []string
-	kinds map[string]cty.Type
+	attrs    []string
+	required []string
+	kinds    map[string]cty.Type
 }
 
 var configurableProducts = map[string]configurableProduct{
-	"bot_management":  {attrs: []string{"contentguard"}, kinds: map[string]cty.Type{"contentguard": cty.String}},
-	"ddos_protection": {attrs: []string{"mode"}, kinds: map[string]cty.Type{"mode": cty.String}},
+	"bot_management":  {attrs: []string{"contentguard"}, required: []string{"contentguard"}, kinds: map[string]cty.Type{"contentguard": cty.String}},
+	"ddos_protection": {attrs: []string{"mode"}, required: []string{"mode"}, kinds: map[string]cty.Type{"mode": cty.String}},
 	"ngwaf": {
-		attrs: []string{"workspace_id", "traffic_ramp"},
-		kinds: map[string]cty.Type{"workspace_id": cty.String, "traffic_ramp": cty.Number},
+		attrs:    []string{"workspace_id", "traffic_ramp"},
+		required: []string{"workspace_id"},
+		kinds:    map[string]cty.Type{"workspace_id": cty.String, "traffic_ramp": cty.Number},
 	},
 }
 
@@ -283,6 +285,13 @@ func (c configurableProduct) literals(block *hclsyntax.Block, name string, issue
 		return false, nil, false
 	}
 	enabled = value.True()
+	for _, attrName := range c.required {
+		if block.Body.Attributes[attrName] == nil {
+			issue(fmt.Sprintf("product_enablement.%s.%s is required", name, attrName),
+				"Set it to a literal value; the standalone resource cannot be created without it.")
+			ok = false
+		}
+	}
 	for _, attrName := range c.attrs {
 		attr := block.Body.Attributes[attrName]
 		if attr == nil {
