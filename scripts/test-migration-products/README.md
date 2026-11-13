@@ -30,3 +30,31 @@ Requires `terraform`, `go`, `jq` and `curl`. The account needs Bot Management,
 DDoS Protection and NGWAF entitlements. Set `LEGACY_PROVIDER_VERSION` to change
 the legacy provider floor (default `9.5.0`) and `KEEP_WORK_DIR=1` to keep the
 temporary directory after a successful run.
+
+## Changes required when `fastly/fastly` 20.0.0 is released
+
+The script currently works around the GA provider not being on the registry.
+When 20.0.0 is published, update `run.sh` so it tests what users will actually do:
+
+- **Install the GA provider from the registry.** Remove the `dev_overrides` file
+  written in `build_binaries` and the `go build -o .../terraform-provider-fastly`
+  step. The provider build is then only needed for pre-release testing.
+- **Run `terraform init -upgrade` after migrating.** `plan_and_apply_ga` currently
+  skips `init` because the migrator's `>= 20.0.0` constraint cannot be resolved
+  without a release. Restore `terraform init -upgrade -input=false` and drop the
+  `rm -f .terraform.lock.hcl` workaround, so the stale legacy lock entry is
+  replaced by a real upgrade. This is the documented user flow.
+- **Stop swapping environment variables by hand.** `use_legacy_provider` and
+  `use_ga_provider` exist because the legacy provider reads `FASTLY_API_KEY` and
+  the GA provider reads `FASTLY_API_TOKEN`. Keep that split, since it mirrors the
+  documented migration step, but drop the `TF_CLI_CONFIG_FILE` handling.
+- **Revisit the legacy version floor.** `LEGACY_PROVIDER_VERSION` (default
+  `9.5.0`) resolves to the newest release below 20, which is 10.2.0 today. Decide
+  whether to pin a specific version or test both the 9.1.0 floor and the latest.
+- **Wire the test into release verification.** It is not part of `make` targets or
+  CI. Consider adding a `make test-migration` target and including it in
+  `release-check`, which needs the account entitlements listed under Running.
+- **Update the legacy source name if the rename ships.** The migrator README says
+  the legacy SDKv2 provider is renamed to `fastly/fastly-legacy` at GA. If the
+  legacy provider is no longer published under `fastly/fastly`, the legacy phase
+  must use the new source address.
