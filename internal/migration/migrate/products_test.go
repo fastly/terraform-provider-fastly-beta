@@ -217,9 +217,9 @@ dynamic "product_enablement" {
 }`, "", "Dynamic legacy service block"},
 		{"invalid literal", `product_enablement { domain_inspector = "yes" }`, "", "must be a boolean or null"},
 		{"count on service", `count = 1
-product_enablement { domain_inspector = true }`, "", "indexed VCL service"},
+product_enablement { domain_inspector = true }`, "", "indexed service"},
 		{"for_each on service", `for_each = toset(["edge"])
-product_enablement { domain_inspector = true }`, "", "indexed VCL service"},
+product_enablement { domain_inspector = true }`, "", "indexed service"},
 		{"comments would be discarded", `product_enablement {
  # Preserve this comment
  domain_inspector = true
@@ -297,14 +297,14 @@ product_enablement {
   enabled      = true
   contentguard = "on"
  }
-}`, "", "indexed VCL service"},
+}`, "", "indexed service"},
 		{"for_each on service with configurable-only product", `for_each = toset(["edge"])
 product_enablement {
  ngwaf {
   enabled      = true
   workspace_id = "ws-123"
  }
-}`, "", "indexed VCL service"},
+}`, "", "indexed service"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()

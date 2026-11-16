@@ -12,14 +12,14 @@ import (
 // block. The planner must first account for every configured product.
 // Comments inside the deleted block are rejected rather than silently lost.
 type RemoveProductEnablement struct {
-	File, ResourceName string
+	File, ResourceType, ResourceName string
 }
 
 func (e RemoveProductEnablement) file() string    { return e.File }
 func (e RemoveProductEnablement) canCreate() bool { return false }
 
 func (e RemoveProductEnablement) apply(source []byte, filename string) ([]byte, error) {
-	resource, err := requireResource(source, filename, "fastly_service_vcl", e.ResourceName)
+	resource, err := requireResource(source, filename, e.ResourceType, e.ResourceName)
 	if err != nil {
 		return nil, err
 	}
@@ -29,18 +29,18 @@ func (e RemoveProductEnablement) apply(source []byte, filename string) ([]byte, 
 			continue
 		}
 		if product != nil {
-			return nil, fmt.Errorf("multiple product_enablement blocks in fastly_service_vcl.%s", e.ResourceName)
+			return nil, fmt.Errorf("multiple product_enablement blocks in %s.%s", e.ResourceType, e.ResourceName)
 		}
 		product = block
 	}
 	if product == nil {
-		return nil, fmt.Errorf("product_enablement block not found in fastly_service_vcl.%s", e.ResourceName)
+		return nil, fmt.Errorf("product_enablement block not found in %s.%s", e.ResourceType, e.ResourceName)
 	}
 	start, end := product.Range().Start.Byte, product.Range().End.Byte
 	if start < 0 || end > len(source) || end <= start || source[end-1] != '}' {
 		return nil, fmt.Errorf(
-			"cannot locate product_enablement block boundaries in %s (fastly_service_vcl.%s) at byte range [%d,%d)",
-			filename, e.ResourceName, start, end,
+			"cannot locate product_enablement block boundaries in %s (%s.%s) at byte range [%d,%d)",
+			filename, e.ResourceType, e.ResourceName, start, end,
 		)
 	}
 	// Do not discard comments, even when they occur inside an empty or

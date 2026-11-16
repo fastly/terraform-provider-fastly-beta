@@ -4,6 +4,8 @@
 
 ### ENHANCEMENTS:
 
+- feat(migration): transform legacy `fastly_service_compute` HCL to `fastly_service_compute_auto` in `fastly-tf-migrate`, with live end-to-end coverage via `make test-migration-compute`([#242](https://github.com/fastly/terraform-provider-fastly-beta/pull/242))
+
 ### BUG FIXES:
 
 ### Dependencies:

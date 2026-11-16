@@ -11,6 +11,12 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/rewrite"
 )
 
+// serviceAutoTypes maps each legacy aggregate service type to its _auto target.
+var serviceAutoTypes = map[string]string{
+	"fastly_service_vcl":     "fastly_service_cdn_auto",
+	"fastly_service_compute": "fastly_service_compute_auto",
+}
+
 func compileResource(
 	key resourceKey,
 	actions []selectedAction,
@@ -26,7 +32,8 @@ func compileResource(
 		})
 	}
 
-	if key.typ != "fastly_service_vcl" {
+	autoType, supportedService := serviceAutoTypes[key.typ]
+	if !supportedService {
 		for _, a := range actions {
 			issue(a, fmt.Sprintf("no dry-run writer is implemented for resource %s", key.typ))
 		}
@@ -35,7 +42,7 @@ func compileResource(
 
 	module := filepath.ToSlash(filepath.Dir(key.file))
 	fromAddress := key.typ + "." + key.name
-	toAddress := "fastly_service_cdn_auto." + key.name
+	toAddress := autoType + "." + key.name
 	if index.resources[module][fromAddress] != key.file {
 		issues = append(issues, Issue{
 			File: key.file, Message: fmt.Sprintf("resource %s was not found at its analyzed location", fromAddress),
@@ -81,22 +88,21 @@ func compileResource(
 		rule := a.rule
 		switch rule.Kind {
 		case compatibility.ConstructAttribute:
-			edit, err := compileAttribute(key, rule)
+			edit, err := compileAttribute(key, rule, autoType)
 			if err != nil {
 				issue(a, err.Error())
 			} else if edit != nil {
 				edits = append(edits, edit)
 			}
 		case compatibility.ConstructServiceBlock:
-			edit, err := compileServiceBlock(key, rule)
+			edit, err := compileServiceBlock(key, rule, autoType)
 			if err != nil {
 				issue(a, err.Error())
 			} else if edit != nil {
 				edits = append(edits, edit)
 			}
 		case compatibility.ConstructResource:
-			if rule.ID != "resource-service-vcl" || rule.Legacy != key.typ ||
-				rule.Target != "fastly_service_cdn_auto" ||
+			if rule.Legacy != key.typ || rule.Target != autoType ||
 				rule.HCL != compatibility.HCLReshape || rule.State != compatibility.StateMove {
 				issue(a, fmt.Sprintf("unimplemented resource conversion %s -> %s", rule.Legacy, rule.Target))
 				continue
@@ -148,7 +154,7 @@ func rankKind(kind compatibility.ConstructKind) int {
 	}
 }
 
-func compileAttribute(key resourceKey, rule compatibility.Rule) (rewrite.Edit, error) {
+func compileAttribute(key resourceKey, rule compatibility.Rule, autoType string) (rewrite.Edit, error) {
 	source := strings.Split(rule.Legacy, ".")
 	if len(source) < 2 || source[0] != key.typ {
 		return nil, fmt.Errorf("invalid legacy attribute route %q", rule.Legacy)
@@ -167,7 +173,7 @@ func compileAttribute(key resourceKey, rule compatibility.Rule) (rewrite.Edit, e
 		}, nil
 	case compatibility.HCLRename, compatibility.HCLReshape:
 		target := strings.Split(rule.Target, ".")
-		if len(target) < 2 || target[0] != "fastly_service_cdn_auto" {
+		if len(target) < 2 || target[0] != autoType {
 			return nil, fmt.Errorf("invalid target for attribute %q", rule.Legacy)
 		}
 		targetPath := target[1:]
@@ -222,11 +228,11 @@ func compileAttribute(key resourceKey, rule compatibility.Rule) (rewrite.Edit, e
 	}
 }
 
-func compileServiceBlock(key resourceKey, rule compatibility.Rule) (rewrite.Edit, error) {
+func compileServiceBlock(key resourceKey, rule compatibility.Rule, autoType string) (rewrite.Edit, error) {
 	source := strings.Split(rule.Legacy, ".")
 	target := strings.Split(rule.Target, ".")
 	if len(source) != 2 || source[0] != key.typ ||
-		len(target) != 2 || target[0] != "fastly_service_cdn_auto" {
+		len(target) != 2 || target[0] != autoType {
 		return nil, fmt.Errorf("service block %q requires an unsupported transformation", rule.Legacy)
 	}
 	switch rule.HCL {
