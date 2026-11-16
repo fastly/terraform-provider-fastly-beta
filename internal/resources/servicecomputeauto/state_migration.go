@@ -2,9 +2,9 @@ package servicecomputeauto
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -16,29 +16,125 @@ const (
 	legacyServiceComputeSchemaV0 = int64(0)
 )
 
-var _ resource.ResourceWithMoveState = &Resource{}
-
-// MoveState declares the supported legacy SDKv2 fastly_service_compute move.
+// MoveState declares the supported legacy SDKv2 -> Framework resource move.
 //
-// The migration CLI rewrites fastly_service_compute configuration to
-// fastly_service_compute_auto and adds a Terraform moved block; Terraform Core
-// then invokes this mover.
+// The migration CLI is expected to rewrite fastly_service_compute configuration to
+// fastly_service_compute_auto and add a Terraform moved block. Terraform Core then
+// invokes this mover to translate the persisted source state.
 //
-// Only state that Read cannot reconstruct is copied: the service ID, and the
-// force_destroy/reuse lifecycle controls the Fastly API does not return. The
-// source schema is deliberately omitted so the mover decodes just those fields
-// from the raw JSON state, independent of the large legacy nested-block type.
-// Legacy product_enablement is not copied; each product becomes a standalone
-// fastly_service_product_* resource imported by service ID.
+// This mover copies only state that cannot be reconstructed safely
+// by Read. The service ID preserves identity; force_destroy and reuse are
+// Terraform lifecycle controls which are not returned by the Fastly API. Read
+// repopulates service metadata, managed/active versions, and API-readable nested
+// service configuration.
+//
+// Legacy product_enablement state, including the configurable bot_management,
+// ddos_protection and ngwaf products, is intentionally not copied to the target
+// service state. Each product is instead split into a standalone
+// fastly_service_product_* resource whose configuration carries its settings,
+// and imported by service ID.
 func (r *Resource) MoveState(_ context.Context) []resource.StateMover {
-	return []resource.StateMover{{StateMover: moveLegacyServiceComputeState}}
+	sourceSchema := legacyServiceComputeMoveStateSchema()
+
+	return []resource.StateMover{
+		{
+			SourceSchema: &sourceSchema,
+			StateMover:   moveLegacyServiceComputeState,
+		},
+	}
 }
 
-type legacyServiceComputeState struct {
-	ID                *string           `json:"id"`
-	ForceDestroy      *bool             `json:"force_destroy"`
-	Reuse             *bool             `json:"reuse"`
-	ProductEnablement []json.RawMessage `json:"product_enablement"`
+var legacyServiceComputeSimpleProductNames = []string{
+	"api_discovery",
+	"domain_inspector",
+	"fanout",
+	"log_explorer_insights",
+	"websockets",
+}
+
+var legacyServiceComputeConfigurableProductNames = []string{
+	"bot_management",
+	"ddos_protection",
+	"ngwaf",
+}
+
+// inspectLegacyProductEnablement reports whether persisted legacy
+// product_enablement state can be safely omitted from the target service state.
+//
+// Every known product, configurable or not, can be split into a standalone
+// fastly_service_product_* resource and imported by service ID.
+func inspectLegacyProductEnablement(products types.Set) (supported bool, hasManagedProducts bool) {
+	if products.IsNull() {
+		return true, false
+	}
+	if products.IsUnknown() {
+		return false, false
+	}
+
+	elements := products.Elements()
+	if len(elements) == 0 {
+		return true, false
+	}
+	if len(elements) != 1 {
+		return false, false
+	}
+
+	product, ok := elements[0].(types.Object)
+	if !ok || product.IsNull() || product.IsUnknown() {
+		return false, false
+	}
+
+	return inspectLegacyProductAttributes(product.Attributes())
+}
+
+func inspectLegacyProductAttributes(attributes map[string]attr.Value) (supported bool, hasManagedProducts bool) {
+	for name := range attributes {
+		if name == "name" {
+			continue
+		}
+		if !legacyServiceComputeProductNameIn(name, legacyServiceComputeSimpleProductNames) &&
+			!legacyServiceComputeProductNameIn(name, legacyServiceComputeConfigurableProductNames) {
+			return false, false
+		}
+	}
+
+	for _, name := range legacyServiceComputeSimpleProductNames {
+		value, ok := attributes[name].(types.Bool)
+		if !ok || value.IsUnknown() {
+			return false, false
+		}
+		if !value.IsNull() {
+			hasManagedProducts = true
+		}
+	}
+
+	for _, name := range legacyServiceComputeConfigurableProductNames {
+		value, ok := attributes[name].(types.List)
+		if !ok || value.IsUnknown() {
+			return false, false
+		}
+		if value.IsNull() {
+			continue
+		}
+		switch len(value.Elements()) {
+		case 0:
+		case 1:
+			hasManagedProducts = true
+		default:
+			return false, false
+		}
+	}
+
+	return true, hasManagedProducts
+}
+
+func legacyServiceComputeProductNameIn(name string, names []string) bool {
+	for _, candidate := range names {
+		if candidate == name {
+			return true
+		}
+	}
+	return false
 }
 
 func moveLegacyServiceComputeState(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
@@ -49,26 +145,49 @@ func moveLegacyServiceComputeState(ctx context.Context, req resource.MoveStateRe
 	if req.SourceSchemaVersion != legacyServiceComputeSchemaV0 {
 		resp.Diagnostics.AddError(
 			"Unsupported legacy Fastly service state",
-			fmt.Sprintf("fastly_service_compute_auto can only move state from fastly_service_compute schema version 0; received schema version %d.", req.SourceSchemaVersion),
+			fmt.Sprintf("fastly_service_compute_auto can only move state from fastly_service_compute schema version 0; received schema version %d. This state mover does not support that persisted state schema and requires a migration path that explicitly supports it.", req.SourceSchemaVersion),
 		)
 		return
 	}
 
-	if req.SourceRawState == nil || len(req.SourceRawState.JSON) == 0 {
+	if req.SourceState == nil {
 		resp.Diagnostics.AddError(
 			"Unable to decode legacy Fastly service state",
-			"Terraform did not provide raw source state for fastly_service_compute.",
+			"Terraform Plugin Framework did not provide decoded source state for fastly_service_compute schema version 0. The legacy source schema declared by the state mover does not match the persisted SDKv2 state.",
 		)
 		return
 	}
 
-	var source legacyServiceComputeState
-	if err := json.Unmarshal(req.SourceRawState.JSON, &source); err != nil {
-		resp.Diagnostics.AddError("Unable to decode legacy Fastly service state", err.Error())
+	var sourceID types.String
+	var sourceForceDestroy types.Bool
+	var sourceReuse types.Bool
+	var sourceProductEnablement types.Set
+
+	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("id"), &sourceID)...)
+	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("force_destroy"), &sourceForceDestroy)...)
+	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("reuse"), &sourceReuse)...)
+	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("product_enablement"), &sourceProductEnablement)...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if source.ID == nil || *source.ID == "" {
+	supportedProductEnablement, hasManagedProducts := inspectLegacyProductEnablement(sourceProductEnablement)
+	if !supportedProductEnablement {
+		resp.Diagnostics.AddError(
+			"Unsupported legacy product enablement state",
+			"fastly_service_compute product_enablement state can be migrated only when it contains known products in a well-formed shape. Unknown or malformed product state is blocked.",
+		)
+		return
+	}
+
+	if hasManagedProducts {
+		resp.Diagnostics.AddWarning(
+			"Legacy product enablement requires standalone resources",
+			"The fastly_service_compute product_enablement block is not copied into fastly_service_compute_auto state. The migration configuration must represent managed products as standalone fastly_service_product_* resources and import their existing service-scoped state using the Fastly service ID.",
+		)
+	}
+
+	if sourceID.IsNull() || sourceID.IsUnknown() || sourceID.ValueString() == "" {
 		resp.Diagnostics.AddError(
 			"Unable to migrate legacy Fastly service state",
 			"The fastly_service_compute state does not contain a Fastly service ID.",
@@ -76,24 +195,23 @@ func moveLegacyServiceComputeState(ctx context.Context, req resource.MoveStateRe
 		return
 	}
 
-	if len(source.ProductEnablement) != 0 {
-		resp.Diagnostics.AddWarning(
-			"Legacy product enablement requires standalone resources",
-			"The fastly_service_compute product_enablement block is not copied into fastly_service_compute_auto state. Manage products as standalone fastly_service_product_* resources and import their existing service-scoped state using the Fastly service ID.",
-		)
+	// SDKv2 optional booleans have false zero-value semantics. Normalize an
+	// absent persisted value so it matches the defaults on the Framework resource
+	// and does not introduce a migration-only plan diff.
+	if sourceForceDestroy.IsNull() || sourceForceDestroy.IsUnknown() {
+		sourceForceDestroy = types.BoolValue(false)
+	}
+	if sourceReuse.IsNull() || sourceReuse.IsUnknown() {
+		sourceReuse = types.BoolValue(false)
 	}
 
-	// SDKv2 optional booleans have false zero-value semantics; normalize absent
-	// values to the Framework defaults to avoid a migration-only plan diff.
-	forceDestroy := source.ForceDestroy != nil && *source.ForceDestroy
-	reuse := source.Reuse != nil && *source.Reuse
+	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("id"), sourceID)...)
+	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("force_destroy"), sourceForceDestroy)...)
+	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("reuse"), sourceReuse)...)
 
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("id"), types.StringValue(*source.ID))...)
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("force_destroy"), types.BoolValue(forceDestroy))...)
-	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("reuse"), types.BoolValue(reuse))...)
-
-	// Like an import, the sparse target state needs its package hash refreshed
-	// on first Read.
+	// Moving a service has the same first-read requirement as importing one:
+	// refresh the package hash from the API instead of inferring absence from
+	// the intentionally sparse target state.
 	if resp.TargetPrivate != nil {
 		resp.Diagnostics.Append(resp.TargetPrivate.SetKey(ctx, computePackageImportedPrivateKey, []byte("true"))...)
 	}
