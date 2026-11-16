@@ -130,6 +130,12 @@ terraform {
 
 provider "fastly" {}
 
+# Fastly's package hash is not a plain file digest, so filesha512() would show a
+# permanent diff against the hash the API reports.
+data "fastly_package_hash" "pkg" {
+  filename = "package.tar.gz"
+}
+
 resource "fastly_service_compute" "demo" {
   name          = "$SERVICE_NAME"
   force_destroy = true
@@ -146,7 +152,7 @@ resource "fastly_service_compute" "demo" {
 
   package {
     filename         = "package.tar.gz"
-    source_code_hash = filesha512("package.tar.gz")
+    source_code_hash = data.fastly_package_hash.pkg.hash
   }
 }
 HCL
