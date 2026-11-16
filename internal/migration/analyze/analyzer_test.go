@@ -637,7 +637,7 @@ resource "fastly_service_vcl" "demo" {
 	}
 }
 
-func TestAnalyzeConfigurableProductParityBlocker(t *testing.T) {
+func TestAnalyzeConfigurableProductsAreAutomaticForCDN(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -650,14 +650,56 @@ resource "fastly_service_vcl" "demo" {
       enabled      = true
       contentguard = "on"
     }
+    ddos_protection {
+      enabled = true
+      mode    = "block"
+    }
+    ngwaf {
+      enabled      = true
+      workspace_id = "ws-123"
+      traffic_ramp = 25
+    }
   }
 }
 `)
 
 	result := analyzeDir(t, dir)
 
-	if _, ok := findingByRuleID(result, "cdn-product-bot-management"); !ok {
-		t.Fatalf("Findings = %#v, want configurable product blocker", result.Findings)
+	for _, id := range []string{"cdn-product-bot-management", "cdn-product-ddos-protection", "cdn-product-ngwaf"} {
+		if _, ok := findingByRuleID(result, id); ok {
+			t.Errorf("Findings = %#v, did not expect a blocker for %s", result.Findings, id)
+		}
+		found := false
+		for _, action := range result.Actions {
+			found = found || action.RuleID == id
+		}
+		if !found {
+			t.Errorf("Actions = %#v, want an action for %s", result.Actions, id)
+		}
+	}
+}
+
+func TestAnalyzeConfigurableProductsRemainBlockedForCompute(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeFile(t, dir, "main.tf", `
+resource "fastly_service_compute" "demo" {
+  name = "migration-demo"
+
+  product_enablement {
+    ngwaf {
+      enabled      = true
+      workspace_id = "ws-123"
+    }
+  }
+}
+`)
+
+	result := analyzeDir(t, dir)
+
+	if _, ok := findingByRuleID(result, "compute-product-ngwaf"); !ok {
+		t.Fatalf("Findings = %#v, want compute product blocker", result.Findings)
 	}
 }
 

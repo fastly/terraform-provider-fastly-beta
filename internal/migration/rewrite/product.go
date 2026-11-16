@@ -73,7 +73,13 @@ func (e RemoveProductEnablement) apply(source []byte, filename string) ([]byte, 
 type AddSimpleProduct struct {
 	File, TypeName, Name, ServiceName, ProviderRef string
 	Enabled                                        bool
+	// Attributes are additional literal settings (HCL expression source) for
+	// configurable products, rendered after enabled in the given order.
+	Attributes []ProductAttribute
 }
+
+// ProductAttribute is one literal attribute of a generated product resource.
+type ProductAttribute struct{ Name, Value string }
 
 func (e AddSimpleProduct) file() string    { return e.File }
 func (e AddSimpleProduct) canCreate() bool { return true }
@@ -106,9 +112,34 @@ func (e AddSimpleProduct) apply(source []byte, filename string) ([]byte, error) 
 	if e.Enabled {
 		enabled = "true"
 	}
-	block := fmt.Sprintf("resource %q %q {\n  service_id = %s.id\n  enabled    = %s\n", e.TypeName, e.Name, service, enabled)
+	lines := []ProductAttribute{{"service_id", service + ".id"}, {"enabled", enabled}}
 	if e.ProviderRef != "" {
-		block += "  provider   = " + e.ProviderRef + "\n"
+		lines = append(lines, ProductAttribute{"provider", e.ProviderRef})
+	}
+	width := 0
+	for _, attribute := range append(lines, e.Attributes...) {
+		if !validAttributeName(attribute.Name) {
+			return nil, fmt.Errorf("invalid product attribute name %q", attribute.Name)
+		}
+		if len(attribute.Name) > width {
+			width = len(attribute.Name)
+		}
+	}
+	block := fmt.Sprintf("resource %q %q {\n", e.TypeName, e.Name)
+	for _, attribute := range append(lines, e.Attributes...) {
+		block += fmt.Sprintf("  %-*s = %s\n", width, attribute.Name, attribute.Value)
 	}
 	return appendBlock(source, block+"}\n"), nil
+}
+
+func validAttributeName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for _, r := range name {
+		if r != '_' && (r < 'a' || r > 'z') && (r < '0' || r > '9') {
+			return false
+		}
+	}
+	return true
 }
