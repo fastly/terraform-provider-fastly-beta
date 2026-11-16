@@ -12,8 +12,13 @@
 ### BUG FIXES:
 
 ### Dependencies:
-
 - build(deps): upgrade Go from 1.26.10 to 1.26.11
+- build(deps): `github.com/fastly/go-fastly` from v19.1.0 to v19.2.0 ([#226](https://github.com/fastly/terraform-provider-fastly-beta/pull/226))
+- build(deps): `github.com/fastly/go-fastly/v19` from 19.2.0 to 19.3.0 ([#234](https://github.com/fastly/terraform-provider-fastly-beta/pull/234))
+- build(deps): `github.com/zclconf/go-cty` from 1.19.0 to 1.20.0 ([#234](https://github.com/fastly/terraform-provider-fastly-beta/pull/234))
+- build(deps): `golang.org/x/mod` from 0.42.0 to 0.43.0 ([#234](https://github.com/fastly/terraform-provider-fastly-beta/pull/234))
+- build(deps): `golang.org/x/sys` from 0.49.0 to 0.50.0 ([#234](https://github.com/fastly/terraform-provider-fastly-beta/pull/234))
+- build(deps): `golang.org/x/text` from 0.43.0 to 0.44.0 ([#234](https://github.com/fastly/terraform-provider-fastly-beta/pull/234))
 
 - build(deps): `github.com/fastly/go-fastly` from v19.1.0 to v19.2.0 ([#226](https://github.com/fastly/terraform-provider-fastly-beta/pull/226))
 
