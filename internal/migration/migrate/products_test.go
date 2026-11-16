@@ -272,6 +272,25 @@ product_enablement { websockets = false }`, "", "multiple product_enablement blo
   traffic_ramp = 25
  }
 }`, "", "product_enablement.ngwaf.workspace_id is required"},
+		{"bot_management disabled", `product_enablement {
+ bot_management {
+  enabled      = false
+  contentguard = "on"
+ }
+}`, "", "product_enablement.bot_management.enabled = false cannot be migrated safely"},
+		{"ddos_protection disabled", `product_enablement {
+ ddos_protection {
+  enabled = false
+  mode    = "block"
+ }
+}`, "", "product_enablement.ddos_protection.enabled = false cannot be migrated safely"},
+		{"ngwaf disabled", `product_enablement {
+ ngwaf {
+  enabled      = false
+  workspace_id = "ws-123"
+  traffic_ramp = 25
+ }
+}`, "", "product_enablement.ngwaf.enabled = false cannot be migrated safely"},
 		{"count on service with configurable-only product", `count = 1
 product_enablement {
  bot_management {
@@ -409,7 +428,7 @@ func TestConfigurableProductMigrationPreservesSettings(t *testing.T) {
       contentguard = "on"
     }
     ddos_protection {
-      enabled = false
+      enabled = true
       mode    = "block"
     }
     ngwaf {
@@ -437,7 +456,7 @@ func TestConfigurableProductMigrationPreservesSettings(t *testing.T) {
 		`contentguard = "on"`,
 		`resource "fastly_service_product_ddos_protection" "demo"`,
 		`mode       = "block"`,
-		`enabled    = false`,
+		`enabled    = true`,
 		`resource "fastly_service_product_ngwaf" "demo"`,
 		`workspace_id = "ws-123"`,
 		`traffic_ramp = 25`,

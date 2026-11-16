@@ -285,6 +285,14 @@ func (c configurableProduct) literals(block *hclsyntax.Block, name string, issue
 		return false, nil, false
 	}
 	enabled = value.True()
+	if !enabled {
+		// The target Read does not populate settings of a disabled product, so the
+		// imported resource would plan an in-place update, and applying it calls the
+		// product's disable API on a product that is already disabled.
+		issue(fmt.Sprintf("product_enablement.%s.enabled = false cannot be migrated safely", name),
+			"Remove the block to leave the disabled product unmanaged, or migrate it manually; importing a disabled product plans an update that calls the disable API.")
+		return false, nil, false
+	}
 	for _, attrName := range c.required {
 		if block.Body.Attributes[attrName] == nil {
 			issue(fmt.Sprintf("product_enablement.%s.%s is required", name, attrName),

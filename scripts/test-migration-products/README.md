@@ -5,19 +5,39 @@ DDoS Protection and NGWAF with non-default settings (plus WebSockets).
 
 ## Flow
 
-1. Create a throwaway NGWAF workspace (`mode: off`) via the API, or use the one in
-   `FASTLY_TEST_NGWAF_WORKSPACE_ID` (never deleted in that case).
-2. Apply a legacy `fastly_service_vcl` with `product_enablement` using the
+Run with `enabled`, `disabled` or `all` (default). Each scenario gets its own
+service and its own throwaway NGWAF workspace (`mode: off`), created via the API
+unless `FASTLY_TEST_NGWAF_WORKSPACE_ID` is set (never deleted in that case).
+
+**`enabled`** (non-default settings: contentguard `on`, mode `block`,
+traffic_ramp `25`, plus WebSockets):
+
+1. Apply a legacy `fastly_service_vcl` with `product_enablement` using the
    published legacy `fastly/fastly` provider, then `apply -refresh-only`.
+2. Snapshot the live status and configuration of each product through the API
+   and assert contentguard, mode, workspace_id and traffic_ramp.
 3. `fastly-tf-migrate analyze`, `migrate --dry-run`, `migrate --write`; assert the
    legacy block is gone and the settings appear in `migration.tf`.
 4. Switch to the locally built provider (served via `dev_overrides` for
    `fastly/fastly`; `terraform init` is skipped because no 20.x release exists on
-   the registry), plan, and assert 4 imports with no creates or deletes.
+   the registry) and plan. Every action must be `no-op`/`read`: 4 imports, and no
+   create, update, delete or replace.
 5. Apply, then require a no-op `plan -detailed-exitcode`.
-6. Confirm the products are still enabled through the enabled-products API.
-7. Destroy the service and delete the workspace. On failure, an emergency
-   destroy and a name-prefix API sweep run.
+6. Re-snapshot the products; the snapshot must be identical, and the four
+   settings must be unchanged.
+7. Check the provider's HTTP calls during steps 4-5, taken from the go-fastly
+   debug dump (`FASTLY_DEBUG_MODE`, API key header removed) in the Terraform
+   trace: no non-GET request may reach `/enabled-products/` or `/ngwaf/`.
+8. Destroy.
+
+**`disabled`** (`enabled = false` on all three configurable products): the
+migrator must refuse. Importing a disabled product plans an in-place update
+(the target `Read` does not populate its settings) that calls the disable API, so
+`migrate --dry-run` and `--write` must exit non-zero, name each product, and
+leave every `.tf` file untouched. The legacy service is then destroyed.
+
+On failure, an emergency destroy and a name-prefix API sweep run, and the
+temporary workspaces are deleted.
 
 ## Running
 

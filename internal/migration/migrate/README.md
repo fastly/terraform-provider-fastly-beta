@@ -139,7 +139,11 @@ Terraform module, and an explicit service provider alias is copied to the
 product resource. This requires Terraform with configuration-driven
 `import` block support (Terraform **1.5+**).
 
-`false` generates a managed standalone product with `enabled = false`;
+`false` on a simple product generates a managed standalone product with
+`enabled = false`. `enabled = false` on Bot Management, DDoS Protection or NGWAF
+blocks the migration: importing a disabled configurable product plans an
+in-place update (its settings are not read back) that calls the disable API.
+Remove the block to leave the product unmanaged, or migrate it manually.
 `null`, empty aggregate blocks, and omitted product fields generate no
 product resource. Unknown boolean expressions, indexed services (`count` or
 `for_each`), existing resource/import collisions, comments that would be
