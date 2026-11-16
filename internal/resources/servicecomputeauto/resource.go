@@ -165,7 +165,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 		Blocks: map[string]schema.Block{
 			"domain":                   domain.NestedBlockSchema(),
 			"healthcheck":              healthcheck.NestedBlockSchema(),
-			"backend":                  backend.NestedBlockSchema(),
+			"backend":                  backend.ComputeNestedBlockSchema(),
 			"dictionary":               dictionary.NestedBlockSchema(),
 			"resource_link":            resourcelink.NestedBlockSchema(),
 			"package":                  computepackage.NestedBlockSchema(),
