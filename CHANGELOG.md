@@ -9,7 +9,11 @@
 - feat(product-enablement): add `fastly_product_ai_accelerator`, `fastly_product_ai_runtime_control`, `fastly_product_domain_research` and `fastly_product_object_storage` resources for enabling account-level products
 - feat(migration): split legacy Bot Management, DDoS Protection and Next-Gen WAF product enablement into standalone resources with service-ID imports during VCL-to-CDN Auto migration
 
+- feat(service-compute-auto): add `moved` block state migration from legacy `fastly_service_compute` to `fastly_service_compute_auto` ([#235](https://github.com/fastly/terraform-provider-fastly-beta/pull/235))
+
 ### BUG FIXES:
+
+- fix(service-compute-auto): default `backend.prefer_ipv6` to `true` to match legacy Compute behavior ([#235](https://github.com/fastly/terraform-provider-fastly-beta/pull/235))
 
 ### Dependencies:
 
