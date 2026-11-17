@@ -260,7 +260,7 @@ func TestReadForVersionForceRefreshFetchesHashForEmptyState(t *testing.T) {
 	t.Parallel()
 
 	var calls atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		calls.Add(1)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"id":"SID123","metadata":{"files_hash":"abc123"}}`))
