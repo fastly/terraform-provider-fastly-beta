@@ -35,7 +35,7 @@ help:
 	@echo "                                See 'Baseline Regression Suite' in TESTING.md"
 	@echo "  make test-lifecycle-cdn     - Run CDN lifecycle tests (requires FASTLY_API_TOKEN)"
 	@echo "  make test-lifecycle-compute - Run Compute lifecycle tests (requires FASTLY_API_TOKEN)"
-	@echo "  make test-migration-vcl      - Run VCL -> CDN Auto live migration test (requires FASTLY_API_TOKEN)"
+	@echo "  make test-migration-vcl     - Run VCL -> CDN Auto live migration test (requires FASTLY_API_TOKEN)"
 	@echo "                                Tests only VCL service state move; no product entitlements"
 	@echo "  make test-lifecycle         - Run all lifecycle tests (requires FASTLY_API_TOKEN)"
 	@echo "  make release-check          - Run build, lint, test-baseline, and docs (requires FASTLY_API_TOKEN)"
