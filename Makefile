@@ -14,7 +14,7 @@ OVERRIDES_FILE := $(BIN_DIR)/developer_overrides.tfrc
 GOLANGCI_LINT_VERSION := v2.12.2
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 
-.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle test-migration-vcl lint install-linter check-linter-version release-check help
+.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle test-migration-vcl test-migration-compute lint install-linter check-linter-version release-check help
 
 help:
 	@echo "Available targets:"
@@ -37,6 +37,7 @@ help:
 	@echo "  make test-lifecycle-compute - Run Compute lifecycle tests (requires FASTLY_API_TOKEN)"
 	@echo "  make test-migration-vcl     - Run VCL -> CDN Auto live migration test (requires FASTLY_API_TOKEN)"
 	@echo "                                Tests only VCL service state move; no product entitlements"
+	@echo "  make test-migration-compute - Run Compute -> Compute Auto live migration test (requires FASTLY_API_TOKEN)"
 	@echo "  make test-lifecycle         - Run all lifecycle tests (requires FASTLY_API_TOKEN)"
 	@echo "  make release-check          - Run build, lint, test-baseline, and docs (requires FASTLY_API_TOKEN)"
 
@@ -157,6 +158,12 @@ test-migration-vcl:
 	@echo "==> Running VCL -> CDN Auto live migration acceptance test (no products)..."
 	@echo "    Note: Creates/destroys a real Fastly test service; requires FASTLY_API_TOKEN"
 	@./scripts/test-migration-vcl/run.sh
+
+# Opt-in live migration test: not part of routine CI or release-check.
+test-migration-compute:
+	@echo "==> Running Compute -> Compute Auto live migration acceptance test..."
+	@echo "    Note: Creates/destroys a real Fastly test service; requires FASTLY_API_TOKEN"
+	@./scripts/test-migration-compute/run.sh
 
 test-lifecycle-cdn:
 	@echo "==> Running CDN lifecycle tests..."

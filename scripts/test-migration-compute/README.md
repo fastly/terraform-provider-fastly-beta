@@ -14,12 +14,17 @@ legacy `fastly_service_compute` (package, domain and backend).
    `previous_address` is `fastly_service_compute.demo`.
 5. Apply, then require a no-op `plan -detailed-exitcode`.
 6. The Fastly service ID must be unchanged.
-7. Destroy. On failure an emergency destroy and a name-prefix API sweep run.
+7. Only the new address remains in state with the lifecycle settings preserved,
+   and re-running the migrator proposes no further changes.
+8. Destroy. On failure an emergency destroy and a name-prefix API sweep run.
 
 ## Running
 
 ```bash
 export FASTLY_API_TOKEN=...
+make test-migration-compute
+
+# Or directly:
 ./scripts/test-migration-compute/run.sh
 ```
 

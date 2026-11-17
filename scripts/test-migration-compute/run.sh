@@ -18,6 +18,7 @@
 # or swept by name prefix if the run fails.
 
 set -euo pipefail
+umask 077
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -39,6 +40,7 @@ PROJECT_DIR="$WORK_DIR/project"
 KEEP_WORK_DIR="${KEEP_WORK_DIR:-}"
 PHASE="setup"
 LEGACY_ID=""
+LEGACY_LIFECYCLE_JSON=""
 
 log_info()    { echo -e "${BLUE}[INFO]${NC} $*"; }
 log_success() { echo -e "${GREEN}[SUCCESS]${NC} $*"; }
@@ -177,7 +179,17 @@ apply_legacy() {
         log_error "Could not read the legacy service ID from state"
         exit 1
     fi
-    log_success "Legacy service created: $LEGACY_ID"
+    LEGACY_LIFECYCLE_JSON="$(terraform show -json | jq -c --arg id "$LEGACY_ID" '
+        .values.root_module.resources[]?
+        | select(.address == "fastly_service_compute.demo" and .values.id == $id)
+        | {force_destroy: .values.force_destroy, reuse: .values.reuse}')"
+    [ -n "$LEGACY_LIFECYCLE_JSON" ] || { log_error "Legacy lifecycle attributes missing from state"; exit 1; }
+    terraform state pull | jq -e --arg id "$LEGACY_ID" '
+        [.resources[]? | select(.type == "fastly_service_compute" and .name == "demo")
+         | .instances[]? | select(.schema_version == 0 and .attributes.id == $id)]
+        | length == 1' > /dev/null \
+        || { log_error "Legacy persisted Compute state must have schema version 0"; exit 1; }
+    log_success "Legacy service created: $LEGACY_ID (persisted schema 0)"
 }
 
 run_migrator() {
@@ -185,7 +197,17 @@ run_migrator() {
     log_step "Running fastly-tf-migrate"
     cd "$PROJECT_DIR"
     "$MIGRATOR" analyze .
+    local before
+    before="$(cksum main.tf)"
     "$MIGRATOR" migrate --dry-run . | tee "$WORK_DIR/dry-run.diff"
+    grep -Fxq 'Migration dry-run: READY' "$WORK_DIR/dry-run.diff" \
+        || { log_error "Migration dry-run was not READY"; exit 1; }
+    grep -Fxq 'Resources to move: 1' "$WORK_DIR/dry-run.diff" \
+        || { log_error "Expected one Compute service move"; exit 1; }
+    if [ "$before" != "$(cksum main.tf)" ] || [ -e migration.tf ]; then
+        log_error "Dry-run modified Terraform configuration"
+        exit 1
+    fi
     if ! grep -q "fastly_service_compute_auto" "$WORK_DIR/dry-run.diff"; then
         log_error "dry-run diff does not mention fastly_service_compute_auto"
         exit 1
@@ -197,6 +219,14 @@ run_migrator() {
     fi
     if ! grep -q "fastly_service_compute.demo" migration.tf; then
         log_error "migration.tf has no moved block"
+        exit 1
+    fi
+    if [ -z "$(find "$BACKUP_DIR" -type f -name manifest.json -print -quit)" ]; then
+        log_error "Migration recovery manifest was not created"
+        exit 1
+    fi
+    if grep -Fq 'fastly_service_product_' migration.tf || grep -Eq '^[[:space:]]*import[[:space:]]*\{' migration.tf; then
+        log_error "Product-free Compute migration generated product resources or imports"
         exit 1
     fi
     log_success "Migration written"
@@ -252,6 +282,28 @@ plan_and_apply_ga() {
         exit 1
     fi
     log_success "Service ID preserved: $new_id"
+
+    terraform state list > "$WORK_DIR/new-state-addresses.txt"
+    if ! grep -Fxq 'fastly_service_compute_auto.demo' "$WORK_DIR/new-state-addresses.txt" \
+        || grep -Fxq 'fastly_service_compute.demo' "$WORK_DIR/new-state-addresses.txt"; then
+        log_error "State must contain only the new Compute Auto address"
+        exit 1
+    fi
+    terraform show -json | jq -e --arg id "$LEGACY_ID" --argjson legacy "$LEGACY_LIFECYCLE_JSON" '
+        [.values.root_module.resources[]?
+         | select(.address == "fastly_service_compute_auto.demo"
+             and .values.id == $id
+             and .values.force_destroy == $legacy.force_destroy
+             and ($legacy.reuse == null or .values.reuse == $legacy.reuse))]
+        | length == 1' > /dev/null \
+        || { log_error "Compute Auto state lost service ID or legacy lifecycle settings"; exit 1; }
+
+    "$MIGRATOR" migrate --dry-run . > "$WORK_DIR/dry-run-after.txt"
+    grep -Fxq 'Resources to move: 0' "$WORK_DIR/dry-run-after.txt" \
+        || { log_error "Repeated migration still proposes a state move"; exit 1; }
+    grep -Fxq 'Files to change: 0' "$WORK_DIR/dry-run-after.txt" \
+        || { log_error "Repeated migration is not idempotent"; exit 1; }
+    log_success "Migration is idempotent on rerun"
 }
 
 expect_activate_false_blocked() {
