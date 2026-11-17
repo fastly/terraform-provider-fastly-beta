@@ -11833,3 +11833,86 @@ func ConfigAuditLogEventMappingDataSource(lookup string) string {
 		"LOOKUP": lookup,
 	})
 }
+
+func configLoggingFOSCDN(serviceName, domainName, loggerName, block string) string {
+	return BuildConfig(
+		ServiceCDN,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"DOMAIN_NAME":      domainName,
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FOS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/service_cdn_domain.tf",
+		block,
+	)
+}
+
+func ConfigLoggingFOSBasic(serviceName, domainName, loggerName string) string {
+	return configLoggingFOSCDN(serviceName, domainName, loggerName, "internal/acceptance_tests/blocks/logging_fos_basic.tf")
+}
+
+func ConfigLoggingFOSUpdated(serviceName, domainName, loggerName string) string {
+	return configLoggingFOSCDN(serviceName, domainName, loggerName, "internal/acceptance_tests/blocks/logging_fos_updated.tf")
+}
+
+// ConfigLoggingFOSCodecConflict sets compression_codec and gzip_level together.
+func ConfigLoggingFOSCodecConflict(serviceName, domainName, loggerName string) string {
+	return configLoggingFOSCDN(serviceName, domainName, loggerName, "internal/acceptance_tests/blocks/logging_fos_codec_conflict.tf")
+}
+
+// ConfigLoggingFOSCompute attaches the standalone resource to an explicit Compute service.
+func ConfigLoggingFOSCompute(serviceName, loggerName string) string {
+	return BuildConfig(
+		ServiceCompute,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"SERVICE_COMMENT":  "",
+			"SERVICE_VERSION":  "1",
+			"LOGGING_FOS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/logging_fos_compute.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingFOS(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"LOGGING_FOS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_fos_nested.tf",
+	)
+}
+
+func ConfigCDNAutoWithLoggingFOSUpdated(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceCDNAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"LOGGING_FOS_NAME": loggerName,
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_fos_nested_updated.tf",
+	)
+}
+
+func ConfigComputeAutoWithLoggingFOS(serviceName, domainName, loggerName string) string {
+	return BuildConfig(
+		ServiceComputeAuto,
+		map[string]string{
+			"SERVICE_NAME":     serviceName,
+			"DOMAIN_NAME":      domainName,
+			"LOGGING_FOS_NAME": loggerName,
+			"PACKAGE_PATH":     GetPackagePath(),
+		},
+		"internal/acceptance_tests/blocks/domain_single.tf",
+		"internal/acceptance_tests/blocks/logging_fos_nested.tf",
+		"internal/acceptance_tests/blocks/package.tf",
+	)
+}

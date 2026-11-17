@@ -110,6 +110,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdatadog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdigitalocean"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingelasticsearch"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingfos"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingftp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggooglepubsub"
@@ -311,6 +312,7 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		loggingcloudfiles.NewResource,
 		loggingdatadog.NewResource,
 		loggingdigitalocean.NewResource,
+		loggingfos.NewResource,
 		loggingelasticsearch.NewResource,
 		loggingftp.NewResource,
 		logginggcs.NewResource,
@@ -515,6 +517,7 @@ func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListReso
 		loggingcloudfiles.NewListResource,
 		loggingdatadog.NewListResource,
 		loggingdigitalocean.NewListResource,
+		loggingfos.NewListResource,
 		loggingelasticsearch.NewListResource,
 		loggingftp.NewListResource,
 		logginggcs.NewListResource,

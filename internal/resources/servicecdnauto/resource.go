@@ -26,6 +26,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdatadog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdigitalocean"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingelasticsearch"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingfos"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingftp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggooglepubsub"
@@ -116,6 +117,7 @@ type Model struct {
 	LoggingCloudfiles             []loggingcloudfiles.NestedModel             `tfsdk:"logging_cloudfiles"`
 	LoggingOpenStack              []loggingopenstack.NestedModel              `tfsdk:"logging_openstack"`
 	LoggingDigitalOcean           []loggingdigitalocean.NestedModel           `tfsdk:"logging_digitalocean"`
+	LoggingFOS                    []loggingfos.NestedModel                    `tfsdk:"logging_fos"`
 	LoggingElasticsearch          []loggingelasticsearch.NestedModel          `tfsdk:"logging_elasticsearch"`
 	LoggingFTP                    []loggingftp.NestedModel                    `tfsdk:"logging_ftp"`
 	LoggingS3                     []loggings3.NestedModel                     `tfsdk:"logging_s3"`
@@ -210,6 +212,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_cloudfiles":               loggingcloudfiles.NestedBlockSchema(),
 			"logging_openstack":                loggingopenstack.NestedBlockSchema(),
 			"logging_digitalocean":             loggingdigitalocean.NestedBlockSchema(),
+			"logging_fos":                      loggingfos.NestedBlockSchema(),
 			"logging_elasticsearch":            loggingelasticsearch.NestedBlockSchema(),
 			"logging_ftp":                      loggingftp.NestedBlockSchema(),
 			"logging_s3":                       loggings3.NestedBlockSchema(),
@@ -440,6 +443,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		resp.Diagnostics.AddAttributeError(
 			path.Root("logging_digitalocean"),
 			"Invalid DigitalOcean logging configuration",
+			err.Error(),
+		)
+	}
+
+	if err := loggingfos.ValidateConditionReferences(config.LoggingFOS, conditionNames); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("logging_fos"),
+			"Invalid Fastly Object Storage logging configuration",
 			err.Error(),
 		)
 	}

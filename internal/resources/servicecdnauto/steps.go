@@ -22,6 +22,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdatadog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdigitalocean"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingelasticsearch"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingfos"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingftp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggooglepubsub"
@@ -310,6 +311,20 @@ func afterDictionaryAndRateLimiterSteps(plan, previous *Model) []mutateStep {
 					return err
 				}
 				plan.LoggingDigitalOcean = loggingdigitalocean.MatchOrder(items, plan.LoggingDigitalOcean)
+				return nil
+			},
+		},
+		{
+			label: "Fastly Object Storage logging endpoints",
+			reconcile: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				return loggingfos.Reconcile(ctx, client, serviceID, version, plan.LoggingFOS)
+			},
+			readBack: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingfos.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				plan.LoggingFOS = loggingfos.MatchOrder(items, plan.LoggingFOS)
 				return nil
 			},
 		},
@@ -898,6 +913,17 @@ func readSteps(state *Model, imported bool) []readStep {
 			},
 		},
 		{
+			label: "Fastly Object Storage logging endpoints",
+			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
+				items, err := loggingfos.ReadForVersion(ctx, client, serviceID, version)
+				if err != nil {
+					return err
+				}
+				state.LoggingFOS = loggingfos.MatchOrder(items, state.LoggingFOS)
+				return nil
+			},
+		},
+		{
 			label: "Elasticsearch logging endpoints",
 			run: func(ctx context.Context, client *fastly.Client, serviceID string, version int) error {
 				items, err := loggingelasticsearch.ReadForVersion(ctx, client, serviceID, version)
@@ -1279,6 +1305,12 @@ func planSteps(plan, state *Model) []planStep {
 			equal: func() bool { return loggingdigitalocean.Equal(plan.LoggingDigitalOcean, state.LoggingDigitalOcean) },
 			matchOnly: func() {
 				plan.LoggingDigitalOcean = loggingdigitalocean.MatchOrder(state.LoggingDigitalOcean, plan.LoggingDigitalOcean)
+			},
+		},
+		{
+			equal: func() bool { return loggingfos.Equal(plan.LoggingFOS, state.LoggingFOS) },
+			matchOnly: func() {
+				plan.LoggingFOS = loggingfos.MatchOrder(state.LoggingFOS, plan.LoggingFOS)
 			},
 		},
 		{
