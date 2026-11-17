@@ -87,7 +87,7 @@ Optional:
 - `min_tls_version` (String) Minimum allowed TLS version on SSL connections to this backend.
 - `override_host` (String) Hostname to override the Host header.
 - `port` (Number) The port number on which the backend responds. Default `80`.
-- `prefer_ipv6` (Boolean) Prefer IPv6 connections to origins for hostname backends. Default `false` for CDN services.
+- `prefer_ipv6` (Boolean) Prefer IPv6 connections to origins for hostname backends. Default `true` for Compute services.
 - `request_condition` (String) Name of a request condition which, if met, selects this backend.
 - `share_key` (String) Value that, when shared across backends, enables those backends to share the same health check.
 - `shield` (String) POP of the shield designated to reduce inbound load.
