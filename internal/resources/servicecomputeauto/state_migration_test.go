@@ -7,9 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -122,6 +124,102 @@ func TestMoveLegacyServiceComputeStateRejectsUnsupportedSchemaVersion(t *testing
 				t.Fatalf("state mover accepted schema version %d, want an error", version)
 			}
 		})
+	}
+}
+
+func TestMoveLegacyServiceComputeStateRejectsUnsupportedLifecycleSettings(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		attribute string
+		value     bool
+		wantError string
+	}{
+		{name: "activate false", attribute: "activate", value: false, wantError: "activate = false"},
+		{name: "stage true", attribute: "stage", value: true, wantError: "stage = true"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+			r := NewResource().(*Resource)
+			mover := legacyServiceComputeSchemaV0Mover(ctx, t, r)
+
+			source := newLegacyMoveSourceState(t, mover)
+			if diags := source.SetAttribute(ctx, path.Root(tt.attribute), tt.value); diags.HasError() {
+				t.Fatalf("SetAttribute(%s) returned diagnostics: %v", tt.attribute, diags)
+			}
+
+			req := resource.MoveStateRequest{
+				SourceProviderAddress: legacyFastlyProviderAddress,
+				SourceSchemaVersion:   legacyServiceComputeSchemaV0,
+				SourceState:           source,
+				SourceTypeName:        legacyServiceComputeTypeName,
+			}
+			resp := resource.MoveStateResponse{TargetState: newComputeAutoTargetState(ctx, t, r)}
+
+			mover.StateMover(ctx, req, &resp)
+			if !resp.Diagnostics.HasError() {
+				t.Fatalf("state mover accepted %s, want an error", tt.name)
+			}
+			if got := resp.Diagnostics.Errors()[0].Summary(); !strings.Contains(got, tt.wantError) {
+				t.Errorf("diagnostic summary = %q, want it to mention %q", got, tt.wantError)
+			}
+			var id types.String
+			if diags := resp.TargetState.GetAttribute(ctx, path.Root("id"), &id); diags.HasError() || !id.IsNull() {
+				t.Errorf("target state was written despite the error (id = %v, diags = %v)", id, diags)
+			}
+		})
+	}
+}
+
+func TestMoveLegacyServiceComputeStateAllowsDefaultLifecycleSettings(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	r := NewResource().(*Resource)
+	mover := legacyServiceComputeSchemaV0Mover(ctx, t, r)
+
+	source := newLegacyMoveSourceState(t, mover)
+	for attribute, value := range map[string]bool{"activate": true, "stage": false} {
+		if diags := source.SetAttribute(ctx, path.Root(attribute), value); diags.HasError() {
+			t.Fatalf("SetAttribute(%s) returned diagnostics: %v", attribute, diags)
+		}
+	}
+
+	req := resource.MoveStateRequest{
+		SourceProviderAddress: legacyFastlyProviderAddress,
+		SourceSchemaVersion:   legacyServiceComputeSchemaV0,
+		SourceState:           source,
+		SourceTypeName:        legacyServiceComputeTypeName,
+	}
+	resp := resource.MoveStateResponse{TargetState: newComputeAutoTargetState(ctx, t, r)}
+
+	mover.StateMover(ctx, req, &resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("state mover rejected default lifecycle settings: %v", resp.Diagnostics)
+	}
+}
+
+type fakePrivateState map[string][]byte
+
+func (f fakePrivateState) SetKey(_ context.Context, key string, value []byte) diag.Diagnostics {
+	f[key] = value
+	return nil
+}
+
+func TestMarkComputePackageForRefreshWritesImportedMarker(t *testing.T) {
+	t.Parallel()
+
+	private := fakePrivateState{}
+	if diags := markComputePackageForRefresh(context.Background(), private); diags.HasError() {
+		t.Fatalf("markComputePackageForRefresh returned diagnostics: %v", diags)
+	}
+	if got := string(private[computePackageImportedPrivateKey]); got != "true" {
+		t.Fatalf("private key %q = %q, want \"true\"", computePackageImportedPrivateKey, got)
 	}
 }
 

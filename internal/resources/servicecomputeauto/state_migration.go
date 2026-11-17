@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -161,12 +162,34 @@ func moveLegacyServiceComputeState(ctx context.Context, req resource.MoveStateRe
 	var sourceID types.String
 	var sourceForceDestroy types.Bool
 	var sourceReuse types.Bool
+	var sourceActivate types.Bool
+	var sourceStage types.Bool
 	var sourceProductEnablement types.Set
 
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("id"), &sourceID)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("force_destroy"), &sourceForceDestroy)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("reuse"), &sourceReuse)...)
+	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("activate"), &sourceActivate)...)
+	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("stage"), &sourceStage)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("product_enablement"), &sourceProductEnablement)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// fastly_service_compute_auto always activates and cannot stage. Moving a
+	// service that opted out would silently discard that lifecycle behaviour.
+	if !sourceActivate.IsNull() && !sourceActivate.IsUnknown() && !sourceActivate.ValueBool() {
+		resp.Diagnostics.AddError(
+			"Unsupported legacy lifecycle setting: activate = false",
+			"fastly_service_compute_auto activates every change and cannot represent a fastly_service_compute with activate = false. Set activate = true and apply with the legacy provider before moving, or keep managing this service with fastly_service_compute.",
+		)
+	}
+	if !sourceStage.IsNull() && !sourceStage.IsUnknown() && sourceStage.ValueBool() {
+		resp.Diagnostics.AddError(
+			"Unsupported legacy lifecycle setting: stage = true",
+			"fastly_service_compute_auto does not support staging and cannot represent a fastly_service_compute with stage = true. Set stage = false and apply with the legacy provider before moving, or keep managing this service with fastly_service_compute.",
+		)
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -213,6 +236,14 @@ func moveLegacyServiceComputeState(ctx context.Context, req resource.MoveStateRe
 	// refresh the package hash from the API instead of inferring absence from
 	// the intentionally sparse target state.
 	if resp.TargetPrivate != nil {
-		resp.Diagnostics.Append(resp.TargetPrivate.SetKey(ctx, computePackageImportedPrivateKey, []byte("true"))...)
+		resp.Diagnostics.Append(markComputePackageForRefresh(ctx, resp.TargetPrivate)...)
 	}
+}
+
+type privateStateSetter interface {
+	SetKey(ctx context.Context, key string, value []byte) diag.Diagnostics
+}
+
+func markComputePackageForRefresh(ctx context.Context, private privateStateSetter) diag.Diagnostics {
+	return private.SetKey(ctx, computePackageImportedPrivateKey, []byte("true"))
 }
