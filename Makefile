@@ -14,7 +14,7 @@ OVERRIDES_FILE := $(BIN_DIR)/developer_overrides.tfrc
 GOLANGCI_LINT_VERSION := v2.12.2
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 
-.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle lint install-linter check-linter-version release-check help
+.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle test-migration-products lint install-linter check-linter-version release-check help
 
 help:
 	@echo "Available targets:"
@@ -33,6 +33,8 @@ help:
 	@echo "                                Add PARALLEL=<n> to cap concurrent tests, TIMEOUT=<dur> to override the 30m default"
 	@echo "  make test-baseline          - Run the baseline regression suite, ~2.5m (requires FASTLY_API_TOKEN)"
 	@echo "                                See 'Baseline Regression Suite' in TESTING.md"
+	@echo "  make test-migration-products - Run all CDN product migration E2E tests (requires FASTLY_API_TOKEN)"
+	@echo "                                Add SCENARIO=simple:domain_inspector to test one product"
 	@echo "  make test-lifecycle-cdn     - Run CDN lifecycle tests (requires FASTLY_API_TOKEN)"
 	@echo "  make test-lifecycle-compute - Run Compute lifecycle tests (requires FASTLY_API_TOKEN)"
 	@echo "  make test-lifecycle         - Run all lifecycle tests (requires FASTLY_API_TOKEN)"
@@ -149,6 +151,11 @@ validate-docs:
 	@$(GO_BIN) tool -modfile=tools/go.mod tfplugindocs validate --provider-name $(PKG_NAME)
 
 docs: generate-docs validate-docs
+
+test-migration-products:
+	@echo "==> Running CDN product migration E2E tests (scenario: $(or $(SCENARIO),all))..."
+	@echo "    Note: Creates/destroys real Fastly resources; requires FASTLY_API_TOKEN and product entitlements"
+	@./scripts/test-migration-products/run.sh '$(or $(SCENARIO),all)'
 
 test-lifecycle-cdn:
 	@echo "==> Running CDN lifecycle tests..."
