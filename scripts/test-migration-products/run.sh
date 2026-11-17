@@ -62,6 +62,7 @@ SIMPLE_PRODUCT=""
 PRODUCT_ENABLED=""
 SERVICE_NAME=""
 SCENARIO_DIR=""
+SCENARIO_SLUG=""
 PROJECT_DIR=""
 WORKSPACE_ID=""
 SERVICE_ID=""
@@ -374,7 +375,7 @@ run_migrator() {
         fi
     done
 
-    "$MIGRATOR" migrate --write --backup-dir "$BACKUP_DIR/$SCENARIO" .
+    "$MIGRATOR" migrate --write --backup-dir "$BACKUP_DIR/$SCENARIO_SLUG" .
 
     if grep -q "product_enablement" main.tf; then
         log_error "legacy product_enablement block still present after migration"
@@ -630,10 +631,11 @@ run_scenario() {
         *) log_error "Unknown scenario '$SCENARIO'"; print_usage; exit 2 ;;
     esac
 
-    # Replace separators and underscores so test domains remain valid hostnames.
-    SERVICE_NAME="$NAME_PREFIX-${SCENARIO//:/-}"
-    SERVICE_NAME="${SERVICE_NAME//_/-}"
-    SCENARIO_DIR="$WORK_DIR/$SCENARIO"
+    # Use the same portable name for service names, directories, and backups.
+    SCENARIO_SLUG="${SCENARIO//:/-}"
+    SCENARIO_SLUG="${SCENARIO_SLUG//_/-}"
+    SERVICE_NAME="$NAME_PREFIX-$SCENARIO_SLUG"
+    SCENARIO_DIR="$WORK_DIR/$SCENARIO_SLUG"
     PROJECT_DIR="$SCENARIO_DIR/project"
     mkdir -p "$PROJECT_DIR"
     PROJECT_DIRS+=("$PROJECT_DIR")
