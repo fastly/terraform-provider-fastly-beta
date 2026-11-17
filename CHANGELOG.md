@@ -4,10 +4,11 @@
 
 ### ENHANCEMENTS:
 
+- test(migration): add live end-to-end coverage for product-free `fastly_service_vcl` to `fastly_service_cdn_auto` migration, verifying state preservation and no-op plans ([#236](https://github.com/fastly/terraform-provider-fastly-beta/pull/236))
 - feat(alert): add `dimensions.services` to `fastly_alert` to monitor a set of services individually for `stats` alerts ([#232](https://github.com/fastly/terraform-provider-fastly-beta/pull/232))
 - feat(migration): generate standalone CDN simple-product resources and service-ID imports from legacy product enablement ([#230](https://github.com/fastly/terraform-provider-fastly-beta/pull/230))
-- feat(product-enablement): add `fastly_product_ai_accelerator`, `fastly_product_ai_runtime_control`, `fastly_product_domain_research` and `fastly_product_object_storage` resources for enabling account-level products
-- feat(migration): split legacy Bot Management, DDoS Protection and Next-Gen WAF product enablement into standalone resources with service-ID imports during VCL-to-CDN Auto migration
+- feat(product-enablement): add `fastly_product_ai_accelerator`, `fastly_product_ai_runtime_control`, `fastly_product_domain_research` and `fastly_product_object_storage` resources for enabling account-level products ([#227](https://github.com/fastly/terraform-provider-fastly-beta/pull/227))
+- feat(migration): split legacy Bot Management, DDoS Protection and Next-Gen WAF product enablement into standalone resources with service-ID imports during VCL-to-CDN Auto migration ([#231](https://github.com/fastly/terraform-provider-fastly-beta/pull/231))
 
 ### BUG FIXES:
 

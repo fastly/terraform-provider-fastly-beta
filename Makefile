@@ -14,7 +14,7 @@ OVERRIDES_FILE := $(BIN_DIR)/developer_overrides.tfrc
 GOLANGCI_LINT_VERSION := v2.12.2
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 
-.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle test-migration-products lint install-linter check-linter-version release-check help
+.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle test-migration-vcl test-migration-products lint install-linter check-linter-version release-check help
 
 help:
 	@echo "Available targets:"
@@ -37,6 +37,8 @@ help:
 	@echo "                                Add SCENARIO=simple:domain_inspector to test one product"
 	@echo "  make test-lifecycle-cdn     - Run CDN lifecycle tests (requires FASTLY_API_TOKEN)"
 	@echo "  make test-lifecycle-compute - Run Compute lifecycle tests (requires FASTLY_API_TOKEN)"
+	@echo "  make test-migration-vcl     - Run VCL -> CDN Auto live migration test (requires FASTLY_API_TOKEN)"
+	@echo "                                Tests only VCL service state move; no product entitlements"
 	@echo "  make test-lifecycle         - Run all lifecycle tests (requires FASTLY_API_TOKEN)"
 	@echo "  make release-check          - Run build, lint, test-baseline, and docs (requires FASTLY_API_TOKEN)"
 
@@ -151,6 +153,12 @@ validate-docs:
 	@$(GO_BIN) tool -modfile=tools/go.mod tfplugindocs validate --provider-name $(PKG_NAME)
 
 docs: generate-docs validate-docs
+
+# Opt-in live migration tests: not part of routine CI or release-check.
+test-migration-vcl:
+	@echo "==> Running VCL -> CDN Auto live migration acceptance test (no products)..."
+	@echo "    Note: Creates/destroys a real Fastly test service; requires FASTLY_API_TOKEN"
+	@./scripts/test-migration-vcl/run.sh
 
 test-migration-products:
 	@echo "==> Running CDN product migration E2E tests (scenario: $(or $(SCENARIO),all))..."
