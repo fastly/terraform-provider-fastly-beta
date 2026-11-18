@@ -6,11 +6,12 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 )
 
 // AppliesToWildcard is the applies_to entry that scopes an account rule to
