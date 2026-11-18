@@ -57,7 +57,10 @@ func preserveGzipSentinelCommon(m *commonModel, desired commonModel) {
 		inferGzipSentinelOnImport(m)
 		return
 	}
-	if service.Int64Value(desired.GzipLevel) == DefaultGzipLevel {
+	// Unset stays unset only when the API's level is meaningless (0, or a codec is in effect); any
+	// other level was set out of band and should show as drift.
+	if service.Int64Value(desired.GzipLevel) == DefaultGzipLevel &&
+		(service.StringValue(m.CompressionCodec) != "" || service.Int64Value(m.GzipLevel) == 0) {
 		m.GzipLevel = types.Int64Value(DefaultGzipLevel)
 	}
 }

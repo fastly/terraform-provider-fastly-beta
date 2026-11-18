@@ -76,9 +76,12 @@ func buildCommonUpdateInput(serviceID string, version int, m commonModel) *fastl
 	input.Path = new(service.StringValue(m.Path))
 	input.Period = fastly.NullInt(int(service.Int64Value(m.Period)))
 	input.CompressionCodec = new(service.StringValue(m.CompressionCodec))
-	// Send gzip_level only when set: the API rejects it alongside compression_codec.
+	// Send gzip_level only when set: the API rejects it alongside compression_codec. With no codec
+	// and no level, send 0 explicitly so a level set out of band is reset.
 	if gl := service.Int64Value(m.GzipLevel); gl != DefaultGzipLevel {
 		input.GzipLevel = new(int(gl))
+	} else if service.StringValue(m.CompressionCodec) == "" {
+		input.GzipLevel = new(0)
 	}
 	input.MessageType = fastly.NullString(service.StringValue(m.MessageType))
 	input.TimestampFormat = fastly.NullString(service.StringValue(m.TimestampFormat))

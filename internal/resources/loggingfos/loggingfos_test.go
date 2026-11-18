@@ -127,7 +127,42 @@ func TestBuildUpdateInput(t *testing.T) {
 	require.NotNil(t, input.FileMaxBytes)
 	assert.Equal(t, 0, *input.FileMaxBytes, "update must send file_max_bytes = 0 so a limit can be removed")
 	require.NotNil(t, input.Placement, "an unset placement must be sent as an explicit null")
-	assert.Nil(t, input.GzipLevel)
+	require.NotNil(t, input.GzipLevel, "unset level with no codec resets compression to 0")
+	assert.Equal(t, 0, *input.GzipLevel)
+}
+
+func TestBuildUpdateInputGzipLevelWithCodec(t *testing.T) {
+	t.Parallel()
+
+	m := testModel()
+	m.CompressionCodec = types.StringValue("zstd")
+	m.GzipLevel = types.Int64Value(DefaultGzipLevel)
+
+	input := BuildUpdateInput("svc", 2, m)
+
+	assert.Nil(t, input.GzipLevel, "the API rejects gzip_level alongside a codec")
+	assert.Equal(t, "zstd", *input.CompressionCodec)
+}
+
+func TestPreserveGzipSentinelSurfacesOutOfBandLevel(t *testing.T) {
+	t.Parallel()
+
+	unset := commonModel{GzipLevel: types.Int64Value(DefaultGzipLevel)}
+
+	for name, tt := range map[string]struct {
+		remote commonModel
+		want   int64
+	}{
+		"level 0 stays unset":      {commonModel{GzipLevel: types.Int64Value(0), CompressionCodec: types.StringValue("")}, DefaultGzipLevel},
+		"codec in effect":          {commonModel{GzipLevel: types.Int64Value(0), CompressionCodec: types.StringValue("zstd")}, DefaultGzipLevel},
+		"out-of-band level drifts": {commonModel{GzipLevel: types.Int64Value(5), CompressionCodec: types.StringValue("")}, 5},
+	} {
+		t.Run(name, func(t *testing.T) {
+			m := tt.remote
+			preserveGzipSentinelCommon(&m, unset)
+			assert.Equal(t, tt.want, m.GzipLevel.ValueInt64())
+		})
+	}
 }
 
 func TestFlattenToNestedModel(t *testing.T) {
