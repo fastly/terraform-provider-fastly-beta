@@ -10,6 +10,7 @@
 - feat(migration): generate standalone CDN simple-product resources and service-ID imports from legacy product enablement ([#230](https://github.com/fastly/terraform-provider-fastly-beta/pull/230))
 - feat(product-enablement): add `fastly_product_ai_accelerator`, `fastly_product_ai_runtime_control`, `fastly_product_domain_research` and `fastly_product_object_storage` resources for enabling account-level products ([#227](https://github.com/fastly/terraform-provider-fastly-beta/pull/227))
 - feat(migration): split legacy Bot Management, DDoS Protection and Next-Gen WAF product enablement into standalone resources with service-ID imports during VCL-to-CDN Auto migration ([#231](https://github.com/fastly/terraform-provider-fastly-beta/pull/231))
+- test(migration): expand live E2E coverage to all supported CDN product migrations and fix Image Optimizer state drift during VCL-to-CDN Auto migration ([#237](https://github.com/fastly/terraform-provider-fastly-beta/pull/237))
 - feat(service-compute-auto): add `moved` block state migration from legacy `fastly_service_compute` to `fastly_service_compute_auto` ([#235](https://github.com/fastly/terraform-provider-fastly-beta/pull/235))
 
 ### BUG FIXES:
