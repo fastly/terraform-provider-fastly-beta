@@ -237,9 +237,10 @@ plan_and_apply_ga() {
     log_step "Switching to the dual-model provider"
     cd "$PROJECT_DIR"
     use_ga_provider
-    # The local build is served via dev_overrides and no 20.x release exists on the
-    # registry yet, so skip init and drop the stale legacy lock entry.
+    # The local build is served via dev_overrides, so init does not download the provider;
+    # drop the stale legacy lock entry first so selection is re-initialized.
     rm -f .terraform.lock.hcl
+    terraform init -input=false
     terraform validate
 
     terraform plan -out="$WORK_DIR/migrate.plan" -input=false
