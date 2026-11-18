@@ -3,6 +3,8 @@ package resourceidentity
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -120,11 +122,8 @@ func importBotManagement(ctx context.Context, req resource.ImportStateRequest, r
 	}
 
 	values := fields()
-	for _, name := range []string{"workspace_id", "category_id", "bot_id"} {
-		v, ok := values[name]
-		if !ok {
-			continue
-		}
+	for _, name := range slices.Sorted(maps.Keys(values)) {
+		v := values[name]
 		if v.IsNull() || v.IsUnknown() || v.ValueString() == "" {
 			resp.Diagnostics.AddError("Invalid resource identity", fmt.Sprintf("The resource identity must contain a non-empty %s.", name))
 			return
