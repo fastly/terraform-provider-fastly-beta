@@ -6,6 +6,8 @@ import (
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/healthcheck"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 
@@ -998,4 +1000,21 @@ func TestValidateConditionReferences(t *testing.T) {
 
 		assert.NoError(t, ValidateConditionReferences([]NestedModel{item}, nil))
 	})
+}
+
+func TestComputeNestedBlockSchemaDefaultsPreferIPv6ToTrue(t *testing.T) {
+	t.Parallel()
+
+	preferIPv6 := func(block schema.ListNestedBlock) schema.BoolAttribute {
+		return block.NestedObject.Attributes["prefer_ipv6"].(schema.BoolAttribute)
+	}
+	ctx := context.Background()
+
+	var resp defaults.BoolResponse
+	preferIPv6(ComputeNestedBlockSchema()).Default.DefaultBool(ctx, defaults.BoolRequest{}, &resp)
+	assert.True(t, resp.PlanValue.ValueBool(), "Compute default must match the legacy provider")
+
+	resp = defaults.BoolResponse{}
+	preferIPv6(NestedBlockSchema()).Default.DefaultBool(ctx, defaults.BoolRequest{}, &resp)
+	assert.False(t, resp.PlanValue.ValueBool(), "CDN default is unchanged")
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdatadog"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingdigitalocean"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingelasticsearch"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingfos"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/loggingftp"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggcs"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginggooglepubsub"
@@ -91,6 +92,7 @@ type Model struct {
 	LoggingCloudfiles       []loggingcloudfiles.ComputeNestedModel       `tfsdk:"logging_cloudfiles"`
 	LoggingOpenStack        []loggingopenstack.ComputeNestedModel        `tfsdk:"logging_openstack"`
 	LoggingDigitalOcean     []loggingdigitalocean.ComputeNestedModel     `tfsdk:"logging_digitalocean"`
+	LoggingFOS              []loggingfos.ComputeNestedModel              `tfsdk:"logging_fos"`
 	LoggingElasticsearch    []loggingelasticsearch.ComputeNestedModel    `tfsdk:"logging_elasticsearch"`
 	LoggingFTP              []loggingftp.ComputeNestedModel              `tfsdk:"logging_ftp"`
 	LoggingS3               []loggings3.ComputeNestedModel               `tfsdk:"logging_s3"`
@@ -165,7 +167,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 		Blocks: map[string]schema.Block{
 			"domain":                   domain.NestedBlockSchema(),
 			"healthcheck":              healthcheck.NestedBlockSchema(),
-			"backend":                  backend.NestedBlockSchema(),
+			"backend":                  backend.ComputeNestedBlockSchema(),
 			"dictionary":               dictionary.NestedBlockSchema(),
 			"resource_link":            resourcelink.NestedBlockSchema(),
 			"package":                  computepackage.NestedBlockSchema(),
@@ -173,6 +175,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"logging_cloudfiles":       loggingcloudfiles.ComputeNestedBlockSchema(),
 			"logging_openstack":        loggingopenstack.ComputeNestedBlockSchema(),
 			"logging_digitalocean":     loggingdigitalocean.ComputeNestedBlockSchema(),
+			"logging_fos":              loggingfos.ComputeNestedBlockSchema(),
 			"logging_elasticsearch":    loggingelasticsearch.ComputeNestedBlockSchema(),
 			"logging_ftp":              loggingftp.ComputeNestedBlockSchema(),
 			"logging_s3":               loggings3.ComputeNestedBlockSchema(),
@@ -398,6 +401,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 	plan.LoggingDigitalOcean = loggingdigitalocean.ComputeMatchOrder(loggingDigitalOceans, plan.LoggingDigitalOcean)
+
+	if err := loggingfos.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingFOS); err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reconciling Fastly Object Storage logging endpoints", err.Error())
+		return
+	}
+
+	loggingFOSes, err := loggingfos.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, version)
+	if err != nil {
+		recordOrphanSafeState()
+		resp.Diagnostics.AddError("Error reading Fastly Object Storage logging endpoints", err.Error())
+		return
+	}
+	plan.LoggingFOS = loggingfos.ComputeMatchOrder(loggingFOSes, plan.LoggingFOS)
 
 	if err := loggingelasticsearch.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, version, plan.LoggingElasticsearch); err != nil {
 		recordOrphanSafeState()
@@ -845,6 +862,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading DigitalOcean logging endpoints", err.Error())
 		return
 	}
+	loggingFOSes, err := loggingfos.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading Fastly Object Storage logging endpoints", err.Error())
+		return
+	}
 	loggingElasticsearches, err := loggingelasticsearch.ComputeReadForVersion(ctx, r.providerData.AutoClient(), state.ID.ValueString(), readVersion)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading Elasticsearch logging endpoints", err.Error())
@@ -968,6 +990,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	state.LoggingCloudfiles = loggingcloudfiles.ComputeMatchOrder(loggingCloudfiless, state.LoggingCloudfiles)
 	state.LoggingOpenStack = loggingopenstack.ComputeMatchOrder(loggingOpenStacks, state.LoggingOpenStack)
 	state.LoggingDigitalOcean = loggingdigitalocean.ComputeMatchOrder(loggingDigitalOceans, state.LoggingDigitalOcean)
+	state.LoggingFOS = loggingfos.ComputeMatchOrder(loggingFOSes, state.LoggingFOS)
 	state.LoggingElasticsearch = loggingelasticsearch.ComputeMatchOrder(loggingElasticsearches, state.LoggingElasticsearch)
 	state.LoggingFTP = loggingftp.ComputeMatchOrder(loggingFTPs, state.LoggingFTP)
 	state.LoggingS3 = loggings3.ComputeMatchOrder(loggingS3s, state.LoggingS3)
@@ -1055,6 +1078,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		!loggingcloudfiles.ComputeEqual(plan.LoggingCloudfiles, state.LoggingCloudfiles) ||
 		!loggingopenstack.ComputeEqual(plan.LoggingOpenStack, state.LoggingOpenStack) ||
 		!loggingdigitalocean.ComputeEqual(plan.LoggingDigitalOcean, state.LoggingDigitalOcean) ||
+		!loggingfos.ComputeEqual(plan.LoggingFOS, state.LoggingFOS) ||
 		!loggingelasticsearch.ComputeEqual(plan.LoggingElasticsearch, state.LoggingElasticsearch) ||
 		!loggingftp.ComputeEqual(plan.LoggingFTP, state.LoggingFTP) ||
 		!loggings3.ComputeEqual(plan.LoggingS3, state.LoggingS3) ||
@@ -1222,6 +1246,18 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 			return
 		}
 		plan.LoggingDigitalOcean = loggingdigitalocean.ComputeMatchOrder(loggingDigitalOceans, plan.LoggingDigitalOcean)
+
+		if err := loggingfos.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingFOS); err != nil {
+			resp.Diagnostics.AddError("Error reconciling Fastly Object Storage logging endpoints", err.Error())
+			return
+		}
+
+		loggingFOSes, err := loggingfos.ComputeReadForVersion(ctx, r.providerData.AutoClient(), serviceID, targetVersion)
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading Fastly Object Storage logging endpoints", err.Error())
+			return
+		}
+		plan.LoggingFOS = loggingfos.ComputeMatchOrder(loggingFOSes, plan.LoggingFOS)
 
 		if err := loggingelasticsearch.ComputeReconcile(ctx, r.providerData.AutoClient(), serviceID, targetVersion, plan.LoggingElasticsearch); err != nil {
 			resp.Diagnostics.AddError("Error reconciling Elasticsearch logging endpoints", err.Error())
@@ -1548,6 +1584,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		plan.LoggingCloudfiles = loggingcloudfiles.ComputeMatchOrder(state.LoggingCloudfiles, plan.LoggingCloudfiles)
 		plan.LoggingOpenStack = loggingopenstack.ComputeMatchOrder(state.LoggingOpenStack, plan.LoggingOpenStack)
 		plan.LoggingDigitalOcean = loggingdigitalocean.ComputeMatchOrder(state.LoggingDigitalOcean, plan.LoggingDigitalOcean)
+		plan.LoggingFOS = loggingfos.ComputeMatchOrder(state.LoggingFOS, plan.LoggingFOS)
 		plan.LoggingElasticsearch = loggingelasticsearch.ComputeMatchOrder(state.LoggingElasticsearch, plan.LoggingElasticsearch)
 		plan.LoggingFTP = loggingftp.ComputeMatchOrder(state.LoggingFTP, plan.LoggingFTP)
 		plan.LoggingS3 = loggings3.ComputeMatchOrder(state.LoggingS3, plan.LoggingS3)

@@ -130,6 +130,36 @@ func inspectLegacyProductAttributes(attributes map[string]attr.Value) (supported
 	return true, hasManagedProducts
 }
 
+// inspectLegacyImageOptimizerDefaultSettings distinguishes an explicitly managed
+// legacy settings block from the API's implicit Image Optimizer defaults.
+// Refreshing implicit defaults into target state when no block was configured
+// would make Terraform plan to remove/reset them during a service move.
+func inspectLegacyImageOptimizerDefaultSettings(settings types.Set) (supported bool, managed bool) {
+	if settings.IsNull() {
+		return true, false
+	}
+	if settings.IsUnknown() {
+		return false, false
+	}
+	elements := settings.Elements()
+	if len(elements) == 0 {
+		return true, false
+	}
+	if len(elements) != 1 {
+		return false, false
+	}
+	setting, ok := elements[0].(types.Object)
+	if !ok || setting.IsNull() || setting.IsUnknown() {
+		return false, false
+	}
+	for _, value := range setting.Attributes() {
+		if value.IsUnknown() {
+			return false, false
+		}
+	}
+	return true, true
+}
+
 func legacyServiceVCLProductNameIn(name string, names []string) bool {
 	for _, candidate := range names {
 		if candidate == name {
@@ -164,11 +194,13 @@ func moveLegacyServiceVCLState(ctx context.Context, req resource.MoveStateReques
 	var sourceForceDestroy types.Bool
 	var sourceReuse types.Bool
 	var sourceProductEnablement types.Set
+	var sourceImageOptimizerDefaultSettings types.Set
 
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("id"), &sourceID)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("force_destroy"), &sourceForceDestroy)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("reuse"), &sourceReuse)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("product_enablement"), &sourceProductEnablement)...)
+	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("image_optimizer_default_settings"), &sourceImageOptimizerDefaultSettings)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -178,6 +210,15 @@ func moveLegacyServiceVCLState(ctx context.Context, req resource.MoveStateReques
 		resp.Diagnostics.AddError(
 			"Unsupported legacy product enablement state",
 			"fastly_service_vcl product_enablement state can be migrated only when it contains known products in a well-formed shape. Unknown or malformed product state is blocked.",
+		)
+		return
+	}
+
+	supportedImageOptimizerSettings, hasManagedImageOptimizerSettings := inspectLegacyImageOptimizerDefaultSettings(sourceImageOptimizerDefaultSettings)
+	if !supportedImageOptimizerSettings {
+		resp.Diagnostics.AddError(
+			"Unsupported legacy Image Optimizer default settings state",
+			"fastly_service_vcl image_optimizer_default_settings state must contain at most one known settings object; malformed state cannot be migrated safely.",
 		)
 		return
 	}
@@ -211,10 +252,12 @@ func moveLegacyServiceVCLState(ctx context.Context, req resource.MoveStateReques
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("force_destroy"), sourceForceDestroy)...)
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("reuse"), sourceReuse)...)
 
-	// Moving a service has the same first-read requirement as importing one:
-	// force-refresh Image Optimizer default settings instead of inferring absence
-	// from the intentionally sparse target state.
-	if resp.TargetPrivate != nil {
+	// Unlike a bare import, a moved resource has legacy state that tells us
+	// whether Image Optimizer default settings were explicitly managed.
+	// Force-refresh only in that case: Image Optimizer returns API defaults even
+	// when no settings block was configured, and surfacing those defaults would
+	// create a migration-only update that resets them.
+	if hasManagedImageOptimizerSettings && resp.TargetPrivate != nil {
 		resp.Diagnostics.Append(resp.TargetPrivate.SetKey(ctx, imageOptimizerImportedPrivateKey, []byte("true"))...)
 	}
 }
