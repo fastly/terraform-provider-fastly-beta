@@ -318,13 +318,13 @@ resource "fastly_service_compute" "demo" {
 }
 HCL
     local before after
-    before="$(shasum "$blocked/main.tf")"
+    before="$(cksum "$blocked/main.tf")"
     if "$MIGRATOR" migrate --write --backup-dir "$WORK_DIR/blocked-backups" "$blocked" > "$WORK_DIR/blocked.out" 2>&1; then
         log_error "migrate --write accepted activate = false"
         cat "$WORK_DIR/blocked.out"
         exit 1
     fi
-    after="$(shasum "$blocked/main.tf")"
+    after="$(cksum "$blocked/main.tf")"
     if [ "$before" != "$after" ] || [ -e "$blocked/migration.tf" ]; then
         log_error "A blocked migration changed the configuration"
         exit 1
