@@ -5,23 +5,37 @@
 ### ENHANCEMENTS:
 
 - feat(bot-management): add support for bot management resources, data sources and lists ([#241](https://github.com/fastly/terraform-provider-fastly-beta/pull/241))
+
+### BUG FIXES:
+
+### Dependencies:
+
+## 0.2.10 (November 18, 2026)
+
+### ENHANCEMENTS:
+
+- feat(logging): add `fastly_service_logging_fos` and the `logging_fos` nested block on `fastly_service_cdn_auto` and `fastly_service_compute_auto` for logging to Fastly Object Storage ([#239](https://github.com/fastly/terraform-provider-fastly-beta/pull/239))
 - test(migration): add live end-to-end coverage for product-free `fastly_service_vcl` to `fastly_service_cdn_auto` migration, verifying state preservation and no-op plans ([#236](https://github.com/fastly/terraform-provider-fastly-beta/pull/236))
 - feat(alert): add `dimensions.services` to `fastly_alert` to monitor a set of services individually for `stats` alerts ([#232](https://github.com/fastly/terraform-provider-fastly-beta/pull/232))
 - feat(migration): generate standalone CDN simple-product resources and service-ID imports from legacy product enablement ([#230](https://github.com/fastly/terraform-provider-fastly-beta/pull/230))
 - feat(product-enablement): add `fastly_product_ai_accelerator`, `fastly_product_ai_runtime_control`, `fastly_product_domain_research` and `fastly_product_object_storage` resources for enabling account-level products ([#227](https://github.com/fastly/terraform-provider-fastly-beta/pull/227))
 - feat(migration): split legacy Bot Management, DDoS Protection and Next-Gen WAF product enablement into standalone resources with service-ID imports during VCL-to-CDN Auto migration ([#231](https://github.com/fastly/terraform-provider-fastly-beta/pull/231))
+- test(migration): expand live E2E coverage to all supported CDN product migrations and fix Image Optimizer state drift during VCL-to-CDN Auto migration ([#237](https://github.com/fastly/terraform-provider-fastly-beta/pull/237))
+- feat(service-compute-auto): add `moved` block state migration from legacy `fastly_service_compute` to `fastly_service_compute_auto` ([#235](https://github.com/fastly/terraform-provider-fastly-beta/pull/235))
 
 ### BUG FIXES:
 
+- fix(service-compute-auto): default `backend.prefer_ipv6` to `true` to match legacy Compute behavior ([#235](https://github.com/fastly/terraform-provider-fastly-beta/pull/235))
+
 ### Dependencies:
-- build(deps): upgrade Go from 1.26.10 to 1.26.11
+
+- build(deps): upgrade Go from 1.26.10 to 1.26.11 ([#233](https://github.com/fastly/terraform-provider-fastly-beta/pull/233))
 - build(deps): `github.com/fastly/go-fastly` from v19.1.0 to v19.2.0 ([#226](https://github.com/fastly/terraform-provider-fastly-beta/pull/226))
 - build(deps): `github.com/fastly/go-fastly/v19` from 19.2.0 to 19.3.0 ([#234](https://github.com/fastly/terraform-provider-fastly-beta/pull/234))
 - build(deps): `github.com/zclconf/go-cty` from 1.19.0 to 1.20.0 ([#234](https://github.com/fastly/terraform-provider-fastly-beta/pull/234))
 - build(deps): `golang.org/x/mod` from 0.42.0 to 0.43.0 ([#234](https://github.com/fastly/terraform-provider-fastly-beta/pull/234))
 - build(deps): `golang.org/x/sys` from 0.49.0 to 0.50.0 ([#234](https://github.com/fastly/terraform-provider-fastly-beta/pull/234))
 - build(deps): `golang.org/x/text` from 0.43.0 to 0.44.0 ([#234](https://github.com/fastly/terraform-provider-fastly-beta/pull/234))
-
 - build(deps): `github.com/fastly/go-fastly` from v19.1.0 to v19.2.0 ([#226](https://github.com/fastly/terraform-provider-fastly-beta/pull/226))
 
 ## 0.2.9 (November 10, 2026)

@@ -45,6 +45,40 @@ func TestMoveStateSourceSchemaMatchesLegacyServiceVCLSchemaV1(t *testing.T) {
 	}
 }
 
+func TestInspectLegacyImageOptimizerDefaultSettings(t *testing.T) {
+	t.Parallel()
+
+	attrs := map[string]attr.Type{"name": types.StringType}
+	objectType := types.ObjectType{AttrTypes: attrs}
+	setting := func(name string) attr.Value {
+		return types.ObjectValueMust(attrs, map[string]attr.Value{"name": types.StringValue(name)})
+	}
+
+	tests := []struct {
+		name      string
+		settings  types.Set
+		supported bool
+		managed   bool
+	}{
+		{"absent", types.SetNull(objectType), true, false},
+		{"empty", types.SetValueMust(objectType, nil), true, false},
+		{"configured", types.SetValueMust(objectType, []attr.Value{setting("image_optimizer_default_settings")}), true, true},
+		{"unknown set", types.SetUnknown(objectType), false, false},
+		{"multiple blocks", types.SetValueMust(objectType, []attr.Value{setting("one"), setting("two")}), false, false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			supported, managed := inspectLegacyImageOptimizerDefaultSettings(tc.settings)
+			if supported != tc.supported || managed != tc.managed {
+				t.Errorf("inspectLegacyImageOptimizerDefaultSettings() = (%t, %t), want (%t, %t)",
+					supported, managed, tc.supported, tc.managed)
+			}
+		})
+	}
+}
+
 func TestMoveLegacyServiceVCLState(t *testing.T) {
 	t.Parallel()
 

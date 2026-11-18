@@ -1,35 +1,20 @@
 #!/usr/bin/env bash
 
-# End-to-end test for fastly-tf-migrate's configurable product migration
-# (Bot Management, DDoS Protection, NGWAF) with non-default settings.
+# Live end-to-end tests for all automatically migrated CDN product enablements:
+# seven simple boolean products and three configurable products.
 #
-# Usage: run.sh [enabled|disabled|all]   (default: all)
+# Usage: run.sh [all|simple|simple:PRODUCT|configurable|enabled|disabled|list]
 #
-# Each scenario:
-#   1. Create a legacy fastly_service_vcl with product_enablement (enabled = true
-#      or false on every configurable product) using the legacy fastly/fastly
-#      provider, then refresh state
-#   2. Snapshot the live product state and configuration through the API
-#   3. fastly-tf-migrate analyze -> migrate --dry-run -> migrate --write
-#   4. Switch to the locally built dual-model provider
-#   5. terraform plan: every action must be no-op/read (imports only), so
-#      creates, deletes, replacements and in-place updates all fail the run
-#   6. terraform apply, then a final plan that must be a no-op (exit code 0)
-#   7. Re-snapshot the live products; the snapshot must be identical, and in the
-#      enabled scenario contentguard, mode, workspace_id and traffic_ramp must
-#      still hold their non-default values
-#   8. Inspect the provider's HTTP calls during steps 5-6: no mutating request
-#      (anything but GET/HEAD) may reach a product or NGWAF API path
-#   9. terraform destroy
+# Each simple product runs on its own throwaway legacy VCL service (enabled=true)
+# and must be adopted by one imported standalone resource with no API mutation.
+# The existing configurable scenarios are retained: enabled adopts the three
+# products plus WebSockets, disabled must fail before writing any Terraform HCL.
 #
-# The disabled scenario instead expects the migrator to refuse: importing a
-# disabled configurable product plans an in-place update that calls the disable
-# API, so `migrate --dry-run` and `--write` must fail without touching any file,
-# and the legacy service is then destroyed with the legacy provider.
-#
-# Requires FASTLY_API_TOKEN. A throwaway NGWAF workspace (mode "off") is created
-# per scenario and deleted afterwards, unless FASTLY_TEST_NGWAF_WORKSPACE_ID is
-# set, in which case that workspace is used for every scenario and left alone.
+# Every successful migration runs analyze -> dry-run -> write -> Terraform
+# plan/apply -> no-op plan, and checks live product state and provider API calls.
+# Requires FASTLY_API_TOKEN and product entitlements on a non-production account.
+# Compute product migration is deliberately excluded while its CLI rules remain
+# blocked; that has separate prerequisites and acceptance coverage.
 
 set -euo pipefail
 
@@ -49,7 +34,14 @@ MIGRATOR="$WORK_DIR/fastly-tf-migrate"
 NAME_PREFIX="tf-test-migprod-$$"
 LEGACY_PROVIDER_VERSION="${LEGACY_PROVIDER_VERSION:-9.5.0}"
 API_BASE="https://api.fastly.com"
-PRODUCTS=(bot_management ddos_protection ngwaf)
+CONFIGURABLE_PRODUCTS=(bot_management ddos_protection ngwaf)
+SIMPLE_PRODUCTS=(
+    api_discovery brotli_compression domain_inspector image_optimizer
+    log_explorer_insights origin_inspector websockets
+)
+PRODUCTS=()
+EXPECTED_PRODUCTS=()
+EXPECTED_IMPORTS=0
 
 CONTENTGUARD="on"
 DDOS_MODE="block"
@@ -65,9 +57,12 @@ CREATED_WORKSPACES=()
 
 # Per-scenario state.
 SCENARIO=""
+SCENARIO_KIND=""
+SIMPLE_PRODUCT=""
 PRODUCT_ENABLED=""
 SERVICE_NAME=""
 SCENARIO_DIR=""
+SCENARIO_SLUG=""
 PROJECT_DIR=""
 WORKSPACE_ID=""
 SERVICE_ID=""
@@ -119,8 +114,10 @@ cleanup() {
                     || log_warning "terraform destroy failed in $dir; falling back to API sweep"
             fi
         done
-        (cd "$REPO_ROOT" && go run ./scripts/cleanup-test-services -prefix "$NAME_PREFIX") \
-            || log_warning "API sweep failed; check for leftover services named $NAME_PREFIX*"
+        if [ -n "$SCENARIO" ]; then
+            (cd "$REPO_ROOT" && go run ./scripts/cleanup-test-services -prefix "$NAME_PREFIX") \
+                || log_warning "API sweep failed; check for leftover services named $NAME_PREFIX*"
+        fi
     fi
 
     # Runs on success too: the services are gone by now, so the workspaces are unlinked.
@@ -210,6 +207,14 @@ write_legacy_config() {
     PHASE="legacy-config"
     log_step "Writing legacy configuration"
 
+    # Fastly requires every backend to have a shield before Image Optimizer
+    # can be enabled. Use the POP from the repository's shielded-backend fixture.
+    # Keep all other product scenarios on the original unshielded fixture.
+    local backend_shield=""
+    if [ "$SCENARIO_KIND" = "simple" ] && [ "$SIMPLE_PRODUCT" = "image_optimizer" ]; then
+        backend_shield=$'\n    shield  = "amsterdam-nl"'
+    fi
+
     cat > "$PROJECT_DIR/main.tf" << EOF
 terraform {
   required_providers {
@@ -233,10 +238,15 @@ resource "fastly_service_vcl" "demo" {
   backend {
     address = "example.com"
     name    = "origin"
-    port    = 443
+    port    = 443${backend_shield}
   }
 
   product_enablement {
+EOF
+    if [ "$SCENARIO_KIND" = "simple" ]; then
+        printf '    %s = true\n' "$SIMPLE_PRODUCT" >> "$PROJECT_DIR/main.tf"
+    else
+        cat >> "$PROJECT_DIR/main.tf" << EOF
     websockets = true
 
     bot_management {
@@ -254,9 +264,9 @@ resource "fastly_service_vcl" "demo" {
       workspace_id = "$WORKSPACE_ID"
       traffic_ramp = $NGWAF_TRAFFIC_RAMP
     }
-  }
-}
 EOF
+    fi
+    printf '  }\n}\n' >> "$PROJECT_DIR/main.tf"
 }
 
 apply_legacy() {
@@ -269,6 +279,17 @@ apply_legacy() {
     terraform apply -auto-approve -input=false
     # Persists state at schema 1, a migrator prerequisite.
     terraform apply -refresh-only -auto-approve -input=false
+
+    # The CDN Auto state mover requires the persisted legacy VCL schema v1.
+    local schema
+    schema="$(terraform state pull | jq -r '[.resources[]? |
+        select(.type == "fastly_service_vcl" and .name == "demo") |
+        .instances[]?.schema_version] | unique |
+        if length == 1 then .[0] else empty end')"
+    if [ "$schema" != "1" ]; then
+        log_error "Expected legacy VCL state schema 1, found '${schema:-missing}'"
+        exit 1
+    fi
 
     SERVICE_ID="$(terraform show -json | jq -r '.values.root_module.resources[] | select(.address=="fastly_service_vcl.demo") | .values.id')"
     if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" = "null" ]; then
@@ -283,7 +304,11 @@ apply_legacy() {
 snapshot_products() {
     local out="$1" product suffix response status body body_json state='{}'
     for product in "${PRODUCTS[@]}"; do
-        for suffix in "" "/configuration"; do
+        local suffixes=("")
+        if [ "$SCENARIO_KIND" = "configurable" ]; then
+            suffixes+=("/configuration")
+        fi
+        for suffix in "${suffixes[@]}"; do
             response="$(api_get "/enabled-products/v1/$product/services/$SERVICE_ID$suffix")"
             status="${response##*$'\n'}"
             body="${response%$'\n'*}"
@@ -307,8 +332,13 @@ assert_snapshot() {
 
 assert_snapshot_settings() {
     local file="$1"
-    if [ "$PRODUCT_ENABLED" = "true" ]; then
-        assert_snapshot "$file" "bot_management" "status" "200"
+    if [ "$SCENARIO_KIND" = "simple" ]; then
+        assert_snapshot "$file" "$SIMPLE_PRODUCT" "status" "200"
+    elif [ "$PRODUCT_ENABLED" = "true" ]; then
+        local product
+        for product in "${CONFIGURABLE_PRODUCTS[@]}"; do
+            assert_snapshot "$file" "$product" "status" "200"
+        done
         assert_snapshot "$file" "bot_management/configuration" "body.configuration.contentguard" "$CONTENTGUARD"
         assert_snapshot "$file" "ddos_protection/configuration" "body.configuration.mode" "$DDOS_MODE"
         assert_snapshot "$file" "ngwaf/configuration" "body.configuration.workspace_id" "$WORKSPACE_ID"
@@ -330,35 +360,74 @@ run_migrator() {
 
     cd "$PROJECT_DIR"
     "$MIGRATOR" analyze .
+    cp main.tf "$SCENARIO_DIR/main-before-dry-run.tf"
     "$MIGRATOR" migrate --dry-run . | tee "$SCENARIO_DIR/dry-run.diff"
+    if ! cmp -s main.tf "$SCENARIO_DIR/main-before-dry-run.tf" || [ -e migration.tf ]; then
+        log_error "migrate --dry-run modified the Terraform configuration"
+        exit 1
+    fi
 
     local product
-    for product in "${PRODUCTS[@]}"; do
-        if ! grep -q "fastly_service_product_$product" "$SCENARIO_DIR/dry-run.diff"; then
+    for product in "${EXPECTED_PRODUCTS[@]}"; do
+        if ! grep -Fq "fastly_service_product_$product" "$SCENARIO_DIR/dry-run.diff"; then
             log_error "dry-run diff does not mention fastly_service_product_$product"
             exit 1
         fi
     done
 
-    "$MIGRATOR" migrate --write --backup-dir "$BACKUP_DIR/$SCENARIO" .
+    "$MIGRATOR" migrate --write --backup-dir "$BACKUP_DIR/$SCENARIO_SLUG" .
 
     if grep -q "product_enablement" main.tf; then
         log_error "legacy product_enablement block still present after migration"
         exit 1
     fi
-    local expected
-    for expected in \
-        "enabled      = $PRODUCT_ENABLED" \
-        "contentguard = \"$CONTENTGUARD\"" \
-        "\"$DDOS_MODE\"" \
-        "workspace_id = \"$WORKSPACE_ID\"" \
-        "traffic_ramp = $NGWAF_TRAFFIC_RAMP"; do
-        if ! grep -q -- "$expected" migration.tf; then
-            log_error "migration.tf is missing: $expected"
+    if ! grep -Fq 'resource "fastly_service_cdn_auto" "demo"' main.tf; then
+        log_error "main.tf does not contain the CDN Auto service"
+        exit 1
+    fi
+    if ! grep -Fq 'from = fastly_service_vcl.demo' migration.tf; then
+        log_error "migration.tf does not contain the VCL state move"
+        exit 1
+    fi
+    for product in "${EXPECTED_PRODUCTS[@]}"; do
+        if ! grep -Fq "resource \"fastly_service_product_$product\" \"demo\"" migration.tf; then
+            log_error "migration.tf is missing the standalone resource for $product"
+            exit 1
+        fi
+        if ! grep -Fq "to = fastly_service_product_$product.demo" migration.tf; then
+            log_error "migration.tf is missing the import for $product"
             exit 1
         fi
     done
-    log_success "Migration written; settings preserved in migration.tf"
+
+    local imports resources
+    imports="$(grep -c -E '^[[:space:]]*import[[:space:]]*[{]' migration.tf || true)"
+    resources="$(grep -c -E '^resource "fastly_service_product_' migration.tf || true)"
+    if [ "$imports" -ne "$EXPECTED_IMPORTS" ] || [ "$resources" -ne "$EXPECTED_IMPORTS" ]; then
+        log_error "Expected $EXPECTED_IMPORTS product resources/imports; found $resources resources and $imports imports"
+        exit 1
+    fi
+    if ! grep -Eq '^[[:space:]]*enabled[[:space:]]*=[[:space:]]*true' migration.tf; then
+        log_error "Expected enabled = true in the generated product configuration"
+        exit 1
+    fi
+
+    if [ "$SCENARIO_KIND" = "configurable" ]; then
+        local expected
+        local checks=(
+            "contentguard = \"$CONTENTGUARD\""
+            "\"$DDOS_MODE\""
+            "workspace_id = \"$WORKSPACE_ID\""
+            "traffic_ramp = $NGWAF_TRAFFIC_RAMP"
+        )
+        for expected in "${checks[@]}"; do
+            if ! grep -Fq -- "$expected" migration.tf; then
+                log_error "migration.tf is missing: $expected"
+                exit 1
+            fi
+        done
+    fi
+    log_success "Migration written with $EXPECTED_IMPORTS product resources/imports"
 }
 
 # provider_calls LOG prints "METHOD PATH" for each HTTP request the provider
@@ -370,7 +439,7 @@ provider_calls() {
 
 assert_no_mutating_product_calls() {
     local log="$1" calls mutating
-    calls="$(provider_calls "$log")"
+    calls="$(provider_calls "$log")" || true
     if ! echo "$calls" | grep -q '^GET /enabled-products/'; then
         log_error "No product GET requests captured in $log; HTTP capture is not working"
         exit 1
@@ -423,11 +492,17 @@ plan_and_apply_ga() {
 
     local importing
     importing="$(jq '[.resource_changes[]? | select(.change.importing != null)] | length' "$SCENARIO_DIR/migrate.plan.json")"
-    if [ "$importing" -ne 4 ]; then
-        log_error "Expected 4 product imports in the plan, found $importing"
+    if [ "$importing" -ne "$EXPECTED_IMPORTS" ]; then
+        log_error "Expected $EXPECTED_IMPORTS product imports in the plan, found $importing"
         exit 1
     fi
-    log_success "Plan is imports only: 4 products, no creates, updates, deletes or replacements"
+    local previous
+    previous="$(jq -r '.resource_changes[]? | select(.address == "fastly_service_cdn_auto.demo") | .previous_address // empty' "$SCENARIO_DIR/migrate.plan.json")"
+    if [ "$previous" != "fastly_service_vcl.demo" ]; then
+        log_error "Plan did not record the VCL state move (previous_address='$previous')"
+        exit 1
+    fi
+    log_success "Plan moves VCL state and imports $EXPECTED_IMPORTS products with no infrastructure changes"
 
     PHASE="ga-apply"
     terraform apply -input=false "$SCENARIO_DIR/migrate.plan"
@@ -441,6 +516,27 @@ plan_and_apply_ga() {
         exit 1
     fi
     log_success "Final plan is a no-op"
+
+    local moved_id
+    moved_id="$(terraform show -json | jq -r '.values.root_module.resources[] | select(.address == "fastly_service_cdn_auto.demo") | .values.id')"
+    if [ "$moved_id" != "$SERVICE_ID" ]; then
+        log_error "Service ID changed during migration: $SERVICE_ID -> $moved_id"
+        exit 1
+    fi
+
+    local old_address product address
+    old_address="$(terraform state list | grep -Fx 'fastly_service_vcl.demo' || true)"
+    if [ -n "$old_address" ] || ! terraform state list | grep -Fxq 'fastly_service_cdn_auto.demo'; then
+        log_error "Legacy VCL state address remains or CDN Auto address is missing"
+        exit 1
+    fi
+    for product in "${EXPECTED_PRODUCTS[@]}"; do
+        address="fastly_service_product_${product}.demo"
+        if ! terraform state list | grep -Fxq "$address"; then
+            log_error "Imported product state address missing: $address"
+            exit 1
+        fi
+    done
 
     unset FASTLY_DEBUG_MODE TF_LOG TF_LOG_PATH
     assert_no_mutating_product_calls "$trace"
@@ -479,22 +575,75 @@ expect_migration_blocked() {
     log_success "Migration blocked for all three disabled products; no files changed"
 }
 
+is_simple_product() {
+    local candidate="$1" product
+    for product in "${SIMPLE_PRODUCTS[@]}"; do
+        if [ "$candidate" = "$product" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+print_usage() {
+    cat << EOF
+Usage: $0 [all|simple|simple:PRODUCT|configurable|enabled|disabled|list]
+
+  all                 All seven automatic simple CDN products, then both
+                      configurable scenarios (requires all entitlements).
+  simple              Every simple CDN product, each on its own service.
+  simple:PRODUCT      One named simple CDN product; useful for individual
+                      entitlements and debugging.
+  configurable        Existing configured enabled/disabled scenarios.
+  enabled             Configurable products enabled (4 imports including WebSockets).
+  disabled            Configurable products disabled (migrator must block).
+  list                Print covered product names without API credentials.
+
+Simple CDN products: ${SIMPLE_PRODUCTS[*]}
+Configurable CDN products: ${CONFIGURABLE_PRODUCTS[*]}
+Compute product transforms are currently blocked in the CLI.
+EOF
+}
+
 run_scenario() {
     SCENARIO="$1"
+    SCENARIO_KIND="configurable"
+    SIMPLE_PRODUCT=""
+    PRODUCTS=("${CONFIGURABLE_PRODUCTS[@]}")
+    EXPECTED_PRODUCTS=(websockets "${CONFIGURABLE_PRODUCTS[@]}")
+    EXPECTED_IMPORTS=4
     case "$SCENARIO" in
         enabled)  PRODUCT_ENABLED=true ;;
         disabled) PRODUCT_ENABLED=false ;;
-        *) log_error "Unknown scenario '$SCENARIO' (expected enabled, disabled or all)"; exit 1 ;;
+        simple:*)
+            SCENARIO_KIND="simple"
+            SIMPLE_PRODUCT="${SCENARIO#simple:}"
+            if ! is_simple_product "$SIMPLE_PRODUCT"; then
+                log_error "Unknown simple product '$SIMPLE_PRODUCT'"
+                print_usage
+                exit 2
+            fi
+            PRODUCTS=("$SIMPLE_PRODUCT")
+            EXPECTED_PRODUCTS=("$SIMPLE_PRODUCT")
+            EXPECTED_IMPORTS=1
+            PRODUCT_ENABLED=true
+            ;;
+        *) log_error "Unknown scenario '$SCENARIO'"; print_usage; exit 2 ;;
     esac
-    SERVICE_NAME="$NAME_PREFIX-$SCENARIO"
-    SCENARIO_DIR="$WORK_DIR/$SCENARIO"
+
+    # Use the same portable name for service names, directories, and backups.
+    SCENARIO_SLUG="${SCENARIO//:/-}"
+    SCENARIO_SLUG="${SCENARIO_SLUG//_/-}"
+    SERVICE_NAME="$NAME_PREFIX-$SCENARIO_SLUG"
+    SCENARIO_DIR="$WORK_DIR/$SCENARIO_SLUG"
     PROJECT_DIR="$SCENARIO_DIR/project"
     mkdir -p "$PROJECT_DIR"
     PROJECT_DIRS+=("$PROJECT_DIR")
 
-    log_step "Scenario: configurable products enabled = $PRODUCT_ENABLED"
-
-    create_workspace
+    log_step "Scenario: $SCENARIO"
+    if [ "$SCENARIO_KIND" = "configurable" ]; then
+        create_workspace
+    fi
     write_legacy_config
     apply_legacy
 
@@ -503,7 +652,7 @@ run_scenario() {
     assert_snapshot_settings "$SCENARIO_DIR/products-before.json"
     log_success "Captured live product configuration before migration"
 
-    if [ "$PRODUCT_ENABLED" = "false" ]; then
+    if [ "$SCENARIO" = "disabled" ]; then
         expect_migration_blocked
         PHASE="destroy"
         log_step "Destroying resources"
@@ -534,14 +683,49 @@ run_scenario() {
 }
 
 main() {
-    local selection="${1:-all}"
+    local selection="${1:-all}" product
+    case "$selection" in
+        list|--help|-h)
+            print_usage
+            return
+            ;;
+        all|simple|configurable|enabled|disabled)
+            ;;
+        simple:*)
+            if ! is_simple_product "${selection#simple:}"; then
+                log_error "Unknown simple product '${selection#simple:}'"
+                print_usage
+                return 2
+            fi
+            ;;
+        *)
+            log_error "Unknown scenario '$selection'"
+            print_usage
+            return 2
+            ;;
+    esac
+
     check_prerequisites
     build_binaries
     case "$selection" in
-        all) run_scenario enabled; run_scenario disabled ;;
-        *)   run_scenario "$selection" ;;
+        all|simple)
+            for product in "${SIMPLE_PRODUCTS[@]}"; do
+                run_scenario "simple:$product"
+            done
+            if [ "$selection" = "all" ]; then
+                run_scenario enabled
+                run_scenario disabled
+            fi
+            ;;
+        configurable)
+            run_scenario enabled
+            run_scenario disabled
+            ;;
+        *)
+            run_scenario "$selection"
+            ;;
     esac
-    log_success "Configurable product migration end-to-end test passed ($selection)"
+    log_success "Product migration end-to-end tests passed ($selection)"
 }
 
 main "$@"

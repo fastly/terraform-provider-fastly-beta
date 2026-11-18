@@ -1,0 +1,143 @@
+---
+page_title: "fastly_service_logging_fos Resource - fastly"
+subcategory: ""
+description: |-
+  Fastly service Object Storage logging endpoint resource. Writes directly to the specified writable service version.
+---
+
+# fastly_service_logging_fos (Resource)
+
+Fastly service Object Storage logging endpoint resource. Writes directly to the specified writable service version.
+
+This resource is part of the explicit/default first-class resource family. It
+manages a Fastly Object Storage real-time logging endpoint on the configured
+service version. It does not clone, activate, or stage service versions.
+
+To have the provider manage the version lifecycle for you instead, use the
+nested `logging_fos` block on `fastly_service_cdn_auto` or
+`fastly_service_compute_auto` — see "Automatic-lifecycle usage" below.
+
+## Example Usage
+
+```terraform
+resource "fastly_service_logging_fos" "example" {
+  service_id  = fastly_service_cdn.example.id
+  version     = 1
+  name        = "fos-example"
+  bucket_name = "my-logs-bucket"
+  region      = "us-east"
+}
+```
+
+A fully configured endpoint. `format`, `format_version`, `placement`, and
+`response_condition` only affect generated VCL, so they are valid when
+`service_id` refers to a CDN (VCL) service and rejected for a Compute service:
+
+```terraform
+resource "fastly_service_logging_fos" "full" {
+  service_id        = fastly_service_cdn.example.id
+  version           = 1
+  name              = "fos-full"
+  bucket_name       = "my-logs-bucket"
+  region            = "us-east"
+  path              = "logs/"
+  period            = 3600
+  compression_codec = "zstd"
+  file_max_bytes    = 104857600
+
+  format             = "%h %l %u %t \"%r\" %>s %b"
+  format_version     = 2
+  placement          = "none"
+  response_condition = fastly_service_condition.errors_only.name
+}
+```
+
+Attaching to a Compute service — the VCL-only attributes must be omitted:
+
+```terraform
+resource "fastly_service_logging_fos" "compute" {
+  service_id  = fastly_service_compute.example.id
+  version     = 1
+  name        = "fos-compute"
+  bucket_name = "my-logs-bucket"
+  region      = "us-east"
+}
+```
+
+## Automatic-lifecycle usage
+
+Inside the `_auto` service resources, Fastly Object Storage logging is a nested
+block and the provider clones, validates, and activates a new service version
+whenever the block changes. The nested block takes the same arguments as this
+resource, minus `service_id` and `version`, which the parent service owns.
+
+```terraform
+resource "fastly_service_cdn_auto" "example" {
+  name = "my-service"
+
+  logging_fos {
+    name        = "fos-example"
+    bucket_name = "my-logs-bucket"
+    region      = "us-east"
+  }
+}
+```
+
+`fastly_service_compute_auto` supports the same block, without the VCL-only
+arguments (`format`, `format_version`, `placement`, `response_condition`):
+
+```terraform
+data "fastly_package_hash" "example" {
+  filename = "package.tar.gz"
+}
+
+resource "fastly_service_compute_auto" "example" {
+  name = "my-compute-service"
+
+  package {
+    filename         = "package.tar.gz"
+    source_code_hash = data.fastly_package_hash.example.hash
+  }
+
+  logging_fos {
+    name        = "fos-compute"
+    bucket_name = "my-logs-bucket"
+    region      = "us-east"
+  }
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+For import-from-scratch with the Terraform CLI, include the service version in
+the import ID so the provider can read the endpoint and
+populate full state:
+
+```shell
+terraform import fastly_service_logging_fos.example SERVICE_ID/VERSION/ENDPOINT_NAME
+```
+
+Example:
+
+```shell
+terraform import fastly_service_logging_fos.example SU1Z0isxPaozGVKXdv0eY/3/fos-example
+```
+
+## Version lifecycle
+
+This resource does not clone, activate, or stage service versions. Use explicit
+service-version lifecycle actions to clone, validate, stage, or activate a
+service version.
+
+## Notes
+
+- This resource has no credential arguments. Access credentials for the
+  endpoint are not configurable and are not exposed in Terraform state.
+- Leaving `placement` unset is not the same as setting it to `none`: unset lets
+  Fastly place the logging call automatically (`vcl_log` for `format_version` 2,
+  `vcl_deliver` for `format_version` 1), while `none` suppresses the generated
+  log statement entirely so you can write it yourself.
+- `compression_codec` and `gzip_level` cannot be set together. To compress at a
+  specific gzip level, leave `compression_codec` unset and set `gzip_level`.

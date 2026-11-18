@@ -1,7 +1,13 @@
 package computepackage
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
 	"testing"
+
+	fastly "github.com/fastly/go-fastly/v19/fastly"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -247,5 +253,41 @@ func TestStringValuesEqual(t *testing.T) {
 				t.Errorf("stringValuesEqual() = %v, expected %v", result, tt.expected)
 			}
 		})
+	}
+}
+
+func TestReadForVersionForceRefreshFetchesHashForEmptyState(t *testing.T) {
+	t.Parallel()
+
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"SID123","metadata":{"files_hash":"abc123"}}`))
+	}))
+	defer server.Close()
+
+	client, err := fastly.NewClientForEndpoint("test-token", server.URL)
+	if err != nil {
+		t.Fatalf("NewClientForEndpoint() error = %v", err)
+	}
+
+	got, err := ReadForVersion(context.Background(), client, "SID123", 1, nil, false)
+	if err != nil {
+		t.Fatalf("ReadForVersion(no refresh) error = %v", err)
+	}
+	if len(got) != 0 || calls.Load() != 0 {
+		t.Fatalf("without a refresh, empty state must stay empty with no API call; got %v after %d calls", got, calls.Load())
+	}
+
+	got, err = ReadForVersion(context.Background(), client, "SID123", 1, nil, true)
+	if err != nil {
+		t.Fatalf("ReadForVersion(refresh) error = %v", err)
+	}
+	if len(got) != 1 || got[0].SourceCodeHash.ValueString() != "abc123" {
+		t.Fatalf("refresh did not populate source_code_hash from the API: %v", got)
+	}
+	if calls.Load() != 1 {
+		t.Fatalf("refresh made %d API calls, want 1", calls.Load())
 	}
 }
