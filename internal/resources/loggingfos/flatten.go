@@ -70,10 +70,13 @@ func preserveGzipSentinelCompute(m *ComputeNestedModel, desired ComputeNestedMod
 	preserveGzipSentinelCommon(&m.commonModel, desired.commonModel)
 }
 
-// inferGzipSentinelOnImport treats an API gzip_level of 0 with no codec as unset when there is no
-// prior model (import, discovered endpoint); a genuine explicit 0 self-corrects on the next apply.
+// inferGzipSentinelOnImport treats gzip_level as unset when there is no prior model (import,
+// discovered endpoint) and either no codec is set with level 0, or a codec is set: the API accepts
+// both on update and then reports gzip_level 0 beside the codec. A genuine explicit 0 self-corrects
+// on the next apply.
 func inferGzipSentinelOnImport(m *commonModel) {
-	if service.StringValue(m.CompressionCodec) == "" && service.Int64Value(m.GzipLevel) == 0 {
+	codecSet := service.StringValue(m.CompressionCodec) != ""
+	if codecSet || service.Int64Value(m.GzipLevel) == 0 {
 		m.GzipLevel = types.Int64Value(DefaultGzipLevel)
 	}
 }

@@ -29,8 +29,8 @@ func NewListResource() list.ListResource {
 	})
 }
 
-// setResourceAttrs mirrors Create/Read: VCL-only fields are reset on Compute so the list output
-// stays valid for the standalone resource's schema.
+// setResourceAttrs nulls VCL-only fields on Compute so generated config omits them; the schema
+// defaults apply on import, matching what Read stores.
 func setResourceAttrs(ctx context.Context, result *list.ListResult, s *fastly.FOS, serviceID string, version int, serviceType string) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -42,8 +42,15 @@ func setResourceAttrs(ctx context.Context, result *list.ListResult, s *fastly.FO
 		Service:     types.StringValue(serviceID),
 		Version:     types.Int64Value(int64(version)),
 	}
+	// The API can report gzip_level alongside a codec, which the validator rejects in generated config.
+	if service.StringValue(model.CompressionCodec) != "" {
+		model.GzipLevel = types.Int64Null()
+	}
 	if serviceType == service.TypeCompute {
-		ResetVCLOnlyToDefaults(&model.NestedModel)
+		model.Format = types.StringNull()
+		model.FormatVersion = types.Int64Null()
+		model.Placement = types.StringNull()
+		model.ResponseCondition = types.StringNull()
 	}
 	diags.Append(result.Resource.Set(ctx, &model)...)
 	return diags

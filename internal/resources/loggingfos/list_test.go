@@ -13,12 +13,11 @@ import (
 
 	fastly "github.com/fastly/go-fastly/v19/fastly"
 
-	"github.com/fastly/terraform-provider-fastly-beta/internal/constants"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 )
 
-// TestSetResourceAttrs_computeResetsVCLOnlyFields checks that the list output resets the API's VCL-only
-// values for Compute endpoints, as Read and Import do.
+// TestSetResourceAttrs_computeResetsVCLOnlyFields checks that the list output nulls the API's VCL-only
+// values for Compute endpoints.
 func TestSetResourceAttrs_computeResetsVCLOnlyFields(t *testing.T) {
 	ctx := context.Background()
 
@@ -50,12 +49,12 @@ func TestSetResourceAttrs_computeResetsVCLOnlyFields(t *testing.T) {
 			wantRespCondition: types.StringValue("some-condition"),
 		},
 		{
-			name:              "compute service resets VCL-only fields to schema defaults",
+			name:              "compute service nulls VCL-only fields so generated config omits them",
 			serviceType:       service.TypeCompute,
-			wantFormat:        types.StringValue(constants.LoggingFOSDefaultFormat),
-			wantFormatVersion: types.Int64Value(DefaultFormatVersion),
+			wantFormat:        types.StringNull(),
+			wantFormatVersion: types.Int64Null(),
 			wantPlacement:     types.StringNull(),
-			wantRespCondition: types.StringValue(DefaultResponseCondition),
+			wantRespCondition: types.StringNull(),
 		},
 	}
 
@@ -73,6 +72,35 @@ func TestSetResourceAttrs_computeResetsVCLOnlyFields(t *testing.T) {
 			require.Equal(t, tt.wantFormatVersion, got.FormatVersion)
 			require.Equal(t, tt.wantPlacement, got.Placement)
 			require.Equal(t, tt.wantRespCondition, got.ResponseCondition)
+		})
+	}
+}
+
+// TestSetResourceAttrs_codecDropsGzipLevel checks that an endpoint the API reports with both a codec
+// and gzip_level yields a null gzip_level, so generated config passes the conflict validator.
+func TestSetResourceAttrs_codecDropsGzipLevel(t *testing.T) {
+	ctx := context.Background()
+
+	for name, tt := range map[string]struct {
+		codec *string
+		want  types.Int64
+	}{
+		"codec set": {codec: new("zstd"), want: types.Int64Null()},
+		"no codec":  {codec: nil, want: types.Int64Value(3)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			s := &fastly.FOS{
+				Name:             new("logger"),
+				BucketName:       new("bucket"),
+				GzipLevel:        new(3),
+				CompressionCodec: tt.codec,
+			}
+			result := buildTestListResult(ctx)
+			require.False(t, setResourceAttrs(ctx, &result, s, "service-id", 1, service.TypeVCL).HasError())
+
+			var got Model
+			require.False(t, result.Resource.Get(ctx, &got).HasError())
+			require.Equal(t, tt.want, got.GzipLevel)
 		})
 	}
 }
