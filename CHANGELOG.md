@@ -4,7 +4,7 @@
 
 ### ENHANCEMENTS:
 
-- feat(bot-management): add support for bot management resources, data sources and lists ([#XXX](https://github.com/fastly/terraform-provider-fastly-beta/pull/XXX))
+- feat(bot-management): add support for bot management resources, data sources and lists ([#241](https://github.com/fastly/terraform-provider-fastly-beta/pull/241))
 - test(migration): add live end-to-end coverage for product-free `fastly_service_vcl` to `fastly_service_cdn_auto` migration, verifying state preservation and no-op plans ([#236](https://github.com/fastly/terraform-provider-fastly-beta/pull/236))
 - feat(alert): add `dimensions.services` to `fastly_alert` to monitor a set of services individually for `stats` alerts ([#232](https://github.com/fastly/terraform-provider-fastly-beta/pull/232))
 - feat(migration): generate standalone CDN simple-product resources and service-ID imports from legacy product enablement ([#230](https://github.com/fastly/terraform-provider-fastly-beta/pull/230))
