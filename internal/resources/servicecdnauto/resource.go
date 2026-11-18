@@ -256,7 +256,8 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 
 func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var config Model
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	isUnknown, diags := validation.GetConfig(ctx, req.Config, &config)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -301,12 +302,14 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		)
 	}
 
-	if err := ratelimiter.ValidateDictionaryReferences(config.RateLimiter, config.Dictionary); err != nil {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("rate_limiter"),
-			"Invalid rate limiter configuration",
-			err.Error(),
-		)
+	if !isUnknown(path.Root("dictionary")) {
+		if err := ratelimiter.ValidateDictionaryReferences(config.RateLimiter, config.Dictionary); err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("rate_limiter"),
+				"Invalid rate limiter configuration",
+				err.Error(),
+			)
+		}
 	}
 
 	if err := director.ValidateConfig(config.Director); err != nil {
@@ -317,28 +320,39 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 		)
 	}
 
-	if err := director.ValidateBackendReferences(config.Director, config.Backend); err != nil {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("director"),
-			"Invalid director configuration",
-			err.Error(),
-		)
+	if !isUnknown(path.Root("backend")) {
+		if err := director.ValidateBackendReferences(config.Director, config.Backend); err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("director"),
+				"Invalid director configuration",
+				err.Error(),
+			)
+		}
 	}
 
-	if err := ratelimiter.ValidateResponseObjectReferences(config.RateLimiter, config.ResponseObject); err != nil {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("rate_limiter"),
-			"Invalid rate limiter configuration",
-			err.Error(),
-		)
+	if !isUnknown(path.Root("response_object")) {
+		if err := ratelimiter.ValidateResponseObjectReferences(config.RateLimiter, config.ResponseObject); err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("rate_limiter"),
+				"Invalid rate limiter configuration",
+				err.Error(),
+			)
+		}
 	}
 
-	if err := backend.ValidateHealthcheckReferences(config.Backend, config.HealthCheck); err != nil {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("backend"),
-			"Invalid backend configuration",
-			err.Error(),
-		)
+	if !isUnknown(path.Root("healthcheck")) {
+		if err := backend.ValidateHealthcheckReferences(config.Backend, config.HealthCheck); err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("backend"),
+				"Invalid backend configuration",
+				err.Error(),
+			)
+		}
+	}
+
+	// Every check below validates condition references.
+	if isUnknown(path.Root("condition")) {
+		return
 	}
 
 	conditionNames := validation.NameSet(config.Condition, func(m condition.NestedModel) types.String { return m.Name })

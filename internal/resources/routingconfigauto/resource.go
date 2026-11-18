@@ -8,6 +8,7 @@ import (
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/reconcile"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -67,12 +68,13 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 // string and would otherwise silently collide.
 func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var config Model
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	isUnknown, diags := validation.GetConfig(ctx, req.Config, &config)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if len(config.Path) == 0 {
+	if len(config.Path) == 0 && !isUnknown(path.Root("path")) {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("path"),
 			"Missing Routing Config Path",
@@ -82,7 +84,7 @@ func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 
 	seen := make(map[string]bool, len(config.Path))
 	for i, pm := range config.Path {
-		validateRules(i, pm, &resp.Diagnostics)
+		validateRules(i, pm, isUnknown, &resp.Diagnostics)
 
 		if pm.Path.IsUnknown() {
 			continue
@@ -441,8 +443,11 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func validateRules(pathIdx int, pm PathModel, diags *diag.Diagnostics) {
+func validateRules(pathIdx int, pm PathModel, isUnknown validation.IsUnknownFunc, diags *diag.Diagnostics) {
 	pathAttr := path.Root("path").AtListIndex(pathIdx)
+	if isUnknown(pathAttr.AtName("rule")) {
+		return
+	}
 
 	if len(pm.Rule) == 0 {
 		diags.AddAttributeError(
@@ -452,8 +457,12 @@ func validateRules(pathIdx int, pm PathModel, diags *diag.Diagnostics) {
 		)
 	}
 
-	hasDefault := false
+	hasDefault, defaultUnknown := false, false
 	for ri, rm := range pm.Rule {
+		if isUnknown(pathAttr.AtName("rule").AtListIndex(ri).AtName("condition")) {
+			defaultUnknown = true
+			continue
+		}
 		if len(rm.Condition) == 0 {
 			hasDefault = true
 			// The API always keeps the default rule last, so a default listed
@@ -480,7 +489,7 @@ func validateRules(pathIdx int, pm PathModel, diags *diag.Diagnostics) {
 		}
 	}
 
-	if len(pm.Rule) > 0 && !hasDefault {
+	if len(pm.Rule) > 0 && !hasDefault && !defaultUnknown {
 		diags.AddAttributeError(
 			pathAttr.AtName("rule"),
 			"Missing Default Routing Config Rule",
