@@ -1,0 +1,41 @@
+---
+subcategory: "Bot Management"
+---
+
+# fastly_bot_management_category_reset_bots Action
+
+Sets every bot in a Bot Management (ContentGuard) category to `inherit`, so
+they all follow the category's action. The category's own action is unchanged.
+
+## Example Usage
+
+```terraform
+data "fastly_bot_management_workspace" "example" {
+  service_id = fastly_service_cdn_auto.example.id
+}
+
+resource "fastly_bot_management_category" "ai_crawler" {
+  workspace_id = data.fastly_bot_management_workspace.example.id
+  category_id  = "cat_ai_crawler"
+  action       = "block"
+}
+
+action "fastly_bot_management_category_reset_bots" "ai_crawler" {
+  config {
+    workspace_id = data.fastly_bot_management_workspace.example.id
+    category_id  = fastly_bot_management_category.ai_crawler.category_id
+  }
+}
+```
+
+```shell
+terraform apply -invoke=action.fastly_bot_management_category_reset_bots.ai_crawler
+```
+
+## Usage Notes
+
+This also resets bots managed by `fastly_bot_management_bot`. The next
+`apply` sets their configured actions again, so set those resources to
+`inherit` or remove them first if the reset should stick.
+
+{{ .SchemaMarkdown | trimspace }}

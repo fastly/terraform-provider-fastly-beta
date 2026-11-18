@@ -19,6 +19,7 @@ import (
 
 	"github.com/fastly/go-fastly/v19/fastly"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/botmanagementcategoryresetbots"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/computepackageupload"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/versionactivate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/versionclone"
@@ -29,6 +30,9 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/apisecurityoperations"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/apisecurityoperationtags"
 	auditlogeventmappingdatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/auditlogeventmapping"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/botmanagementbots"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/botmanagementcategories"
+	botmanagementworkspacedatasource "github.com/fastly/terraform-provider-fastly-beta/internal/datasources/botmanagementworkspace"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/configstores"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/datacenters"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/dictionaries"
@@ -82,6 +86,9 @@ import (
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/apisecurityoperationtag"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/auditlogeventmapping"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/backend"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/botmanagementbot"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/botmanagementcategory"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/botmanagementworkspace"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cachesetting"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cdnacl"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/cdnaclentries"
@@ -289,6 +296,9 @@ func (p *fastlyProvider) Resources(_ context.Context) []func() resource.Resource
 		apisecurityoperation.NewResource,
 		apisecurityoperationtag.NewResource,
 		backend.NewResource,
+		botmanagementbot.NewResource,
+		botmanagementcategory.NewResource,
+		botmanagementworkspace.NewResource,
 		cachesetting.NewResource,
 		cdnacl.NewResource,
 		cdnaclentries.NewResource,
@@ -416,6 +426,9 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 		apisecuritydiscoveredoperations.NewDataSource,
 		apisecurityoperations.NewDataSource,
 		apisecurityoperationtags.NewDataSource,
+		botmanagementbots.NewDataSource,
+		botmanagementcategories.NewDataSource,
+		botmanagementworkspacedatasource.NewDataSource,
 		configstores.NewDataSource,
 		datacenters.NewDataSource,
 		dictionaries.NewDataSource,
@@ -469,6 +482,9 @@ func (p *fastlyProvider) DataSources(_ context.Context) []func() datasource.Data
 func (p *fastlyProvider) ListResources(_ context.Context) []func() list.ListResource {
 	return []func() list.ListResource{
 		backend.NewListResource,
+		botmanagementbot.NewListResource,
+		botmanagementcategory.NewListResource,
+		botmanagementworkspace.NewListResource,
 		cachesetting.NewListResource,
 		cdnacl.NewListResource,
 		cdnaclentries.NewListResource,
@@ -554,5 +570,6 @@ func (p *fastlyProvider) Actions(_ context.Context) []func() action.Action {
 		versionactivate.NewAction,
 		versionstage.NewAction,
 		computepackageupload.NewAction,
+		botmanagementcategoryresetbots.NewAction,
 	}
 }
