@@ -36,6 +36,7 @@ const (
 	DefaultMinTLSVersion       = ""
 	DefaultOverrideHost        = ""
 	DefaultPreferIPv6          = false
+	DefaultComputePreferIPv6   = true
 	DefaultRequestCondition    = ""
 	DefaultShareKey            = ""
 	DefaultShield              = ""
@@ -384,6 +385,19 @@ func NestedBlockSchema() schema.ListNestedBlock {
 			Attributes: CommonAttributes(),
 		},
 	}
+}
+
+// ComputeNestedBlockSchema is NestedBlockSchema for Compute services, where the
+// legacy provider (and so the migration source) defaults prefer_ipv6 to true.
+func ComputeNestedBlockSchema() schema.ListNestedBlock {
+	block := NestedBlockSchema()
+	attrs := CommonAttributes()
+	preferIPv6 := attrs["prefer_ipv6"].(schema.BoolAttribute)
+	preferIPv6.Default = booldefault.StaticBool(DefaultComputePreferIPv6)
+	preferIPv6.Description = "Prefer IPv6 connections to origins for hostname backends. Default `true` for Compute services."
+	attrs["prefer_ipv6"] = preferIPv6
+	block.NestedObject.Attributes = attrs
+	return block
 }
 
 type ops struct{}
