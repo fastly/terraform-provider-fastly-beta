@@ -6,6 +6,8 @@
 
 ### BUG FIXES:
 
+- fix(validation): stop `terraform validate` and `plan` failing with "Value Conversion Error: Received unknown value" when a `dynamic` block has an unknown `for_each` on `fastly_service_cdn_auto`, `fastly_routing_config_auto`, `fastly_alert` and the `fastly_ngwaf_*_rule` resources
+
 ### Dependencies:
 
 ## 0.2.10 (November 18, 2026)

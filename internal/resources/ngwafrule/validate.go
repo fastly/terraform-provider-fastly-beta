@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/validation"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -77,14 +78,16 @@ func TotalConditionCount(conditions []ConditionModel, groups []GroupConditionMod
 // the live API's behavior for this rule type: it rejects a templated_signal
 // rule with no conditions, so this validator applies the same requirement
 // here as for every other rule type.
-func ValidateConditions(m CommonModel, diags *diag.Diagnostics) {
-	if !HasAnyCondition(m.Condition, m.GroupCondition, m.MultivalCondition) {
+func ValidateConditions(m CommonModel, isUnknown validation.IsUnknownFunc, diags *diag.Diagnostics) {
+	anyUnknown := isUnknown(path.Root("condition")) || isUnknown(path.Root("group_condition")) || isUnknown(path.Root("multival_condition"))
+	if !anyUnknown && !HasAnyCondition(m.Condition, m.GroupCondition, m.MultivalCondition) {
 		diags.AddError(
 			"Missing rule conditions",
 			"A rule must define at least one 'condition', 'group_condition', or 'multival_condition'.",
 		)
 	}
 
+	// Unknown blocks decode as empty, so this count is a lower bound and still safe to check.
 	if total := TotalConditionCount(m.Condition, m.GroupCondition, m.MultivalCondition); total > MaxConditions {
 		diags.AddError(
 			"Too many conditions",
@@ -93,8 +96,12 @@ func ValidateConditions(m CommonModel, diags *diag.Diagnostics) {
 	}
 
 	for _, i := range EmptyGroupConditionIndexes(m.GroupCondition) {
+		group := path.Root("group_condition").AtListIndex(i)
+		if isUnknown(group.AtName("condition")) || isUnknown(group.AtName("multival_condition")) {
+			continue
+		}
 		diags.AddAttributeError(
-			path.Root("group_condition").AtListIndex(i),
+			group,
 			"Empty group_condition",
 			fmt.Sprintf("group_condition[%d] must define at least one 'condition' or 'multival_condition' block.", i),
 		)
