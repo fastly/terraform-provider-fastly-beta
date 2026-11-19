@@ -18,20 +18,26 @@ func containsSensitiveConfiguration(files map[string][]byte) bool {
 		if diagnostics.HasErrors() || parsed == nil {
 			return true
 		}
-		if sensitiveBody(parsed.Body.(*hclsyntax.Body)) {
+		if sensitiveBody(parsed.Body) {
 			return true
 		}
 	}
 	return false
 }
 
-func sensitiveBody(body *hclsyntax.Body) bool {
-	for name := range body.Attributes {
+func sensitiveBody(body hcl.Body) bool {
+	// Fail closed if the parser ever supplies an unexpected or nil body.
+	// A source preview must not be emitted when sensitivity cannot be checked.
+	syntaxBody, ok := body.(*hclsyntax.Body)
+	if !ok || syntaxBody == nil {
+		return true
+	}
+	for name := range syntaxBody.Attributes {
 		if sensitiveFieldName(name) {
 			return true
 		}
 	}
-	for _, block := range body.Blocks {
+	for _, block := range syntaxBody.Blocks {
 		if sensitiveFieldName(block.Type) || sensitiveBody(block.Body) {
 			return true
 		}
