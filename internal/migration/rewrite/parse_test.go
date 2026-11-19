@@ -37,10 +37,16 @@ func TestNativeSyntaxErrorUsesFirstPositionedError(t *testing.T) {
 		diagnostics hcl.Diagnostics
 		want        string
 	}{
-		{"first positioned error", hcl.Diagnostics{warning, unpositioned, positioned, later},
-			"parse native HCL in fixture.tf: invalid syntax at line 4, column 5 (source text omitted)"},
-		{"no positioned error", hcl.Diagnostics{warning, unpositioned},
-			"parse native HCL in fixture.tf: invalid syntax (source text omitted)"},
+		{
+			"first positioned error",
+			hcl.Diagnostics{warning, unpositioned, positioned, later},
+			"parse native HCL in fixture.tf: invalid syntax at line 4, column 5 (source text omitted)",
+		},
+		{
+			"no positioned error",
+			hcl.Diagnostics{warning, unpositioned},
+			"parse native HCL in fixture.tf: invalid syntax (source text omitted)",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
