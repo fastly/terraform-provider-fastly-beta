@@ -17,6 +17,7 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/hashicorp/hcl/v2/hclwrite"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/analyze"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/compatibility"
@@ -111,14 +112,6 @@ func (p *Planner) Plan(ctx context.Context, path string) (Result, error) {
 			})
 		}
 	}
-	for _, reference := range analysis.References {
-		result.Issues = append(result.Issues, Issue{
-			File:    displayPath(analysis.Root, reference.Range.Filename),
-			Message: fmt.Sprintf("reference %s must be rewritten to %s", reference.From, reference.To),
-			Remediation: "Wait for the Terraform reference-rewriting migration task, or update " +
-				"the references manually before requesting a complete preview.",
-		})
-	}
 
 	index, indexIssues, err := inspectFiles(ctx, analysis)
 	if err != nil {
@@ -184,6 +177,18 @@ func (p *Planner) Plan(ctx context.Context, path string) (Result, error) {
 		}
 		return moves[i].From < moves[j].From
 	})
+	// Reference edits run before resource/attribute transformations, so
+	// self and lifecycle paths still belong to their original resource type.
+	// Build uses only successful, compiler-authorized resource moves.
+	referenceEdits, referenceIssues := compileReferences(p.registry, index, moves)
+	result.Issues = append(result.Issues, referenceIssues...)
+	var referenceOperations []rewrite.Edit
+	for _, edit := range referenceEdits {
+		if len(edit.Routes) != 0 {
+			referenceOperations = append(referenceOperations, edit)
+		}
+	}
+	edits = append(referenceOperations, edits...)
 	sortIssues(result.Issues)
 	if len(result.Issues) != 0 {
 		return result, nil // Never produce a partial diff.
@@ -199,6 +204,14 @@ func (p *Planner) Plan(ctx context.Context, path string) (Result, error) {
 		return result, nil
 	}
 	changes := plan.Changes()
+	if issues := verifyRenderedReferences(index, referenceEdits, changes); len(issues) != 0 {
+		result.Issues = issues
+		return result, nil
+	}
+	if err := checkModuleFileSet(analysis.Root, analysis.Modules, index.snapshots); err != nil {
+		result.Issues = []Issue{{File: ".", Message: err.Error(), Remediation: "Rerun migration after configuration changes have stopped."}}
+		return result, nil //nolint:nilerr // Configuration drift is a blocking preview diagnostic, not an execution error.
+	}
 	if err := checkSnapshots(analysis.Root, index.snapshots, changes); err != nil {
 		result.Issues = []Issue{{
 			File:        ".",
@@ -360,6 +373,14 @@ func sourceExpression(source []byte, body *hclsyntax.Body, name string) (string,
 	if attr == nil {
 		return "", false
 	}
+	// Canonicalize static address traversals so whitespace and quoting do
+	// not conceal a duplicate or an existing exact moved block.
+	if traversal, diags := hcl.AbsTraversalForExpr(attr.Expr); !diags.HasErrors() {
+		return string(hclwrite.TokensForTraversal(traversal).Bytes()), true
+	}
+	if name == "from" {
+		return "", false
+	}
 	rng := attr.Expr.Range()
 	if rng.Start.Byte < 0 || rng.End.Byte > len(source) || rng.End.Byte < rng.Start.Byte {
 		return "", false
@@ -389,6 +410,29 @@ func checkSnapshots(root string, snapshots map[string][]byte, changes []rewrite.
 		}
 		if !bytes.Equal(previous, current) {
 			return fmt.Errorf("%s changed since the initial analysis", filename)
+		}
+	}
+	return nil
+}
+
+// checkModuleFileSet detects a newly added Terraform source, including a file
+// with references the analyzer never saw. The existing snapshot check detects
+// changes/deletions to the original files. Neither check replaces coordination
+// with other writers while Apply installs the plan.
+func checkModuleFileSet(root string, modules []string, snapshots map[string][]byte) error {
+	for _, module := range modules {
+		entries, err := os.ReadDir(filepath.Join(root, filepath.FromSlash(module)))
+		if err != nil {
+			return fmt.Errorf("recheck module %s: %w", module, err)
+		}
+		for _, entry := range entries {
+			if entry.IsDir() || (!strings.HasSuffix(entry.Name(), ".tf") && !strings.HasSuffix(entry.Name(), ".tf.json")) {
+				continue
+			}
+			name := filepath.ToSlash(filepath.Join(module, entry.Name()))
+			if _, ok := snapshots[name]; !ok {
+				return fmt.Errorf("terraform file %s appeared after analysis", name)
+			}
 		}
 	}
 	return nil

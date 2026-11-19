@@ -362,29 +362,6 @@ func TestPlanFailClosedCases(t *testing.T) {
 		want   string
 	}{
 		{
-			name: "direct reference",
-			source: `resource "fastly_service_vcl" "demo" {
-  name = "demo"
-}
-output "id" {
-  value = fastly_service_vcl.demo.id
-}
-`,
-			want: "reference",
-		},
-		{
-			name: "count-indexed reference",
-			source: `resource "fastly_service_vcl" "demo" {
-  count = var.instances
-  name = "demo"
-}
-output "id" {
-  value = fastly_service_vcl.demo[0].id
-}
-`,
-			want: "reference",
-		},
-		{
 			name: "provider constraint",
 			source: `terraform {
   required_providers {
