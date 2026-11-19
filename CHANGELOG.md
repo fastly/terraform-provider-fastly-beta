@@ -6,6 +6,9 @@
 
 ### BUG FIXES:
 
+- fix(migration): extend legacy VCL and Compute state decoders for SDKv2 10.3.0 schema additions and reject configured backend IAM until target parity is available
+- fix(service-compute-auto): preserve local Compute package inputs during state migration while refreshing the API package hash
+
 - fix(validation): config validation now handles `dynamic` blocks whose `for_each` isn't known yet, such as one driven by an input variable during `terraform validate` ([#243](https://github.com/fastly/terraform-provider-fastly-beta/pull/243))
 
 ### Dependencies:
