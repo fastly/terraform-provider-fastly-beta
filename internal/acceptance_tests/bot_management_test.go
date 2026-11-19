@@ -12,9 +12,7 @@ import (
 	"github.com/fastly/go-fastly/v19/fastly/botmanagement/v1/workspaces/policy"
 )
 
-// botManagementTestCategoryID and botManagementTestBotID are live IDs. The API
-// spec's examples (ai_crawlers, gptbot) don't match them. The bot must belong
-// to the category.
+// botManagementTestBotID must belong to botManagementTestCategoryID.
 const (
 	botManagementTestCategoryID = "cat_ai_crawler"
 	botManagementTestBotID      = "bot_gptbot"
