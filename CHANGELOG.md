@@ -8,6 +8,8 @@
 
 ### BUG FIXES:
 
+- fix(validation): config validation now handles `dynamic` blocks whose `for_each` isn't known yet, such as one driven by an input variable during `terraform validate` ([#243](https://github.com/fastly/terraform-provider-fastly-beta/pull/243))
+
 ### Dependencies:
 
 ## 0.2.10 (November 18, 2026)

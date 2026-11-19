@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -60,7 +61,7 @@ func TestValidateRules_defaultRule(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			var diags diag.Diagnostics
-			validateRules(0, PathModel{Rule: tc.rules}, &diags)
+			validateRules(0, PathModel{Rule: tc.rules}, func(path.Path) bool { return false }, &diags)
 			if diags.HasError() != tc.wantErr {
 				t.Fatalf("HasError() = %v, want %v: %v", diags.HasError(), tc.wantErr, diags)
 			}
