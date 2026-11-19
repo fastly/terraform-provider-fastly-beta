@@ -5,7 +5,7 @@
 ### ENHANCEMENTS:
 
 - feat(migration): transform legacy `fastly_service_compute` HCL to `fastly_service_compute_auto` in `fastly-tf-migrate`, with live end-to-end coverage via `make test-migration-compute` ([#242](https://github.com/fastly/terraform-provider-fastly-beta/pull/242))
-- feat(migration): add syntax-aware Terraform reference rewriting for legacy VCL and Compute service migrations, preserving module addresses, resource labels, `count`, `for_each`, provider aliases, and supported meta-arguments while blocking unsupported transformations before writing configuration changes ([#xxx](https://github.com/fastly/terraform-provider-fastly-beta/pull/xxx))
+- feat(migration): add syntax-aware Terraform reference rewriting for legacy VCL and Compute service migrations, preserving module addresses, resource labels, `count`, `for_each`, provider aliases, and supported meta-arguments while blocking unsupported transformations before writing configuration changes ([#245](https://github.com/fastly/terraform-provider-fastly-beta/pull/245))
 
 ### BUG FIXES:
 
