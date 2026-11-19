@@ -14,7 +14,7 @@ OVERRIDES_FILE := $(BIN_DIR)/developer_overrides.tfrc
 GOLANGCI_LINT_VERSION := v2.12.2
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 
-.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle test-migration-vcl test-migration-products lint install-linter check-linter-version release-check help
+.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle test-migration-vcl test-migration-compute test-migration-products test-migration-schemas test-migration-references lint install-linter check-linter-version release-check help
 
 help:
 	@echo "Available targets:"
@@ -37,8 +37,11 @@ help:
 	@echo "                                 Add SCENARIO=simple:domain_inspector to test one product"
 	@echo "  make test-lifecycle-cdn      - Run CDN lifecycle tests (requires FASTLY_API_TOKEN)"
 	@echo "  make test-lifecycle-compute  - Run Compute lifecycle tests (requires FASTLY_API_TOKEN)"
+	@echo "  make test-migration-schemas  - Verify published SDKv2 state decoder compatibility (no API token)"
+	@echo "  make test-migration-references - Run live module/reference migration test (requires FASTLY_API_TOKEN)"
 	@echo "  make test-migration-vcl      - Run VCL -> CDN Auto live migration test (requires FASTLY_API_TOKEN)"
 	@echo "                                 Tests only VCL service state move; no product entitlements"
+	@echo "  make test-migration-compute  - Run Compute -> Compute Auto live migration test (requires FASTLY_API_TOKEN)"
 	@echo "  make test-lifecycle          - Run all lifecycle tests (requires FASTLY_API_TOKEN)"
 	@echo "  make release-check           - Run build, lint, test-baseline, and docs (requires FASTLY_API_TOKEN)"
 
@@ -154,6 +157,15 @@ validate-docs:
 
 docs: generate-docs validate-docs
 
+# Opt-in registry-schema verification (no live resources).
+test-migration-schemas:
+	@echo "==> Verifying published SDKv2 provider state schemas..."
+	@./scripts/test-migration-state-schemas/run.sh
+
+test-migration-references:
+	@echo "==> Running live module/reference migration acceptance test..."
+	@./scripts/test-migration-references/run.sh
+
 # Opt-in live migration tests: not part of routine CI or release-check.
 test-migration-vcl:
 	@echo "==> Running VCL -> CDN Auto live migration acceptance test (no products)..."
@@ -164,6 +176,12 @@ test-migration-products:
 	@echo "==> Running CDN product migration E2E tests (scenario: $(or $(SCENARIO),all))..."
 	@echo "    Note: Creates/destroys real Fastly resources; requires FASTLY_API_TOKEN and product entitlements"
 	@./scripts/test-migration-products/run.sh '$(or $(SCENARIO),all)'
+
+# Opt-in live migration test: not part of routine CI or release-check.
+test-migration-compute:
+	@echo "==> Running Compute -> Compute Auto live migration acceptance test..."
+	@echo "    Note: Creates/destroys a real Fastly test service; requires FASTLY_API_TOKEN"
+	@./scripts/test-migration-compute/run.sh
 
 test-lifecycle-cdn:
 	@echo "==> Running CDN lifecycle tests..."

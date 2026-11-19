@@ -14,6 +14,7 @@ import (
 	"github.com/zclconf/go-cty/cty"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/compatibility"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/rewrite"
 )
 
 var terraformMetaAttributes = map[string]struct{}{
@@ -45,10 +46,11 @@ type parsedFile struct {
 }
 
 type analysisState struct {
-	root       string
-	result     Result
-	files      []parsedFile
-	addressMap map[string]map[string]string
+	root             string
+	result           Result
+	files            []parsedFile
+	addressMap       map[string]map[string]string
+	referenceTargets map[string]map[string]rewrite.ReferenceTarget
 }
 
 // Analyze inspects a Terraform working directory without modifying configuration or state.
@@ -64,7 +66,10 @@ func (a *Analyzer) Analyze(ctx context.Context, workingDir string) (Result, erro
 	if err != nil {
 		return Result{}, fmt.Errorf("resolve working directory: %w", err)
 	}
-	root = filepath.Clean(root)
+	root, err = filepath.EvalSymlinks(root)
+	if err != nil {
+		return Result{}, fmt.Errorf("resolve working directory symlinks: %w", err)
+	}
 
 	info, err := os.Stat(root)
 	if err != nil {
@@ -75,9 +80,10 @@ func (a *Analyzer) Analyze(ctx context.Context, workingDir string) (Result, erro
 	}
 
 	state := &analysisState{
-		root:       root,
-		result:     Result{Root: root},
-		addressMap: make(map[string]map[string]string),
+		root:             root,
+		result:           Result{Root: root},
+		addressMap:       make(map[string]map[string]string),
+		referenceTargets: make(map[string]map[string]rewrite.ReferenceTarget),
 	}
 
 	if err := a.discover(ctx, state); err != nil {
@@ -149,6 +155,13 @@ func (a *Analyzer) discover(ctx context.Context, state *analysisState) error {
 			if !strings.HasSuffix(name, ".tf") {
 				continue
 			}
+			if name == "override.tf" || strings.HasSuffix(name, "_override.tf") {
+				state.result.Findings = append(state.result.Findings, Finding{
+					Severity: SeverityError, Range: fileStartRange(path),
+					Message:     "Terraform override files cannot be resolved safely by the migration analyzer.",
+					Remediation: "Consolidate override files into ordinary Terraform configuration before migration.",
+				})
+			}
 
 			source, err := os.ReadFile(path)
 			if err != nil {
@@ -198,7 +211,29 @@ func (a *Analyzer) discover(ctx context.Context, state *analysisState) error {
 					})
 					continue
 				}
-				queue = append(queue, filepath.Clean(filepath.Join(moduleDir, child.source)))
+				childPath := filepath.Clean(filepath.Join(moduleDir, child.source))
+				rel, relErr := filepath.Rel(state.root, childPath)
+				if relErr != nil || !filepath.IsLocal(rel) {
+					state.result.Findings = append(state.result.Findings, Finding{
+						Severity: SeverityError, Range: child.sourceRange,
+						Message:     "Local module source is outside the selected Terraform root.",
+						Remediation: "Select a root that contains all local module sources before migrating.",
+					})
+					continue
+				}
+				resolved, resolveErr := filepath.EvalSymlinks(childPath)
+				if resolveErr != nil {
+					return fmt.Errorf("resolve local module %q: %w", rel, resolveErr)
+				}
+				if resolved != childPath {
+					state.result.Findings = append(state.result.Findings, Finding{
+						Severity: SeverityError, Range: child.sourceRange,
+						Message:     "Symlinked local module source cannot be migrated safely.",
+						Remediation: "Use a canonical module path inside the selected root.",
+					})
+					continue
+				}
+				queue = append(queue, childPath)
 			}
 		}
 	}
@@ -411,6 +446,15 @@ func (a *Analyzer) analyzeResource(
 			state.addressMap[moduleDir] = make(map[string]string)
 		}
 		state.addressMap[moduleDir][resourceType+"."+resourceName] = rule.Target + "." + resourceName
+	}
+	// A known mapping is not necessarily enabled. Only automatic resource
+	// actions can authorize reference rewrites.
+	if rule.Support == compatibility.SupportAutomatic && shouldPlan(rule) && rule.Target != "" {
+		if state.referenceTargets[moduleDir] == nil {
+			state.referenceTargets[moduleDir] = make(map[string]rewrite.ReferenceTarget)
+		}
+		address := resourceType + "." + resourceName
+		state.referenceTargets[moduleDir][address] = rewrite.ResourceReferenceTarget(rule.Target+"."+resourceName, block)
 	}
 
 	if resourceType != "fastly_service_vcl" && resourceType != "fastly_service_compute" {
@@ -946,11 +990,33 @@ func qualifyTarget(target, resourceName string) string {
 }
 
 func (a *Analyzer) findReferences(state *analysisState) {
-	if len(state.addressMap) == 0 {
-		return
+	all := make(map[string]bool)
+	for _, targets := range state.referenceTargets {
+		for source, target := range targets {
+			all[source], all[target.To] = true, true
+		}
 	}
-
 	for _, parsed := range state.files {
+		targets := state.referenceTargets[parsed.moduleDir]
+		if len(all) != 0 {
+			inspection := (rewrite.References{
+				Routes: targets, AllRoutes: all, Registry: a.registry,
+			}).Inspect(parsed.body)
+			for _, reference := range inspection.References {
+				state.result.References = append(state.result.References, Reference{
+					From: reference.From, To: reference.To, Range: reference.Range,
+				})
+			}
+			for _, problem := range inspection.Problems {
+				state.result.Findings = append(state.result.Findings, Finding{
+					Severity: SeverityError, Range: problem.Range, Message: problem.Message,
+					Remediation: "Resolve the reference or state address manually before automatic migration.",
+				})
+			}
+		}
+
+		// Keep reporting known but blocked resource mappings. These never
+		// authorize edits; their existing compatibility finding blocks migration.
 		moduleAddresses := state.addressMap[parsed.moduleDir]
 		if len(moduleAddresses) == 0 {
 			continue
@@ -969,14 +1035,15 @@ func (a *Analyzer) findReferences(state *analysisState) {
 					continue
 				}
 				address := root.Name + "." + name.Name
+				if _, enabled := targets[address]; enabled {
+					continue
+				}
 				target, ok := moduleAddresses[address]
 				if !ok {
 					continue
 				}
 				state.result.References = append(state.result.References, Reference{
-					From:  address,
-					To:    target,
-					Range: traversal.SourceRange(),
+					From: address, To: target, Range: traversal.SourceRange(),
 				})
 			}
 		})

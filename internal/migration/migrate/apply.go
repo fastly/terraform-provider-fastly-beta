@@ -76,6 +76,9 @@ func (r Result) Apply(ctx context.Context, backupRoot string) (Applied, error) {
 	}
 	// Recheck every file inspected by the analyzer, not just the changed
 	// files: even a non-target source can invalidate preflight assumptions.
+	if err := checkModuleFileSet(root, r.Analysis.Modules, r.snapshots); err != nil {
+		return Applied{}, fmt.Errorf("configuration changed after migration planning: %w", err)
+	}
 	if err := checkSnapshots(root, r.snapshots, changes); err != nil {
 		return Applied{}, fmt.Errorf("configuration changed after migration planning: %w", err)
 	}

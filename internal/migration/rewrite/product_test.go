@@ -24,11 +24,11 @@ func TestRemoveProductEnablementAndGenerateImports(t *testing.T) {
 		t.Fatal(err)
 	}
 	plan, err := Build(context.Background(), dir,
-		RemoveProductEnablement{File: "main.tf", ResourceName: "demo"},
+		RemoveProductEnablement{File: "main.tf", ResourceType: "fastly_service_vcl", ResourceName: "demo"},
 		RenameResource{File: "main.tf", FromType: "fastly_service_vcl", ToType: "fastly_service_cdn_auto", Name: "demo"},
 		AddSimpleProduct{
 			File: "migration.tf", TypeName: "fastly_service_product_domain_inspector",
-			Name: "demo", ServiceName: "demo", Enabled: true, ProviderRef: "fastly.edge",
+			Name: "demo", ServiceAddress: "fastly_service_cdn_auto.demo", Enabled: true, ProviderRef: "fastly.edge",
 		},
 		AddImport{
 			File: "migration.tf", To: "fastly_service_product_domain_inspector.demo",
@@ -86,7 +86,7 @@ func TestRemoveProductEnablementRefusesCommentsAndTrailingContent(t *testing.T) 
 			if err := os.WriteFile(filepath.Join(dir, "main.tf"), []byte(source), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			_, err := Build(context.Background(), dir, RemoveProductEnablement{File: "main.tf", ResourceName: "demo"})
+			_, err := Build(context.Background(), dir, RemoveProductEnablement{File: "main.tf", ResourceType: "fastly_service_vcl", ResourceName: "demo"})
 			if err == nil {
 				t.Fatal("expected removal to refuse unsafe block layout")
 			}

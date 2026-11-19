@@ -21,6 +21,17 @@ import (
 
 const gaVersionConstraint = ">= 20.0.0"
 
+// isLegacyServiceAddress reports whether address names a legacy aggregate service
+// (VCL or Compute), either of which moves to a resource only the GA provider has.
+func isLegacyServiceAddress(address string) bool {
+	for legacy := range serviceAutoTypes {
+		if strings.HasPrefix(address, legacy+".") {
+			return true
+		}
+	}
+	return false
+}
+
 // compileProviderMigration handles only the original SDKv2 provider address.
 // The original state address remains fastly/fastly: neither -legacy nor -beta
 // is a valid target for the GA source-preserving transition.
@@ -49,15 +60,15 @@ func compileProviderMigration(analysis analyze.Result, index moduleIndex) ([]rew
 		}
 		return modules[module]
 	}
-	migratingVCL := false
+	migratingService := false
 	for _, action := range analysis.Actions {
-		if action.Kind == compatibility.ConstructResource && strings.HasPrefix(action.From, "fastly_service_vcl.") {
-			migratingVCL = true
+		if action.Kind == compatibility.ConstructResource && isLegacyServiceAddress(action.From) {
+			migratingService = true
 			file := displayPath(analysis.Root, action.Range.Filename)
 			infoFor(filepath.ToSlash(filepath.Dir(file))).active = true
 		}
 	}
-	if !migratingVCL {
+	if !migratingService {
 		return nil, nil
 	}
 	var issues []Issue

@@ -618,3 +618,166 @@ func TestMigrateWriteBlockedByMissingLegacyLockfileWritesNothing(t *testing.T) {
 		t.Fatalf("migration.tf created: %v", err)
 	}
 }
+
+func TestMigrateNewLegacySchemaConfigurationRemainsBlocked(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name, resource, block, finding string
+	}{
+		{
+			name: "VCL FOS", resource: "fastly_service_vcl",
+			block: `logging_fos {
+    name = "fos"
+    bucket_name = "example"
+    region = "us-east"
+  }`,
+			finding: "fastly_service_vcl.logging_fos is blocked",
+		},
+		{
+			name: "Compute FOS", resource: "fastly_service_compute",
+			block: `logging_fos {
+    name = "fos"
+    bucket_name = "example"
+    region = "us-east"
+  }`,
+			finding: "fastly_service_compute.logging_fos is blocked",
+		},
+	}
+	for _, attribute := range []string{"iam_vendor", "iam_product", "iam_region", "iam_role", "iam_external_id"} {
+		cases = append(cases, struct {
+			name, resource, block, finding string
+		}{
+			name: attribute, resource: "fastly_service_vcl",
+			block: `backend {
+    name = "origin"
+    address = "example.com"
+    ` + attribute + ` = "synthetic-iam-value"
+  }`,
+			finding: "fastly_service_vcl.backend." + attribute + " is blocked",
+		})
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir, backups := t.TempDir(), privateBackupDir(t)
+			input := []byte("resource \"" + tc.resource + "\" \"demo\" {\n  name = \"demo\"\n  " + tc.block + "\n}\n")
+			path := filepath.Join(dir, "main.tf")
+			if err := writeConfigFile(path, input); err != nil {
+				t.Fatal(err)
+			}
+			// Ensure the configured production release passes version preflight;
+			// it is the unsupported configuration, not a missing lockfile, that blocks.
+			lock := []byte("provider \"registry.terraform.io/fastly/fastly\" {\n  version = \"10.3.0\"\n}\n")
+			if err := os.WriteFile(filepath.Join(dir, ".terraform.lock.hcl"), lock, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			for _, mode := range []string{"--dry-run", "--write"} {
+				args := []string{commandName, "migrate", mode}
+				if mode == "--write" {
+					args = append(args, "--backup-dir", backups)
+				}
+				var stdout bytes.Buffer
+				err := NewCommand(Config{Writer: &stdout, ErrWriter: io.Discard}).Run(context.Background(), append(args, dir))
+				var coder interface{ ExitCode() int }
+				if !errors.As(err, &coder) || coder.ExitCode() != exitCodeAnalysisBlocked {
+					t.Fatalf("%s: expected blocked exit, got %v", mode, err)
+				}
+				if !strings.Contains(stdout.String(), tc.finding) {
+					t.Fatalf("%s: missing configuration blocker %q: %s", mode, tc.finding, stdout.String())
+				}
+				if strings.Contains(stdout.String(), "synthetic-iam-value") ||
+					strings.Contains(stdout.String(), "--- a/main.tf") {
+					t.Fatal("blocked migration exposed an IAM setting or partial diff")
+				}
+			}
+			got, err := os.ReadFile(path)
+			if err != nil || !bytes.Equal(got, input) {
+				t.Fatal("blocked migration changed original HCL")
+			}
+			got, err = os.ReadFile(filepath.Join(dir, ".terraform.lock.hcl"))
+			if err != nil || !bytes.Equal(got, lock) {
+				t.Fatal("blocked migration changed the source lockfile")
+			}
+			if _, err := os.Stat(filepath.Join(dir, "migration.tf")); !errors.Is(err, os.ErrNotExist) {
+				t.Fatal("blocked migration created migration.tf")
+			}
+			if _, err := os.Stat(filepath.Join(backups, "backups")); !errors.Is(err, os.ErrNotExist) {
+				t.Fatal("blocked migration created backup storage")
+			}
+		})
+	}
+}
+
+func TestMigrateReferenceRewriteTransaction(t *testing.T) {
+	t.Parallel()
+	for _, blocked := range []bool{false, true} {
+		name := "supported"
+		if blocked {
+			name = "unsupported"
+		}
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			dir, backups := t.TempDir(), privateBackupDir(t)
+			service := []byte("resource \"fastly_service_compute\" \"demo\" {\n  name = \"demo\"\n  package { filename = \"pkg.tar.gz\" }\n}\n")
+			refs := []byte("output \"id\" { value = fastly_service_compute.demo.id }\n")
+			if blocked {
+				refs = append(refs, []byte("output \"old\" { value = fastly_service_compute.demo.cloned_version }\n")...)
+			}
+			main, output := filepath.Join(dir, "main.tf"), filepath.Join(dir, "outputs.tf")
+			if err := writeConfigFile(main, service); err != nil {
+				t.Fatal(err)
+			}
+			if err := writeConfigFile(output, refs); err != nil {
+				t.Fatal(err)
+			}
+			lock := filepath.Join(dir, ".terraform.lock.hcl")
+			lockBefore, err := os.ReadFile(lock)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, mode := range []string{"--dry-run", "--write"} {
+				var stdout bytes.Buffer
+				command := NewCommand(Config{Writer: &stdout, ErrWriter: io.Discard})
+				args := []string{commandName, "migrate", mode}
+				if mode == "--write" {
+					args = append(args, "--backup-dir", backups)
+				}
+				err := command.Run(context.Background(), append(args, dir))
+				if blocked {
+					var code interface{ ExitCode() int }
+					if !errors.As(err, &code) || code.ExitCode() != exitCodeAnalysisBlocked ||
+						!strings.Contains(stdout.String(), "cloned_version") ||
+						!strings.Contains(stdout.String(), "No changes proposed") {
+						t.Fatalf("%s not safely blocked: %v\n%s", mode, err, stdout.String())
+					}
+				} else if err != nil || !strings.Contains(stdout.String(), "fastly_service_compute_auto.demo.id") {
+					t.Fatalf("%s failed: %v\n%s", mode, err, stdout.String())
+				}
+				if blocked || mode == "--dry-run" {
+					got, err := os.ReadFile(output)
+					if err != nil || !bytes.Equal(got, refs) {
+						t.Fatal("preflight changed reference file")
+					}
+					got, err = os.ReadFile(main)
+					if err != nil || !bytes.Equal(got, service) {
+						t.Fatal("preflight changed service file")
+					}
+					if _, err := os.Stat(filepath.Join(dir, "migration.tf")); !os.IsNotExist(err) {
+						t.Fatal("preflight generated migration.tf")
+					}
+				}
+			}
+			lockAfter, err := os.ReadFile(lock)
+			if err != nil || !bytes.Equal(lockBefore, lockAfter) {
+				t.Fatal("migration changed provider lockfile")
+			}
+			if !blocked {
+				got, err := os.ReadFile(output)
+				if err != nil || !bytes.Equal(got, bytes.ReplaceAll(refs, []byte("fastly_service_compute."), []byte("fastly_service_compute_auto."))) {
+					t.Fatalf("write did not rewrite output: %v %s", err, got)
+				}
+			}
+		})
+	}
+}

@@ -450,7 +450,7 @@ type legacyNestedBlockFixture struct {
 func readLegacyServiceVCLTypeFixture(t *testing.T) legacyServiceVCLTypeFixture {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join("testdata", "legacy_service_vcl_schema_v1_type.json"))
+	raw, err := os.ReadFile(filepath.Join("testdata", "legacy_service_vcl_schema_v1_10_3_0_type.json"))
 	if err != nil {
 		t.Fatalf("read legacy schema fixture: %v", err)
 	}

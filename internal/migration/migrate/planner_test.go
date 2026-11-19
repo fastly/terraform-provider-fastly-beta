@@ -263,9 +263,9 @@ func TestAllAutomaticResourceRulesAreCovered(t *testing.T) {
 				t.Fatalf("automatic resource rule %s blocked: issues=%#v findings=%#v",
 					rule.ID, result.Issues, result.Analysis.Findings)
 			}
-			if rule.Legacy == "fastly_service_vcl" {
+			if rule.Legacy == "fastly_service_vcl" || rule.Legacy == "fastly_service_compute" {
 				if len(result.Changes) != 2 || len(result.Moves) != 1 {
-					t.Fatalf("expected VCL preview, got %#v", result)
+					t.Fatalf("expected service preview, got %#v", result)
 				}
 			} else if len(result.Changes) != 0 || len(result.Moves) != 0 {
 				t.Fatalf("unchanged resource %s was transformed: %#v", rule.Legacy, result)
@@ -362,29 +362,6 @@ func TestPlanFailClosedCases(t *testing.T) {
 		want   string
 	}{
 		{
-			name: "direct reference",
-			source: `resource "fastly_service_vcl" "demo" {
-  name = "demo"
-}
-output "id" {
-  value = fastly_service_vcl.demo.id
-}
-`,
-			want: "reference",
-		},
-		{
-			name: "count-indexed reference",
-			source: `resource "fastly_service_vcl" "demo" {
-  count = var.instances
-  name = "demo"
-}
-output "id" {
-  value = fastly_service_vcl.demo[0].id
-}
-`,
-			want: "reference",
-		},
-		{
 			name: "provider constraint",
 			source: `terraform {
   required_providers {
@@ -435,10 +412,11 @@ resource "fastly_service_vcl" "demo" {
 		{
 			name: "unsupported Compute",
 			source: `resource "fastly_service_compute" "demo" {
-  name = "demo"
+  name     = "demo"
+  activate = false
 }
 `,
-			want: "fastly_service_compute",
+			want: "activate",
 		},
 		{
 			name:   "unknown Fastly resource",
@@ -694,5 +672,82 @@ func TestPlanRejectsChildModulesOutsideSelectedRoot(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(parent, "outside/migration.tf")); !os.IsNotExist(err) {
 		t.Fatalf("dry-run created files outside root: %v", err)
+	}
+}
+
+func TestPlanComputeServiceRewritesResourceAndMovedBlock(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeConfig(t, dir, "main.tf", `resource "fastly_service_compute" "demo" {
+  name     = "demo"
+  activate = true
+  stage    = false
+
+  domain {
+    name = "example.com"
+  }
+
+  package {
+    filename         = "pkg.tar.gz"
+    source_code_hash = filebase64sha512("pkg.tar.gz")
+  }
+
+  product_enablement {
+    websockets = true
+  }
+}
+`)
+	result := newPlan(t, dir)
+	if result.Blocked() {
+		t.Fatalf("compute plan blocked: issues=%#v findings=%#v", result.Issues, result.Analysis.Findings)
+	}
+	if len(result.Moves) != 1 ||
+		result.Moves[0].From != "fastly_service_compute.demo" ||
+		result.Moves[0].To != "fastly_service_compute_auto.demo" {
+		t.Fatalf("Moves = %#v", result.Moves)
+	}
+	after := map[string]string{}
+	for _, change := range result.Changes {
+		after[change.Path] = string(change.After)
+	}
+	main := after["main.tf"]
+	for _, want := range []string{
+		`resource "fastly_service_compute_auto" "demo"`, "package {", `filename         = "pkg.tar.gz"`,
+	} {
+		if !strings.Contains(main, want) {
+			t.Errorf("missing %q in:\n%s", want, main)
+		}
+	}
+	for _, gone := range []string{"activate", "stage ", "product_enablement"} {
+		if strings.Contains(main, gone) {
+			t.Errorf("%q should have been removed:\n%s", gone, main)
+		}
+	}
+	migration := after["migration.tf"]
+	for _, want := range []string{
+		"from = fastly_service_compute.demo", "to   = fastly_service_compute_auto.demo",
+		`id = fastly_service_compute_auto.demo.id`,
+	} {
+		if !strings.Contains(migration, want) {
+			t.Errorf("missing %q in migration.tf:\n%s", want, migration)
+		}
+	}
+}
+
+func TestPlanComputeUnsupportedConstructsBlockBeforeWrite(t *testing.T) {
+	t.Parallel()
+	for name, source := range map[string]string{
+		"activate false": "activate = false",
+		"stage true":     "stage = true",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			writeConfig(t, dir, "main.tf", "resource \"fastly_service_compute\" \"demo\" {\n  name = \"demo\"\n  "+source+"\n}\n")
+			result := newPlan(t, dir)
+			if !result.Blocked() || len(result.Changes) != 0 || len(result.Moves) != 0 {
+				t.Fatalf("expected blocked plan without changes, got %#v", result)
+			}
+		})
 	}
 }

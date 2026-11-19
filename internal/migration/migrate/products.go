@@ -84,7 +84,7 @@ func compileSimpleProducts(key resourceKey, actions []selectedAction, index modu
 			continue
 		}
 		rule := action.rule
-		prefix := "fastly_service_vcl.product_enablement."
+		prefix := key.typ + ".product_enablement."
 		name := strings.TrimPrefix(rule.Legacy, prefix)
 		if !strings.HasPrefix(rule.Legacy, prefix) || name == "" || strings.Contains(name, ".") ||
 			rule.Support != compatibility.SupportAutomatic || rule.HCL != compatibility.HCLSplit ||
@@ -98,7 +98,7 @@ func compileSimpleProducts(key resourceKey, actions []selectedAction, index modu
 
 	if (len(product.Body.Attributes) != 0 || len(product.Body.Blocks) != 0) &&
 		(resource.Body.Attributes["count"] != nil || resource.Body.Attributes["for_each"] != nil) {
-		issue("product_enablement on an indexed VCL service cannot be split safely",
+		issue("product_enablement on an indexed service cannot be split safely",
 			"Migrate count/for_each service instances explicitly with matching product addresses and import IDs.")
 	}
 
@@ -155,10 +155,10 @@ func compileSimpleProducts(key resourceKey, actions []selectedAction, index modu
 		}
 		edits = append(edits, rewrite.AddSimpleProduct{
 			File: migrationFile, TypeName: rule.Target, Name: key.name,
-			ServiceName: key.name, ProviderRef: providerRef, Enabled: enabled, Attributes: attrs,
+			ServiceAddress: serviceAutoTypes[key.typ] + "." + key.name, ProviderRef: providerRef, Enabled: enabled, Attributes: attrs,
 		}, rewrite.AddImport{
 			File: migrationFile, To: target,
-			IDExpression: "fastly_service_cdn_auto." + key.name + ".id",
+			IDExpression: serviceAutoTypes[key.typ] + "." + key.name + ".id",
 		})
 	}
 
@@ -220,7 +220,7 @@ func compileSimpleProducts(key resourceKey, actions []selectedAction, index modu
 	// Even an empty/null-only aggregate block must go: _auto has no such block.
 	// The rewrite edit itself detects comments and other unsafe source shapes.
 	edits = append([]rewrite.Edit{rewrite.RemoveProductEnablement{
-		File: key.file, ResourceName: key.name,
+		File: key.file, ResourceType: key.typ, ResourceName: key.name,
 	}}, edits...)
 	if len(issues) != 0 {
 		return nil, issues

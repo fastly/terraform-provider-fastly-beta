@@ -22,8 +22,14 @@ planner can produce a complete diff:
 - Automatic registry rules with `HCLUnchanged` / `StateUnchanged` are no-ops.
 - `fastly_service_vcl` becomes `fastly_service_cdn_auto`, with a Terraform
   `moved` block in the same module.
-- Compatible existing nested blocks, expressions, comments, `count`,
-  `for_each`, provider meta-arguments and unrelated HCL remain unchanged.
+- `fastly_service_compute` becomes `fastly_service_compute_auto`, with a
+  Terraform `moved` block in the same module. The provider's
+  `MoveState` copies the service ID, `force_destroy` and `reuse`; `activate = false`,
+  `stage = true` and other constructs the `_auto` schema cannot represent block
+  the whole plan before anything is written.
+- Compatible existing nested blocks, comments, `count`, `for_each`, provider
+  meta-arguments and unrelated HCL remain unchanged. Supported references in
+  their expressions are rewritten using parsed HCL syntax.
 - Registry-defined automatic removals, safe block renames and settings
   nesting are compiled using the existing rewrite primitives.
 - Local child modules and multiple `.tf` files are planned deterministically.
@@ -38,12 +44,79 @@ planner can produce a complete diff:
 
 Any **unsupported** transformation blocks the *entire* plan without writing.
 This includes unknown-expression product enablements,
-direct references requiring rewrite, ambiguous/exclusionary provider constraints,
+unverified reference transformations, ambiguous/exclusionary provider constraints,
 unsupported provider arguments, remote module internals, and the current unsupported
 nested object-attribute targets (`authentication`, `tls`,
 `ssl_client_secrets`) and computed-only rate-limiter ID. These remain for
 the corresponding dedicated migration tickets. The write command does
 **not** claim all legacy Fastly configurations are supported.
+
+## Terraform reference rewriting
+
+References are resolved against **enabled resource conversions in the same
+source module**, never by textual search and replacement. Local module call
+labels, module instance selectors, resource labels, provider aliases and
+`providers` mappings are retained. A resource-level `moved` block in the
+declaring module covers its `count` or `for_each` instances.
+
+For example:
+
+```hcl
+# Before
+output "service_ids" {
+  value = fastly_service_vcl.demo[*].id
+}
+# After
+output "service_ids" {
+  value = fastly_service_cdn_auto.demo[*].id
+}
+```
+
+The writer handles direct verified scalar outputs (including `id` and
+`active_version`), static and dynamic instance indexes, splats, interpolation,
+function arguments, conditional expressions, direct scalar instance
+comprehensions, and dependency references. It also handles `self` and verified
+relative `ignore_changes` paths. It preserves literal strings, comments and
+lexically scoped `for` and `dynamic` iterators. It does not rewrite module
+output names when the output declaration itself is migrated.
+
+Legacy nested ACL, dictionary, dynamic snippet and rate-limiter collections
+can be consumed by order-independent `{for item in collection : item.name =>
+item.<identity>}` maps when the corresponding block rule is automatic. This
+includes the `dynamicsnippet` block rename and the read-only rate-limiter ID
+rename where the registry authorizes it. Other collection projections, numeric
+positions into former sets, whole resource values and arbitrary nested output
+paths require explicit semantic evidence.
+
+The following are deliberately blocked before any write:
+
+- Removed lifecycle outputs without a verified equivalent.
+- CDN `settings` output references (including `default_ttl` and `http3`).
+  Although the registry describes a singleton-list path, the migrated settings
+  list is not yet guaranteed to be populated by the provider state mover.
+  This applies even if the legacy setting is explicitly configured.
+- Conflicting or indexed pre-existing moves, imports/removals targeting a
+  migrated address, and possibly conflicting module-qualified state addresses.
+  An exact existing module-local whole-resource move is preserved.
+- Out-of-root or symlinked module sources, override files, JSON configuration,
+  and unverified remote module contents.
+
+Known mappings do not enable a blocked resource. Standalone domain upgrades
+and legacy ACL-entry/dictionary-item resource migrations retain their existing
+provider prerequisites. Their supported service-reference expressions use the
+same writer when those resource conversions are enabled by their own tickets.
+
+Both analysis and planning inspect references, and the final rendered HCL is
+checked again before a write is offered. Newly added Terraform files invalidate
+a prepared write. Run the CLI against a stable working tree and inspect
+Terraform's actual plan before applying.
+
+`make test-migration-references` is an opt-in live regression scenario with a
+local module instance, aliased provider, counted VCL service, keyed Compute
+service, cross-file references and a Terraform-managed consumer. It pins the
+legacy provider using `LEGACY_PROVIDER_VERSION` (default `10.3.0`), checks exact
+instance moves, no managed-resource changes, unchanged outputs and final no-op,
+and destroys the two test services. Use an isolated Fastly test account.
 
 ## Legacy provider prerequisites
 
