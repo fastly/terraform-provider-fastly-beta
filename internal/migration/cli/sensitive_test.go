@@ -74,8 +74,16 @@ output "id" {
 					(err != nil && strings.Contains(err.Error(), "SYNTHETIC_")) {
 					t.Fatal("secret material appeared in command output")
 				}
-				if !blocked && args[0] == "migrate" && !strings.Contains(stdout.String(), "HCL diff withheld") {
-					t.Fatal("missing sensitive preview notice")
+				if !blocked && args[0] == "migrate" {
+					want := "HCL diff withheld: sensitive configuration detected. Review changed files locally after writing."
+					unexpected := "No files written. To write the proposed configuration"
+					if args[1] == "--dry-run" {
+						want = "HCL diff withheld: sensitive configuration detected. No files written. To write the proposed configuration, re-run with --write and review changed files locally before running Terraform."
+						unexpected = "Review changed files locally after writing."
+					}
+					if !strings.Contains(stdout.String(), want) || strings.Contains(stdout.String(), unexpected) {
+						t.Fatal("missing mode-specific sensitive preview notice or incorrect write guidance")
+					}
 				}
 				if blocked || args[0] == "analyze" || args[1] == "--dry-run" {
 					for path, want := range map[string]string{main: source, refFile: refs} {

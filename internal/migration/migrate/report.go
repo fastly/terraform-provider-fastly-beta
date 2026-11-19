@@ -91,7 +91,13 @@ func writeText(writer io.Writer, result Result, applying bool) error {
 		if result.withholdDiff {
 			// Avoid printing any source, including unchanged context lines
 			// and values that may also occur in other files.
-			if _, err := fmt.Fprintln(writer, "HCL diff withheld: sensitive configuration detected. Review changed files locally after writing."); err != nil {
+			message := "HCL diff withheld: sensitive configuration detected. "
+			if applying {
+				message += "Review changed files locally after writing."
+			} else {
+				message += "No files written. To write the proposed configuration, re-run with --write and review changed files locally before running Terraform."
+			}
+			if _, err := fmt.Fprintln(writer, message); err != nil {
 				return err
 			}
 			for _, action := range result.Analysis.Actions {
