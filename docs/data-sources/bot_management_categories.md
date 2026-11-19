@@ -1,0 +1,49 @@
+---
+page_title: "fastly_bot_management_categories Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to list the predefined bot categories in a Bot Management (ContentGuard) workspace.
+---
+
+# fastly_bot_management_categories (Data Source)
+
+Use this data source to list the predefined bot categories in a Bot
+Management (ContentGuard) workspace, for example to find the `category_id` to
+use with `fastly_bot_management_category`.
+
+## Example Usage
+
+```terraform
+data "fastly_bot_management_workspace" "example" {
+  service_id = fastly_service_cdn_auto.example.id
+}
+
+data "fastly_bot_management_categories" "all" {
+  workspace_id = data.fastly_bot_management_workspace.example.id
+}
+
+output "category_ids" {
+  value = [for c in data.fastly_bot_management_categories.all.categories : c.category_id]
+}
+```
+
+## Schema
+
+### Required
+
+- `workspace_id` (String) The ID of the Bot Management workspace.
+
+### Read-Only
+
+- `categories` (Attributes List) The bot categories in the Bot Management workspace. (see [below for nested schema](#nestedatt--categories))
+- `id` (String) Terraform data source identifier.
+
+<a id="nestedatt--categories"></a>
+### Nested Schema for `categories`
+
+Read-Only:
+
+- `action` (String) The category's action. One of `allow`, `block`, or `challenge`.
+- `category_id` (String) The ID of the category.
+- `description` (String) A description of the bots the category contains.
+- `name` (String) The display name of the category.
