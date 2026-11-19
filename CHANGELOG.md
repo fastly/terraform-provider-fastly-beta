@@ -4,13 +4,12 @@
 
 ### ENHANCEMENTS:
 
-- feat(migration): transform legacy `fastly_service_compute` HCL to `fastly_service_compute_auto` in `fastly-tf-migrate`, with live end-to-end coverage via `make test-migration-compute`([#242](https://github.com/fastly/terraform-provider-fastly-beta/pull/242))
+- feat(migration): transform legacy `fastly_service_compute` HCL to `fastly_service_compute_auto` in `fastly-tf-migrate`, with live end-to-end coverage via `make test-migration-compute` ([#242](https://github.com/fastly/terraform-provider-fastly-beta/pull/242))
+- feat(migration): add syntax-aware Terraform reference rewriting for legacy VCL and Compute service migrations, preserving module addresses, resource labels, `count`, `for_each`, provider aliases, and supported meta-arguments while blocking unsupported transformations before writing configuration changes ([#245](https://github.com/fastly/terraform-provider-fastly-beta/pull/245))
 
 ### BUG FIXES:
 
-- fix(migration): extend legacy VCL and Compute state decoders for SDKv2 10.3.0 schema additions and reject configured backend IAM until target parity is available
-- fix(service-compute-auto): preserve local Compute package inputs during state migration while refreshing the API package hash
-
+- fix(migration): extend legacy VCL and Compute state decoders for SDKv2 10.3.0 schema additions and reject configured backend IAM until target parity is available ([#244](https://github.com/fastly/terraform-provider-fastly-beta/pull/244))
 - fix(validation): config validation now handles `dynamic` blocks whose `for_each` isn't known yet, such as one driven by an input variable during `terraform validate` ([#243](https://github.com/fastly/terraform-provider-fastly-beta/pull/243))
 
 ### Dependencies:

@@ -708,3 +708,76 @@ func TestMigrateNewLegacySchemaConfigurationRemainsBlocked(t *testing.T) {
 		})
 	}
 }
+
+func TestMigrateReferenceRewriteTransaction(t *testing.T) {
+	t.Parallel()
+	for _, blocked := range []bool{false, true} {
+		name := "supported"
+		if blocked {
+			name = "unsupported"
+		}
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			dir, backups := t.TempDir(), privateBackupDir(t)
+			service := []byte("resource \"fastly_service_compute\" \"demo\" {\n  name = \"demo\"\n  package { filename = \"pkg.tar.gz\" }\n}\n")
+			refs := []byte("output \"id\" { value = fastly_service_compute.demo.id }\n")
+			if blocked {
+				refs = append(refs, []byte("output \"old\" { value = fastly_service_compute.demo.cloned_version }\n")...)
+			}
+			main, output := filepath.Join(dir, "main.tf"), filepath.Join(dir, "outputs.tf")
+			if err := writeConfigFile(main, service); err != nil {
+				t.Fatal(err)
+			}
+			if err := writeConfigFile(output, refs); err != nil {
+				t.Fatal(err)
+			}
+			lock := filepath.Join(dir, ".terraform.lock.hcl")
+			lockBefore, err := os.ReadFile(lock)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, mode := range []string{"--dry-run", "--write"} {
+				var stdout bytes.Buffer
+				command := NewCommand(Config{Writer: &stdout, ErrWriter: io.Discard})
+				args := []string{commandName, "migrate", mode}
+				if mode == "--write" {
+					args = append(args, "--backup-dir", backups)
+				}
+				err := command.Run(context.Background(), append(args, dir))
+				if blocked {
+					var code interface{ ExitCode() int }
+					if !errors.As(err, &code) || code.ExitCode() != exitCodeAnalysisBlocked ||
+						!strings.Contains(stdout.String(), "cloned_version") ||
+						!strings.Contains(stdout.String(), "No changes proposed") {
+						t.Fatalf("%s not safely blocked: %v\n%s", mode, err, stdout.String())
+					}
+				} else if err != nil || !strings.Contains(stdout.String(), "fastly_service_compute_auto.demo.id") {
+					t.Fatalf("%s failed: %v\n%s", mode, err, stdout.String())
+				}
+				if blocked || mode == "--dry-run" {
+					got, err := os.ReadFile(output)
+					if err != nil || !bytes.Equal(got, refs) {
+						t.Fatal("preflight changed reference file")
+					}
+					got, err = os.ReadFile(main)
+					if err != nil || !bytes.Equal(got, service) {
+						t.Fatal("preflight changed service file")
+					}
+					if _, err := os.Stat(filepath.Join(dir, "migration.tf")); !os.IsNotExist(err) {
+						t.Fatal("preflight generated migration.tf")
+					}
+				}
+			}
+			lockAfter, err := os.ReadFile(lock)
+			if err != nil || !bytes.Equal(lockBefore, lockAfter) {
+				t.Fatal("migration changed provider lockfile")
+			}
+			if !blocked {
+				got, err := os.ReadFile(output)
+				if err != nil || !bytes.Equal(got, bytes.ReplaceAll(refs, []byte("fastly_service_compute."), []byte("fastly_service_compute_auto."))) {
+					t.Fatalf("write did not rewrite output: %v %s", err, got)
+				}
+			}
+		})
+	}
+}
