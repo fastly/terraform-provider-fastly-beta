@@ -11,7 +11,7 @@ import (
 func parseBody(source []byte, filename string) (*hclsyntax.Body, error) {
 	file, diagnostics := hclsyntax.ParseConfig(source, filename, hcl.Pos{Line: 1, Column: 1})
 	if diagnostics.HasErrors() {
-		return nil, fmt.Errorf("parse native HCL in %s: invalid syntax (source text omitted)", filename)
+		return nil, nativeSyntaxError(filename, diagnostics)
 	}
 	if file == nil {
 		return nil, fmt.Errorf("parse native HCL: no HCL file returned")
@@ -21,6 +21,19 @@ func parseBody(source []byte, filename string) (*hclsyntax.Body, error) {
 		return nil, fmt.Errorf("unexpected HCL body type %T", file.Body)
 	}
 	return body, nil
+}
+
+// nativeSyntaxError reports the first positioned error without including
+// diagnostic summaries, details or source text, which may contain secrets.
+func nativeSyntaxError(filename string, diagnostics hcl.Diagnostics) error {
+	for _, diagnostic := range diagnostics {
+		if diagnostic.Severity != hcl.DiagError || diagnostic.Subject == nil {
+			continue
+		}
+		pos := diagnostic.Subject.Start
+		return fmt.Errorf("parse native HCL in %s: invalid syntax at line %d, column %d (source text omitted)", filename, pos.Line, pos.Column)
+	}
+	return fmt.Errorf("parse native HCL in %s: invalid syntax (source text omitted)", filename)
 }
 
 func findResource(body *hclsyntax.Body, typ, name string) *hclsyntax.Block {
