@@ -618,3 +618,93 @@ func TestMigrateWriteBlockedByMissingLegacyLockfileWritesNothing(t *testing.T) {
 		t.Fatalf("migration.tf created: %v", err)
 	}
 }
+
+func TestMigrateNewLegacySchemaConfigurationRemainsBlocked(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name, resource, block, finding string
+	}{
+		{
+			name: "VCL FOS", resource: "fastly_service_vcl",
+			block: `logging_fos {
+    name = "fos"
+    bucket_name = "example"
+    region = "us-east"
+  }`,
+			finding: "fastly_service_vcl.logging_fos is blocked",
+		},
+		{
+			name: "Compute FOS", resource: "fastly_service_compute",
+			block: `logging_fos {
+    name = "fos"
+    bucket_name = "example"
+    region = "us-east"
+  }`,
+			finding: "fastly_service_compute.logging_fos is blocked",
+		},
+	}
+	for _, attribute := range []string{"iam_vendor", "iam_product", "iam_region", "iam_role", "iam_external_id"} {
+		cases = append(cases, struct {
+			name, resource, block, finding string
+		}{
+			name: attribute, resource: "fastly_service_vcl",
+			block: `backend {
+    name = "origin"
+    address = "example.com"
+    ` + attribute + ` = "synthetic-iam-value"
+  }`,
+			finding: "fastly_service_vcl.backend." + attribute + " is blocked",
+		})
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir, backups := t.TempDir(), privateBackupDir(t)
+			input := []byte("resource \"" + tc.resource + "\" \"demo\" {\n  name = \"demo\"\n  " + tc.block + "\n}\n")
+			path := filepath.Join(dir, "main.tf")
+			if err := writeConfigFile(path, input); err != nil {
+				t.Fatal(err)
+			}
+			// Ensure the configured production release passes version preflight;
+			// it is the unsupported configuration, not a missing lockfile, that blocks.
+			lock := []byte("provider \"registry.terraform.io/fastly/fastly\" {\n  version = \"10.3.0\"\n}\n")
+			if err := os.WriteFile(filepath.Join(dir, ".terraform.lock.hcl"), lock, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			for _, mode := range []string{"--dry-run", "--write"} {
+				args := []string{commandName, "migrate", mode}
+				if mode == "--write" {
+					args = append(args, "--backup-dir", backups)
+				}
+				var stdout bytes.Buffer
+				err := NewCommand(Config{Writer: &stdout, ErrWriter: io.Discard}).Run(context.Background(), append(args, dir))
+				var coder interface{ ExitCode() int }
+				if !errors.As(err, &coder) || coder.ExitCode() != exitCodeAnalysisBlocked {
+					t.Fatalf("%s: expected blocked exit, got %v", mode, err)
+				}
+				if !strings.Contains(stdout.String(), tc.finding) {
+					t.Fatalf("%s: missing configuration blocker %q: %s", mode, tc.finding, stdout.String())
+				}
+				if strings.Contains(stdout.String(), "synthetic-iam-value") ||
+					strings.Contains(stdout.String(), "--- a/main.tf") {
+					t.Fatal("blocked migration exposed an IAM setting or partial diff")
+				}
+			}
+			got, err := os.ReadFile(path)
+			if err != nil || !bytes.Equal(got, input) {
+				t.Fatal("blocked migration changed original HCL")
+			}
+			got, err = os.ReadFile(filepath.Join(dir, ".terraform.lock.hcl"))
+			if err != nil || !bytes.Equal(got, lock) {
+				t.Fatal("blocked migration changed the source lockfile")
+			}
+			if _, err := os.Stat(filepath.Join(dir, "migration.tf")); !errors.Is(err, os.ErrNotExist) {
+				t.Fatal("blocked migration created migration.tf")
+			}
+			if _, err := os.Stat(filepath.Join(backups, "backups")); !errors.Is(err, os.ErrNotExist) {
+				t.Fatal("blocked migration created backup storage")
+			}
+		})
+	}
+}

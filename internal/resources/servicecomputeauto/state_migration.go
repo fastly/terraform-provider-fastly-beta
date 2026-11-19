@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/computepackage"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -25,9 +27,10 @@ const (
 //
 // This mover copies only state that cannot be reconstructed safely
 // by Read. The service ID preserves identity; force_destroy and reuse are
-// Terraform lifecycle controls which are not returned by the Fastly API. Read
-// repopulates service metadata, managed/active versions, and API-readable nested
-// service configuration.
+// Terraform lifecycle controls which are not returned by the Fastly API. Package
+// content/filename are also local-only; preserve them so refreshing the package
+// hash does not cause Terraform to upload an unchanged package. Read repopulates
+// service metadata, managed/active versions, and API-readable configuration.
 //
 // Legacy product_enablement state, including the configurable bot_management,
 // ddos_protection and ngwaf products, is intentionally not copied to the target
@@ -165,6 +168,7 @@ func moveLegacyServiceComputeState(ctx context.Context, req resource.MoveStateRe
 	var sourceActivate types.Bool
 	var sourceStage types.Bool
 	var sourceProductEnablement types.Set
+	var sourcePackage types.List
 
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("id"), &sourceID)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("force_destroy"), &sourceForceDestroy)...)
@@ -172,6 +176,7 @@ func moveLegacyServiceComputeState(ctx context.Context, req resource.MoveStateRe
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("activate"), &sourceActivate)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("stage"), &sourceStage)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("product_enablement"), &sourceProductEnablement)...)
+	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("package"), &sourcePackage)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -218,6 +223,12 @@ func moveLegacyServiceComputeState(ctx context.Context, req resource.MoveStateRe
 		return
 	}
 
+	packages, packageDiags := legacyComputePackageState(ctx, sourcePackage)
+	resp.Diagnostics.Append(packageDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// SDKv2 optional booleans have false zero-value semantics. Normalize an
 	// absent persisted value so it matches the defaults on the Framework resource
 	// and does not introduce a migration-only plan diff.
@@ -231,13 +242,78 @@ func moveLegacyServiceComputeState(ctx context.Context, req resource.MoveStateRe
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("id"), sourceID)...)
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("force_destroy"), sourceForceDestroy)...)
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("reuse"), sourceReuse)...)
+	if len(packages) != 0 {
+		resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("package"), packages)...)
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Moving a service has the same first-read requirement as importing one:
-	// refresh the package hash from the API instead of inferring absence from
-	// the intentionally sparse target state.
+	// refresh the package hash from the API, including when no package block
+	// survived in the source state. Read retains copied local-only inputs.
 	if resp.TargetPrivate != nil {
 		resp.Diagnostics.Append(markComputePackageForRefresh(ctx, resp.TargetPrivate)...)
 	}
+}
+
+// legacyComputePackageState preserves local-only package inputs. SDKv2 writes
+// the unused content/filename as an empty string, while the Framework target
+// represents an omitted attribute as null.
+func legacyComputePackageState(ctx context.Context, source types.List) ([]computepackage.Model, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if source.IsNull() {
+		return nil, diags
+	}
+	if source.IsUnknown() || len(source.Elements()) > 1 {
+		diags.AddError(
+			"Unsupported legacy Compute package state",
+			"The legacy package state must contain at most one known package object.",
+		)
+		return nil, diags
+	}
+	if len(source.Elements()) == 0 {
+		return nil, diags
+	}
+
+	object, ok := source.Elements()[0].(types.Object)
+	if !ok || object.IsNull() || object.IsUnknown() {
+		diags.AddError(
+			"Unsupported legacy Compute package state",
+			"The legacy package state contains an unknown or malformed package object.",
+		)
+		return nil, diags
+	}
+
+	var packages []computepackage.Model
+	diags.Append(source.ElementsAs(ctx, &packages, false)...)
+	if diags.HasError() {
+		return nil, diags
+	}
+	pkg := &packages[0]
+	for _, value := range []*types.String{&pkg.Filename, &pkg.Content, &pkg.SourceCodeHash} {
+		if value.IsUnknown() {
+			diags.AddError(
+				"Unsupported legacy Compute package state",
+				"The legacy package state contains an unknown local input or package hash.",
+			)
+			return nil, diags
+		}
+		if value.ValueString() == "" {
+			*value = types.StringNull()
+		}
+	}
+	if !pkg.Filename.IsNull() && !pkg.Content.IsNull() {
+		diags.AddError(
+			"Unsupported legacy Compute package state",
+			"The legacy package state contains both filename and content; only one can be migrated.",
+		)
+		return nil, diags
+	}
+
+	// Imported legacy packages may have only an API hash. Do not invent
+	// filename/content for them, and let the first Read refresh the hash.
+	return packages, diags
 }
 
 type privateStateSetter interface {

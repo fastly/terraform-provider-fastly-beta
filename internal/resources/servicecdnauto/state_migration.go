@@ -169,6 +169,33 @@ func legacyServiceVCLProductNameIn(name string, names []string) bool {
 	return false
 }
 
+// legacyBackendIAMAbsent accepts the null/empty values written for backends
+// without IAM. CDN Auto cannot represent configured IAM yet; a state move must
+// not silently discard its settings. Do not put credential values in diagnostics.
+func legacyBackendIAMAbsent(backends types.Set) bool {
+	if backends.IsNull() {
+		return true
+	}
+	if backends.IsUnknown() {
+		return false
+	}
+
+	for _, value := range backends.Elements() {
+		backend, ok := value.(types.Object)
+		if !ok || backend.IsNull() || backend.IsUnknown() {
+			return false
+		}
+		attrs := backend.Attributes()
+		for _, name := range []string{"iam_vendor", "iam_product", "iam_region", "iam_role", "iam_external_id"} {
+			field, ok := attrs[name].(types.String)
+			if !ok || field.IsUnknown() || (!field.IsNull() && field.ValueString() != "") {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func moveLegacyServiceVCLState(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
 	if req.SourceProviderAddress != legacyFastlyProviderAddress || req.SourceTypeName != legacyServiceVCLTypeName {
 		return
@@ -195,13 +222,23 @@ func moveLegacyServiceVCLState(ctx context.Context, req resource.MoveStateReques
 	var sourceReuse types.Bool
 	var sourceProductEnablement types.Set
 	var sourceImageOptimizerDefaultSettings types.Set
+	var sourceBackends types.Set
 
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("id"), &sourceID)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("force_destroy"), &sourceForceDestroy)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("reuse"), &sourceReuse)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("product_enablement"), &sourceProductEnablement)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("image_optimizer_default_settings"), &sourceImageOptimizerDefaultSettings)...)
+	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("backend"), &sourceBackends)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !legacyBackendIAMAbsent(sourceBackends) {
+		resp.Diagnostics.AddError(
+			"Unsupported legacy backend IAM authentication state",
+			"fastly_service_cdn_auto cannot currently represent legacy backend IAM authentication. Keep this service on fastly_service_vcl until backend IAM migration is supported.",
+		)
 		return
 	}
 

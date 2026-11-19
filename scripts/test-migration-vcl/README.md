@@ -9,7 +9,7 @@ domain, backend, and `force_destroy = true`, with **no `reuse` argument or
 `product_enablement` block**. The legacy provider rejects `force_destroy` and
 `reuse` when both are explicitly configured. Product-split and product-import
 acceptance tests belong in `scripts/test-migration-products/`; Compute tests
-belong in `scripts/test-migration-compute/` (introduced by PR #235).
+belong in the Compute migration follow-up (CDTOOL-1867).
 
 The provider's existing
 `internal/resources/servicecdnauto/state_migration_test.go` exercises the
@@ -21,7 +21,7 @@ Fastly service.
 
 1. Build the CLI and the current dual-model provider from this checkout.
 2. Create a throwaway legacy `fastly_service_vcl` with the published SDKv2
-   `fastly/fastly` provider (version `>= 9.1.0, < 20.0.0`) and perform a
+   `fastly/fastly` provider (exact version, default `10.3.0`) and perform a
    `terraform apply -refresh-only`.
 3. Verify **persisted** legacy state schema version **1**, rather than
    assuming the provider version guarantees a compatible state schema.
@@ -64,14 +64,17 @@ make test-migration-vcl
 ```
 
 The script takes **no scenario argument** and requires no optional Fastly
-product entitlement. It needs `terraform` (1.5+), `go`, `jq`, `curl`, and
+product entitlement. It needs `terraform` (1.8+), `go`, `jq`, `curl`, and
 `cksum`, plus network access to Fastly and the legacy provider registry.
 
 Optional environment variables:
 
-- `LEGACY_PROVIDER_VERSION`: legacy provider version floor, default `9.1.0`.
-  The selected version remains `< 20.0.0`; Terraform may choose a newer
-  matching version.
+- `LEGACY_PROVIDER_VERSION`: exact published legacy provider release, default
+  `10.3.0`. The script verifies the actual selected version after `terraform init`.
+  For historical regression coverage, run with `9.1.0`, `9.5.0`, `9.8.0`,
+  `10.2.0`, and `10.3.0`. Each invocation creates a separate live test service.
+  The credential-free published-schema check in
+  `scripts/test-migration-state-schemas/` complements these live tests.
 - `FASTLY_API_URL`: API base URL, default `https://api.fastly.com`.
 - `KEEP_WORK_DIR=1`: retain temporary files for debugging.
 

@@ -28,7 +28,7 @@ func TestMoveStateDeclaresLegacyServiceComputeMover(t *testing.T) {
 	_ = legacyServiceComputeSchemaV0Mover(ctx, t, r)
 }
 
-func TestMoveStateSourceSchemaMatchesLegacyServiceComputeSchemaV1(t *testing.T) {
+func TestMoveStateSourceSchemaMatchesLegacyServiceComputeSchemaV0(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -514,7 +514,7 @@ type legacyNestedBlockFixture struct {
 func readLegacyServiceComputeTypeFixture(t *testing.T) legacyServiceComputeTypeFixture {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join("testdata", "legacy_service_compute_schema_v0_type.json"))
+	raw, err := os.ReadFile(filepath.Join("testdata", "legacy_service_compute_schema_v0_10_3_0_type.json"))
 	if err != nil {
 		t.Fatalf("read legacy schema fixture: %v", err)
 	}
