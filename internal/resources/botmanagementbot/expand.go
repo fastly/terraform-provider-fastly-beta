@@ -6,11 +6,11 @@ import (
 	"github.com/fastly/go-fastly/v19/fastly/botmanagement/v1/workspaces/policy"
 )
 
-func BuildUpdateInput(m Model, action string) *policy.UpdateBotInput {
+func BuildUpdateInput(m Model) *policy.UpdateBotInput {
 	return &policy.UpdateBotInput{
 		WorkspaceID: new(service.StringValue(m.WorkspaceID)),
 		CategoryID:  new(service.StringValue(m.CategoryID)),
 		BotID:       new(service.StringValue(m.BotID)),
-		Action:      &policy.Action{Type: action},
+		Action:      &policy.Action{Type: service.StringValue(m.Action)},
 	}
 }

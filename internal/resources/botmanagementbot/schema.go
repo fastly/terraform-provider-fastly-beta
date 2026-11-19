@@ -56,7 +56,7 @@ func ResourceAttributes() map[string]schema.Attribute {
 		},
 		"action": schema.StringAttribute{
 			Required:    true,
-			Description: "The action applied to requests from the bot. One of `allow`, `block`, or `challenge` to override the category's action, or `inherit` to use the category's action. Destroying this resource sets the action to `inherit`.",
+			Description: "The action applied to requests from the bot. One of `allow`, `block`, or `challenge` to override the category's action, or `inherit` to use the category's action.",
 			Validators: []validator.String{
 				stringvalidator.OneOf(Actions...),
 			},

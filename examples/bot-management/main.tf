@@ -50,8 +50,9 @@ resource "fastly_bot_management_category" "ai_crawler" {
   action       = "block"
 }
 
-# Allow GPTBot, overriding the category action. Destroying this resource
-# resets GPTBot back to `inherit`, so it uses its parent category's action.
+# Allow GPTBot, overriding the category action. Destroying this resource leaves
+# GPTBot's action unchanged; set `action = "inherit"` first to return it to the
+# category action.
 resource "fastly_bot_management_bot" "gptbot" {
   workspace_id = data.fastly_bot_management_workspace.example.id
   category_id  = fastly_bot_management_category.ai_crawler.category_id
@@ -77,10 +78,10 @@ output "ai_crawler_bot_ids" {
   value = [for b in data.fastly_bot_management_bots.ai_crawler.bots : b.bot_id]
 }
 
-# Reset every bot in a given category back to its inherited category default,
-# for example with
-# `terraform apply -invoke=action.fastly_bot_management_category_reset_bots.ai_crawler`.
-action "fastly_bot_management_category_reset_bots" "ai_crawler" {
+# Clear the bot overrides in a given category, so every bot uses its inherited
+# category default, for example with
+# `terraform apply -invoke=action.fastly_bot_management_category_overrides_clear.ai_crawler`.
+action "fastly_bot_management_category_overrides_clear" "ai_crawler" {
   config {
     workspace_id = data.fastly_bot_management_workspace.example.id
     category_id  = fastly_bot_management_category.ai_crawler.category_id

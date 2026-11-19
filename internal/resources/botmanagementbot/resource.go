@@ -8,7 +8,6 @@ import (
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resourceidentity"
-	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -42,7 +41,7 @@ func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, res
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages the action of a predefined bot in a Bot Management (ContentGuard) workspace. This resource doesn't create or delete bots, and destroying the resource sets the bot's action back to `inherit`.",
+		Description: "Manages the action of a predefined bot in a Bot Management (ContentGuard) workspace. This resource doesn't create or delete bots, and destroying the resource only removes it from Terraform state.",
 		Attributes:  ResourceAttributes(),
 	}
 }
@@ -110,18 +109,15 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	r.write(ctx, plan, &resp.State, resp.Identity, &resp.Diagnostics)
 }
 
-// Delete returns the bot to its category's action.
-func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+// Delete only removes the bot from state. Updating it to inherit could loosen
+// protection, for example when the bot is blocked inside an allowed category.
+//
+// We decided not change the value of `action` to `inherit` upon delete, as some bots
+// have overrides by default on a new workspace.
+func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, _ *resource.DeleteResponse) {
 	var state Model
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	tflog.Debug(ctx, "Resetting Fastly Bot Management bot to inherit", logFields(state))
-
-	if _, err := policy.UpdateBot(ctx, r.client, BuildUpdateInput(state, InheritAction)); err != nil && !errors.IsNotFound(err) {
-		resp.Diagnostics.AddError("Error resetting Bot Management bot to inherit", err.Error())
+	if diags := req.State.Get(ctx, &state); !diags.HasError() {
+		tflog.Debug(ctx, "Removing Fastly Bot Management bot from state; its action is left unchanged", logFields(state))
 	}
 }
 
@@ -146,7 +142,7 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 }
 
 func (r *Resource) write(ctx context.Context, plan Model, state *tfsdk.State, identity *tfsdk.ResourceIdentity, diags *diag.Diagnostics) {
-	bot, err := policy.UpdateBot(ctx, r.client, BuildUpdateInput(plan, service.StringValue(plan.Action)))
+	bot, err := policy.UpdateBot(ctx, r.client, BuildUpdateInput(plan))
 	if err != nil {
 		diags.AddError("Error updating Bot Management bot", err.Error())
 		return

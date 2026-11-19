@@ -2,10 +2,6 @@ package botmanagementbot
 
 import (
 	"context"
-	"encoding/json"
-	"io"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -17,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fastly/go-fastly/v19/fastly"
 	"github.com/fastly/go-fastly/v19/fastly/botmanagement/v1/workspaces/policy"
 )
 
@@ -41,7 +36,7 @@ func TestActionValidator(t *testing.T) {
 }
 
 func TestBuildUpdateInput(t *testing.T) {
-	input := BuildUpdateInput(testModel("block"), "allow")
+	input := BuildUpdateInput(testModel("allow"))
 	assert.Equal(t, "ws", *input.WorkspaceID)
 	assert.Equal(t, "cat_ai_crawler", *input.CategoryID)
 	assert.Equal(t, "bot_gptbot", *input.BotID)
@@ -53,33 +48,10 @@ func TestFlattenToModelUsesCallerCategoryID(t *testing.T) {
 	assert.Equal(t, testModel("block"), m)
 }
 
-func TestDeleteResetsBotToInherit(t *testing.T) {
-	var gotMethod, gotPath string
-	var gotBody map[string]any
-	r := &Resource{client: testClient(t, func(w http.ResponseWriter, req *http.Request) {
-		gotMethod, gotPath = req.Method, req.URL.Path
-		body, _ := io.ReadAll(req.Body)
-		_ = json.Unmarshal(body, &gotBody)
-		_, _ = w.Write([]byte(`{"bot_id":"bot_gptbot","name":"GPTBot","action":{"type":"inherit"}}`))
-	})}
-
+// The resource has no client here, so any API call would panic.
+func TestDeleteOnlyRemovesFromState(t *testing.T) {
 	resp := &resource.DeleteResponse{}
-	r.Delete(context.Background(), resource.DeleteRequest{State: stateForTest(t, new(testModel("allow")))}, resp)
-	require.False(t, resp.Diagnostics.HasError(), resp.Diagnostics)
-
-	assert.Equal(t, http.MethodPatch, gotMethod)
-	assert.Equal(t, "/bot-management/v1/workspaces/ws/policy/categories/cat_ai_crawler/bots/bot_gptbot", gotPath)
-	assert.Equal(t, map[string]any{"action": map[string]any{"type": "inherit"}}, gotBody)
-}
-
-func TestDeleteIgnoresNotFound(t *testing.T) {
-	r := &Resource{client: testClient(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte(`{"title":"Not found","status":404}`))
-	})}
-
-	resp := &resource.DeleteResponse{}
-	r.Delete(context.Background(), resource.DeleteRequest{State: stateForTest(t, new(testModel("allow")))}, resp)
+	(&Resource{}).Delete(context.Background(), resource.DeleteRequest{State: stateForTest(t, new(testModel("block")))}, resp)
 	assert.False(t, resp.Diagnostics.HasError(), resp.Diagnostics)
 }
 
@@ -112,15 +84,6 @@ func testModel(action string) Model {
 		Action:      types.StringValue(action),
 		Name:        types.StringValue("GPTBot"),
 	}
-}
-
-func testClient(t *testing.T, handler http.HandlerFunc) *fastly.Client {
-	t.Helper()
-	srv := httptest.NewServer(handler)
-	t.Cleanup(srv.Close)
-	client, err := fastly.NewClientForEndpoint("test-key", srv.URL)
-	require.NoError(t, err)
-	return client
 }
 
 func stateForTest(t *testing.T, m *Model) tfsdk.State {

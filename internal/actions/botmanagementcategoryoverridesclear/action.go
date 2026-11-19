@@ -1,4 +1,4 @@
-package botmanagementcategoryresetbots
+package botmanagementcategoryoverridesclear
 
 import (
 	"context"
@@ -35,12 +35,12 @@ type Model struct {
 }
 
 func (a *Action) Metadata(_ context.Context, req action.MetadataRequest, resp *action.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_bot_management_category_reset_bots"
+	resp.TypeName = req.ProviderTypeName + "_bot_management_category_overrides_clear"
 }
 
 func (a *Action) Schema(_ context.Context, _ action.SchemaRequest, resp *action.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Sets every bot in a Bot Management (ContentGuard) category to `inherit`, so they all follow the category's action. The category's own action is unchanged. Implemented as a Terraform Action (non-CRUD).",
+		Description: "Clears the bot overrides in a Bot Management (ContentGuard) category. Every bot with its own action is set back to `inherit`, so it uses the category's action. The category's own action is unchanged. Implemented as a Terraform Action (non-CRUD).",
 		Attributes: map[string]schema.Attribute{
 			"workspace_id": schema.StringAttribute{
 				Required:    true,
@@ -48,7 +48,7 @@ func (a *Action) Schema(_ context.Context, _ action.SchemaRequest, resp *action.
 			},
 			"category_id": schema.StringAttribute{
 				Required:    true,
-				Description: "The ID of the category whose bots are reset, such as `cat_ai_crawler`.",
+				Description: "The ID of the category whose bot overrides are cleared, such as `cat_ai_crawler`.",
 			},
 		},
 	}
@@ -74,7 +74,7 @@ func (a *Action) Invoke(ctx context.Context, req action.InvokeRequest, resp *act
 	categoryID := cfg.CategoryID.ValueString()
 	fields := map[string]any{"workspace_id": workspaceID, "category_id": categoryID}
 
-	tflog.Info(ctx, "Resetting every bot in Fastly Bot Management category to inherit", fields)
+	tflog.Info(ctx, "Clearing bot overrides in Fastly Bot Management category", fields)
 
 	bots, err := policy.UpdateCategoryBots(ctx, a.client, &policy.UpdateCategoryBotsInput{
 		WorkspaceID: &workspaceID,
@@ -82,10 +82,10 @@ func (a *Action) Invoke(ctx context.Context, req action.InvokeRequest, resp *act
 		Action:      &policy.Action{Type: inheritAction},
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("Failed to reset Bot Management category bots", err.Error())
+		resp.Diagnostics.AddError("Failed to clear Bot Management category bot overrides", err.Error())
 		return
 	}
 
 	fields["bot_count"] = len(bots)
-	tflog.Info(ctx, "Reset every bot in Fastly Bot Management category to inherit", fields)
+	tflog.Info(ctx, "Cleared bot overrides in Fastly Bot Management category", fields)
 }

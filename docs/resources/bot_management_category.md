@@ -12,9 +12,9 @@ Manages the action of a predefined bot category in a Bot Management
 
 The category's action applies to every bot in the category that is set to
 `inherit`, including bots added to the category later. Bots with
-their own action, set with `fastly_bot_management_bot`, keep it. To return
-every bot in a category to the category's action at once, use the
-`fastly_bot_management_category_reset_bots` action.
+their own action, set with `fastly_bot_management_bot`, keep it. To clear
+every bot override in a category at once, use the
+`fastly_bot_management_category_overrides_clear` action.
 
 Categories are predefined and can't be created or deleted. This resource
 doesn't create or delete categories; it sets the action of an existing

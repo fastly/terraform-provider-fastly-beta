@@ -19,7 +19,7 @@ import (
 
 	"github.com/fastly/go-fastly/v19/fastly"
 
-	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/botmanagementcategoryresetbots"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/botmanagementcategoryoverridesclear"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/computepackageupload"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/versionactivate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/actions/versionclone"
@@ -573,6 +573,6 @@ func (p *fastlyProvider) Actions(_ context.Context) []func() action.Action {
 		versionactivate.NewAction,
 		versionstage.NewAction,
 		computepackageupload.NewAction,
-		botmanagementcategoryresetbots.NewAction,
+		botmanagementcategoryoverridesclear.NewAction,
 	}
 }

@@ -1,4 +1,4 @@
-package botmanagementcategoryresetbots
+package botmanagementcategoryoverridesclear
 
 import (
 	"context"
@@ -21,10 +21,10 @@ import (
 func TestMetadata(t *testing.T) {
 	var resp action.MetadataResponse
 	NewAction().Metadata(context.Background(), action.MetadataRequest{ProviderTypeName: "fastly"}, &resp)
-	assert.Equal(t, "fastly_bot_management_category_reset_bots", resp.TypeName)
+	assert.Equal(t, "fastly_bot_management_category_overrides_clear", resp.TypeName)
 }
 
-func TestInvokeSetsEveryBotToInherit(t *testing.T) {
+func TestInvokeClearsOverrides(t *testing.T) {
 	var gotMethod, gotPath string
 	var gotBody map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

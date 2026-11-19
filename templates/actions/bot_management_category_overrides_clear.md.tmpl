@@ -1,0 +1,42 @@
+---
+subcategory: "Bot Management"
+---
+
+# fastly_bot_management_category_overrides_clear Action
+
+Clears the bot overrides in a Bot Management (ContentGuard) category. Every bot
+with its own action is set back to `inherit`, so it uses the category's action.
+The category's own action is unchanged.
+
+## Example Usage
+
+```terraform
+data "fastly_bot_management_workspace" "example" {
+  service_id = fastly_service_cdn_auto.example.id
+}
+
+resource "fastly_bot_management_category" "ai_crawler" {
+  workspace_id = data.fastly_bot_management_workspace.example.id
+  category_id  = "cat_ai_crawler"
+  action       = "block"
+}
+
+action "fastly_bot_management_category_overrides_clear" "ai_crawler" {
+  config {
+    workspace_id = data.fastly_bot_management_workspace.example.id
+    category_id  = fastly_bot_management_category.ai_crawler.category_id
+  }
+}
+```
+
+```shell
+terraform apply -invoke=action.fastly_bot_management_category_overrides_clear.ai_crawler
+```
+
+## Usage Notes
+
+This also clears the overrides of bots managed by `fastly_bot_management_bot`.
+The next `apply` sets their configured actions again, so set those resources to
+`inherit` or remove them first if the overrides should stay cleared.
+
+{{ .SchemaMarkdown | trimspace }}

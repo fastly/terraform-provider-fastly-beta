@@ -23,15 +23,16 @@ terraform apply -target=fastly_service_product_bot_management.example
 terraform apply
 ```
 
-To reset every bot in a given category back to its inherited category default:
+To clear the bot overrides in a given category, so every bot uses its inherited
+category default:
 
 ```shell
-terraform apply -invoke=action.fastly_bot_management_category_reset_bots.ai_crawler
+terraform apply -invoke=action.fastly_bot_management_category_overrides_clear.ai_crawler
 ```
 
 ## Destroying
 
-- `fastly_bot_management_workspace` and `fastly_bot_management_category`
-  are only removed from state. Their settings are left unchanged.
-- `fastly_bot_management_bot` sets the bot's action back to `inherit`, so it
-  follows its category's action.
+`fastly_bot_management_workspace`, `fastly_bot_management_category` and
+`fastly_bot_management_bot` are only removed from state. Their settings are
+left unchanged. To return a bot to its category's action, set
+`action = "inherit"` and apply before removing its resource.

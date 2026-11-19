@@ -114,10 +114,9 @@ func TestAccFastlyBotManagement_lifecycle(t *testing.T) {
 				ImportStateKind: resource.ImportBlockWithResourceIdentity,
 			},
 			{
-				// Removing the bot resource returns the bot to its category's
-				// action.
+				// Removing the bot resource leaves its action unchanged.
 				Config: ConfigBotManagement(serviceName, domainName, backendName, workspaceName, "block", "challenge", ""),
-				Check:  checkBotManagementBotAction("fastly_bot_management_category.test", botManagementTestBotID, "inherit"),
+				Check:  checkBotManagementBotAction("fastly_bot_management_category.test", botManagementTestBotID, "block"),
 			},
 		},
 	})
