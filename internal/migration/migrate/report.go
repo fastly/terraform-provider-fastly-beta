@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// WriteText reports blocking diagnostics or the full proposed HCL diff.
+// WriteText reports blockers, a source-free sensitive preview, or the proposed HCL diff.
 // It never prints a partial diff when any required change is unsupported.
 func WriteText(writer io.Writer, result Result) error {
 	return writeText(writer, result, false)
@@ -88,13 +88,31 @@ func writeText(writer io.Writer, result Result, applying bool) error {
 		if _, err := fmt.Fprintln(writer, "\nProposed changes:"); err != nil {
 			return err
 		}
-		if err := WriteDiff(writer, result.Changes); err != nil {
+		if result.withholdDiff {
+			// Avoid printing any source, including unchanged context lines
+			// and values that may also occur in other files.
+			message := "HCL diff withheld: sensitive configuration detected. "
+			if applying {
+				message += "Review changed files locally after writing."
+			} else {
+				message += "No files written. To write the proposed configuration, re-run with --write and review changed files locally before running Terraform."
+			}
+			if _, err := fmt.Fprintln(writer, message); err != nil {
+				return err
+			}
+			for _, action := range result.Analysis.Actions {
+				if _, err := fmt.Fprintf(writer, "  [%s] %s -> %s (hcl=%s)\n",
+					action.RuleID, action.From, action.To, action.HCL); err != nil {
+					return err
+				}
+			}
+		} else if err := WriteDiff(writer, result.Changes); err != nil {
 			return err
 		}
 	}
 	if applying {
 		_, err := fmt.Fprintln(writer,
-			"\nWrite requested: the validated HCL changes shown above will be applied after "+
+			"\nWrite requested: the validated HCL plan summarized above will be applied after "+
 				"private recovery backups are saved. Terraform state and Fastly will not be changed.")
 		return err
 	}
