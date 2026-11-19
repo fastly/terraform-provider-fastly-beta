@@ -187,6 +187,72 @@ func TestPlanReferenceBlockersPreventEveryWrite(t *testing.T) {
 	}
 }
 
+func TestPlanReferencesRejectsExistingTerraformJSON(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeConfig(t, dir, "main.tf", simpleVCLConfiguration)
+	const jsonConfig = `{"output":{"legacy":{"value":"${fastly_service_vcl.demo.id}"}}}`
+	writeConfig(t, dir, "references.tf.json", jsonConfig)
+
+	result := newPlan(t, dir)
+	if !result.Blocked() || len(result.Changes) != 0 || len(result.Moves) != 0 {
+		t.Fatalf("unsafe JSON plan: %#v", result)
+	}
+	if len(result.Issues) != 0 {
+		t.Fatalf("JSON should block during analysis, not planning: %#v", result.Issues)
+	}
+	found := false
+	for _, finding := range result.Analysis.Findings {
+		if strings.Contains(finding.Message, "Terraform JSON configuration is not supported") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("missing unsupported JSON diagnostic: %#v", result.Analysis.Findings)
+	}
+	if _, err := result.Apply(context.Background(), privateBackupDir(t)); err == nil {
+		t.Fatal("blocked JSON plan applied")
+	}
+	got, err := os.ReadFile(filepath.Join(dir, "main.tf"))
+	if err != nil || string(got) != simpleVCLConfiguration {
+		t.Fatal("blocked plan modified source")
+	}
+	got, err = os.ReadFile(filepath.Join(dir, "references.tf.json"))
+	if err != nil || string(got) != jsonConfig {
+		t.Fatal("blocked plan modified JSON")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "migration.tf")); !os.IsNotExist(err) {
+		t.Fatalf("blocked plan generated migration.tf: %v", err)
+	}
+}
+
+func TestPlanReferencesRejectsNewTerraformJSONAfterPreview(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeConfig(t, dir, "main.tf", simpleVCLConfiguration)
+	result := newPlan(t, dir)
+	if result.Blocked() {
+		t.Fatalf("preview blocked: %#v %#v", result.Issues, result.Analysis.Findings)
+	}
+	const jsonConfig = `{"output":{"late":{"value":"${fastly_service_vcl.demo.id}"}}}`
+	writeConfig(t, dir, "new-reference.tf.json", jsonConfig)
+	if _, err := result.Apply(context.Background(), privateBackupDir(t)); err == nil ||
+		!strings.Contains(err.Error(), "terraform file new-reference.tf.json appeared after analysis") {
+		t.Fatalf("new JSON file not rejected as drift: %v", err)
+	}
+	got, err := os.ReadFile(filepath.Join(dir, "main.tf"))
+	if err != nil || string(got) != simpleVCLConfiguration {
+		t.Fatal("stale preview modified source")
+	}
+	got, err = os.ReadFile(filepath.Join(dir, "new-reference.tf.json"))
+	if err != nil || string(got) != jsonConfig {
+		t.Fatal("stale preview modified JSON")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "migration.tf")); !os.IsNotExist(err) {
+		t.Fatalf("stale preview generated migration.tf: %v", err)
+	}
+}
+
 func TestPlanReferencesRejectsNewFileAfterPreview(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

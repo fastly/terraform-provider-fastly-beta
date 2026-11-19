@@ -416,9 +416,12 @@ func checkSnapshots(root string, snapshots map[string][]byte, changes []rewrite.
 }
 
 // checkModuleFileSet detects a newly added Terraform source, including a file
-// with references the analyzer never saw. The existing snapshot check detects
-// changes/deletions to the original files. Neither check replaces coordination
-// with other writers while Apply installs the plan.
+// with references the analyzer never saw. Analysis rejects existing .tf.json
+// files before inspectFiles snapshots native HCL. Keep checking .tf.json here
+// to reject JSON configuration added after that successful analysis.
+// The existing snapshot check detects changes/deletions to the original files.
+// Neither check replaces coordination with other writers while Apply installs
+// the plan.
 func checkModuleFileSet(root string, modules []string, snapshots map[string][]byte) error {
 	for _, module := range modules {
 		entries, err := os.ReadDir(filepath.Join(root, filepath.FromSlash(module)))
