@@ -324,11 +324,11 @@ func TestAnalyzeTargetParityBlocker(t *testing.T) {
 
 	result := analyzeFixture(t, "parity-blocked")
 
-	finding, ok := findingByRuleID(result, "resource-service-compute")
+	finding, ok := findingByRuleID(result, "resource-service-acl-entries")
 	if !ok {
-		t.Fatalf("Findings = %#v, want resource-service-compute blocker", result.Findings)
+		t.Fatalf("Findings = %#v, want resource-service-acl-entries blocker", result.Findings)
 	}
-	if !strings.Contains(finding.Remediation, "ResourceWithMoveState") {
+	if !strings.Contains(finding.Remediation, "state migration") {
 		t.Fatalf("Remediation = %q, want provider prerequisite", finding.Remediation)
 	}
 }
@@ -679,7 +679,7 @@ resource "fastly_service_vcl" "demo" {
 	}
 }
 
-func TestAnalyzeConfigurableProductsRemainBlockedForCompute(t *testing.T) {
+func TestAnalyzeConfigurableProductsAreAutomaticForCompute(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -698,8 +698,8 @@ resource "fastly_service_compute" "demo" {
 
 	result := analyzeDir(t, dir)
 
-	if _, ok := findingByRuleID(result, "compute-product-ngwaf"); !ok {
-		t.Fatalf("Findings = %#v, want compute product blocker", result.Findings)
+	if !result.Migratable() {
+		t.Fatalf("Findings = %#v, want migratable compute product", result.Findings)
 	}
 }
 

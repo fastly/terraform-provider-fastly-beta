@@ -525,3 +525,28 @@ resource "fastly_service_cdn_auto" "demo" {
 		t.Fatalf("already migrated config changed: %#v", result)
 	}
 }
+
+func TestProviderMigrationRaisesConstraintForComputeOnlyProject(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeConfig(t, dir, "main.tf", `terraform {
+  required_providers {
+    fastly = {
+      source  = "fastly/fastly"
+      version = ">= 9.5.0, < 20.0.0"
+    }
+  }
+}
+resource "fastly_service_compute" "demo" {
+  name = "demo"
+}
+`)
+	result := newPlan(t, dir)
+	if result.Blocked() {
+		t.Fatalf("blocked: %#v", result.Issues)
+	}
+	main := changedFile(t, result, "main.tf")
+	if strings.Contains(main, "< 20.0.0") || !strings.Contains(main, `>= 20.0.0`) {
+		t.Fatalf("Compute-only project kept the legacy provider constraint:\n%s", main)
+	}
+}

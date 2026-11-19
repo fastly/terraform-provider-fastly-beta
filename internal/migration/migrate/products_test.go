@@ -217,9 +217,9 @@ dynamic "product_enablement" {
 }`, "", "Dynamic legacy service block"},
 		{"invalid literal", `product_enablement { domain_inspector = "yes" }`, "", "must be a boolean or null"},
 		{"count on service", `count = 1
-product_enablement { domain_inspector = true }`, "", "indexed VCL service"},
+product_enablement { domain_inspector = true }`, "", "indexed service"},
 		{"for_each on service", `for_each = toset(["edge"])
-product_enablement { domain_inspector = true }`, "", "indexed VCL service"},
+product_enablement { domain_inspector = true }`, "", "indexed service"},
 		{"comments would be discarded", `product_enablement {
  # Preserve this comment
  domain_inspector = true
@@ -297,14 +297,14 @@ product_enablement {
   enabled      = true
   contentguard = "on"
  }
-}`, "", "indexed VCL service"},
+}`, "", "indexed service"},
 		{"for_each on service with configurable-only product", `for_each = toset(["edge"])
 product_enablement {
  ngwaf {
   enabled      = true
   workspace_id = "ws-123"
  }
-}`, "", "indexed VCL service"},
+}`, "", "indexed service"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -465,5 +465,33 @@ func TestConfigurableProductMigrationPreservesSettings(t *testing.T) {
 		if !strings.Contains(generated, expected) {
 			t.Errorf("missing %q from migration.tf:\n%s", expected, generated)
 		}
+	}
+}
+
+func TestComputeProductSplitReferencesComputeAutoService(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeConfig(t, dir, "main.tf", `resource "fastly_service_compute" "demo" {
+  name = "demo"
+  product_enablement {
+    websockets = true
+  }
+}
+`)
+	plan := newPlan(t, dir)
+	if plan.Blocked() {
+		t.Fatalf("blocked: %#v findings=%#v", plan.Issues, plan.Analysis.Findings)
+	}
+	generated := changedFile(t, plan, "migration.tf")
+	for _, expected := range []string{
+		`service_id = fastly_service_compute_auto.demo.id`,
+		`id = fastly_service_compute_auto.demo.id`,
+	} {
+		if !strings.Contains(generated, expected) {
+			t.Errorf("missing %q:\n%s", expected, generated)
+		}
+	}
+	if strings.Contains(generated, "fastly_service_cdn_auto") {
+		t.Fatalf("Compute product references a CDN service:\n%s", generated)
 	}
 }

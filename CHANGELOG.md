@@ -4,6 +4,8 @@
 
 ### ENHANCEMENTS:
 
+- feat(migration): transform legacy `fastly_service_compute` HCL to `fastly_service_compute_auto` in `fastly-tf-migrate`, with live end-to-end coverage via `make test-migration-compute`([#242](https://github.com/fastly/terraform-provider-fastly-beta/pull/242))
+
 ### BUG FIXES:
 
 - fix(migration): extend legacy VCL and Compute state decoders for SDKv2 10.3.0 schema additions and reject configured backend IAM until target parity is available

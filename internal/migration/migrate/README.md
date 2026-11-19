@@ -22,6 +22,11 @@ planner can produce a complete diff:
 - Automatic registry rules with `HCLUnchanged` / `StateUnchanged` are no-ops.
 - `fastly_service_vcl` becomes `fastly_service_cdn_auto`, with a Terraform
   `moved` block in the same module.
+- `fastly_service_compute` becomes `fastly_service_compute_auto`, with a
+  Terraform `moved` block in the same module. The provider's
+  `MoveState` copies the service ID, `force_destroy` and `reuse`; `activate = false`,
+  `stage = true` and other constructs the `_auto` schema cannot represent block
+  the whole plan before anything is written.
 - Compatible existing nested blocks, expressions, comments, `count`,
   `for_each`, provider meta-arguments and unrelated HCL remain unchanged.
 - Registry-defined automatic removals, safe block renames and settings
