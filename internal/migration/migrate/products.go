@@ -155,7 +155,7 @@ func compileSimpleProducts(key resourceKey, actions []selectedAction, index modu
 		}
 		edits = append(edits, rewrite.AddSimpleProduct{
 			File: migrationFile, TypeName: rule.Target, Name: key.name,
-			ServiceName: key.name, ProviderRef: providerRef, Enabled: enabled, Attributes: attrs,
+			ServiceAddress: serviceAutoTypes[key.typ] + "." + key.name, ProviderRef: providerRef, Enabled: enabled, Attributes: attrs,
 		}, rewrite.AddImport{
 			File: migrationFile, To: target,
 			IDExpression: serviceAutoTypes[key.typ] + "." + key.name + ".id",

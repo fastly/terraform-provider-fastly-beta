@@ -467,3 +467,31 @@ func TestConfigurableProductMigrationPreservesSettings(t *testing.T) {
 		}
 	}
 }
+
+func TestComputeProductSplitReferencesComputeAutoService(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeConfig(t, dir, "main.tf", `resource "fastly_service_compute" "demo" {
+  name = "demo"
+  product_enablement {
+    websockets = true
+  }
+}
+`)
+	plan := newPlan(t, dir)
+	if plan.Blocked() {
+		t.Fatalf("blocked: %#v findings=%#v", plan.Issues, plan.Analysis.Findings)
+	}
+	generated := changedFile(t, plan, "migration.tf")
+	for _, expected := range []string{
+		`service_id = fastly_service_compute_auto.demo.id`,
+		`id = fastly_service_compute_auto.demo.id`,
+	} {
+		if !strings.Contains(generated, expected) {
+			t.Errorf("missing %q:\n%s", expected, generated)
+		}
+	}
+	if strings.Contains(generated, "fastly_service_cdn_auto") {
+		t.Fatalf("Compute product references a CDN service:\n%s", generated)
+	}
+}

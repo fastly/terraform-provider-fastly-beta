@@ -71,8 +71,8 @@ func (e RemoveProductEnablement) apply(source []byte, filename string) ([]byte, 
 // The imported product is never created by the CLI. Terraform imports it
 // later with the ID of the moved legacy service.
 type AddSimpleProduct struct {
-	File, TypeName, Name, ServiceName, ProviderRef string
-	Enabled                                        bool
+	File, TypeName, Name, ServiceAddress, ProviderRef string
+	Enabled                                           bool
 	// Attributes are additional literal settings (HCL expression source) for
 	// configurable products, rendered after enabled in the given order.
 	Attributes []ProductAttribute
@@ -89,7 +89,7 @@ func (e AddSimpleProduct) apply(source []byte, filename string) ([]byte, error) 
 		return nil, fmt.Errorf("invalid standalone product type %q", e.TypeName)
 	}
 	to := e.TypeName + "." + e.Name
-	service := "fastly_service_cdn_auto." + e.ServiceName
+	service := e.ServiceAddress
 	if err := checkTraversal(to); err != nil {
 		return nil, err
 	}

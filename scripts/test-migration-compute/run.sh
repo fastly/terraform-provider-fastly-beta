@@ -217,6 +217,10 @@ run_migrator() {
         log_error "main.tf was not rewritten to fastly_service_compute_auto"
         exit 1
     fi
+    if grep -Fq '< 20.0.0' main.tf migration.tf 2> /dev/null; then
+        log_error "Provider constraint was not raised to the GA provider"
+        exit 1
+    fi
     if ! grep -q "fastly_service_compute.demo" migration.tf; then
         log_error "migration.tf has no moved block"
         exit 1
@@ -237,10 +241,10 @@ plan_and_apply_ga() {
     log_step "Switching to the dual-model provider"
     cd "$PROJECT_DIR"
     use_ga_provider
-    # The local build is served via dev_overrides, so init does not download the provider;
-    # drop the stale legacy lock entry first so selection is re-initialized.
+    # The migrator raises the constraint to >= 20.0.0, which init would try to resolve from the
+    # registry, and no 20.x release exists yet. The local build is served via dev_overrides, so
+    # skip init and drop the stale legacy lock entry. Re-add init once 20.x is published.
     rm -f .terraform.lock.hcl
-    terraform init -input=false
     terraform validate
 
     terraform plan -out="$WORK_DIR/migrate.plan" -input=false

@@ -28,7 +28,7 @@ func TestRemoveProductEnablementAndGenerateImports(t *testing.T) {
 		RenameResource{File: "main.tf", FromType: "fastly_service_vcl", ToType: "fastly_service_cdn_auto", Name: "demo"},
 		AddSimpleProduct{
 			File: "migration.tf", TypeName: "fastly_service_product_domain_inspector",
-			Name: "demo", ServiceName: "demo", Enabled: true, ProviderRef: "fastly.edge",
+			Name: "demo", ServiceAddress: "fastly_service_cdn_auto.demo", Enabled: true, ProviderRef: "fastly.edge",
 		},
 		AddImport{
 			File: "migration.tf", To: "fastly_service_product_domain_inspector.demo",
