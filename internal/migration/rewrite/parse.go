@@ -11,7 +11,7 @@ import (
 func parseBody(source []byte, filename string) (*hclsyntax.Body, error) {
 	file, diagnostics := hclsyntax.ParseConfig(source, filename, hcl.Pos{Line: 1, Column: 1})
 	if diagnostics.HasErrors() {
-		return nil, fmt.Errorf("parse native HCL: %s", diagnostics.Error())
+		return nil, fmt.Errorf("parse native HCL in %s: invalid syntax (source text omitted)", filename)
 	}
 	if file == nil {
 		return nil, fmt.Errorf("parse native HCL: no HCL file returned")

@@ -1018,3 +1018,32 @@ func TestComputeNestedBlockSchemaDefaultsPreferIPv6ToTrue(t *testing.T) {
 	preferIPv6(NestedBlockSchema()).Default.DefaultBool(ctx, defaults.BoolRequest{}, &resp)
 	assert.False(t, resp.PlanValue.ValueBool(), "CDN default is unchanged")
 }
+
+func TestBackendTLSMigrationSchemaContract(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name  string
+		block schema.ListNestedBlock
+	}{
+		{"cdn", NestedBlockSchema()},
+		{"compute", ComputeNestedBlockSchema()},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			attributes := tc.block.NestedObject.Attributes
+			object, ok := attributes["ssl_client_secrets"].(schema.SingleNestedAttribute)
+			if !ok || !object.Optional || !object.Computed {
+				t.Fatal("backend TLS target must be an optional computed object attribute")
+			}
+			for _, name := range []string{"ssl_client_cert", "ssl_client_key"} {
+				if _, exists := attributes[name]; exists {
+					t.Fatal("legacy flat TLS field remains in target schema")
+				}
+				field, ok := object.Attributes[name].(schema.StringAttribute)
+				if !ok || !field.Sensitive || !field.Optional || !field.Computed {
+					t.Fatal("TLS object field must be an optional computed sensitive string")
+				}
+			}
+		})
+	}
+}

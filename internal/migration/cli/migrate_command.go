@@ -30,7 +30,7 @@ func newMigrateCommand(config Config) *urfavecli.Command {
 		Flags: []urfavecli.Flag{
 			&urfavecli.BoolFlag{
 				Name:  "dry-run",
-				Usage: "Print a deterministic HCL diff; never write configuration or state",
+				Usage: "Preview deterministic HCL changes (source withheld for sensitive configurations); never write configuration or state",
 			},
 			&urfavecli.BoolFlag{
 				Name:  "write",
@@ -73,7 +73,7 @@ func newMigrateCommand(config Config) *urfavecli.Command {
 				}
 			}
 			if write {
-				// Stream the complete preview before touching Terraform files.
+				// Stream the preview before touching Terraform files.
 				// A short write or output error prevents the migration from applying.
 				err = migrationmigrate.WriteApplyPreview(
 					strictOutputWriter{Writer: command.Writer}, result)

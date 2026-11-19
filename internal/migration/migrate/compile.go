@@ -83,11 +83,28 @@ func compileResource(
 	issues = append(issues, productIssues...)
 	var edits []rewrite.Edit
 	edits = append(edits, productEdits...)
+	// Group object fields before applying any individual attribute edits.
+	// Each backend may configure a different subset of the selected fields.
+	var fields []rewrite.ObjectField
+	for _, action := range actions {
+		if field, ok := backendTLSField(action.rule, key.typ, autoType); ok && !slices.Contains(fields, field) {
+			fields = append(fields, field)
+		}
+	}
+	if len(fields) != 0 {
+		edits = append(edits, rewrite.NestObject{
+			File: key.file, ResourceType: key.typ, ResourceName: key.name,
+			Parents: []string{"backend"}, Target: "ssl_client_secrets", Fields: fields,
+		})
+	}
 	foundResource := false
 	for _, a := range actions {
 		rule := a.rule
 		switch rule.Kind {
 		case compatibility.ConstructAttribute:
+			if _, ok := backendTLSField(rule, key.typ, autoType); ok {
+				continue // grouped above, not one object per field
+			}
 			edit, err := compileAttribute(key, rule, autoType)
 			if err != nil {
 				issue(a, err.Error())
@@ -137,6 +154,24 @@ func compileResource(
 	}
 	move := &Move{Module: module, From: fromAddress, To: toAddress}
 	return edits, move, nil
+}
+
+// backendTLSField authorizes only the exact automatic backend routes already
+// reviewed in the registry. Other object destinations need their own schema
+// and state validation before using the generic writer.
+func backendTLSField(rule compatibility.Rule, legacyType, targetType string) (rewrite.ObjectField, bool) {
+	if rule.Kind != compatibility.ConstructAttribute ||
+		rule.Support != compatibility.SupportAutomatic || rule.HCL != compatibility.HCLReshape ||
+		rule.State != compatibility.StateMove {
+		return rewrite.ObjectField{}, false
+	}
+	for _, name := range []string{"ssl_client_cert", "ssl_client_key"} {
+		if rule.Legacy == legacyType+".backend."+name &&
+			rule.Target == targetType+".backend.ssl_client_secrets."+name {
+			return rewrite.ObjectField{From: name, To: name}, true
+		}
+	}
+	return rewrite.ObjectField{}, false
 }
 
 func rankKind(kind compatibility.ConstructKind) int {
@@ -196,10 +231,9 @@ func compileAttribute(key resourceKey, rule compatibility.Rule, autoType string)
 			}, nil
 		case compatibility.HCLReshape:
 			// Only the top-level CDN settings fields move into an HCL block.
-			// Targets such as backend.ssl_client_secrets, logging.authentication,
-			// and logging.tls are schema.SingleNestedAttribute objects and
-			// require `key = { ... }`, not `key { ... }`. NestAttribute would
-			// produce invalid target HCL for those constructs.
+			// Backend TLS is grouped by the compiler before this function.
+			// Other object routes (e.g. logging) remain blocked until their
+			// schema/state mappings have been reviewed.
 			if len(parents) != 0 || len(targetPath) != 2 ||
 				targetPath[0] != "settings" {
 				return nil, fmt.Errorf("attribute %q requires an object-attribute writer, not an HCL block", rule.Legacy)
