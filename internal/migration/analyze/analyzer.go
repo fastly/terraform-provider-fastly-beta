@@ -1003,6 +1003,9 @@ func (a *Analyzer) findReferences(state *analysisState) {
 				Routes: targets, AllRoutes: all, Registry: a.registry,
 			}).Inspect(parsed.body)
 			for _, reference := range inspection.References {
+				if !reference.Changed {
+					continue
+				}
 				state.result.References = append(state.result.References, Reference{
 					From: reference.From, To: reference.To, Range: reference.Range,
 				})

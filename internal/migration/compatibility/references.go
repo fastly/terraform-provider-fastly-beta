@@ -1,6 +1,18 @@
 package compatibility
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
+
+// unchangedReferenceOutputs lists scalar outputs that keep their name and value
+// across a versionless resource migration. The legacy-only domain_id is not
+// listed: its registry rule renames it to id.
+var unchangedReferenceOutputs = map[string][]string{
+	"fastly_domain>fastly_domain":                              {"id", "description", "fqdn", "service_id"},
+	"fastly_domain_v1>fastly_domain":                           {"id", "description", "fqdn", "service_id"},
+	"fastly_domain_v1_service_link>fastly_domain_service_link": {"id", "domain_id", "service_id"},
+}
 
 // ReferenceAttribute resolves a scalar output, not a configurable HCL attribute.
 // A removed input with default semantics does not imply an equivalent output.
@@ -13,6 +25,9 @@ func (r *Registry) ReferenceAttribute(sourceType, targetType, name string) (stri
 		if name == "id" || name == "active_version" {
 			return name, true
 		}
+	}
+	if slices.Contains(unchangedReferenceOutputs[sourceType+">"+targetType], name) {
+		return name, true
 	}
 	var path string
 	for _, rule := range r.RulesForLegacy(sourceType + "." + name) {

@@ -51,6 +51,26 @@ nested object-attribute targets (`authentication`, `tls`,
 the corresponding dedicated migration tickets. The write command does
 **not** claim all legacy Fastly configurations are supported.
 
+## Standalone domain migration
+
+Versionless domain resources migrate together with the services that reference them:
+
+| Legacy resource                 | Target resource              | HCL                         | State                                  |
+| ------------------------------- | ---------------------------- | --------------------------- | -------------------------------------- |
+| `fastly_domain`                 | `fastly_domain`              | Address kept, no `moved`    | Decoded by the provider unchanged      |
+| `fastly_domain_v1`              | `fastly_domain`              | Renamed, `moved` block      | Provider `MoveState`                   |
+| `fastly_domain_v1_service_link` | `fastly_domain_service_link` | Renamed, `moved` block      | Provider `MoveState`                   |
+| `fastly_domain_service_link`    | `fastly_domain_service_link` | Unchanged                   | Unchanged                              |
+
+The legacy `domain_id` attribute no longer exists; references to
+`fastly_domain.<name>.domain_id` and `fastly_domain_v1.<name>.domain_id`
+become `.id`. The provider drops the legacy `domain_id` value when it reads the
+persisted state, so no domain is recreated and no service link changes.
+The `id`, `fqdn`, `description` and `service_id` outputs are unchanged. Whole-resource
+references, other attributes, projections that read `domain_id`, and `moved`, `import` or
+`removed` blocks that address a migrating domain block the whole plan before anything
+is written.
+
 ## Terraform reference rewriting
 
 References are resolved against **enabled resource conversions in the same
