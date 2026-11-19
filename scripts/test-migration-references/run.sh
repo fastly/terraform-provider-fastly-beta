@@ -199,6 +199,11 @@ fi
 PHASE=target
 use_target
 # The local dev override represents the not-yet-published target release.
+# Do not run terraform init here: dev_overrides bypass provider selection for
+# validate/plan/apply/destroy, but init still tries to select a published
+# version matching the migrated constraint. Preserve .terraform/ so the
+# local module installation from legacy init remains available, and remove
+# the legacy provider lockfile before exercising the locally built binary.
 rm -f .terraform.lock.hcl
 terraform validate
 TRACE="$WORK_DIR/migration-provider-trace.log"
