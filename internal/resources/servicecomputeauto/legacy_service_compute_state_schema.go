@@ -1,14 +1,13 @@
-// This file snapshots the Terraform value type exported by
-// fastly/fastly fastly_service_compute schema version 0.
+// This decoder snapshots the Terraform value type of fastly/fastly
+// fastly_service_compute schema version 0 through SDKv2 10.3.0.
 //
-// Keep this schema in sync with testdata/legacy_service_compute_schema_v0_type.json,
-// captured with `terraform providers schema -json` against fastly/fastly 9.5.0.
-// TestMoveStateSourceSchemaMatchesLegacyServiceComputeSchemaV0 verifies that
-// the Framework source schema still matches that independently captured SDKv2 type.
+// The original v0 fixture is retained for historical regression coverage.
+// The 10_3_0 fixture includes GCS public_key (absent in 9.8.0, present
+// by 10.2.0) and 10.3.0 FOS logging. These changes did not bump the
+// resource schema version. Older JSON states omit the added attributes;
+// the Terraform JSON decoder must decode those omissions as null.
 //
-// This schema exists only so Terraform Plugin Framework can decode persisted
-// SDKv2 state before invoking the state mover. Configuration semantics are
-// deliberately not reproduced because they do not affect the persisted value type.
+// This schema is decode-only: configuration semantics are intentionally omitted.
 package servicecomputeauto
 
 import (
@@ -17,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// legacyServiceComputeMoveStateSchema exactly describes the Terraform value type
+// legacyServiceComputeMoveStateSchema describes the latest known Terraform value type
 // of fastly_service_compute schema version 0. Every field is Computed because
 // this schema is decode-only.
 func legacyServiceComputeMoveStateSchema() schema.Schema {
@@ -42,8 +41,9 @@ func legacyServiceComputeMoveStateSchema() schema.Schema {
 			"logging_datadog":                  schema.SetAttribute{Computed: true, ElementType: types.ObjectType{AttrTypes: map[string]attr.Type{"name": types.StringType, "processing_region": types.StringType, "region": types.StringType, "token": types.StringType}}},
 			"logging_digitalocean":             schema.SetAttribute{Computed: true, ElementType: types.ObjectType{AttrTypes: map[string]attr.Type{"access_key": types.StringType, "bucket_name": types.StringType, "compression_codec": types.StringType, "domain": types.StringType, "gzip_level": types.NumberType, "message_type": types.StringType, "name": types.StringType, "path": types.StringType, "period": types.NumberType, "processing_region": types.StringType, "public_key": types.StringType, "secret_key": types.StringType, "timestamp_format": types.StringType}}},
 			"logging_elasticsearch":            schema.SetAttribute{Computed: true, ElementType: types.ObjectType{AttrTypes: map[string]attr.Type{"index": types.StringType, "name": types.StringType, "password": types.StringType, "pipeline": types.StringType, "processing_region": types.StringType, "request_max_bytes": types.NumberType, "request_max_entries": types.NumberType, "tls_ca_cert": types.StringType, "tls_client_cert": types.StringType, "tls_client_key": types.StringType, "tls_hostname": types.StringType, "url": types.StringType, "user": types.StringType}}},
+			"logging_fos":                      schema.SetAttribute{Computed: true, ElementType: types.ObjectType{AttrTypes: map[string]attr.Type{"bucket_name": types.StringType, "compression_codec": types.StringType, "file_max_bytes": types.NumberType, "gzip_level": types.NumberType, "message_type": types.StringType, "name": types.StringType, "path": types.StringType, "period": types.NumberType, "public_key": types.StringType, "region": types.StringType, "timestamp_format": types.StringType}}},
 			"logging_ftp":                      schema.SetAttribute{Computed: true, ElementType: types.ObjectType{AttrTypes: map[string]attr.Type{"address": types.StringType, "compression_codec": types.StringType, "gzip_level": types.NumberType, "message_type": types.StringType, "name": types.StringType, "password": types.StringType, "path": types.StringType, "period": types.NumberType, "port": types.NumberType, "processing_region": types.StringType, "public_key": types.StringType, "timestamp_format": types.StringType, "user": types.StringType}}},
-			"logging_gcs":                      schema.SetAttribute{Computed: true, ElementType: types.ObjectType{AttrTypes: map[string]attr.Type{"account_name": types.StringType, "bucket_name": types.StringType, "compression_codec": types.StringType, "gzip_level": types.NumberType, "message_type": types.StringType, "name": types.StringType, "path": types.StringType, "period": types.NumberType, "processing_region": types.StringType, "project_id": types.StringType, "secret_key": types.StringType, "timestamp_format": types.StringType, "user": types.StringType}}},
+			"logging_gcs":                      schema.SetAttribute{Computed: true, ElementType: types.ObjectType{AttrTypes: map[string]attr.Type{"account_name": types.StringType, "bucket_name": types.StringType, "compression_codec": types.StringType, "gzip_level": types.NumberType, "message_type": types.StringType, "name": types.StringType, "path": types.StringType, "period": types.NumberType, "processing_region": types.StringType, "project_id": types.StringType, "public_key": types.StringType, "secret_key": types.StringType, "timestamp_format": types.StringType, "user": types.StringType}}},
 			"logging_googlepubsub":             schema.SetAttribute{Computed: true, ElementType: types.ObjectType{AttrTypes: map[string]attr.Type{"account_name": types.StringType, "name": types.StringType, "processing_region": types.StringType, "project_id": types.StringType, "secret_key": types.StringType, "topic": types.StringType, "user": types.StringType}}},
 			"logging_grafanacloudlogs":         schema.SetAttribute{Computed: true, ElementType: types.ObjectType{AttrTypes: map[string]attr.Type{"index": types.StringType, "name": types.StringType, "processing_region": types.StringType, "token": types.StringType, "url": types.StringType, "user": types.StringType}}},
 			"logging_heroku":                   schema.SetAttribute{Computed: true, ElementType: types.ObjectType{AttrTypes: map[string]attr.Type{"name": types.StringType, "processing_region": types.StringType, "token": types.StringType, "url": types.StringType}}},

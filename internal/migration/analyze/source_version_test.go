@@ -50,6 +50,8 @@ func TestSourceProviderVersionBoundary(t *testing.T) {
 		{"9.1.0", false},
 		{"9.8.0", false},
 		{"10.1.0", false},
+		{"10.2.0", false},
+		{"10.3.0", false},
 		{"19.9.9", false},
 		{"20.0.0", true},
 		{"20.1.0", true},

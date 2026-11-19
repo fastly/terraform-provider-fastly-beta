@@ -17,7 +17,7 @@ BACKUP_ROOT="$WORK_DIR/backups"
 NAME_PREFIX="tf-test-migvcl-$$-$(date +%s)"
 SERVICE_NAME="$NAME_PREFIX-svc"
 API_BASE="${FASTLY_API_URL:-https://api.fastly.com}"
-LEGACY_PROVIDER_VERSION="${LEGACY_PROVIDER_VERSION:-9.1.0}"
+LEGACY_PROVIDER_VERSION="${LEGACY_PROVIDER_VERSION:-10.3.0}"
 KEEP_WORK_DIR="${KEEP_WORK_DIR:-}"
 
 PHASE="setup"
@@ -29,7 +29,8 @@ info() { printf '[INFO] %s\n' "$*"; }
 fail() { printf '[ERROR] %s\n' "$*" >&2; exit 1; }
 
 use_legacy_provider() {
-    unset TF_CLI_CONFIG_FILE FASTLY_DEBUG_MODE TF_LOG TF_LOG_PATH
+    unset FASTLY_DEBUG_MODE TF_LOG TF_LOG_PATH
+    export TF_CLI_CONFIG_FILE="$WORK_DIR/legacy.tfrc"
     export FASTLY_API_KEY="$FASTLY_API_TOKEN"
 }
 
@@ -77,6 +78,8 @@ check_prerequisites() {
     PHASE="prerequisites"
     [[ -n "${FASTLY_API_TOKEN:-}" ]] || fail "Set FASTLY_API_TOKEN for an isolated Fastly test account"
     [[ "$API_BASE" == https://* ]] || fail "FASTLY_API_URL must be an HTTPS URL"
+    [[ "$LEGACY_PROVIDER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
+        fail "LEGACY_PROVIDER_VERSION must be an exact published release (for example 10.3.0)"
     local cmd
     for cmd in terraform go jq curl cksum; do
         command -v "$cmd" >/dev/null 2>&1 || fail "Missing prerequisite: $cmd"
@@ -94,6 +97,11 @@ build_binaries() {
         go build -o "$PROVIDER_DIR/terraform-provider-fastly" .
         go build -o "$MIGRATOR" ./cmd/fastly-tf-migrate
     )
+    cat > "$WORK_DIR/legacy.tfrc" <<'EOF'
+provider_installation {
+  direct {}
+}
+EOF
     cat > "$WORK_DIR/.terraformrc" <<EOF
 provider_installation {
   dev_overrides {
@@ -111,7 +119,7 @@ terraform {
   required_providers {
     fastly = {
       source  = "fastly/fastly"
-      version = ">= $LEGACY_PROVIDER_VERSION, < 20.0.0"
+      version = "= $LEGACY_PROVIDER_VERSION"
     }
   }
 }
@@ -141,6 +149,10 @@ apply_legacy() {
     cd "$PROJECT_DIR"
     use_legacy_provider
     terraform init -input=false
+    terraform version -json | jq -e --arg version "$LEGACY_PROVIDER_VERSION" '
+      .provider_selections["registry.terraform.io/fastly/fastly"] == $version
+    ' >/dev/null || fail "Terraform did not select pinned legacy provider $LEGACY_PROVIDER_VERSION"
+    info "Selected exact SDKv2 version $LEGACY_PROVIDER_VERSION"
     terraform apply -auto-approve -input=false
     # The supported SDKv2 persisted schema is 1, not merely provider >= 9.1.
     terraform apply -refresh-only -auto-approve -input=false
@@ -328,6 +340,7 @@ plan_apply_and_verify() {
 main() {
     [[ $# -eq 0 ]] || fail "Usage: $0"
     check_prerequisites
+    unset TF_DATA_DIR TF_WORKSPACE TF_CLI_ARGS TF_CLI_ARGS_init TF_CLI_ARGS_plan TF_CLI_ARGS_apply TF_CLI_ARGS_destroy
     build_binaries
 
     mkdir -p "$PROJECT_DIR"
