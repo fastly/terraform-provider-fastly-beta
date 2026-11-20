@@ -73,36 +73,79 @@ func stringAttr(t *testing.T, attrs map[string]tftypes.Value, name string) (stri
 }
 
 func TestLegacyDomainSameTypeStateUpgrade(t *testing.T) {
-	// fastly_domain keeps its name and schema version 0. The persisted SDKv2
-	// state includes domain_id, which the target schema no longer defines.
-	cases := map[string]string{
-		"linked":   `{"id":"` + legacyDomainID + `","domain_id":"` + legacyDomainID + `","fqdn":"www.example.com","description":"demo","service_id":"` + legacyServiceID + `"}`,
-		"unlinked": `{"id":"` + legacyDomainID + `","domain_id":"` + legacyDomainID + `","fqdn":"www.example.com","description":null,"service_id":null}`,
+	// fastly_domain keeps its name. The persisted SDKv2 state includes
+	// domain_id, which the target schema no longer defines.
+	cases := map[string]struct {
+		raw         string
+		description string // "" means null
+		serviceID   string // "" means no association
+	}{
+		"linked":   {`{"id":"` + legacyDomainID + `","domain_id":"` + legacyDomainID + `","fqdn":"www.example.com","description":"demo","service_id":"` + legacyServiceID + `"}`, "demo", legacyServiceID},
+		"unlinked": {`{"id":"` + legacyDomainID + `","domain_id":"` + legacyDomainID + `","fqdn":"www.example.com","description":null,"service_id":null}`, "", ""},
 	}
-	for name, raw := range cases {
+	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			server := domainTestServer(t)
 			resp, err := server.UpgradeResourceState(context.Background(), &tfprotov6.UpgradeResourceStateRequest{
-				TypeName: "fastly_domain", Version: 0, RawState: &tfprotov6.RawState{JSON: []byte(raw)},
+				TypeName: "fastly_domain", Version: 0, RawState: &tfprotov6.RawState{JSON: []byte(tc.raw)},
 			})
 			if err != nil || rpcHasError(resp.Diagnostics) {
 				t.Fatalf("UpgradeResourceState: %v %v", err, resp.Diagnostics)
 			}
 			attrs := targetAttrs(t, server, "fastly_domain", resp.UpgradedState)
-			if id, _ := stringAttr(t, attrs, "id"); id != legacyDomainID {
-				t.Fatalf("id = %q", id)
-			}
-			if fqdn, _ := stringAttr(t, attrs, "fqdn"); fqdn != "www.example.com" {
-				t.Fatalf("fqdn = %q", fqdn)
-			}
-			_, linked := stringAttr(t, attrs, "service_id")
-			if linked != (name == "linked") {
-				t.Fatalf("service_id present = %t", linked)
+			for attr, want := range map[string]string{
+				"id": legacyDomainID, "fqdn": "www.example.com", "description": tc.description, "service_id": tc.serviceID,
+			} {
+				got, present := stringAttr(t, attrs, attr)
+				if got != want || present != (want != "") {
+					t.Fatalf("%s = %q (present %t), want %q", attr, got, present, want)
+				}
 			}
 			if _, present := attrs["domain_id"]; present {
 				t.Fatal("domain_id must not exist in the target schema")
 			}
 		})
+	}
+}
+
+func TestLegacyDomainSameTypeStateUpgradeRejectsUnsupportedState(t *testing.T) {
+	for name, tc := range legacyDomainInvalidStates() {
+		t.Run(name, func(t *testing.T) {
+			resp, err := domainTestServer(t).UpgradeResourceState(context.Background(), &tfprotov6.UpgradeResourceStateRequest{
+				TypeName: "fastly_domain", Version: tc.version, RawState: &tfprotov6.RawState{JSON: []byte(tc.raw)},
+			})
+			if err == nil && !rpcHasError(resp.Diagnostics) {
+				t.Fatal("expected the upgrade to be rejected")
+			}
+		})
+	}
+}
+
+type invalidDomainState struct {
+	version int64
+	raw     string
+}
+
+// legacyDomainInvalidStates lists persisted states that must never be accepted
+// as a migrated domain, shared by the same-name upgrade and the _v1 move. Scalar
+// numbers and booleans are absent on purpose: Terraform's JSON state decoder
+// coerces them to strings before the provider sees them.
+func legacyDomainInvalidStates() map[string]invalidDomainState {
+	id := `"` + legacyDomainID + `"`
+	return map[string]invalidDomainState{
+		"conflicting id and domain_id": {0, `{"id":` + id + `,"domain_id":"domain-B","fqdn":"www.example.com","description":null,"service_id":null}`},
+		"missing id":                   {0, `{"id":null,"domain_id":null,"fqdn":"www.example.com","description":null,"service_id":null}`},
+		"empty id":                     {0, `{"id":"","domain_id":"","fqdn":"www.example.com","description":null,"service_id":null}`},
+		"missing id key":               {0, `{"domain_id":` + id + `,"fqdn":"www.example.com"}`},
+		"missing fqdn":                 {0, `{"id":` + id + `,"domain_id":` + id + `,"fqdn":null,"description":null,"service_id":null}`},
+		"empty fqdn":                   {0, `{"id":` + id + `,"domain_id":` + id + `,"fqdn":"","description":null,"service_id":null}`},
+		"fqdn wrong type":              {0, `{"id":` + id + `,"domain_id":` + id + `,"fqdn":["www.example.com"],"description":null,"service_id":null}`},
+		"id wrong type":                {0, `{"id":{"a":1},"domain_id":{"a":1},"fqdn":"www.example.com","description":null,"service_id":null}`},
+		"description wrong type":       {0, `{"id":` + id + `,"domain_id":` + id + `,"fqdn":"www.example.com","description":{"a":1},"service_id":null}`},
+		"service_id wrong type":        {0, `{"id":` + id + `,"domain_id":` + id + `,"fqdn":"www.example.com","description":null,"service_id":["a"]}`},
+		"malformed json":               {0, `{"id":` + id + `,"fqdn":`},
+		"not an object":                {0, `["id"]`},
+		"unsupported future version":   {7, `{"id":` + id + `,"domain_id":` + id + `,"fqdn":"www.example.com","description":null,"service_id":null}`},
 	}
 }
 
@@ -177,6 +220,17 @@ func TestLegacyDomainV1MoveStateRejectsUnsupportedState(t *testing.T) {
 		"conflicting ids":       {0, `{"id":"` + legacyDomainID + `","domain_id":"OTHER",` + validBody + `}`},
 	}
 	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			resp, err := moveDomainRPC(domainTestServer(t), "fastly_domain_v1", "fastly_domain", tc.version, tc.raw)
+			if err == nil && !rpcHasError(resp.Diagnostics) {
+				t.Fatal("expected the move to be rejected")
+			}
+		})
+	}
+}
+
+func TestLegacyDomainV1MoveStateRejectsSharedInvalidStates(t *testing.T) {
+	for name, tc := range legacyDomainInvalidStates() {
 		t.Run(name, func(t *testing.T) {
 			resp, err := moveDomainRPC(domainTestServer(t), "fastly_domain_v1", "fastly_domain", tc.version, tc.raw)
 			if err == nil && !rpcHasError(resp.Diagnostics) {
