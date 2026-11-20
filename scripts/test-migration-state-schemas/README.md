@@ -72,6 +72,27 @@ actions before apply, check identity and active version, audit service API
 traffic, and require a final no-op. Compute also checks the filename and
 package hash before and after apply.
 
+### NGWAF
+
+Every renamed or split legacy NGWAF resource type is unchanged at schema
+version 0 from 9.1.0 through 10.3.0, so one 10.3.0 fixture per type in
+`internal/ngwafmovestate/testdata` covers the matrix. The published-schema
+suite above compares all 16 against each release.
+
+```sh
+for version in 9.1.0 9.5.0 9.8.0 10.2.0 10.3.0; do
+  LEGACY_PROVIDER_VERSION="$version" ./scripts/test-migration-state-schemas/run-ngwaf.sh || exit 1
+done
+```
+
+The NGWAF suite needs an account entitled to Next-Gen WAF. It creates one
+workspace and one object for each of the 28 target types, including
+account-wide lists, rules and a signal, then moves them with hand-written
+target HCL and `moved` blocks (CDTOOL-1873 owns the CLI workflow). It
+requires 28 state-only moves, no mutating NGWAF API requests, unchanged
+object and workspace IDs, and a final no-op. Set `NGWAF_VIRTUAL_PATCH_ID`
+if `CVE-2017-5638` isn't available to the test account.
+
 Start with 10.3.0 for each service type, then run the older releases. Retained
 work directories contain private Terraform state, plan and log files; do not
 upload them unredacted. Cleanup attempts to destroy only test-owned resources.
