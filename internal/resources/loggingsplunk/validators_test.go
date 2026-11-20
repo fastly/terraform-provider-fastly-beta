@@ -23,6 +23,11 @@ func TestAuthenticationRequired(t *testing.T) {
 			wantError: false,
 		},
 		{
+			name:      "configured token unknown at validation",
+			token:     types.StringUnknown(),
+			wantError: false,
+		},
+		{
 			name:      "token unset, no env var",
 			token:     types.StringNull(),
 			wantError: true,

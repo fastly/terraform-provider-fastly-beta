@@ -46,7 +46,7 @@ Any **unsupported** transformation blocks the *entire* plan without writing.
 This includes unknown-expression product enablements,
 unverified reference transformations, ambiguous/exclusionary provider constraints,
 unsupported provider arguments, remote module internals, and the current unsupported
-nested object-attribute targets (`authentication`, `tls`)
+nested object-attribute targets outside the five logging endpoints described below
 and computed-only rate-limiter ID. These remain for
 the corresponding dedicated migration tickets. The write command does
 **not** claim all legacy Fastly configurations are supported.
@@ -193,6 +193,61 @@ Never apply a migration-only plan that proposes backend changes. The
 opt-in `make test-migration-backend-tls` exercise uses freshly generated
 test certificates and keys and checks exact legacy and target TLS state,
 stable service/consumer identities, no-op plans and no mutating API calls.
+
+## Logging TLS and mixed authentication migration
+
+The five static logging blocks below retain their names in CDN Auto and
+Compute Auto. The shared object writer moves only reviewed legacy fields:
+
+| Legacy block | Target `tls` members | Target `authentication` members |
+| --- | --- | --- |
+| `logging_https` | `ca_cert`, `client_cert`, `client_key`, `hostname` | None; `header_name` / `header_value` stay flat |
+| `logging_elasticsearch` | Same | `user`, `password` |
+| `logging_kafka` | Same | `user`, `password` |
+| `logging_splunk` | Same | `token` |
+| `logging_syslog` | Same | `token` |
+
+For example, `tls_client_key = trimspace(file(var.key))` becomes
+`tls = { client_key = trimspace(file(var.key)) }`, without evaluating the
+expression. Other fields, endpoint names, response conditions, and explicit
+format/placement expressions are retained. Repeated endpoints are processed
+independently. Unknown legacy fields, existing target objects/blocks, and
+unsupported shapes block the entire plan. The raw HCL preview is withheld
+for any of these logging blocks, including flat HTTPS header credentials.
+
+**Defaults and limits.** VCL omitted or literal-null `format` is pinned to
+the production SDKv2 source default (including Splunk's distinct format);
+that prevents a difference in default string formatting from causing a
+migration-only update. Explicit expressions are preserved; if a format
+expression resolves to null, check the effective default manually. Historical
+schema fixtures establish value types, not historical default values.
+Compute has no VCL format, placement or response-condition fields.
+HTTPS state moves copy only names and gzip-level hints to disambiguate
+the API's zero versus the unset `-1` sentinel on the first refresh. Explicit
+legacy `gzip_level = -1`, incompatible compression combinations, unsupported
+literal Kafka options, blank/unsupported VCL options, and literal non-HTTPS
+Elasticsearch URLs are rejected. Omit the gzip sentinel rather than setting
+it explicitly. Splunk request limits are target-only and are not introduced
+into migrated HCL; any nonzero remote limits need review. Existing Splunk and
+Syslog environment-based TLS defaults and Splunk token fallback remain in
+the provider. Use the same environment at migration time. Unknown expressions
+are not evaluated by the CLI and must be validated by Terraform.
+
+**Verification and safety.** The provider refreshes endpoint configuration
+and credentials from the API; the legacy provider also reads these fields.
+That does not prove every account/endpoint returns unredacted values. Do not
+apply a migration plan containing a service or logging update, replacement
+or other managed-resource change. Investigate any masked/missing value or
+default mismatch before proceeding. The new `make test-migration-logging-tls-config`
+target validates synthetic migrated configurations with the local provider
+and no API calls. See `scripts/test-migration-logging-tls/README.md`.
+No receiver-backed logging endpoint migration was executed for any of the five
+types in this PR. The existing VCL, Compute, backend TLS and reference live
+regression tests do not establish live logging credential preservation.
+For a real migration, independently verify endpoint and credential state
+and reject any infrastructure-changing Terraform plan. Compute shares
+the HCL and HTTPS state hint implementation, but needs separate live
+logging verification.
 
 ## Terraform reference rewriting
 
