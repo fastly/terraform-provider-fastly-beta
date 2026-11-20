@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Opt-in live standalone domain migration test. Creates and deletes two real
-# services and six versionless domains. Requires FASTLY_API_TOKEN for an
+# services and eight versionless domains. Requires FASTLY_API_TOKEN for an
 # isolated test account that may create domains; this has not been verified
 # against accounts without that entitlement.
 #

@@ -5,9 +5,10 @@ import (
 	"strings"
 )
 
-// unchangedReferenceOutputs lists scalar outputs that keep their name and value
-// across a versionless resource migration. The legacy-only domain_id is not
-// listed: its registry rule renames it to id.
+// unchangedReferenceOutputs lists scalar outputs that keep their name across a
+// versionless resource migration. Domain description and service_id also keep
+// their value except when unset: SDKv2 persists "" and the target reads null.
+// The legacy-only domain_id is not listed: its registry rule renames it to id.
 var unchangedReferenceOutputs = map[string][]string{
 	"fastly_domain>fastly_domain":                              {"id", "description", "fqdn", "service_id"},
 	"fastly_domain_v1>fastly_domain":                           {"id", "description", "fqdn", "service_id"},

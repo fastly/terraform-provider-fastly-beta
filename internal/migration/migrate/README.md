@@ -68,7 +68,9 @@ become `.id`. The provider drops the legacy `domain_id` value and turns an unset
 (persisted by SDKv2 as `""`) into null, so no domain is recreated and an omitted
 description plans no change. An explicit `description = ""` takes one
 empty-description update after migration.
-The `id`, `fqdn`, `description` and `service_id` outputs are unchanged. Whole-resource
+The `id` and `fqdn` outputs are unchanged. An unset `description` or `service_id` reads as
+null instead of `""` after migration, so an expression that compares them to `""` must be
+checked by hand. Whole-resource
 references, other attributes, projections that read `domain_id`, and `moved`, `import` or
 `removed` blocks that address a migrating domain block the whole plan before anything
 is written.
