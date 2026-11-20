@@ -299,6 +299,7 @@ func TestLegacyNGWAFMoveStateRejectsUnsafeState(t *testing.T) {
 		contains string
 	}{
 		{"unsupported schema version", redaction, 1, func(map[string]any) {}, "schema version 1"},
+		{"undecodable state", redaction, 0, func(s map[string]any) { s["field"] = []any{"password"} }, "state cannot be decoded as schema version 0"},
 		{"unknown type", rateLimit, 0, func(s map[string]any) { s["type"] = "bogus" }, `type "bogus", which has no dedicated resource type`},
 		{"account scope has no rate limit rule", accountRequest, 0, func(s map[string]any) { s["type"] = "rate_limit" }, `type "rate_limit", which has no dedicated resource type`},
 		{"missing type", rateLimit, 0, func(s map[string]any) { s["type"] = nil }, "has no type"},

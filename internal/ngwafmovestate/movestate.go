@@ -189,7 +189,7 @@ func move(ctx context.Context, source Source, target string, req resource.MoveSt
 	if req.SourceState == nil {
 		resp.Diagnostics.AddError(
 			"Unable to decode legacy Fastly NGWAF state",
-			fmt.Sprintf("Terraform Plugin Framework did not provide decoded source state for %s schema version %d. The persisted state does not match the legacy schema this mover declares.", source.TypeName, legacySchemaVersion),
+			fmt.Sprintf("The %s state cannot be decoded as schema version %d. Make sure it was written by fastly/fastly 9.1.0 or later (before 20.0.0), run terraform apply -refresh-only with that provider, then retry the move.", source.TypeName, legacySchemaVersion),
 		)
 		return
 	}
