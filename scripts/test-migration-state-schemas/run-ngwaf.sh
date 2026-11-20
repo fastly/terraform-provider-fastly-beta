@@ -1,19 +1,23 @@
 #!/usr/bin/env bash
 #
-# Opt-in provider-only NGWAF state moves. Creates one object for every renamed
-# or split NGWAF target with an exact SDKv2 release, then moves each through a
-# hand-written moved block. CDTOOL-1873 owns the HCL migration CLI workflow.
+# Opt-in live NGWAF migration. Creates one object for every renamed or split
+# NGWAF target with an exact SDKv2 release, then moves all of them. By default
+# the target HCL and moved blocks are hand-written, which tests only the
+# provider's state moves. NGWAF_MIGRATION_MODE=cli has fastly-tf-migrate write
+# them instead, testing the full CLI workflow.
 set -euo pipefail
 umask 077
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 VERSION="${LEGACY_PROVIDER_VERSION:-10.3.0}"
 VIRTUAL_PATCH_ID="${NGWAF_VIRTUAL_PATCH_ID:-CVE-2017-5638}"
+MODE="${NGWAF_MIGRATION_MODE:-manual}"
 
 [[ $# -eq 0 ]] || { echo "Usage: $0" >&2; exit 1; }
 [[ -n "${FASTLY_API_TOKEN:-}" ]] || { echo "Set FASTLY_API_TOKEN for an isolated test account" >&2; exit 1; }
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Use an exact legacy provider version" >&2; exit 1; }
-for cmd in terraform go jq; do
+[[ "$MODE" == manual || "$MODE" == cli ]] || { echo "NGWAF_MIGRATION_MODE must be manual or cli" >&2; exit 1; }
+for cmd in terraform go jq cksum; do
     command -v "$cmd" >/dev/null 2>&1 || { echo "Missing prerequisite: $cmd" >&2; exit 1; }
 done
 
@@ -72,6 +76,10 @@ unset TF_DATA_DIR TF_WORKSPACE FASTLY_DEBUG_MODE TF_LOG TF_LOG_PATH
 
 PHASE="build"
 (cd "$REPO_ROOT" && go build -o "$WORK_DIR/provider/terraform-provider-fastly" .)
+MIGRATOR="$WORK_DIR/fastly-tf-migrate"
+if [[ "$MODE" == cli ]]; then
+    (cd "$REPO_ROOT" && go build -o "$MIGRATOR" ./cmd/fastly-tf-migrate)
+fi
 cat > "$WORK_DIR/legacy.tfrc" <<'EOF'
 provider_installation {
   direct {}
@@ -548,11 +556,30 @@ terraform state pull | jq -e --argjson moves "$moves_json" '
   | if length == 28 then from_entries else error("expected 28 legacy objects at schema version 0") end
 ' > "$WORK_DIR/before.json" || fail "Legacy persisted NGWAF state is incomplete or not schema version 0"
 
-PHASE="manual-state-move"
-write_target_config
-for from in "${!MOVES[@]}"; do
-    printf 'moved {\n  from = %s\n  to   = %s\n}\n\n' "$from" "${MOVES[$from]}"
-done > migration.tf
+if [[ "$MODE" == cli ]]; then
+    PHASE="cli-migrate"
+    "$MIGRATOR" analyze .
+    before="$(cksum main.tf)"
+    "$MIGRATOR" migrate --dry-run . > "$WORK_DIR/dry-run.txt"
+    grep -Fxq 'Migration dry-run: READY' "$WORK_DIR/dry-run.txt" || fail "Migration dry-run was not READY"
+    grep -Fxq 'Resources to move: 28' "$WORK_DIR/dry-run.txt" || fail "Expected 28 NGWAF resource moves"
+    [[ "$before" == "$(cksum main.tf)" && ! -e migration.tf ]] || fail "Dry-run modified Terraform configuration"
+    "$MIGRATOR" migrate --write --backup-dir "$WORK_DIR/backups" .
+    for from in "${!MOVES[@]}"; do
+        grep -Fq "from = $from" migration.tf || fail "migration.tf has no moved block for $from"
+        grep -Fq "resource \"${MOVES[$from]%%.*}\" \"${MOVES[$from]#*.}\"" main.tf ||
+            fail "main.tf does not declare ${MOVES[$from]}"
+    done
+    ! grep -Eq '^resource "fastly_ngwaf_(account_(list|rule|signal)|workspace_(list|rule)|redaction|thresholds|virtual_patches|alert_[a-z_]+)" ' main.tf ||
+        fail "main.tf still declares a legacy NGWAF resource type"
+    ! grep -Fq "= $VERSION" main.tf migration.tf || fail "Provider constraint was not raised to the GA provider"
+else
+    PHASE="manual-state-move"
+    write_target_config
+    for from in "${!MOVES[@]}"; do
+        printf 'moved {\n  from = %s\n  to   = %s\n}\n\n' "$from" "${MOVES[$from]}"
+    done > migration.tf
+fi
 use_target
 rm -f .terraform.lock.hcl
 terraform validate
@@ -598,6 +625,13 @@ terraform show -json | jq -e --slurpfile before "$WORK_DIR/before.json" '
   | from_entries == $before[0]
 ' >/dev/null || fail "Migration changed an NGWAF object ID or workspace"
 
+if [[ "$MODE" == cli ]]; then
+    PHASE="cli-idempotency"
+    "$MIGRATOR" migrate --dry-run . > "$WORK_DIR/dry-run-after.txt"
+    grep -Fxq 'Resources to move: 0' "$WORK_DIR/dry-run-after.txt" || fail "Repeated migration still proposes a move"
+    grep -Fxq 'Files to change: 0' "$WORK_DIR/dry-run-after.txt" || fail "Repeated migration is not idempotent"
+fi
+
 PHASE="destroy"
 terraform destroy -auto-approve -input=false
-info "NGWAF state-only migration of 28 resources from SDKv2 $VERSION PASSED"
+info "NGWAF $MODE migration of 28 resources from SDKv2 $VERSION PASSED"

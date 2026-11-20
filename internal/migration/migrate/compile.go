@@ -43,6 +43,9 @@ func compileResource(
 		})
 	}
 
+	if strings.HasPrefix(key.typ, "fastly_ngwaf_") {
+		return compileNGWAFResource(key, actions, index)
+	}
 	autoType, supportedService := serviceAutoTypes[key.typ]
 	if !supportedService {
 		for _, a := range actions {
@@ -54,32 +57,7 @@ func compileResource(
 	module := filepath.ToSlash(filepath.Dir(key.file))
 	fromAddress := key.typ + "." + key.name
 	toAddress := autoType + "." + key.name
-	if index.resources[module][fromAddress] != key.file {
-		issues = append(issues, Issue{
-			File: key.file, Message: fmt.Sprintf("resource %s was not found at its analyzed location", fromAddress),
-			Remediation: "Check for conflicting or modified Terraform resource declarations.",
-		})
-	}
-	if file := index.resources[module][toAddress]; file != "" {
-		issues = append(issues, Issue{
-			File: key.file, Message: fmt.Sprintf("target resource %s already exists in %s", toAddress, file),
-			Remediation: "Resolve the target address collision before migration.",
-		})
-	}
-	if existingTo, found := index.moves[module][fromAddress]; found && existingTo != toAddress {
-		issues = append(issues, Issue{
-			File: key.file, Message: fmt.Sprintf("existing moved block for %s targets %s, not %s", fromAddress, existingTo, toAddress),
-			Remediation: "Resolve conflicting moved blocks before migration.",
-		})
-	}
-	for previousFrom, existingTo := range index.moves[module] {
-		if existingTo == toAddress && previousFrom != fromAddress {
-			issues = append(issues, Issue{
-				File: key.file, Message: fmt.Sprintf("target %s is already used by a moved block from %s", toAddress, previousFrom),
-				Remediation: "Resolve conflicting moved blocks before migration.",
-			})
-		}
-	}
+	issues = append(issues, moveIssues(key, module, fromAddress, toAddress, index)...)
 
 	// Nested HCL operations must run while parent blocks still have legacy
 	// names. Resource and block renames are applied last.
@@ -434,4 +412,36 @@ func compileVersionlessResource(
 		})
 	}
 	return edits, &Move{Module: module, From: fromAddress, To: toAddress}, nil
+}
+
+// moveIssues reports resource and moved-block collisions for one planned move.
+func moveIssues(key resourceKey, module, fromAddress, toAddress string, index moduleIndex) []Issue {
+	var issues []Issue
+	if index.resources[module][fromAddress] != key.file {
+		issues = append(issues, Issue{
+			File: key.file, Message: fmt.Sprintf("resource %s was not found at its analyzed location", fromAddress),
+			Remediation: "Check for conflicting or modified Terraform resource declarations.",
+		})
+	}
+	if file := index.resources[module][toAddress]; file != "" {
+		issues = append(issues, Issue{
+			File: key.file, Message: fmt.Sprintf("target resource %s already exists in %s", toAddress, file),
+			Remediation: "Resolve the target address collision before migration.",
+		})
+	}
+	if existingTo, found := index.moves[module][fromAddress]; found && existingTo != toAddress {
+		issues = append(issues, Issue{
+			File: key.file, Message: fmt.Sprintf("existing moved block for %s targets %s, not %s", fromAddress, existingTo, toAddress),
+			Remediation: "Resolve conflicting moved blocks before migration.",
+		})
+	}
+	for previousFrom, existingTo := range index.moves[module] {
+		if existingTo == toAddress && previousFrom != fromAddress {
+			issues = append(issues, Issue{
+				File: key.file, Message: fmt.Sprintf("target %s is already used by a moved block from %s", toAddress, previousFrom),
+				Remediation: "Resolve conflicting moved blocks before migration.",
+			})
+		}
+	}
+	return issues
 }

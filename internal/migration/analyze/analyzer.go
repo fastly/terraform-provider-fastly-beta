@@ -484,11 +484,39 @@ func (a *Analyzer) analyzeResource(
 		state.referenceTargets[moduleDir][address] = rewrite.ResourceReferenceTarget(rule.Target+"."+resourceName, block)
 	}
 
+	if strings.HasPrefix(resourceType, "fastly_ngwaf_") && rule.Support == compatibility.SupportAutomatic {
+		a.analyzeNGWAFBody(state, block.Body, resourceType, resourceName)
+		return
+	}
 	if resourceType != "fastly_service_vcl" && resourceType != "fastly_service_compute" {
 		return
 	}
 
 	a.analyzeServiceBody(state, block.Body, resourceType, resourceName)
+}
+
+// analyzeNGWAFBody plans the attribute rules of a standalone NGWAF resource.
+// Unlike service bodies, unlisted attributes keep their name and shape: the
+// resource rule covers them, and the compiler owns the per-type removals.
+func (a *Analyzer) analyzeNGWAFBody(
+	state *analysisState,
+	body *hclsyntax.Body,
+	resourceType string,
+	resourceName string,
+) {
+	for name, attr := range body.Attributes {
+		rules := filterKind(a.registry.RulesForLegacy(resourceType+"."+name), compatibility.ConstructAttribute)
+		if len(rules) == 0 {
+			continue
+		}
+		rule, ok := selectAttributeRule(rules, attr.Expr)
+		if !ok {
+			a.appendAmbiguousRuleFinding(state, attr.SrcRange, rules,
+				fmt.Sprintf("Value of %q cannot be classified statically.", resourceType+"."+name))
+			continue
+		}
+		a.applyRule(state, rule, attr.SrcRange, resourceType, resourceName)
+	}
 }
 
 // isKnownTargetResource identifies resources that already use a target-model
