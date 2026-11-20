@@ -454,10 +454,41 @@ func (s *referenceScanner) moved(block *hclsyntax.Block) {
 			target.To == toAddress {
 			return
 		}
+		if okA && okB && a.root != "resource" && b.root != "resource" && len(fromTail) == 0 && len(toTail) == 0 &&
+			s.isAppliedRename(fromAddress, toAddress) {
+			return
+		}
 	}
 	for _, attr := range block.Body.Attributes {
 		s.stateAddress(attr.Expr)
 	}
+}
+
+// isAppliedRename recognizes the moved block a previous migration wrote for a
+// resource that has since been renamed. The source no longer exists, so its
+// destination is a reference-only route: an address that keeps its name and
+// needs no move. That history is valid and must survive repeated runs. A moved
+// block that leaves a route's address, or enters it from anything but the
+// registry's rename of the same name, is still a conflict.
+func (s *referenceScanner) isAppliedRename(fromAddress, toAddress string) bool {
+	target, found := s.edit.Routes[toAddress]
+	if !found || target.To != toAddress || fromAddress == toAddress {
+		return false
+	}
+	if _, stillRouted := s.edit.Routes[fromAddress]; stillRouted {
+		return false
+	}
+	fromType, fromName, _ := strings.Cut(fromAddress, ".")
+	toType, toName, _ := strings.Cut(toAddress, ".")
+	if fromName != toName {
+		return false
+	}
+	for _, rule := range s.edit.Registry.RulesForLegacy(fromType) {
+		if rule.Kind == compatibility.ConstructResource && rule.Target == toType {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *referenceScanner) stateAddress(expr hclsyntax.Expression) {

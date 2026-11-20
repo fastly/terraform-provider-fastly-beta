@@ -1,6 +1,8 @@
 package migrate
 
 import (
+	"context"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -304,4 +306,72 @@ output "domain_id" {
 	if !found {
 		t.Fatalf("missing data source finding: %#v", result.Analysis.Findings)
 	}
+}
+
+func TestPlanApplyPlanRenamedDomainResourcesIsStable(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeConfig(t, dir, "main.tf", `resource "fastly_domain_v1" "example" {
+  fqdn = "www.example.com"
+}
+
+resource "fastly_domain_v1_service_link" "example" {
+  domain_id  = fastly_domain_v1.example.domain_id
+  service_id = "SU1Z0isxPaozGVKXdv0eY"
+}
+
+output "domain_id" {
+  value = fastly_domain_v1.example.domain_id
+}
+`)
+	first := newPlan(t, dir)
+	if first.Blocked() || len(first.Moves) != 2 {
+		t.Fatalf("first plan: %#v %#v", first.Issues, first.Analysis.Findings)
+	}
+	if _, err := first.Apply(context.Background(), privateBackupDir(t)); err != nil {
+		t.Fatal(err)
+	}
+	migrated := readConfigFiles(t, dir)
+
+	second := newPlan(t, dir)
+	if second.Blocked() {
+		t.Fatalf("second plan must be READY: %#v %#v", second.Issues, second.Analysis.Findings)
+	}
+	if len(second.Changes) != 0 || len(second.Moves) != 0 {
+		t.Fatalf("second plan must not change anything: %#v", second)
+	}
+	if after := readConfigFiles(t, dir); !maps.Equal(migrated, after) {
+		t.Fatalf("second plan modified the configuration:\n%v\n%v", migrated, after)
+	}
+	moved := migrated["migration.tf"]
+	for _, want := range []string{
+		"from = fastly_domain_v1.example",
+		"to   = fastly_domain.example",
+		"from = fastly_domain_v1_service_link.example",
+		"to   = fastly_domain_service_link.example",
+	} {
+		if !strings.Contains(moved, want) {
+			t.Errorf("missing moved block %q in:\n%s", want, moved)
+		}
+	}
+}
+
+func readConfigFiles(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := make(map[string]string, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".tf") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		files[entry.Name()] = string(data)
+	}
+	return files
 }
