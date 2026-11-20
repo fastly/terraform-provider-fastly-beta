@@ -57,15 +57,17 @@ Versionless domain resources migrate together with the services that reference t
 
 | Legacy resource                 | Target resource              | HCL                         | State                                  |
 | ------------------------------- | ---------------------------- | --------------------------- | -------------------------------------- |
-| `fastly_domain`                 | `fastly_domain`              | Address kept, no `moved`    | Decoded by the provider unchanged      |
+| `fastly_domain`                 | `fastly_domain`              | Address kept, no `moved`    | Provider state upgrader (v0 to v1)     |
 | `fastly_domain_v1`              | `fastly_domain`              | Renamed, `moved` block      | Provider `MoveState`                   |
 | `fastly_domain_v1_service_link` | `fastly_domain_service_link` | Renamed, `moved` block      | Provider `MoveState`                   |
 | `fastly_domain_service_link`    | `fastly_domain_service_link` | Unchanged                   | Unchanged                              |
 
 The legacy `domain_id` attribute no longer exists; references to
 `fastly_domain.<name>.domain_id` and `fastly_domain_v1.<name>.domain_id`
-become `.id`. The provider drops the legacy `domain_id` value when it reads the
-persisted state, so no domain is recreated and no service link changes.
+become `.id`. The provider drops the legacy `domain_id` value and turns an unset `description`
+(persisted by SDKv2 as `""`) into null, so no domain is recreated and an omitted
+description plans no change. An explicit `description = ""` takes one
+empty-description update after migration.
 The `id`, `fqdn`, `description` and `service_id` outputs are unchanged. Whole-resource
 references, other attributes, projections that read `domain_id`, and `moved`, `import` or
 `removed` blocks that address a migrating domain block the whole plan before anything

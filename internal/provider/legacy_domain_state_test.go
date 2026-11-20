@@ -228,3 +228,68 @@ func TestLegacyDomainV1ServiceLinkMoveStateRejectsUnsupportedState(t *testing.T)
 		})
 	}
 }
+
+// legacyDomainStateJSON builds SDKv2 state. A nil description omits the key.
+func legacyDomainStateJSON(description *string, linked bool) string {
+	body := `"id":"` + legacyDomainID + `","domain_id":"` + legacyDomainID + `","fqdn":"www.example.com"`
+	if description != nil {
+		body += `,"description":"` + *description + `"`
+	}
+	if linked {
+		body += `,"service_id":"` + legacyServiceID + `"`
+	} else {
+		body += `,"service_id":null`
+	}
+	return `{` + body + `}`
+}
+
+func TestLegacyDomainDescriptionNormalization(t *testing.T) {
+	empty, demo := "", "demo"
+	descriptions := map[string]struct {
+		value *string
+		// want is "" when the migrated description must be null.
+		want string
+	}{
+		"omitted":   {nil, ""},
+		"empty":     {&empty, ""},
+		"populated": {&demo, "demo"},
+	}
+	for descName, d := range descriptions {
+		for _, linked := range []bool{true, false} {
+			raw := legacyDomainStateJSON(d.value, linked)
+			check := func(t *testing.T, state *tfprotov6.DynamicValue, server tfprotov6.ProviderServer) {
+				t.Helper()
+				attrs := targetAttrs(t, server, "fastly_domain", state)
+				got, present := stringAttr(t, attrs, "description")
+				if present != (d.want != "") || got != d.want {
+					t.Fatalf("description = %q (present %t), want %q", got, present, d.want)
+				}
+				if _, hasServiceID := stringAttr(t, attrs, "service_id"); hasServiceID != linked {
+					t.Fatalf("service_id present = %t, want %t", hasServiceID, linked)
+				}
+			}
+			suffix := descName + "/unlinked"
+			if linked {
+				suffix = descName + "/linked"
+			}
+			t.Run("move/"+suffix, func(t *testing.T) {
+				server := domainTestServer(t)
+				resp, err := moveDomainRPC(server, "fastly_domain_v1", "fastly_domain", 0, raw)
+				if err != nil || rpcHasError(resp.Diagnostics) {
+					t.Fatalf("MoveResourceState: %v %v", err, resp.Diagnostics)
+				}
+				check(t, resp.TargetState, server)
+			})
+			t.Run("upgrade/"+suffix, func(t *testing.T) {
+				server := domainTestServer(t)
+				resp, err := server.UpgradeResourceState(context.Background(), &tfprotov6.UpgradeResourceStateRequest{
+					TypeName: "fastly_domain", Version: 0, RawState: &tfprotov6.RawState{JSON: []byte(raw)},
+				})
+				if err != nil || rpcHasError(resp.Diagnostics) {
+					t.Fatalf("UpgradeResourceState: %v %v", err, resp.Diagnostics)
+				}
+				check(t, resp.UpgradedState, server)
+			})
+		}
+	}
+}
