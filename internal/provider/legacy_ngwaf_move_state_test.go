@@ -306,6 +306,7 @@ func TestLegacyNGWAFMoveStateRejectsUnsafeState(t *testing.T) {
 		{"missing id", redaction, 0, func(s map[string]any) { s["id"] = "" }, "has no id"},
 		{"missing workspace", rateLimit, 0, func(s map[string]any) { s["workspace_id"] = nil }, "has no workspace_id"},
 		{"missing virtual patch id", patch, 0, func(s map[string]any) { s["virtual_patch_id"] = "" }, "has no virtual_patch_id"},
+		{"virtual patch id differs from id", patch, 0, func(s map[string]any) { s["virtual_patch_id"] = "other" }, `but virtual_patch_id "other"; they must match`},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

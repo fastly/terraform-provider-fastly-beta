@@ -36,6 +36,7 @@ type Source struct {
 	Target    string
 	Targets   map[string]string
 	// Extra lists further string attributes Read needs, copied unchanged.
+	// Legacy sets each to the object ID, so any other value is rejected.
 	Extra  []string
 	schema func() schema.Schema
 }
@@ -203,6 +204,12 @@ func move(ctx context.Context, source Source, target string, req resource.MoveSt
 	extra := make(map[string]types.String, len(source.Extra))
 	for _, name := range source.Extra {
 		extra[name] = requiredString(ctx, source, req.SourceState, name, &resp.Diagnostics)
+		if !id.IsNull() && !extra[name].IsNull() && !extra[name].Equal(id) {
+			resp.Diagnostics.AddError(
+				"Inconsistent legacy Fastly NGWAF state",
+				fmt.Sprintf("%s state has id %q but %s %q; they must match. Run terraform apply -refresh-only with the legacy provider, then retry the move.", source.TypeName, id.ValueString(), name, extra[name].ValueString()),
+			)
+		}
 	}
 	if resp.Diagnostics.HasError() {
 		return
