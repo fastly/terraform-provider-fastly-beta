@@ -638,7 +638,7 @@ var resourceRules = []Rule{
 		HCL:            HCLUnchanged,
 		State:          StateUpgrade,
 		ImportIdentity: ImportNone,
-		Notes:          "The persisted schema version 0 state decodes unchanged; the legacy-only `domain_id` attribute is dropped. References to `domain_id` are rewritten to `id`.",
+		Notes:          "The provider upgrades schema version 0 state: the legacy-only `domain_id` attribute is dropped and an unset `description` becomes null. References to `domain_id` are rewritten to `id`.",
 	},
 	{
 		ID:             "resource-domain-service-link",

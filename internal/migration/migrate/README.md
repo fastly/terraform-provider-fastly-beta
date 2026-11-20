@@ -75,6 +75,11 @@ references, other attributes, projections that read `domain_id`, and `moved`, `i
 `removed` blocks that address a migrating domain block the whole plan before anything
 is written.
 
+A module that declares a `fastly_domain_v1` or `fastly_domain_v1_service_link` resource moves to the
+target provider requirement even when it has no service, because the legacy provider cannot run the
+`moved` block. An unchanged `fastly_domain` updates an existing Fastly provider requirement or block
+but never adds one, since the type is shared with the target provider.
+
 **Verification status.** The SDKv2 domain schemas are verified against published
 releases 9.1.0 through 10.3.0 by `make test-migration-schemas`. `make test-migration-domains`
 is a live test that creates real services and domains in a test account that can create
