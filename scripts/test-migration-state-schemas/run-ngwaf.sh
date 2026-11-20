@@ -43,7 +43,9 @@ cleanup() {
     if (( status != 0 )) && [[ -f "$PROJECT/terraform.tfstate" ]]; then
         printf '[ERROR] Failed in phase %s (exit %s)\n' "$PHASE" "$status" >&2
         # Destroy with whichever provider owns the current state addresses.
-        if (cd "$PROJECT" && terraform state list 2>/dev/null | grep -q '^fastly_ngwaf_workspace_alert_'); then
+        local addresses
+        addresses="$(cd "$PROJECT" && terraform state list 2>/dev/null || true)"
+        if grep -Fxq -f <(printf '%s\n' "${MOVES[@]}") <<< "$addresses"; then
             use_target
             write_target_config
         else
