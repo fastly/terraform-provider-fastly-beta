@@ -259,3 +259,49 @@ resource "fastly_domain_v1_service_link" "link" {
 		})
 	}
 }
+
+// TestPlanDomainMigrationGuideConfigurationBlocksOnDeprecatedDataSource mirrors
+// the configuration in the SDKv2 migrating_from_domains_v1_to_domains guide. The
+// deprecated data source has no automatic rewrite, so nothing may be written.
+func TestPlanDomainMigrationGuideConfigurationBlocksOnDeprecatedDataSource(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeConfig(t, dir, "main.tf", `data "fastly_domains_v1" "all" {}
+
+locals {
+  domain_ids = {
+    for domain in data.fastly_domains_v1.all.domains :
+    domain.fqdn => domain.id
+  }
+}
+
+resource "fastly_domain_v1" "example" {
+  fqdn = "www.example.com"
+}
+
+resource "fastly_domain_v1_service_link" "example" {
+  domain_id  = fastly_domain_v1.example.domain_id
+  service_id = "SU1Z0isxPaozGVKXdv0eY"
+}
+
+output "domain_id" {
+  value = local.domain_ids["www.example.com"]
+}
+`)
+	result := newPlan(t, dir)
+	if !result.Blocked() {
+		t.Fatalf("expected the deprecated data source to block: %#v", result)
+	}
+	if len(result.Changes) != 0 || len(result.Moves) != 0 {
+		t.Fatalf("a blocked plan must not produce changes: %#v", result)
+	}
+	var found bool
+	for _, finding := range result.Analysis.Findings {
+		if strings.Contains(finding.Message, "fastly_domains_v1") && finding.Remediation != "" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("missing data source finding: %#v", result.Analysis.Findings)
+	}
+}

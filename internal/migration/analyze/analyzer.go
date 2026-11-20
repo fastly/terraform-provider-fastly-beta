@@ -285,11 +285,41 @@ func (a *Analyzer) analyzeFile(state *analysisState, parsed parsedFile) {
 	a.analyzeProviderRequirements(state, body)
 
 	for _, block := range body.Blocks {
-		if block.Type != "resource" || len(block.Labels) != 2 {
+		if len(block.Labels) != 2 {
 			continue
 		}
-		a.analyzeResource(state, parsed.moduleDir, block)
+		switch block.Type {
+		case "resource":
+			a.analyzeResource(state, parsed.moduleDir, block)
+		case "data":
+			a.analyzeDataSource(state, block)
+		}
 	}
+}
+
+// unsupportedLegacyDataSources are deprecated SDKv2 data sources that the target
+// provider does not register. Their schemas differ from the replacement, so a
+// rename could leave dependent references pointing at attributes that do not
+// exist. They block migration until they are rewritten by hand.
+var unsupportedLegacyDataSources = map[string]string{
+	"fastly_domains_v1": "fastly_domains",
+}
+
+func (a *Analyzer) analyzeDataSource(state *analysisState, block *hclsyntax.Block) {
+	dataType := block.Labels[0]
+	replacement, ok := unsupportedLegacyDataSources[dataType]
+	if !ok {
+		return
+	}
+	state.result.Findings = append(state.result.Findings, Finding{
+		Severity: SeverityError,
+		Code:     FindingCodeUnsupportedDataSource,
+		Range:    block.TypeRange,
+		Message:  fmt.Sprintf("Data source %q is not supported by the target provider and cannot be migrated automatically.", dataType),
+		Remediation: fmt.Sprintf("Replace data.%s.%s with the %q data source and update every reference to it, "+
+			"after checking the target schema, because the attributes and computed id differ. "+
+			"Then run the migration again.", dataType, block.Labels[1], replacement),
+	})
 }
 
 func (a *Analyzer) analyzeProviderRequirements(state *analysisState, body *hclsyntax.Body) {

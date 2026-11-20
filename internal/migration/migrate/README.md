@@ -73,6 +73,11 @@ references, other attributes, projections that read `domain_id`, and `moved`, `i
 `removed` blocks that address a migrating domain block the whole plan before anything
 is written.
 
+The deprecated `fastly_domains_v1` data source is not migrated. The target
+`fastly_domains` schema and computed `id` differ, so the CLI blocks the whole plan
+with a finding instead of renaming it. Replace the data source and its references by
+hand, then run the migration again.
+
 ## Terraform reference rewriting
 
 References are resolved against **enabled resource conversions in the same

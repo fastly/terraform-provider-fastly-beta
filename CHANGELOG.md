@@ -6,7 +6,7 @@
 
 - feat(migration): transform legacy `fastly_service_compute` HCL to `fastly_service_compute_auto` in `fastly-tf-migrate`, with live end-to-end coverage via `make test-migration-compute` ([#242](https://github.com/fastly/terraform-provider-fastly-beta/pull/242))
 - feat(migration): add syntax-aware Terraform reference rewriting for legacy VCL and Compute service migrations, preserving module addresses, resource labels, `count`, `for_each`, provider aliases, and supported meta-arguments while blocking unsupported transformations before writing configuration changes ([#245](https://github.com/fastly/terraform-provider-fastly-beta/pull/245))
-- feat(migration): migrate standalone `fastly_domain`, `fastly_domain_v1` and `fastly_domain_v1_service_link` resources in `fastly-tf-migrate`, rewriting `domain_id` references to `id`, and add `fastly_domain` and `fastly_domain_service_link` state movers for the deprecated `_v1` resources and a `fastly_domain` state upgrader that normalizes an unset legacy `description` to null ([#247](https://github.com/fastly/terraform-provider-fastly-beta/pull/247))
+- feat(migration): migrate standalone `fastly_domain`, `fastly_domain_v1` and `fastly_domain_v1_service_link` resources in `fastly-tf-migrate`, rewriting `domain_id` references to `id`, and add `fastly_domain` and `fastly_domain_service_link` state movers for the deprecated `_v1` resources and a `fastly_domain` state upgrader that normalizes an unset legacy `description` to null, and block migration when a configuration still uses the deprecated `fastly_domains_v1` data source ([#247](https://github.com/fastly/terraform-provider-fastly-beta/pull/247))
 
 ### BUG FIXES:
 
