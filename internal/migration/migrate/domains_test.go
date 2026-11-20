@@ -9,6 +9,26 @@ import (
 	"testing"
 )
 
+// requireStableAfterApply applies a ready plan, then plans again. The second
+// analysis must be READY, recommend nothing and leave the files untouched.
+func requireStableAfterApply(t *testing.T, dir string, result Result) {
+	t.Helper()
+	if _, err := result.Apply(context.Background(), privateBackupDir(t)); err != nil {
+		t.Fatal(err)
+	}
+	migrated := readConfigFiles(t, dir)
+	second := newPlan(t, dir)
+	if second.Blocked() {
+		t.Fatalf("second plan must be READY: %#v %#v", second.Issues, second.Analysis.Findings)
+	}
+	if len(second.Changes) != 0 || len(second.Moves) != 0 {
+		t.Fatalf("second plan must not recommend another migration: %#v %#v", second.Changes, second.Moves)
+	}
+	if after := readConfigFiles(t, dir); !maps.Equal(migrated, after) {
+		t.Fatalf("second plan modified the configuration:\n%v\n%v", migrated, after)
+	}
+}
+
 func changedFiles(result Result) map[string]string {
 	files := make(map[string]string, len(result.Changes))
 	for _, change := range result.Changes {
@@ -93,6 +113,7 @@ resource "fastly_dns_zone" "unrelated" {
 	if strings.Contains(files["migration.tf"], "fastly_domain.example") {
 		t.Fatalf("unchanged domain must not get a moved block:\n%s", files["migration.tf"])
 	}
+	requireStableAfterApply(t, dir, result)
 }
 
 func TestPlanDomainOnlyConfigurationDoesNotRequireServiceMove(t *testing.T) {
@@ -116,6 +137,7 @@ output "id" {
 	if got := changedFiles(result)["main.tf"]; !strings.Contains(got, "value = fastly_domain.example.id") {
 		t.Fatalf("reference not rewritten:\n%s", got)
 	}
+	requireStableAfterApply(t, dir, result)
 }
 
 func TestPlanDomainWithoutLegacyReferencesIsANoOp(t *testing.T) {
@@ -189,6 +211,7 @@ output "fqdn" {
 	if len(result.Moves) != 2 {
 		t.Fatalf("moves = %#v", result.Moves)
 	}
+	requireStableAfterApply(t, dir, result)
 }
 
 func TestPlanDomainIndexedResourceReferences(t *testing.T) {
@@ -328,21 +351,8 @@ output "domain_id" {
 	if first.Blocked() || len(first.Moves) != 2 {
 		t.Fatalf("first plan: %#v %#v", first.Issues, first.Analysis.Findings)
 	}
-	if _, err := first.Apply(context.Background(), privateBackupDir(t)); err != nil {
-		t.Fatal(err)
-	}
+	requireStableAfterApply(t, dir, first)
 	migrated := readConfigFiles(t, dir)
-
-	second := newPlan(t, dir)
-	if second.Blocked() {
-		t.Fatalf("second plan must be READY: %#v %#v", second.Issues, second.Analysis.Findings)
-	}
-	if len(second.Changes) != 0 || len(second.Moves) != 0 {
-		t.Fatalf("second plan must not change anything: %#v", second)
-	}
-	if after := readConfigFiles(t, dir); !maps.Equal(migrated, after) {
-		t.Fatalf("second plan modified the configuration:\n%v\n%v", migrated, after)
-	}
 	moved := migrated["migration.tf"]
 	for _, want := range []string{
 		"from = fastly_domain_v1.example",
