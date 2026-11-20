@@ -8,6 +8,7 @@
 - feat(migration): add reusable expression-preserving nested object transformations for legacy CDN and Compute backend TLS credentials, withholding HCL diffs for recognized sensitive configurations and rejecting conflicting shapes before writing
 - feat(migration): transform legacy `fastly_service_compute` HCL to `fastly_service_compute_auto` in `fastly-tf-migrate`, with live end-to-end coverage via `make test-migration-compute` ([#242](https://github.com/fastly/terraform-provider-fastly-beta/pull/242))
 - feat(migration): add syntax-aware Terraform reference rewriting for legacy VCL and Compute service migrations, preserving module addresses, resource labels, `count`, `for_each`, provider aliases, and supported meta-arguments while blocking unsupported transformations before writing configuration changes ([#245](https://github.com/fastly/terraform-provider-fastly-beta/pull/245))
+- feat(migration): migrate standalone `fastly_domain` resources in `fastly-tf-migrate` ([#247](https://github.com/fastly/terraform-provider-fastly-beta/pull/247))
 
 ### BUG FIXES:
 

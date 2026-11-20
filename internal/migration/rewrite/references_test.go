@@ -215,3 +215,39 @@ func TestRewriteReferencesMigrationConstructs(t *testing.T) {
 		t.Fatalf("import ID rewrite: %v\n%s", err, got)
 	}
 }
+
+func TestRewriteReferencesAppliedRenameToReferenceOnlyRoute(t *testing.T) {
+	t.Parallel()
+	edit := References{
+		File:     "references.tf",
+		Registry: compatibility.Default(),
+		Routes: map[string]ReferenceTarget{
+			"fastly_domain.example":              {To: "fastly_domain.example"},
+			"fastly_domain_service_link.example": {To: "fastly_domain_service_link.example"},
+		},
+		AllRoutes: map[string]bool{"fastly_domain.example": true, "fastly_domain_service_link.example": true},
+	}
+	for _, source := range []string{
+		"moved {\n  from = fastly_domain_v1.example\n  to = fastly_domain.example\n}\n",
+		"moved {\n  from = fastly_domain_v1_service_link.example\n  to = fastly_domain_service_link.example\n}\n",
+	} {
+		got, err := edit.apply([]byte(source), edit.File)
+		if err != nil || string(got) != source {
+			t.Fatalf("applied rename rejected or changed: %v\n%s", err, got)
+		}
+	}
+	for name, source := range map[string]string{
+		"different name":          "moved {\n  from = fastly_domain_v1.other\n  to = fastly_domain.example\n}\n",
+		"unrelated source type":   "moved {\n  from = fastly_dns_zone.example\n  to = fastly_domain.example\n}\n",
+		"leaves the route":        "moved {\n  from = fastly_domain.example\n  to = fastly_domain_v1.example\n}\n",
+		"indexed destination":     "moved {\n  from = fastly_domain_v1.example\n  to = fastly_domain.example[0]\n}\n",
+		"wrong target type":       "moved {\n  from = fastly_domain_v1.example\n  to = fastly_domain_service_link.example\n}\n",
+		"removed at route":        "removed {\n  from = fastly_domain.example\n}\n",
+		"import into route":       "import {\n  to = fastly_domain.example\n  id = \"test\"\n}\n",
+		"module-qualified rename": "moved {\n  from = module.edge.fastly_domain_v1.example\n  to = module.edge.fastly_domain.example\n}\n",
+	} {
+		if got, err := edit.apply([]byte(source), edit.File); err == nil || got != nil {
+			t.Errorf("%s: conflicting state construct accepted:\n%s", name, source)
+		}
+	}
+}

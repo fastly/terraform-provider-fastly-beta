@@ -263,9 +263,9 @@ func TestAllAutomaticResourceRulesAreCovered(t *testing.T) {
 				t.Fatalf("automatic resource rule %s blocked: issues=%#v findings=%#v",
 					rule.ID, result.Issues, result.Analysis.Findings)
 			}
-			if rule.Legacy == "fastly_service_vcl" || rule.Legacy == "fastly_service_compute" {
+			if rule.Legacy != rule.Target {
 				if len(result.Changes) != 2 || len(result.Moves) != 1 {
-					t.Fatalf("expected service preview, got %#v", result)
+					t.Fatalf("expected renamed resource preview, got %#v", result)
 				}
 			} else if len(result.Changes) != 0 || len(result.Moves) != 0 {
 				t.Fatalf("unchanged resource %s was transformed: %#v", rule.Legacy, result)

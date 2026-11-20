@@ -151,7 +151,7 @@ func TestPlanReferenceBlockersPreventEveryWrite(t *testing.T) {
 		{"unsafe list shape", `output "bad" { value = fastly_service_vcl.demo.backend }`},
 		{"invalid moved history", "moved {\n  from = fastly_service_vcl.demo[0]\n  to = fastly_service_cdn_auto.demo[0]\n}\n"},
 		{"standalone import conflict", "import {\n  to = fastly_service_vcl.demo\n  id = \"id\"\n}\n"},
-		{"standalone domain still blocked", "resource \"fastly_domain\" \"domain\" {\n  service_id = fastly_service_vcl.demo.id\n}\n"},
+		{"standalone domain whole resource", "resource \"fastly_domain\" \"domain\" {\n  service_id = fastly_service_vcl.demo.id\n}\noutput \"domain\" { value = fastly_domain.domain }\n"},
 		{"legacy ACL entries still blocked", "resource \"fastly_service_acl_entries\" \"entries\" {\n  service_id = fastly_service_vcl.demo.id\n}\n"},
 		{"legacy dictionary items still blocked", "resource \"fastly_service_dictionary_items\" \"items\" {\n  service_id = fastly_service_vcl.demo.id\n}\n"},
 	} {
