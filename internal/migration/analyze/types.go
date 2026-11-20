@@ -26,6 +26,9 @@ const (
 	// FindingCodeRemoteModuleSource identifies a remote module whose contents
 	// were not inspected by the local configuration analyzer.
 	FindingCodeRemoteModuleSource FindingCode = "remote-module-source"
+	// FindingCodeUnsupportedDataSource identifies a deprecated legacy data
+	// source that has no automatic rewrite to the target provider.
+	FindingCodeUnsupportedDataSource FindingCode = "unsupported-data-source"
 )
 
 // Finding is an actionable diagnostic produced while analyzing Terraform configuration.

@@ -550,3 +550,93 @@ resource "fastly_service_compute" "demo" {
 		t.Fatalf("Compute-only project kept the legacy provider constraint:\n%s", main)
 	}
 }
+
+func TestProviderMigrationUpdatesDomainOnlyModules(t *testing.T) {
+	t.Parallel()
+	const legacyPin = `terraform {
+  required_providers {
+    fastly = {
+      source  = "fastly/fastly"
+      version = "~> 10.0"
+    }
+  }
+}
+`
+	for name, tc := range map[string]struct {
+		config string
+		wantIn string
+	}{
+		"renamed domain":                       {legacyPin + "resource \"fastly_domain_v1\" \"example\" {\n  fqdn = \"www.example.com\"\n}\n", "main.tf"},
+		"renamed link":                         {legacyPin + "resource \"fastly_domain_v1_service_link\" \"example\" {\n  domain_id  = \"d\"\n  service_id = \"s\"\n}\n", "main.tf"},
+		"unchanged domain with a pin":          {legacyPin + "resource \"fastly_domain\" \"example\" {\n  fqdn = \"www.example.com\"\n}\n", "main.tf"},
+		"renamed domain without a requirement": {"resource \"fastly_domain_v1\" \"example\" {\n  fqdn = \"www.example.com\"\n}\n", "migration.tf"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			writeConfig(t, dir, "main.tf", tc.config)
+			result := newPlan(t, dir)
+			if result.Blocked() {
+				t.Fatalf("blocked: %#v %#v", result.Issues, result.Analysis.Findings)
+			}
+			got := changedFile(t, result, tc.wantIn)
+			if !strings.Contains(got, `version = ">= 20.0.0"`) || strings.Contains(got, "~> 10.0") {
+				t.Fatalf("domain-only module kept the legacy provider pin in %s:\n%s", tc.wantIn, got)
+			}
+		})
+	}
+}
+
+func TestProviderMigrationLeavesUnchangedDomainWithoutRequirementAlone(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeConfig(t, dir, "main.tf", "resource \"fastly_domain\" \"example\" {\n  fqdn = \"www.example.com\"\n}\n")
+	result := newPlan(t, dir)
+	if result.Blocked() || len(result.Changes) != 0 {
+		t.Fatalf("a module that may already use the target provider changed: %#v", result)
+	}
+}
+
+func TestProviderMigrationUpdatesDomainOnlyChildModuleBesideServices(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeConfig(t, dir, "main.tf", `terraform {
+  required_providers {
+    fastly = {
+      source  = "fastly/fastly"
+      version = "~> 10.0"
+    }
+  }
+}
+resource "fastly_service_vcl" "demo" {
+  name = "demo"
+}
+module "domains" {
+  source = "./domains"
+}
+`)
+	if err := os.Mkdir(filepath.Join(dir, "domains"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	writeConfig(t, filepath.Join(dir, "domains"), "main.tf", `terraform {
+  required_providers {
+    fastly = {
+      source  = "fastly/fastly"
+      version = "~> 10.0"
+    }
+  }
+}
+resource "fastly_domain_v1" "example" {
+  fqdn = "www.example.com"
+}
+`)
+	result := newPlan(t, dir)
+	if result.Blocked() {
+		t.Fatalf("blocked: %#v %#v", result.Issues, result.Analysis.Findings)
+	}
+	for _, file := range []string{"main.tf", "domains/main.tf"} {
+		if got := changedFile(t, result, file); !strings.Contains(got, `version = ">= 20.0.0"`) || strings.Contains(got, "~> 10.0") {
+			t.Errorf("%s kept the legacy provider pin:\n%s", file, got)
+		}
+	}
+}

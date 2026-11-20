@@ -979,3 +979,23 @@ func hashTree(t *testing.T, root string) string {
 	}
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
+
+func TestAnalyzeDeprecatedDomainsDataSourceBlocks(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeFile(t, dir, "main.tf", `
+data "fastly_domains_v1" "all" {}
+data "fastly_domains" "already_migrated" {}
+data "aws_caller_identity" "unrelated" {}
+`)
+	result := analyzeDir(t, dir)
+	if result.Migratable() || result.BlockingCount() != 1 {
+		t.Fatalf("only the deprecated data source must block, findings = %#v", result.Findings)
+	}
+	finding := result.Findings[0]
+	if finding.Code != FindingCodeUnsupportedDataSource || !strings.Contains(finding.Message, "fastly_domains_v1") ||
+		!strings.Contains(finding.Remediation, `"fastly_domains"`) {
+		t.Fatalf("finding = %#v", finding)
+	}
+}

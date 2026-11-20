@@ -51,6 +51,49 @@ and computed-only rate-limiter ID. These remain for
 the corresponding dedicated migration tickets. The write command does
 **not** claim all legacy Fastly configurations are supported.
 
+## Standalone domain migration
+
+Versionless domain resources migrate together with the services that reference them:
+
+| Legacy resource                 | Target resource              | HCL                         | State                                  |
+| ------------------------------- | ---------------------------- | --------------------------- | -------------------------------------- |
+| `fastly_domain`                 | `fastly_domain`              | Address kept, no `moved`    | Provider state upgrader (v0 to v1)     |
+| `fastly_domain_v1`              | `fastly_domain`              | Renamed, `moved` block      | Provider `MoveState`                   |
+| `fastly_domain_v1_service_link` | `fastly_domain_service_link` | Renamed, `moved` block      | Provider `MoveState`                   |
+| `fastly_domain_service_link`    | `fastly_domain_service_link` | Unchanged                   | Unchanged                              |
+
+The legacy `domain_id` attribute no longer exists; references to
+`fastly_domain.<name>.domain_id` and `fastly_domain_v1.<name>.domain_id`
+become `.id`. The provider drops the legacy `domain_id` value and turns an unset `description`
+(persisted by SDKv2 as `""`) into null, so no domain is recreated and an omitted
+description plans no change. An explicit `description = ""` takes one
+empty-description update after migration.
+The `id` and `fqdn` outputs are unchanged. An unset `description` or `service_id` reads as
+null instead of `""` after migration, so an expression that compares them to `""` must be
+checked by hand. Whole-resource
+references, other attributes, projections that read `domain_id`, and `moved`, `import` or
+`removed` blocks that address a migrating domain block the whole plan before anything
+is written.
+
+A module that declares a `fastly_domain_v1` or `fastly_domain_v1_service_link` resource moves to the
+target provider requirement even when it has no service, because the legacy provider cannot run the
+`moved` block. An unchanged `fastly_domain` updates an existing Fastly provider requirement or block
+but never adds one, since the type is shared with the target provider.
+
+**Verification status.** The SDKv2 domain schemas are verified against published
+releases 9.1.0 through 10.3.0 by `make test-migration-schemas`. `make test-migration-domains`
+is a live test that creates real services and domains in a test account that can create
+versionless domains. It migrated state from SDKv2 10.3.0 with a zero-change plan and
+no mutating domain or service requests, and left the services' ids and active versions
+unchanged. It covers a direct association, omitted and populated descriptions, a
+standalone link and both `_v1` renames. A linked domain keeps no description there,
+because creating the link leaves the remote description empty.
+
+The deprecated `fastly_domains_v1` data source is not migrated. The target
+`fastly_domains` schema and computed `id` differ, so the CLI blocks the whole plan
+with a finding instead of renaming it. Replace the data source and its references by
+hand, then run the migration again.
+
 ## Sensitive nested object transformations
 
 Legacy static CDN and Compute backend `ssl_client_cert` and `ssl_client_key`

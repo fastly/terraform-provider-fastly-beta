@@ -17,11 +17,22 @@ var serviceAutoTypes = map[string]string{
 	"fastly_service_compute": "fastly_service_compute_auto",
 }
 
+// versionlessResourceTypes maps legacy versionless resources to their target
+// type. fastly_domain keeps its name, so only its references are rewritten.
+var versionlessResourceTypes = map[string]string{
+	"fastly_domain":                 "fastly_domain",
+	"fastly_domain_v1":              "fastly_domain",
+	"fastly_domain_v1_service_link": "fastly_domain_service_link",
+}
+
 func compileResource(
 	key resourceKey,
 	actions []selectedAction,
 	index moduleIndex,
 ) ([]rewrite.Edit, *Move, []Issue) {
+	if target, ok := versionlessResourceTypes[key.typ]; ok {
+		return compileVersionlessResource(key, target, actions, index)
+	}
 	var issues []Issue
 	issue := func(a selectedAction, message string) {
 		issues = append(issues, Issue{
@@ -288,4 +299,93 @@ func compileServiceBlock(key resourceKey, rule compatibility.Rule, autoType stri
 		return nil, fmt.Errorf("service block %q uses unsupported HCL strategy %s", rule.Legacy, rule.HCL)
 	}
 	return nil, fmt.Errorf("service block %q is not supported by the dry-run writer", rule.Legacy)
+}
+
+func compileVersionlessResource(
+	key resourceKey,
+	target string,
+	actions []selectedAction,
+	index moduleIndex,
+) ([]rewrite.Edit, *Move, []Issue) {
+	var issues []Issue
+	issue := func(a selectedAction, message string) {
+		issues = append(issues, Issue{
+			RuleID:      a.rule.ID,
+			File:        key.file,
+			Message:     message,
+			Remediation: "Implement a reviewed HCL mapping or migrate this construct manually.",
+		})
+	}
+
+	module := filepath.ToSlash(filepath.Dir(key.file))
+	fromAddress := key.typ + "." + key.name
+	toAddress := target + "." + key.name
+	renamed := key.typ != target
+	if index.resources[module][fromAddress] != key.file {
+		issues = append(issues, Issue{
+			File: key.file, Message: fmt.Sprintf("resource %s was not found at its analyzed location", fromAddress),
+			Remediation: "Check for conflicting or modified Terraform resource declarations.",
+		})
+	}
+
+	foundResource := false
+	for _, a := range actions {
+		rule := a.rule
+		wantHCL, wantState := compatibility.HCLUnchanged, compatibility.StateUpgrade
+		if renamed {
+			wantHCL, wantState = compatibility.HCLRename, compatibility.StateMove
+		}
+		if rule.Kind != compatibility.ConstructResource || rule.Legacy != key.typ || rule.Target != target ||
+			rule.HCL != wantHCL || rule.State != wantState {
+			issue(a, fmt.Sprintf("unimplemented resource conversion %s -> %s", rule.Legacy, rule.Target))
+			continue
+		}
+		foundResource = true
+	}
+	if !foundResource {
+		issues = append(issues, Issue{
+			File: key.file, Message: fmt.Sprintf("resource %s has no supported conversion action", fromAddress),
+			Remediation: "Review the compatibility registry; the migration must include the resource conversion.",
+		})
+	}
+
+	if renamed {
+		if file := index.resources[module][toAddress]; file != "" {
+			issues = append(issues, Issue{
+				File: key.file, Message: fmt.Sprintf("target resource %s already exists in %s", toAddress, file),
+				Remediation: "Resolve the target address collision before migration.",
+			})
+		}
+		if existingTo, found := index.moves[module][fromAddress]; found && existingTo != toAddress {
+			issues = append(issues, Issue{
+				File: key.file, Message: fmt.Sprintf("existing moved block for %s targets %s, not %s", fromAddress, existingTo, toAddress),
+				Remediation: "Resolve conflicting moved blocks before migration.",
+			})
+		}
+		for previousFrom, existingTo := range index.moves[module] {
+			if existingTo == toAddress && previousFrom != fromAddress {
+				issues = append(issues, Issue{
+					File: key.file, Message: fmt.Sprintf("target %s is already used by a moved block from %s", toAddress, previousFrom),
+					Remediation: "Resolve conflicting moved blocks before migration.",
+				})
+			}
+		}
+	}
+	if len(issues) != 0 {
+		return nil, nil, issues
+	}
+
+	if !renamed {
+		return nil, &Move{Module: module, From: fromAddress, To: toAddress, ReferenceOnly: true}, nil
+	}
+
+	edits := []rewrite.Edit{rewrite.RenameResource{
+		File: key.file, FromType: key.typ, ToType: target, Name: key.name,
+	}}
+	if _, exists := index.moves[module][fromAddress]; !exists {
+		edits = append(edits, rewrite.AddMoved{
+			File: filepath.ToSlash(filepath.Join(module, "migration.tf")), From: fromAddress, To: toAddress,
+		})
+	}
+	return edits, &Move{Module: module, From: fromAddress, To: toAddress}, nil
 }

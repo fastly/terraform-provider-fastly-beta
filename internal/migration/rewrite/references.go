@@ -34,6 +34,10 @@ func ResourceReferenceTarget(to string, block *hclsyntax.Block) ReferenceTarget 
 type ReferenceOccurrence struct {
 	From, To string
 	Range    hcl.Range
+	// Changed reports that this occurrence needs a source edit. A reference to
+	// a resource whose address is unchanged is matched, but needs no edit
+	// unless it reads an attribute the target schema renamed.
+	Changed bool
 }
 
 // ReferenceProblem is a fail-closed diagnostic about an ambiguous reference.
@@ -302,60 +306,67 @@ func (s *referenceScanner) expression(expr hclsyntax.Expression, shadow map[stri
 		return nil
 	})
 	for _, c := range freeChains(expr) {
-		if shadow[c.root] {
-			continue
-		}
-		address, typeRange, tail := c.address()
-		isSelf := c.root == "self" && self != ""
-		if isSelf {
-			address, tail = self, c.steps
-		}
-		target, found := s.edit.Routes[address]
-		if !found {
-			continue
-		}
-		s.result.References = append(s.result.References, ReferenceOccurrence{From: address, To: target.To, Range: c.rng})
-		splat := !isSelf && len(tail) != 0 && tail[0].splat
-		instanceSelected := !isSelf && len(tail) != 0 && tail[0].name == ""
-		if !isSelf {
-			tail = instanceTail(tail)
-		}
-		sourceType, _, _ := strings.Cut(address, ".")
-		targetType, _, _ := strings.Cut(target.To, ".")
-		switch {
-		case len(tail) == 0 && !isSelf && (dependency ||
-			(target.Indexed && !instanceSelected && s.verifiedInstanceProjection(projections[c.rng.Start.Byte], sourceType, targetType))):
-			// Terraform dependency meta-arguments consume resource addresses;
-			// verified scalar projections consume only unchanged instance values.
-			if sourceType != targetType {
-				s.token(typeRange, targetType)
-			}
-			continue
-		case len(tail) == 1 && tail[0].name != "":
-			if path, ok := s.edit.Registry.ReferenceAttribute(sourceType, targetType, tail[0].name); ok {
-				if strings.HasPrefix(path, "settings[0].") && (!target.Settings || splat) {
-					s.problem(c.rng, fmt.Sprintf("reference to %s.%s requires a proven singleton settings migration", address, tail[0].name))
-					continue
-				}
-				if path != tail[0].name {
-					s.attribute(tail[0], path)
-				}
-			} else if block, id, newID, ok := s.edit.Registry.ReferenceIdentityCollection(sourceType, targetType, tail[0].name); ok &&
-				!splat && s.rewriteIdentityProjection(projections[c.rng.Start.Byte], id, newID) {
-				if block != tail[0].name {
-					s.attribute(tail[0], block)
-				}
-			} else {
-				s.problem(c.rng, fmt.Sprintf("reference to %s.%s has no verified equivalent output or collection projection", address, tail[0].name))
-				continue
-			}
-		default:
-			s.problem(c.rng, fmt.Sprintf("reference to %s uses an unsupported whole-resource value or nested attribute path", address))
-			continue
-		}
-		if !isSelf && sourceType != targetType {
+		s.chain(c, shadow, self, dependency, projections)
+	}
+}
+
+func (s *referenceScanner) chain(c referenceChain, shadow map[string]bool, self string, dependency bool, projections map[int]*hclsyntax.ForExpr) {
+	if shadow[c.root] {
+		return
+	}
+	editsBefore := len(s.result.edits)
+	address, typeRange, tail := c.address()
+	isSelf := c.root == "self" && self != ""
+	if isSelf {
+		address, tail = self, c.steps
+	}
+	target, found := s.edit.Routes[address]
+	if !found {
+		return
+	}
+	s.result.References = append(s.result.References, ReferenceOccurrence{From: address, To: target.To, Range: c.rng})
+	occurrence := len(s.result.References) - 1
+	defer func() { s.result.References[occurrence].Changed = len(s.result.edits) > editsBefore }()
+	splat := !isSelf && len(tail) != 0 && tail[0].splat
+	instanceSelected := !isSelf && len(tail) != 0 && tail[0].name == ""
+	if !isSelf {
+		tail = instanceTail(tail)
+	}
+	sourceType, _, _ := strings.Cut(address, ".")
+	targetType, _, _ := strings.Cut(target.To, ".")
+	switch {
+	case len(tail) == 0 && !isSelf && (dependency ||
+		(target.Indexed && !instanceSelected && s.verifiedInstanceProjection(projections[c.rng.Start.Byte], sourceType, targetType))):
+		// Terraform dependency meta-arguments consume resource addresses;
+		// verified scalar projections consume only unchanged instance values.
+		if sourceType != targetType {
 			s.token(typeRange, targetType)
 		}
+		return
+	case len(tail) == 1 && tail[0].name != "":
+		if path, ok := s.edit.Registry.ReferenceAttribute(sourceType, targetType, tail[0].name); ok {
+			if strings.HasPrefix(path, "settings[0].") && (!target.Settings || splat) {
+				s.problem(c.rng, fmt.Sprintf("reference to %s.%s requires a proven singleton settings migration", address, tail[0].name))
+				return
+			}
+			if path != tail[0].name {
+				s.attribute(tail[0], path)
+			}
+		} else if block, id, newID, ok := s.edit.Registry.ReferenceIdentityCollection(sourceType, targetType, tail[0].name); ok &&
+			!splat && s.rewriteIdentityProjection(projections[c.rng.Start.Byte], id, newID) {
+			if block != tail[0].name {
+				s.attribute(tail[0], block)
+			}
+		} else {
+			s.problem(c.rng, fmt.Sprintf("reference to %s.%s has no verified equivalent output or collection projection", address, tail[0].name))
+			return
+		}
+	default:
+		s.problem(c.rng, fmt.Sprintf("reference to %s uses an unsupported whole-resource value or nested attribute path", address))
+		return
+	}
+	if !isSelf && sourceType != targetType {
+		s.token(typeRange, targetType)
 	}
 }
 
@@ -443,10 +454,41 @@ func (s *referenceScanner) moved(block *hclsyntax.Block) {
 			target.To == toAddress {
 			return
 		}
+		if okA && okB && a.root != "resource" && b.root != "resource" && len(fromTail) == 0 && len(toTail) == 0 &&
+			s.isAppliedRename(fromAddress, toAddress) {
+			return
+		}
 	}
 	for _, attr := range block.Body.Attributes {
 		s.stateAddress(attr.Expr)
 	}
+}
+
+// isAppliedRename recognizes the moved block a previous migration wrote for a
+// resource that has since been renamed. The source no longer exists, so its
+// destination is a reference-only route: an address that keeps its name and
+// needs no move. That history is valid and must survive repeated runs. A moved
+// block that leaves a route's address, or enters it from anything but the
+// registry's rename of the same name, is still a conflict.
+func (s *referenceScanner) isAppliedRename(fromAddress, toAddress string) bool {
+	target, found := s.edit.Routes[toAddress]
+	if !found || target.To != toAddress || fromAddress == toAddress {
+		return false
+	}
+	if _, stillRouted := s.edit.Routes[fromAddress]; stillRouted {
+		return false
+	}
+	fromType, fromName, _ := strings.Cut(fromAddress, ".")
+	toType, toName, _ := strings.Cut(toAddress, ".")
+	if fromName != toName {
+		return false
+	}
+	for _, rule := range s.edit.Registry.RulesForLegacy(fromType) {
+		if rule.Kind == compatibility.ConstructResource && rule.Target == toType {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *referenceScanner) stateAddress(expr hclsyntax.Expression) {

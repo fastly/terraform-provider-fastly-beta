@@ -37,6 +37,9 @@ type Move struct {
 	Module string
 	From   string
 	To     string
+	// ReferenceOnly marks a resource that keeps its address. It authorizes
+	// reference rewriting but needs no moved block and is not reported as a move.
+	ReferenceOnly bool
 }
 
 // Result contains either a complete read-only preview or blocking diagnostics.
@@ -223,7 +226,11 @@ func (p *Planner) Plan(ctx context.Context, path string) (Result, error) {
 	}
 	result.Changes = changes
 	result.withholdDiff = containsSensitiveConfiguration(index.snapshots)
-	result.Moves = moves
+	for _, move := range moves {
+		if !move.ReferenceOnly {
+			result.Moves = append(result.Moves, move)
+		}
+	}
 	result.rewritePlan = plan
 	result.snapshots = index.snapshots
 	return result, nil

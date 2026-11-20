@@ -388,7 +388,7 @@ func TestApplyChecksRegistrySupportedResourceNoOps(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if rule.Legacy == "fastly_service_vcl" || rule.Legacy == "fastly_service_compute" {
+			if rule.Legacy != rule.Target {
 				if outcome.FilesWritten != 2 {
 					t.Fatalf("service write = %#v", outcome)
 				}

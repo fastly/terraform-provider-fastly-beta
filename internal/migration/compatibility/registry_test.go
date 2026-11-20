@@ -348,3 +348,28 @@ func validTestRule(mutate func(*Rule)) Rule {
 	}
 	return rule
 }
+
+func TestReferenceAttributeForVersionlessResources(t *testing.T) {
+	registry := Default()
+	for _, tc := range []struct {
+		source, target, name, want string
+		ok                         bool
+	}{
+		{"fastly_domain", "fastly_domain", "domain_id", "id", true},
+		{"fastly_domain", "fastly_domain", "id", "id", true},
+		{"fastly_domain", "fastly_domain", "fqdn", "fqdn", true},
+		{"fastly_domain", "fastly_domain", "service_id", "service_id", true},
+		{"fastly_domain", "fastly_domain", "description", "description", true},
+		{"fastly_domain", "fastly_domain", "managed", "", false},
+		{"fastly_domain_v1", "fastly_domain", "domain_id", "id", true},
+		{"fastly_domain_v1", "fastly_domain", "fqdn", "fqdn", true},
+		{"fastly_domain_v1_service_link", "fastly_domain_service_link", "domain_id", "domain_id", true},
+		{"fastly_domain_v1_service_link", "fastly_domain_service_link", "managed", "", false},
+		{"fastly_domain_v1", "fastly_domain_service_link", "fqdn", "", false},
+	} {
+		got, ok := registry.ReferenceAttribute(tc.source, tc.target, tc.name)
+		if got != tc.want || ok != tc.ok {
+			t.Errorf("ReferenceAttribute(%s, %s, %s) = %q, %t; want %q, %t", tc.source, tc.target, tc.name, got, ok, tc.want, tc.ok)
+		}
+	}
+}
