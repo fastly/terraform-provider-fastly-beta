@@ -5,6 +5,7 @@ import (
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/ngwafmovestate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resourceidentity"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/ngwafrule"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
@@ -23,6 +24,7 @@ var (
 	_ resource.ResourceWithConfigure      = &Resource{}
 	_ resource.ResourceWithImportState    = &Resource{}
 	_ resource.ResourceWithIdentity       = &Resource{}
+	_ resource.ResourceWithMoveState      = &Resource{}
 	_ resource.ResourceWithValidateConfig = &Resource{}
 )
 
@@ -176,4 +178,9 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 	}
 
 	ngwafrule.ImportWorkspaceState(ctx, req, resp)
+}
+
+// MoveState accepts legacy fastly_ngwaf_workspace_rule state through a Terraform moved block.
+func (r *Resource) MoveState(_ context.Context) []resource.StateMover {
+	return []resource.StateMover{ngwafmovestate.Mover(ngwafmovestate.WorkspaceRule, "fastly_ngwaf_workspace_request_rule")}
 }

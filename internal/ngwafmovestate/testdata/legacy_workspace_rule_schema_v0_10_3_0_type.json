@@ -1,0 +1,126 @@
+{
+  "block": {
+    "attributes": {
+      "description": "string",
+      "enabled": "bool",
+      "group_operator": "string",
+      "id": "string",
+      "request_logging": "string",
+      "type": "string",
+      "workspace_id": "string"
+    },
+    "block_types": {
+      "action": {
+        "block": {
+          "attributes": {
+            "allow_interactive": "bool",
+            "deception_type": "string",
+            "redirect_url": "string",
+            "response_code": "number",
+            "signal": "string",
+            "type": "string"
+          }
+        },
+        "nesting_mode": "list"
+      },
+      "condition": {
+        "block": {
+          "attributes": {
+            "field": "string",
+            "operator": "string",
+            "value": "string"
+          }
+        },
+        "nesting_mode": "list"
+      },
+      "group_condition": {
+        "block": {
+          "attributes": {
+            "group_operator": "string"
+          },
+          "block_types": {
+            "condition": {
+              "block": {
+                "attributes": {
+                  "field": "string",
+                  "operator": "string",
+                  "value": "string"
+                }
+              },
+              "nesting_mode": "list"
+            },
+            "multival_condition": {
+              "block": {
+                "attributes": {
+                  "field": "string",
+                  "group_operator": "string",
+                  "operator": "string"
+                },
+                "block_types": {
+                  "condition": {
+                    "block": {
+                      "attributes": {
+                        "field": "string",
+                        "operator": "string",
+                        "value": "string"
+                      }
+                    },
+                    "nesting_mode": "list"
+                  }
+                }
+              },
+              "nesting_mode": "list"
+            }
+          }
+        },
+        "nesting_mode": "list"
+      },
+      "multival_condition": {
+        "block": {
+          "attributes": {
+            "field": "string",
+            "group_operator": "string",
+            "operator": "string"
+          },
+          "block_types": {
+            "condition": {
+              "block": {
+                "attributes": {
+                  "field": "string",
+                  "operator": "string",
+                  "value": "string"
+                }
+              },
+              "nesting_mode": "list"
+            }
+          }
+        },
+        "nesting_mode": "list"
+      },
+      "rate_limit": {
+        "block": {
+          "attributes": {
+            "duration": "number",
+            "interval": "number",
+            "signal": "string",
+            "threshold": "number"
+          },
+          "block_types": {
+            "client_identifiers": {
+              "block": {
+                "attributes": {
+                  "key": "string",
+                  "name": "string",
+                  "type": "string"
+                }
+              },
+              "nesting_mode": "set"
+            }
+          }
+        },
+        "nesting_mode": "list"
+      }
+    }
+  },
+  "version": 0
+}
