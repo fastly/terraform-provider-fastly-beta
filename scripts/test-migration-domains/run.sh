@@ -137,7 +137,8 @@ output "services" {
 HCL
 
 # Covers: unchanged fastly_domain (direct association, omitted description,
-# populated description, standalone link), both deprecated renames, and a
+# populated description, standalone link; the linked domain sets no description
+# because creating the link leaves the remote description empty), both deprecated renames, and a
 # standalone link for each family. domain_id references exercise the rewrite.
 cat > "$DOMAINS/main.tf" <<HCL
 $REQUIRED
@@ -159,8 +160,7 @@ resource "fastly_domain" "omitted" {
   fqdn = "omitted.\${var.suffix}"
 }
 resource "fastly_domain" "linked" {
-  fqdn        = "linked.\${var.suffix}"
-  description = "standalone link"
+  fqdn = "linked.\${var.suffix}"
 }
 resource "fastly_domain_service_link" "linked" {
   domain_id  = fastly_domain.linked.domain_id
@@ -219,11 +219,12 @@ jq -e 'all(.[]; . != "")' "$WORK_DIR/domains-before.json" >/dev/null
 terraform state pull > "$WORK_DIR/state-before.json"
 # Every attribute a migration must preserve, keyed by the target address. The
 # legacy-only domain_id is dropped from domains, and SDKv2's empty description
-# is the same unset value as the target's null.
+# and service_id are the same unset values as the target's null.
 NORMALIZE='[.resources[] | select(.mode=="managed") | . as $r | .instances[] as $i |
     {key: (($r.type | sub("_v1"; "")) + "." + $r.name),
      value: (if ($r.type | test("service_link")) then $i.attributes
-             else ($i.attributes | del(.domain_id) | .description |= (if . == "" then null else . end)) end)}]
+             else ($i.attributes | del(.domain_id) | .description |= (if . == "" then null else . end)
+                                  | .service_id |= (if . == "" then null else . end)) end)}]
     | from_entries'
 jq -S "$NORMALIZE" "$WORK_DIR/state-before.json" > "$WORK_DIR/attributes-before.json"
 jq -e '[.resources[] | select(.mode=="managed") | .instances[] | select(.schema_version != 0)] | length == 0' \
@@ -302,8 +303,8 @@ jq -e --arg svc "$TF_VAR_service_direct" '
     "$WORK_DIR/state-after.json" >/dev/null
 calls="$(grep -a -E -o 'http\.Request \(dump\): \\?"[A-Z]+ [^ ]+' "$TRACE" |
     sed -E 's/^.*"([A-Z]+ )/\1/' | sort -u || true)"
-awk '$1 ~ /^(GET|HEAD)$/ && $2 ~ /^\/domains\/v1/ {found=1} END {exit !found}' <<< "$calls"
-unsafe="$(awk '$1 !~ /^(GET|HEAD)$/ && $2 ~ /^\/(domains\/v1|service|enabled-products)(\/|$)/ {print}' <<< "$calls")"
+awk '$1 ~ /^(GET|HEAD)$/ && $2 ~ /^\/domain-management\/v1\// {found=1} END {exit !found}' <<< "$calls"
+unsafe="$(awk '$1 !~ /^(GET|HEAD)$/ && $2 ~ /^\/(domain-management\/v1|service|enabled-products)(\/|$)/ {print}' <<< "$calls")"
 [[ -z "$unsafe" ]] || { echo "Unexpected mutating domain/service API requests: $unsafe" >&2; exit 1; }
 terraform state list > "$WORK_DIR/addresses.txt"
 if grep -Eq '^fastly_domain_v1' "$WORK_DIR/addresses.txt"; then

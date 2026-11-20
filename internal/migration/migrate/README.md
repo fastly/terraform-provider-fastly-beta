@@ -74,11 +74,13 @@ references, other attributes, projections that read `domain_id`, and `moved`, `i
 is written.
 
 **Verification status.** The SDKv2 domain schemas are verified against published
-releases 9.1.0 through 10.3.0 by `make test-migration-schemas`. The claim that no
-domain is recreated and no service link changes is covered by
-`make test-migration-domains`, a live test that creates real services and domains.
-It has not been run against a real account yet, so treat that claim as unverified
-until it has. It needs a test account that can create versionless domains.
+releases 9.1.0 through 10.3.0 by `make test-migration-schemas`. `make test-migration-domains`
+is a live test that creates real services and domains in a test account that can create
+versionless domains. It migrated state from SDKv2 10.3.0 with a zero-change plan and
+no mutating domain or service requests, and left the services' ids and active versions
+unchanged. It covers a direct association, omitted and populated descriptions, a
+standalone link and both `_v1` renames. A linked domain keeps no description there,
+because creating the link leaves the remote description empty.
 
 The deprecated `fastly_domains_v1` data source is not migrated. The target
 `fastly_domains` schema and computed `id` differ, so the CLI blocks the whole plan
