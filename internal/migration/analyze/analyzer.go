@@ -202,10 +202,7 @@ func (a *Analyzer) discover(ctx context.Context, state *analysisState) error {
 						Severity: SeverityWarning,
 						Code:     FindingCodeRemoteModuleSource,
 						Range:    child.sourceRange,
-						Message: fmt.Sprintf(
-							"Remote module source %q is outside the selected local module tree.",
-							child.source,
-						),
+						Message:  "Remote module source is outside the selected local module tree.",
 						Remediation: "If this module manages legacy Fastly resources, analyze and migrate " +
 							"that module's source separately.",
 					})
@@ -572,7 +569,7 @@ func (a *Analyzer) selectResourceRule(
 		state,
 		attr.SrcRange,
 		rules,
-		fmt.Sprintf("No compatibility rule matches %s.", selector),
+		fmt.Sprintf("No compatibility rule matches the configured %q selector.", selectorAttribute),
 	)
 	return compatibility.Rule{}, false
 }
@@ -696,6 +693,15 @@ func (a *Analyzer) analyzeNestedBlock(
 ) {
 	for name, attr := range block.Body.Attributes {
 		legacy := resourceType + "." + block.Type + "." + name
+		if block.Type == "backend" && name == "ssl_client_secrets" {
+			state.result.Findings = append(state.result.Findings, Finding{
+				Severity:    SeverityError,
+				Range:       attr.SrcRange,
+				Message:     "Legacy backend already contains target ssl_client_secrets object.",
+				Remediation: "Use the legacy flat certificate and key fields before migrating; mixed shapes cannot be verified.",
+			})
+			continue
+		}
 
 		if block.Type == "product_enablement" {
 			productRules := filterKind(a.registry.RulesForLegacy(legacy), compatibility.ConstructProduct)
@@ -1104,7 +1110,7 @@ func appendHCLDiagnostics(result *Result, filename string, diags hcl.Diagnostics
 		result.Findings = append(result.Findings, Finding{
 			Severity: SeverityError,
 			Range:    sourceRange,
-			Message:  diagnostic.Summary + ": " + diagnostic.Detail,
+			Message:  "Invalid native Terraform syntax (source text omitted).",
 			Remediation: "Fix the Terraform syntax error before running " +
 				"fastly-tf-migrate analyze again.",
 		})

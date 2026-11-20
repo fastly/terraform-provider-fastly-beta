@@ -554,15 +554,6 @@ func TestPlanRejectsUnimplementedObjectAttributesAndComputedTargets(t *testing.T
 		want   string
 	}{
 		{
-			name: "backend TLS client certificate is a nested object attribute",
-			nested: `backend {
-    name = "origin"
-    address = var.origin
-    ssl_client_cert = var.certificate
-  }`,
-			want: "object-attribute writer",
-		},
-		{
 			name: "logging S3 authentication is a nested object attribute",
 			nested: `logging_s3 {
     name = "bucket"
