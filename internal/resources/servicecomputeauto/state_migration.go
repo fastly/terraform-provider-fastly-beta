@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/computepackage"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -31,6 +32,10 @@ const (
 // content/filename are also local-only; preserve them so refreshing the package
 // hash does not cause Terraform to upload an unchanged package. Read repopulates
 // service metadata, managed/active versions, and API-readable configuration.
+//
+// HTTPS logging retains endpoint names and gzip-level hints, since refresh
+// cannot distinguish all API defaults from explicitly configured zero values.
+// Credentials and other endpoint attributes are still reconstructed by Read.
 //
 // Legacy product_enablement state, including the configurable bot_management,
 // ddos_protection and ngwaf products, is intentionally not copied to the target
@@ -169,6 +174,7 @@ func moveLegacyServiceComputeState(ctx context.Context, req resource.MoveStateRe
 	var sourceStage types.Bool
 	var sourceProductEnablement types.Set
 	var sourcePackage types.List
+	var sourceHTTPS types.Set
 
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("id"), &sourceID)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("force_destroy"), &sourceForceDestroy)...)
@@ -177,6 +183,7 @@ func moveLegacyServiceComputeState(ctx context.Context, req resource.MoveStateRe
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("stage"), &sourceStage)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("product_enablement"), &sourceProductEnablement)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("package"), &sourcePackage)...)
+	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("logging_https"), &sourceHTTPS)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -229,6 +236,12 @@ func moveLegacyServiceComputeState(ctx context.Context, req resource.MoveStateRe
 		return
 	}
 
+	https, httpsDiags := logginghttps.LegacyComputeMoveState(sourceHTTPS)
+	resp.Diagnostics.Append(httpsDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// SDKv2 optional booleans have false zero-value semantics. Normalize an
 	// absent persisted value so it matches the defaults on the Framework resource
 	// and does not introduce a migration-only plan diff.
@@ -242,6 +255,11 @@ func moveLegacyServiceComputeState(ctx context.Context, req resource.MoveStateRe
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("id"), sourceID)...)
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("force_destroy"), sourceForceDestroy)...)
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("reuse"), sourceReuse)...)
+	// Keep only the prior endpoint names and gzip hints for the first Read.
+	if len(https) != 0 {
+		resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("logging_https"), https)...)
+	}
+
 	if len(packages) != 0 {
 		resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("package"), packages)...)
 	}

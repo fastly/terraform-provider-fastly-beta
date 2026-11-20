@@ -3,6 +3,7 @@
 # Real Fastly/Terraform acceptance test for the legacy VCL -> CDN Auto state move.
 # Deliberately does NOT enable or import any Fastly products.
 # Scope: a VCL service with domain and backend, without any product enablement.
+# The opt-in logging mode adds trusted test-owned endpoints to the same service.
 #
 # This is deliberately opt-in: it creates and destroys LIVE Fastly services.
 set -euo pipefail
@@ -19,6 +20,17 @@ SERVICE_NAME="$NAME_PREFIX-svc"
 API_BASE="${FASTLY_API_URL:-https://api.fastly.com}"
 LEGACY_PROVIDER_VERSION="${LEGACY_PROVIDER_VERSION:-10.3.0}"
 KEEP_WORK_DIR="${KEEP_WORK_DIR:-}"
+LOGGING_TLS="${MIGRATION_TEST_LOGGING_TLS:-false}"
+LOGGING_FIXTURE="${MIGRATION_LOGGING_FIXTURE:-}"
+LOGGING_SUMMARY=""
+[[ "$LOGGING_TLS" == true || "$LOGGING_TLS" == false ]] || { echo "MIGRATION_TEST_LOGGING_TLS must be true or false" >&2; exit 1; }
+if [[ "$LOGGING_TLS" == true ]]; then
+    # The legacy provider may display fields such as HTTPS header_value in
+    # plaintext. Do not stream any Terraform output, logs, diffs or traces.
+    exec 3>&1
+    exec >"$WORK_DIR/live.log" 2>&1
+    printf '[INFO] Logging migration acceptance: raw logs and state remain private.\n' >&3
+fi
 
 PHASE="setup"
 PROJECT_DIR="$WORK_DIR/project"
@@ -26,7 +38,15 @@ SERVICE_ID=""
 LEGACY_LIFECYCLE_JSON=""
 
 info() { printf '[INFO] %s\n' "$*"; }
-fail() { printf '[ERROR] %s\n' "$*" >&2; exit 1; }
+fail() {
+    printf '[ERROR] %s\n' "$*" >&2
+    # Prerequisite diagnostics contain only fixed messages and tool names.
+    # Later phases may involve sensitive receiver configuration: keep them private.
+    if [[ "$LOGGING_TLS" == true && "$PHASE" == prerequisites ]]; then
+        printf '[ERROR] %s\n' "$*" >&3
+    fi
+    exit 1
+}
 
 use_legacy_provider() {
     unset FASTLY_DEBUG_MODE TF_LOG TF_LOG_PATH
@@ -63,6 +83,18 @@ cleanup() {
         fi
     fi
 
+    if [[ "$LOGGING_TLS" == true ]]; then
+        if (( status == 0 )); then
+            printf '[INFO] Logging endpoint types/counts: %s\n' "$LOGGING_SUMMARY" >&3
+            printf '[INFO] Exact persisted endpoint config/credentials, service ID and active version preserved; zero mutating service requests\n' >&3
+            printf '[INFO] CDN logging TLS/auth migration from SDKv2 %s PASSED (including cleanup)\n' "$LEGACY_PROVIDER_VERSION" >&3
+        else
+            printf '[ERROR] Logging migration failed in phase %s (exit %s). Inspect the private log locally.\n' "$PHASE" "$status" >&3
+        fi
+        if [[ -n "$KEEP_WORK_DIR" || $status -ne 0 ]]; then
+            printf '[INFO] Private workspace: %s (do not share state, plans or live.log)\n' "$WORK_DIR" >&3
+        fi
+    fi
     if [[ -n "$KEEP_WORK_DIR" || $status -ne 0 ]]; then
         info "Work directory retained: $WORK_DIR (contains Terraform state; keep private)"
     else
@@ -81,9 +113,13 @@ check_prerequisites() {
     [[ "$LEGACY_PROVIDER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
         fail "LEGACY_PROVIDER_VERSION must be an exact published release (for example 10.3.0)"
     local cmd
-    for cmd in terraform go jq curl cksum; do
+    for cmd in terraform go jq curl cksum cmp; do
         command -v "$cmd" >/dev/null 2>&1 || fail "Missing prerequisite: $cmd"
     done
+    if [[ "$LOGGING_TLS" == true ]]; then
+        [[ "$LOGGING_FIXTURE" == /* && -r "$LOGGING_FIXTURE" && -s "$LOGGING_FIXTURE" ]] ||
+            fail "Set MIGRATION_LOGGING_FIXTURE to an absolute, readable, nonempty file containing only trusted test logging blocks"
+    fi
     info "Running against $API_BASE; this test creates and deletes real Fastly resources"
 }
 
@@ -142,6 +178,30 @@ resource "fastly_service_vcl" "demo" {
   }
 }
 EOF
+    if [[ "$LOGGING_TLS" == true ]]; then
+        # Keep the same isolated service, with the supplied logging blocks
+        # inside it. Do not use a fixture from an untrusted source.
+        sed '$d' "$PROJECT_DIR/main.tf" > "$PROJECT_DIR/main.tf.tmp"
+        cat >> "$PROJECT_DIR/main.tf.tmp" <<'HCL'
+
+  condition {
+    name = "migration-logging-response"
+    type = "RESPONSE"
+    statement = "resp.status == 200"
+    priority = 10
+  }
+HCL
+        cat "$LOGGING_FIXTURE" >> "$PROJECT_DIR/main.tf.tmp"
+        printf '\n}\n' >> "$PROJECT_DIR/main.tf.tmp"
+        mv "$PROJECT_DIR/main.tf.tmp" "$PROJECT_DIR/main.tf"
+    fi
+}
+
+snapshot_logging_state() {
+    local type="$1" destination="$2"
+    terraform state pull | jq -eS --arg type "$type" \
+        -f "$REPO_ROOT/scripts/test-migration-logging-tls/snapshot.jq" > "$destination" ||
+        fail "Could not capture a complete private logging state snapshot"
 }
 
 apply_legacy() {
@@ -153,7 +213,17 @@ apply_legacy() {
       .provider_selections["registry.terraform.io/fastly/fastly"] == $version
     ' >/dev/null || fail "Terraform did not select pinned legacy provider $LEGACY_PROVIDER_VERSION"
     info "Selected exact SDKv2 version $LEGACY_PROVIDER_VERSION"
-    terraform apply -auto-approve -input=false
+    if [[ "$LOGGING_TLS" == true ]]; then
+        terraform plan -input=false -out="$WORK_DIR/legacy.tfplan"
+        terraform show -json "$WORK_DIR/legacy.tfplan" | jq -e '
+          [.resource_changes[]? | select(.mode == "managed") |
+            {address, actions:.change.actions}] ==
+          [{address:"fastly_service_vcl.demo", actions:["create"]}]
+        ' >/dev/null || fail "Logging fixture must create only the isolated test service"
+        terraform apply -input=false "$WORK_DIR/legacy.tfplan"
+    else
+        terraform apply -auto-approve -input=false
+    fi
     # The supported SDKv2 persisted schema is 1, not merely provider >= 9.1.
     terraform apply -refresh-only -auto-approve -input=false
 
@@ -187,6 +257,10 @@ apply_legacy() {
     # The state check file may include secrets; do not keep a redundant copy.
     rm -f "$WORK_DIR/legacy-state-check.json"
     info "Legacy VCL service $SERVICE_ID has persisted schema 1"
+    if [[ "$LOGGING_TLS" == true ]]; then
+        snapshot_logging_state fastly_service_vcl "$WORK_DIR/logging-before.json"
+        LOGGING_SUMMARY="$(jq -r '.logging | to_entries | map(select(.value|length>0) | "\(.key)=\(.value|length)") | join(", ")' "$WORK_DIR/logging-before.json")"
+    fi
 }
 
 snapshot_live_service() {
@@ -217,7 +291,15 @@ run_migrator() {
     [[ "$before" == "$(cksum main.tf)" && ! -e migration.tf ]] ||
         fail "Dry-run modified Terraform configuration"
 
-    "$MIGRATOR" migrate --write --backup-dir "$BACKUP_ROOT" .
+    if [[ "$LOGGING_TLS" == true ]]; then
+        grep -Fq 'HCL diff withheld' "$WORK_DIR/dry-run.txt" ||
+            fail "Sensitive logging dry-run did not withhold the source diff"
+        "$MIGRATOR" migrate --write --backup-dir "$BACKUP_ROOT" . | tee "$WORK_DIR/write-preview.txt"
+        grep -Fq 'HCL diff withheld' "$WORK_DIR/write-preview.txt" ||
+            fail "Sensitive logging write preview did not withhold the source diff"
+    else
+        "$MIGRATOR" migrate --write --backup-dir "$BACKUP_ROOT" .
+    fi
     grep -Fq 'resource "fastly_service_cdn_auto" "demo"' main.tf ||
         fail "Main resource was not rewritten to fastly_service_cdn_auto"
     ! grep -Fq 'resource "fastly_service_vcl"' main.tf ||
@@ -328,6 +410,12 @@ plan_apply_and_verify() {
            and ($legacy.reuse == null or .values.reuse == $legacy.reuse))]
       | length == 1
     ' >/dev/null || fail "CDN Auto state lost service ID or legacy lifecycle settings"
+
+    if [[ "$LOGGING_TLS" == true ]]; then
+        snapshot_logging_state fastly_service_cdn_auto "$WORK_DIR/logging-after.json"
+        cmp -s "$WORK_DIR/logging-before.json" "$WORK_DIR/logging-after.json" ||
+            fail "Logging state changed across migration (values withheld)"
+    fi
 
     "$MIGRATOR" analyze . > "$WORK_DIR/analyze-after.txt"
     "$MIGRATOR" migrate --dry-run . > "$WORK_DIR/dry-run-after.txt"

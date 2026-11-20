@@ -2,7 +2,6 @@ package loggingelasticsearch
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"strings"
 
@@ -33,7 +32,7 @@ func (httpsURL) ValidateString(_ context.Context, req validator.StringRequest, r
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid URL",
-			fmt.Sprintf("must be a valid URL using the https:// scheme, got %q.", value),
+			"must be a valid URL using the https:// scheme (value omitted).",
 		)
 	}
 }

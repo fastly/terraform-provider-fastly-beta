@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/resources/logginghttps"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -27,6 +29,10 @@ const (
 // Terraform lifecycle controls which are not returned by the Fastly API. Read
 // repopulates service metadata, managed/active versions, and API-readable nested
 // service configuration.
+//
+// HTTPS logging retains endpoint names and gzip-level hints, since refresh
+// cannot distinguish all API defaults from explicitly configured zero values.
+// Credentials and other endpoint attributes are still reconstructed by Read.
 //
 // Legacy product_enablement state, including the configurable bot_management,
 // ddos_protection and ngwaf products, is intentionally not copied to the target
@@ -223,6 +229,7 @@ func moveLegacyServiceVCLState(ctx context.Context, req resource.MoveStateReques
 	var sourceProductEnablement types.Set
 	var sourceImageOptimizerDefaultSettings types.Set
 	var sourceBackends types.Set
+	var sourceHTTPS types.Set
 
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("id"), &sourceID)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("force_destroy"), &sourceForceDestroy)...)
@@ -230,6 +237,7 @@ func moveLegacyServiceVCLState(ctx context.Context, req resource.MoveStateReques
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("product_enablement"), &sourceProductEnablement)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("image_optimizer_default_settings"), &sourceImageOptimizerDefaultSettings)...)
 	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("backend"), &sourceBackends)...)
+	resp.Diagnostics.Append(req.SourceState.GetAttribute(ctx, path.Root("logging_https"), &sourceHTTPS)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -275,6 +283,12 @@ func moveLegacyServiceVCLState(ctx context.Context, req resource.MoveStateReques
 		return
 	}
 
+	https, httpsDiags := logginghttps.LegacyMoveState(sourceHTTPS)
+	resp.Diagnostics.Append(httpsDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// SDKv2 optional booleans have false zero-value semantics. Normalize an
 	// absent persisted value so it matches the defaults on the Framework resource
 	// and does not introduce a migration-only plan diff.
@@ -288,6 +302,10 @@ func moveLegacyServiceVCLState(ctx context.Context, req resource.MoveStateReques
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("id"), sourceID)...)
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("force_destroy"), sourceForceDestroy)...)
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("reuse"), sourceReuse)...)
+	// Keep only the prior endpoint names and gzip hints for the first Read.
+	if len(https) != 0 {
+		resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("logging_https"), https)...)
+	}
 
 	// Unlike a bare import, a moved resource has legacy state that tells us
 	// whether Image Optimizer default settings were explicitly managed.

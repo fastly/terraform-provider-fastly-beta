@@ -2,7 +2,6 @@ package logginghttps
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 
 	"github.com/fastly/terraform-provider-fastly-beta/internal/service"
@@ -36,7 +35,7 @@ func (httpsURL) ValidateString(_ context.Context, req validator.StringRequest, r
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid URL",
-			fmt.Sprintf("must be a valid URL using the https:// scheme, got %q.", value),
+			"must be a valid URL using the https:// scheme (value omitted).",
 		)
 	}
 }

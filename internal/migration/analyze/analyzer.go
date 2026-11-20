@@ -691,6 +691,9 @@ func (a *Analyzer) analyzeNestedBlock(
 	resourceType string,
 	resourceName string,
 ) {
+	if compatibility.IsTLSLoggingBlock(block.Type) {
+		analyzeTLSLoggingBlock(state, block, resourceType == "fastly_service_vcl")
+	}
 	for name, attr := range block.Body.Attributes {
 		legacy := resourceType + "." + block.Type + "." + name
 		if block.Type == "backend" && name == "ssl_client_secrets" {
