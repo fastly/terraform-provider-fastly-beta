@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/legacystate"
+
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -11,9 +13,8 @@ import (
 )
 
 const (
-	legacyFastlyProviderAddress = "registry.terraform.io/fastly/fastly"
-	legacyLinkV1TypeName        = "fastly_domain_v1_service_link"
-	legacyLinkSchemaV0          = int64(0)
+	legacyLinkV1TypeName = "fastly_domain_v1_service_link"
+	legacyLinkSchemaV0   = int64(0)
 )
 
 var _ resource.ResourceWithMoveState = &Resource{}
@@ -41,7 +42,7 @@ func (r *Resource) MoveState(_ context.Context) []resource.StateMover {
 }
 
 func moveLegacyLinkV1State(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
-	if req.SourceProviderAddress != legacyFastlyProviderAddress || req.SourceTypeName != legacyLinkV1TypeName {
+	if req.SourceProviderAddress != legacystate.ProviderAddress || req.SourceTypeName != legacyLinkV1TypeName {
 		return
 	}
 
@@ -68,14 +69,14 @@ func moveLegacyLinkV1State(ctx context.Context, req resource.MoveStateRequest, r
 		return
 	}
 
-	if !hasValue(domainID) || !hasValue(serviceID) {
+	if !legacystate.HasValue(domainID) || !legacystate.HasValue(serviceID) {
 		resp.Diagnostics.AddError(
 			"Unable to migrate legacy Fastly domain service link state",
 			"The fastly_domain_v1_service_link state must contain both a domain_id and a service_id.",
 		)
 		return
 	}
-	if hasValue(id) && id.ValueString() != domainID.ValueString() {
+	if legacystate.HasValue(id) && id.ValueString() != domainID.ValueString() {
 		resp.Diagnostics.AddError(
 			"Unable to migrate legacy Fastly domain service link state",
 			"The fastly_domain_v1_service_link state has different id and domain_id values, so the link identity is ambiguous.",
@@ -86,8 +87,4 @@ func moveLegacyLinkV1State(ctx context.Context, req resource.MoveStateRequest, r
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("id"), domainID)...)
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("domain_id"), domainID)...)
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("service_id"), serviceID)...)
-}
-
-func hasValue(v types.String) bool {
-	return !v.IsNull() && !v.IsUnknown() && v.ValueString() != ""
 }

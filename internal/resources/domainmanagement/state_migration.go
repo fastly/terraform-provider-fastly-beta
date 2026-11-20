@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/legacystate"
+
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -11,9 +13,8 @@ import (
 )
 
 const (
-	legacyFastlyProviderAddress = "registry.terraform.io/fastly/fastly"
-	legacyDomainV1TypeName      = "fastly_domain_v1"
-	legacyDomainSchemaV0        = int64(0)
+	legacyDomainV1TypeName = "fastly_domain_v1"
+	legacyDomainSchemaV0   = int64(0)
 )
 
 var _ resource.ResourceWithMoveState = &Resource{}
@@ -46,7 +47,7 @@ func (r *Resource) MoveState(_ context.Context) []resource.StateMover {
 }
 
 func moveLegacyDomainV1State(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
-	if req.SourceProviderAddress != legacyFastlyProviderAddress || req.SourceTypeName != legacyDomainV1TypeName {
+	if req.SourceProviderAddress != legacystate.ProviderAddress || req.SourceTypeName != legacyDomainV1TypeName {
 		return
 	}
 
@@ -75,17 +76,17 @@ func moveLegacyDomainV1State(ctx context.Context, req resource.MoveStateRequest,
 		return
 	}
 
-	if !hasValue(id) {
+	if !legacystate.HasValue(id) {
 		resp.Diagnostics.AddError("Unable to migrate legacy Fastly domain state", "The fastly_domain_v1 state does not contain a domain ID.")
 		return
 	}
-	if !hasValue(fqdn) {
+	if !legacystate.HasValue(fqdn) {
 		resp.Diagnostics.AddError("Unable to migrate legacy Fastly domain state", "The fastly_domain_v1 state does not contain an fqdn.")
 		return
 	}
 	// The legacy provider always wrote both attributes from the same API value.
 	// A disagreement means the state was edited or is not a domain state.
-	if hasValue(domainID) && domainID.ValueString() != id.ValueString() {
+	if legacystate.HasValue(domainID) && domainID.ValueString() != id.ValueString() {
 		resp.Diagnostics.AddError(
 			"Unable to migrate legacy Fastly domain state",
 			"The fastly_domain_v1 state has different id and domain_id values, so the domain identity is ambiguous.",
@@ -97,8 +98,4 @@ func moveLegacyDomainV1State(ctx context.Context, req resource.MoveStateRequest,
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("fqdn"), fqdn)...)
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("description"), description)...)
 	resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root("service_id"), serviceID)...)
-}
-
-func hasValue(v types.String) bool {
-	return !v.IsNull() && !v.IsUnknown() && v.ValueString() != ""
 }
