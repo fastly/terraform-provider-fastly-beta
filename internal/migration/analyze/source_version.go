@@ -20,7 +20,7 @@ const (
 // The lockfile is only a selection record: it does not prove which release last
 // wrote the state, and a required_providers range proves nothing.
 func (a *Analyzer) checkSourceProviderVersion(state *analysisState) {
-	floor, ceiling, rule := a.sourceVersionRange(state)
+	floor, ceiling, rule, legacy := a.sourceVersionRange(state)
 	if floor == nil {
 		return
 	}
@@ -45,7 +45,7 @@ func (a *Analyzer) checkSourceProviderVersion(state *analysisState) {
 			RuleID:   rule,
 			Range:    fileStartRange(lockPath),
 			Message: fmt.Sprintf("The selected legacy fastly/fastly provider %s is older than %s, which is the first release "+
-				"that persists the fastly_service_vcl state schema this migration supports.", selected, floor),
+				"that persists the %s state schema this migration supports.", selected, floor, legacy),
 			Remediation: upgradeRemediation(state, floor, ceiling),
 		})
 	case ceiling != nil && !selected.LessThan(ceiling):
@@ -68,7 +68,7 @@ func versionRange(floor, ceiling *version.Version) string {
 	return fmt.Sprintf(">= %s, < %s", floor, ceiling)
 }
 
-func (a *Analyzer) sourceVersionRange(state *analysisState) (floor, ceiling *version.Version, ruleID string) {
+func (a *Analyzer) sourceVersionRange(state *analysisState) (floor, ceiling *version.Version, ruleID, legacy string) {
 	for _, action := range state.result.Actions {
 		rule, ok := a.registry.RuleByID(action.RuleID)
 		if !ok || rule.MinSourceProviderVersion == "" {
@@ -79,7 +79,7 @@ func (a *Analyzer) sourceVersionRange(state *analysisState) (floor, ceiling *ver
 			continue
 		}
 		if floor == nil || v.GreaterThan(floor) {
-			floor, ruleID = v, rule.ID
+			floor, ruleID, legacy = v, rule.ID, rule.Legacy
 		}
 		if rule.MaxSourceProviderVersion == "" {
 			continue
@@ -88,7 +88,7 @@ func (a *Analyzer) sourceVersionRange(state *analysisState) (floor, ceiling *ver
 			ceiling = m
 		}
 	}
-	return floor, ceiling, ruleID
+	return floor, ceiling, ruleID, legacy
 }
 
 func upgradeRemediation(state *analysisState, floor, ceiling *version.Version) string {

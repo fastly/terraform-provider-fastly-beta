@@ -91,10 +91,13 @@ done
 The NGWAF suite needs an account entitled to Next-Gen WAF. It creates one
 workspace and one object for each of the 28 target types, including
 account-wide lists, rules and a signal, then moves them with hand-written
-target HCL and `moved` blocks (CDTOOL-1873 owns the CLI workflow). It
+target HCL and `moved` blocks. It
 requires 28 state-only moves, no mutating NGWAF API requests, unchanged
 object and workspace IDs, and a final no-op. Set `NGWAF_VIRTUAL_PATCH_ID`
-if `CVE-2017-5638` isn't available to the test account.
+if `CVE-2017-5638` isn't available to the test account. Set
+`NGWAF_MIGRATION_MODE=cli` (as `make test-migration-ngwaf` does) to have
+`fastly-tf-migrate` write the target HCL and moved blocks instead; it also
+checks that a rerun proposes no further changes.
 
 Start with 10.3.0 for each service type, then run the older releases. Retained
 work directories contain private Terraform state, plan and log files; do not

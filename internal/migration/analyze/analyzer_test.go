@@ -504,8 +504,14 @@ resource "fastly_ngwaf_account_list" "example" {
 
 	result := analyzeDir(t, dir)
 
-	if _, ok := findingByRuleID(result, "resource-ngwaf-account-list-ip"); !ok {
-		t.Fatalf("Findings = %#v, want selected ip compatibility rule", result.Findings)
+	selected := false
+	for _, action := range result.Actions {
+		if action.RuleID == "resource-ngwaf-account-list-ip" && action.To == "fastly_ngwaf_ip_list.example" {
+			selected = true
+		}
+	}
+	if !selected || len(result.Findings) != 0 {
+		t.Fatalf("Actions = %#v, Findings = %#v, want the selected ip list move", result.Actions, result.Findings)
 	}
 	if containsFinding(result, "cannot be determined statically") {
 		t.Fatalf("Findings = %#v, did not expect ambiguity", result.Findings)
