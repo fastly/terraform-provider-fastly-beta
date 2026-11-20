@@ -73,6 +73,13 @@ references, other attributes, projections that read `domain_id`, and `moved`, `i
 `removed` blocks that address a migrating domain block the whole plan before anything
 is written.
 
+**Verification status.** The SDKv2 domain schemas are verified against published
+releases 9.1.0 through 10.3.0 by `make test-migration-schemas`. The claim that no
+domain is recreated and no service link changes is covered by
+`make test-migration-domains`, a live test that creates real services and domains.
+It has not been run against a real account yet, so treat that claim as unverified
+until it has. It needs a test account that can create versionless domains.
+
 The deprecated `fastly_domains_v1` data source is not migrated. The target
 `fastly_domains` schema and computed `id` differ, so the CLI blocks the whole plan
 with a finding instead of renaming it. Replace the data source and its references by

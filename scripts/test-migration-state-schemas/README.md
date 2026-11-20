@@ -44,7 +44,10 @@ Requires the repository Go toolchain, Terraform, jq and registry connectivity,
 but no Fastly token. Exports the exact releases listed above in isolated
 temporary directories, verifies the selected provider versions, compares
 every type and nesting mode, and runs the move RPC using those exported
-shapes. The script does not create infrastructure.
+shapes. It also compares the `fastly_domain`, `fastly_domain_v1`,
+`fastly_domain_service_link` and `fastly_domain_v1_service_link` schemas in every
+release and converts state generated from them. The script does not create
+infrastructure.
 
 ## 3. Live state move verification
 
