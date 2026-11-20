@@ -3,6 +3,7 @@ package rewrite
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -35,7 +36,10 @@ func (e AddStringDefault) apply(source []byte, filename string) ([]byte, error) 
 	}
 	parents := matchingParentBlocks(resource, e.Parents)
 	if len(parents) == 0 {
-		return nil, fmt.Errorf("default attribute parent path not found")
+		return nil, fmt.Errorf(
+			"cannot set default %q for %s.%s in %q: parent block path %q not found",
+			e.Attribute, e.ResourceType, e.ResourceName, filename, strings.Join(e.Parents, "."),
+		)
 	}
 	// TokensForValue escapes both interpolation and template directives
 	// (notably the literal VCL log-format sequence %{).
