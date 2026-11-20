@@ -17,7 +17,7 @@ MODE="${NGWAF_MIGRATION_MODE:-manual}"
 [[ -n "${FASTLY_API_TOKEN:-}" ]] || { echo "Set FASTLY_API_TOKEN for an isolated test account" >&2; exit 1; }
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Use an exact legacy provider version" >&2; exit 1; }
 [[ "$MODE" == manual || "$MODE" == cli ]] || { echo "NGWAF_MIGRATION_MODE must be manual or cli" >&2; exit 1; }
-for cmd in terraform go jq; do
+for cmd in terraform go jq cksum; do
     command -v "$cmd" >/dev/null 2>&1 || { echo "Missing prerequisite: $cmd" >&2; exit 1; }
 done
 
