@@ -4,7 +4,7 @@
 
 ### ENHANCEMENTS:
 
-- feat(migration): migrate legacy NGWAF resources to their renamed and split resource types in `fastly-tf-migrate`
+- feat(migration): migrate legacy NGWAF resources to their renamed and split resource types in `fastly-tf-migrate` ([#249](https://github.com/fastly/terraform-provider-fastly-beta/pull/249))
 - feat(migration): move state from legacy NGWAF resources to their renamed and split resource types through Terraform `moved` blocks ([#248](https://github.com/fastly/terraform-provider-fastly-beta/pull/248))
 - feat(migration): add reusable expression-preserving nested object transformations for legacy CDN and Compute backend TLS credentials, withholding HCL diffs for recognized sensitive configurations and rejecting conflicting shapes before writing
 - feat(migration): transform legacy `fastly_service_compute` HCL to `fastly_service_compute_auto` in `fastly-tf-migrate`, with live end-to-end coverage via `make test-migration-compute` ([#242](https://github.com/fastly/terraform-provider-fastly-beta/pull/242))
