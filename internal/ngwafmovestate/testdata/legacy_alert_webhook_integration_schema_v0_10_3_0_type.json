@@ -1,0 +1,11 @@
+{
+  "block": {
+    "attributes": {
+      "description": "string",
+      "id": "string",
+      "webhook": "string",
+      "workspace_id": "string"
+    }
+  },
+  "version": 0
+}

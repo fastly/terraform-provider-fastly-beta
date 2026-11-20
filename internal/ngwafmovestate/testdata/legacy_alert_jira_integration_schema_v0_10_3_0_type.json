@@ -1,0 +1,15 @@
+{
+  "block": {
+    "attributes": {
+      "description": "string",
+      "host": "string",
+      "id": "string",
+      "issue_type": "string",
+      "key": "string",
+      "project": "string",
+      "username": "string",
+      "workspace_id": "string"
+    }
+  },
+  "version": 0
+}

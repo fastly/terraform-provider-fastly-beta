@@ -1,0 +1,12 @@
+{
+  "block": {
+    "attributes": {
+      "action": "string",
+      "enabled": "bool",
+      "id": "string",
+      "virtual_patch_id": "string",
+      "workspace_id": "string"
+    }
+  },
+  "version": 0
+}

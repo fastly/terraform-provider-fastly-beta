@@ -6,6 +6,7 @@ import (
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/ngwafmovestate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resourceidentity"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -25,6 +26,7 @@ var (
 	_ resource.ResourceWithConfigure   = &Resource{}
 	_ resource.ResourceWithImportState = &Resource{}
 	_ resource.ResourceWithIdentity    = &Resource{}
+	_ resource.ResourceWithMoveState   = &Resource{}
 )
 
 // Definition describes one concrete type-specific NGWAF list resource.
@@ -78,11 +80,25 @@ func NewAccountResource(listType, typeSuffix, description string) resource.Resou
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = r.typeName(req.ProviderTypeName)
+}
+
+func (r *Resource) typeName(providerTypeName string) string {
 	scopePrefix := ""
 	if r.definition.Scope == scope.ScopeTypeWorkspace {
 		scopePrefix = "workspace_"
 	}
-	resp.TypeName = req.ProviderTypeName + "_ngwaf_" + scopePrefix + r.definition.TypeSuffix + "_list"
+	return providerTypeName + "_ngwaf_" + scopePrefix + r.definition.TypeSuffix + "_list"
+}
+
+// MoveState accepts legacy fastly_ngwaf_account_list or fastly_ngwaf_workspace_list
+// state whose type matches this list resource.
+func (r *Resource) MoveState(_ context.Context) []resource.StateMover {
+	source := ngwafmovestate.AccountList
+	if r.definition.Scope == scope.ScopeTypeWorkspace {
+		source = ngwafmovestate.WorkspaceList
+	}
+	return []resource.StateMover{ngwafmovestate.Mover(source, r.typeName("fastly"))}
 }
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {

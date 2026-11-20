@@ -1,0 +1,102 @@
+{
+  "block": {
+    "attributes": {
+      "applies_to": [
+        "list",
+        "string"
+      ],
+      "description": "string",
+      "enabled": "bool",
+      "group_operator": "string",
+      "id": "string",
+      "request_logging": "string",
+      "type": "string"
+    },
+    "block_types": {
+      "action": {
+        "block": {
+          "attributes": {
+            "signal": "string",
+            "type": "string"
+          }
+        },
+        "nesting_mode": "list"
+      },
+      "condition": {
+        "block": {
+          "attributes": {
+            "field": "string",
+            "operator": "string",
+            "value": "string"
+          }
+        },
+        "nesting_mode": "list"
+      },
+      "group_condition": {
+        "block": {
+          "attributes": {
+            "group_operator": "string"
+          },
+          "block_types": {
+            "condition": {
+              "block": {
+                "attributes": {
+                  "field": "string",
+                  "operator": "string",
+                  "value": "string"
+                }
+              },
+              "nesting_mode": "list"
+            },
+            "multival_condition": {
+              "block": {
+                "attributes": {
+                  "field": "string",
+                  "group_operator": "string",
+                  "operator": "string"
+                },
+                "block_types": {
+                  "condition": {
+                    "block": {
+                      "attributes": {
+                        "field": "string",
+                        "operator": "string",
+                        "value": "string"
+                      }
+                    },
+                    "nesting_mode": "list"
+                  }
+                }
+              },
+              "nesting_mode": "list"
+            }
+          }
+        },
+        "nesting_mode": "list"
+      },
+      "multival_condition": {
+        "block": {
+          "attributes": {
+            "field": "string",
+            "group_operator": "string",
+            "operator": "string"
+          },
+          "block_types": {
+            "condition": {
+              "block": {
+                "attributes": {
+                  "field": "string",
+                  "operator": "string",
+                  "value": "string"
+                }
+              },
+              "nesting_mode": "list"
+            }
+          }
+        },
+        "nesting_mode": "list"
+      }
+    }
+  },
+  "version": 0
+}

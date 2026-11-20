@@ -1,0 +1,16 @@
+{
+  "block": {
+    "attributes": {
+      "description": "string",
+      "entries": [
+        "list",
+        "string"
+      ],
+      "id": "string",
+      "name": "string",
+      "type": "string",
+      "workspace_id": "string"
+    }
+  },
+  "version": 0
+}

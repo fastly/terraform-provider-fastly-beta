@@ -1,0 +1,17 @@
+{
+  "block": {
+    "attributes": {
+      "action": "string",
+      "dont_notify": "bool",
+      "duration": "number",
+      "enabled": "bool",
+      "id": "string",
+      "interval": "number",
+      "limit": "number",
+      "name": "string",
+      "signal": "string",
+      "workspace_id": "string"
+    }
+  },
+  "version": 0
+}
