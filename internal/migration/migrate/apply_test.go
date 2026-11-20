@@ -378,8 +378,12 @@ func TestApplyChecksRegistrySupportedResourceNoOps(t *testing.T) {
 		t.Run(rule.ID, func(t *testing.T) {
 			t.Parallel()
 			dir, backups := t.TempDir(), privateBackupDir(t)
+			selector := ""
+			if rule.Selector != "" {
+				selector = "  " + rule.Selector + "\n"
+			}
 			writeConfig(t, dir, "main.tf",
-				"resource \""+rule.Legacy+"\" \"example\" {\n  name = var.name\n}\n")
+				"resource \""+rule.Legacy+"\" \"example\" {\n  name = var.name\n"+selector+"}\n")
 			result := newPlan(t, dir)
 			if result.Blocked() {
 				t.Fatalf("automatic resource %s blocked: %#v", rule.Legacy, result.Issues)
@@ -390,7 +394,7 @@ func TestApplyChecksRegistrySupportedResourceNoOps(t *testing.T) {
 			}
 			if rule.Legacy != rule.Target {
 				if outcome.FilesWritten != 2 {
-					t.Fatalf("service write = %#v", outcome)
+					t.Fatalf("moved resource write = %#v", outcome)
 				}
 			} else if outcome.FilesWritten != 0 || outcome.BackupDir != "" {
 				t.Fatalf("unchanged automatic resource produced writes: %#v", outcome)

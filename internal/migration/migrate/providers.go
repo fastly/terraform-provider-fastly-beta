@@ -21,15 +21,11 @@ import (
 
 const gaVersionConstraint = ">= 20.0.0"
 
-// isLegacyServiceAddress reports whether address names a legacy aggregate service
-// (VCL or Compute), either of which moves to a resource only the GA provider has.
-func isLegacyServiceAddress(address string) bool {
-	for legacy := range serviceAutoTypes {
-		if strings.HasPrefix(address, legacy+".") {
-			return true
-		}
-	}
-	return false
+// movesToGAResource reports whether action moves state to a resource type
+// only the GA provider has, such as a service _auto, renamed domain or NGWAF
+// target.
+func movesToGAResource(action analyze.Action) bool {
+	return action.Kind == compatibility.ConstructResource && action.State == compatibility.StateMove
 }
 
 // isRenamedLegacyDomainAddress reports a deprecated domain resource. Its type
@@ -83,7 +79,7 @@ func compileProviderMigration(analysis analyze.Result, index moduleIndex) ([]rew
 			continue
 		}
 		switch {
-		case isLegacyServiceAddress(action.From), isRenamedLegacyDomainAddress(action.From):
+		case movesToGAResource(action), isRenamedLegacyDomainAddress(action.From):
 			requiresTargetProvider = true
 			file := displayPath(analysis.Root, action.Range.Filename)
 			infoFor(filepath.ToSlash(filepath.Dir(file))).active = true

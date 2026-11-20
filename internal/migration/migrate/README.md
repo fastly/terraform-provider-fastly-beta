@@ -135,8 +135,56 @@ until their same-name state upgrade prerequisites and precise source schema
 mappings are verified. The target TLS private key uses a required
 `private_key.pem` object member and the target integration uses a sensitive
 `authentication` string map. Both have values that cannot be recovered by
-a remote read; rewriting HCL alone is insufficient. NGWAF alert integrations require coordination with
-the NGWAF state and HCL migration work.
+a remote read; rewriting HCL alone is insufficient. NGWAF alert integration
+credentials are migrated separately; see the NGWAF section below.
+
+## NGWAF resource migration
+
+Renamed and split legacy NGWAF resources move to their dedicated resource
+types, each with a module-local `moved` block. The provider moves the state
+without changing the remote object; the first refresh rebuilds it from the API.
+
+| Legacy | Target |
+| --- | --- |
+| `fastly_ngwaf_account_list`, `fastly_ngwaf_workspace_list` | `fastly_ngwaf_[workspace_]<type>_list`, selected by `type` |
+| `fastly_ngwaf_account_rule` | `fastly_ngwaf_request_rule` or `fastly_ngwaf_signal_rule`, selected by `type` |
+| `fastly_ngwaf_workspace_rule` | `fastly_ngwaf_workspace_{request,signal,rate_limit,templated_signal}_rule`, selected by `type` |
+| `fastly_ngwaf_account_signal` | `fastly_ngwaf_signal` |
+| `fastly_ngwaf_redaction` | `fastly_ngwaf_workspace_redaction` |
+| `fastly_ngwaf_thresholds` | `fastly_ngwaf_workspace_threshold` |
+| `fastly_ngwaf_virtual_patches` | `fastly_ngwaf_workspace_virtual_patch` (`action` becomes `mode`) |
+| `fastly_ngwaf_alert_<kind>_integration` | `fastly_ngwaf_workspace_alert_<kind>_integration` |
+
+The writer removes what the target type no longer has: the `type`
+discriminator; `request_logging` on signal, rate limit and templated signal
+rules; `action.type` on signal and templated signal rules; and the required
+empty `description` on templated signal rules. Alert credentials (`key`,
+`webhook`, or mailing-list `address`) move into `authentication = { ... }`,
+keeping the original expressions. `fastly_ngwaf_workspace` and
+`fastly_ngwaf_workspace_signal` keep their names and are not changed.
+
+References are rewritten to the selected target, including `.action` to
+`.mode` and alert credentials to `.authentication.<name>`. The following block
+the migration before any write:
+
+- a `type` that is not a literal, so the target cannot be selected statically;
+- a signal rule `action.type` other than `exclude_signal`, a templated signal
+  rule `action.type` other than `templated_signal`, or a templated signal
+  `description` other than `""`, since the target cannot represent them;
+- `dynamic "action"` blocks on signal or templated signal rules;
+- references to outputs a target drops, such as `type` or account-list
+  `applies_to`, and indexed `applies_to`, which is now a set.
+
+The target schemas validate some values more strictly than the legacy
+provider, such as list name lengths, signal name characters and condition
+fields. The migrator does not repeat those checks: `terraform validate` and
+`terraform plan` report them before any remote change.
+
+`make test-migration-ngwaf` is an opt-in live test that creates one object for
+each of the 28 targets with an exact legacy release, migrates them with the
+CLI, and requires state-only moves, no NGWAF write requests, unchanged IDs and
+a final no-op plan. It needs an account entitled to Next-Gen WAF and creates
+account-wide lists, rules and a signal.
 
 The CLI does not resolve or inspect remote state. Backend TLS migration
 must be checked with Terraform's migration plan: the existing state movers

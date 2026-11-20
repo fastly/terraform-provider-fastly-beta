@@ -256,7 +256,11 @@ func TestAllAutomaticResourceRulesAreCovered(t *testing.T) {
 		t.Run(rule.ID, func(t *testing.T) {
 			t.Parallel()
 			dir := t.TempDir()
-			source := fmt.Sprintf("resource %q \"example\" {\n  name = var.name\n}\n", rule.Legacy)
+			selector := ""
+			if rule.Selector != "" {
+				selector = "  " + rule.Selector + "\n"
+			}
+			source := fmt.Sprintf("resource %q \"example\" {\n  name = var.name\n%s}\n", rule.Legacy, selector)
 			writeConfig(t, dir, "main.tf", source)
 			result := newPlan(t, dir)
 			if result.Blocked() {
@@ -264,8 +268,8 @@ func TestAllAutomaticResourceRulesAreCovered(t *testing.T) {
 					rule.ID, result.Issues, result.Analysis.Findings)
 			}
 			if rule.Legacy != rule.Target {
-				if len(result.Changes) != 2 || len(result.Moves) != 1 {
-					t.Fatalf("expected renamed resource preview, got %#v", result)
+				if len(result.Changes) != 2 || len(result.Moves) != 1 || result.Moves[0].To != rule.Target+".example" {
+					t.Fatalf("expected a moved-resource preview to %s, got %#v", rule.Target, result)
 				}
 			} else if len(result.Changes) != 0 || len(result.Moves) != 0 {
 				t.Fatalf("unchanged resource %s was transformed: %#v", rule.Legacy, result)
