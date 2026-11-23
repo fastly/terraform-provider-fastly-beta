@@ -43,6 +43,11 @@ func writeText(writer io.Writer, result Result, applying bool) error {
 					finding.Message); err != nil {
 					return err
 				}
+				if finding.Remediation != "" {
+					if _, err := fmt.Fprintf(writer, "    %s\n", finding.Remediation); err != nil {
+						return err
+					}
+				}
 			}
 		}
 		for _, issue := range result.Issues {

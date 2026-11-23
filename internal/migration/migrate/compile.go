@@ -72,26 +72,15 @@ func compileResource(
 	issues = append(issues, productIssues...)
 	var edits []rewrite.Edit
 	edits = append(edits, productEdits...)
-	// Group object fields before applying any individual attribute edits.
-	// Each backend may configure a different subset of the selected fields.
-	var fields []rewrite.ObjectField
-	for _, action := range actions {
-		if field, ok := backendTLSField(action.rule, key.typ, autoType); ok && !slices.Contains(fields, field) {
-			fields = append(fields, field)
-		}
-	}
-	if len(fields) != 0 {
-		edits = append(edits, rewrite.NestObject{
-			File: key.file, ResourceType: key.typ, ResourceName: key.name,
-			Parents: []string{"backend"}, Target: "ssl_client_secrets", Fields: fields,
-		})
-	}
+	// Group every authorized flat field by its parent and destination.
+	// Preserve the legacy block names until every nested edit is finished.
+	edits = append(edits, compileServiceObjects(key, actions, autoType)...)
 	foundResource := false
 	for _, a := range actions {
 		rule := a.rule
 		switch rule.Kind {
 		case compatibility.ConstructAttribute:
-			if _, ok := backendTLSField(rule, key.typ, autoType); ok {
+			if _, _, _, ok := serviceObjectField(rule, key.typ, autoType); ok {
 				continue // grouped above, not one object per field
 			}
 			edit, err := compileAttribute(key, rule, autoType)
@@ -163,6 +152,57 @@ func backendTLSField(rule compatibility.Rule, legacyType, targetType string) (re
 	return rewrite.ObjectField{}, false
 }
 
+// serviceObjectField allows only reviewed object routes, not arbitrary
+// HCLReshape rules that happen to have the correct number of path components.
+func serviceObjectField(rule compatibility.Rule, legacyType, targetType string) (parent, object string, field rewrite.ObjectField, ok bool) {
+	if backend, found := backendTLSField(rule, legacyType, targetType); found {
+		return "backend", "ssl_client_secrets", backend, true
+	}
+	if rule.Kind != compatibility.ConstructAttribute ||
+		rule.Support != compatibility.SupportAutomatic || rule.HCL != compatibility.HCLReshape ||
+		rule.State != compatibility.StateMove {
+		return "", "", rewrite.ObjectField{}, false
+	}
+	source := strings.Split(rule.Legacy, ".")
+	if len(source) != 3 || source[0] != legacyType {
+		return "", "", rewrite.ObjectField{}, false
+	}
+	object, member, ok := compatibility.TLSLoggingObjectRoute(source[1], source[2])
+	if !ok || rule.Target != targetType+"."+source[1]+"."+object+"."+member {
+		return "", "", rewrite.ObjectField{}, false
+	}
+	return source[1], object, rewrite.ObjectField{From: source[2], To: member}, true
+}
+
+func compileServiceObjects(key resourceKey, actions []selectedAction, autoType string) []rewrite.Edit {
+	type destination struct{ parent, object string }
+	groups := make(map[destination][]rewrite.ObjectField)
+	var order []destination
+	// compileResource has sorted actions. Record a stable first-seen order;
+	// repeated endpoint blocks can contribute the same rule more than once.
+	for _, action := range actions {
+		parent, object, field, ok := serviceObjectField(action.rule, key.typ, autoType)
+		if !ok {
+			continue
+		}
+		dst := destination{parent, object}
+		if _, exists := groups[dst]; !exists {
+			order = append(order, dst)
+		}
+		if !slices.Contains(groups[dst], field) {
+			groups[dst] = append(groups[dst], field)
+		}
+	}
+	var edits []rewrite.Edit
+	for _, dst := range order {
+		edits = append(edits, rewrite.NestObject{
+			File: key.file, ResourceType: key.typ, ResourceName: key.name,
+			Parents: []string{dst.parent}, Target: dst.object, Fields: groups[dst],
+		})
+	}
+	return edits
+}
+
 func rankKind(kind compatibility.ConstructKind) int {
 	switch kind {
 	case compatibility.ConstructAttribute:
@@ -220,8 +260,8 @@ func compileAttribute(key resourceKey, rule compatibility.Rule, autoType string)
 			}, nil
 		case compatibility.HCLReshape:
 			// Only the top-level CDN settings fields move into an HCL block.
-			// Backend TLS is grouped by the compiler before this function.
-			// Other object routes (e.g. logging) remain blocked until their
+			// Reviewed backend and logging TLS/auth routes are grouped above.
+			// Other object routes remain blocked until their
 			// schema/state mappings have been reviewed.
 			if len(parents) != 0 || len(targetPath) != 2 ||
 				targetPath[0] != "settings" {
@@ -269,6 +309,12 @@ func compileServiceBlock(key resourceKey, rule compatibility.Rule, autoType stri
 		// every necessary known field-level change. The rule remains the
 		// authority for the rest of the block's compatible shape.
 		if source[1] == target[1] {
+			if key.typ == "fastly_service_vcl" && compatibility.IsTLSLoggingBlock(source[1]) {
+				return rewrite.AddStringDefault{
+					File: key.file, ResourceType: key.typ, ResourceName: key.name,
+					Parents: []string{source[1]}, Attribute: "format", Value: legacyTLSLoggingFormat(source[1]),
+				}, nil
+			}
 			return nil, nil
 		}
 	case compatibility.HCLSplit, compatibility.HCLRemove, compatibility.HCLReject:

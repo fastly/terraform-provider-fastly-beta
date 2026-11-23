@@ -26,6 +26,14 @@ func (authenticationRequired) ValidateObject(ctx context.Context, req validator.
 		return
 	}
 
+	// A configured variable or file expression may be unknown at validation time.
+	// Do not mistake it for an absent token and require the environment fallback.
+	if !req.ConfigValue.IsNull() {
+		if token, ok := req.ConfigValue.Attributes()["token"].(types.String); ok && token.IsUnknown() {
+			return
+		}
+	}
+
 	if effectiveAuthToken(ctx, req.ConfigValue) != "" {
 		return
 	}

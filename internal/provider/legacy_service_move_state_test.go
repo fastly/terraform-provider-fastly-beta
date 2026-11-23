@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -170,6 +171,20 @@ func legacyMoveStateValue(fixture legacyServiceSchema, populated bool) map[strin
 		gcs["public_key"] = "synthetic-public-key"
 	}
 	state["logging_gcs"] = []any{gcs}
+	for _, block := range []string{"logging_https", "logging_elasticsearch", "logging_kafka", "logging_splunk", "logging_syslog"} {
+		endpoint := legacyBlockValue(fixture.Block.BlockTypes[block].Block)
+		endpoint["name"] = "synthetic-endpoint"
+		for _, name := range []string{"tls_ca_cert", "tls_client_cert", "tls_client_key", "tls_hostname", "user", "password", "token", "header_value"} {
+			if _, exists := endpoint[name]; exists {
+				endpoint[name] = "synthetic-" + name
+			}
+		}
+		if block == "logging_https" {
+			endpoint["gzip_level"] = 0
+		}
+		state[block] = []any{endpoint}
+	}
+
 	if fos, exists := fixture.Block.BlockTypes["logging_fos"]; exists {
 		endpoint := legacyBlockValue(fos.Block)
 		endpoint["name"] = "fos-test"
@@ -317,8 +332,32 @@ func assertLegacyMoveState(t *testing.T, tc legacyMoveCase, fixture legacyServic
 		}
 	}
 	// API-readable blocks are intentionally reconstructed by Read, not copied.
-	for _, name := range []string{"backend", "logging_gcs", "logging_fos"} {
+	for _, name := range []string{"backend", "logging_gcs", "logging_fos", "logging_elasticsearch", "logging_kafka", "logging_splunk", "logging_syslog"} {
 		assertUnpopulatedLegacyMoveBlock(t, attrs, name)
+	}
+	if endpoints, _ := state["logging_https"].([]any); len(endpoints) == 0 {
+		assertUnpopulatedLegacyMoveBlock(t, attrs, "logging_https")
+	} else {
+		var models []tftypes.Value
+		if err := attrs["logging_https"].As(&models); err != nil || len(models) != 1 {
+			t.Fatal("missing HTTPS gzip hint")
+		}
+		var fields map[string]tftypes.Value
+		if err := models[0].As(&fields); err != nil {
+			t.Fatal(err)
+		}
+		var name string
+		if err := fields["name"].As(&name); err != nil || name != "synthetic-endpoint" {
+			t.Fatal("HTTPS endpoint name hint not preserved")
+		}
+		if !fields["gzip_level"].Equal(tftypes.NewValue(tftypes.Number, big.NewFloat(0))) {
+			t.Fatal("explicit HTTPS gzip_level=0 was not preserved")
+		}
+		for field, value := range fields {
+			if field != "name" && field != "gzip_level" && !value.IsNull() {
+				t.Fatalf("HTTPS field %s was copied instead of refreshed", field)
+			}
+		}
 	}
 	if tc.source == "fastly_service_compute" {
 		if len(resp.TargetPrivate) == 0 {

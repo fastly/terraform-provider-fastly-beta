@@ -3,6 +3,8 @@ package migrate
 import (
 	"strings"
 
+	"github.com/fastly/terraform-provider-fastly-beta/internal/migration/compatibility"
+
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 )
@@ -38,7 +40,7 @@ func sensitiveBody(body hcl.Body) bool {
 		}
 	}
 	for _, block := range syntaxBody.Blocks {
-		if sensitiveFieldName(block.Type) || sensitiveBody(block.Body) {
+		if compatibility.IsTLSLoggingBlock(block.Type) || sensitiveFieldName(block.Type) || sensitiveBody(block.Body) {
 			return true
 		}
 	}
@@ -49,7 +51,7 @@ func sensitiveFieldName(name string) bool {
 	switch name {
 	case "ssl_client_cert", "ssl_client_key", "ssl_client_secrets",
 		"ssl_ca_cert", "private_key", "authentication", "tls",
-		"api_key", "api_token", "password", "token", "secret", "sensitive", "share_key":
+		"api_key", "api_token", "header_value", "password", "token", "secret", "sensitive", "share_key":
 		return true
 	}
 	// Cover conventional prefixed credential names used by logging and

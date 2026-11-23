@@ -93,3 +93,17 @@ func TestHTTPSURL(t *testing.T) {
 		})
 	}
 }
+
+func TestHTTPSURLDiagnosticWithholdsValue(t *testing.T) {
+	t.Parallel()
+	resp := &validator.StringResponse{}
+	httpsURL{}.ValidateString(context.Background(), validator.StringRequest{
+		Path:        path.Root("url"),
+		ConfigValue: types.StringValue("http://SYNTHETIC_CREDENTIAL@example.invalid"),
+	}, resp)
+	assert.True(t, resp.Diagnostics.HasError())
+	for _, diagnostic := range resp.Diagnostics {
+		assert.NotContains(t, diagnostic.Summary(), "SYNTHETIC_CREDENTIAL")
+		assert.NotContains(t, diagnostic.Detail(), "SYNTHETIC_CREDENTIAL")
+	}
+}
