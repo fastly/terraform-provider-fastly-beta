@@ -1,8 +1,8 @@
 # Logging TLS/authentication configuration validation
 
-Run `make test-migration-logging-tls-config` to check the CDTOOL-1923
-migrations for CDN and Compute without a Fastly API token or external logging
-receiver.
+Run `make test-migration-logging-tls-config` to validate logging TLS/authentication
+configuration migration for CDN and Compute without a Fastly API token or
+external logging receiver.
 
 The script builds the local Framework provider and migration CLI, migrates
 the repository-owned synthetic combined logging fixtures, compares the written

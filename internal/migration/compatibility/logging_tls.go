@@ -5,7 +5,8 @@ import (
 	"strings"
 )
 
-// loggingTLSFields is the flat source surface reviewed for CDTOOL-1923.
+// loggingTLSFields lists the reviewed flat source fields for the five
+// legacy logging endpoints with TLS and authentication transformations.
 // The published SDKv2 VCL and Compute schemas differ only in the four VCL
 // fields below. In particular, Splunk request limits are target-only.
 var loggingTLSFields = map[string][]string{
