@@ -485,7 +485,12 @@ func (a *Analyzer) analyzeResource(
 	}
 
 	if strings.HasPrefix(resourceType, "fastly_ngwaf_") && rule.Support == compatibility.SupportAutomatic {
-		a.analyzeNGWAFBody(state, block.Body, resourceType, resourceName)
+		a.analyzeStandaloneBody(state, block.Body, resourceType, resourceName)
+		return
+	}
+	if _, container := legacyEntryContainers[resourceType]; container && rule.Support == compatibility.SupportAutomatic {
+		a.analyzeStandaloneBody(state, block.Body, resourceType, resourceName)
+		warnSeedOnlyEntries(state, block, rule)
 		return
 	}
 	if resourceType != "fastly_service_vcl" && resourceType != "fastly_service_compute" {
@@ -495,10 +500,10 @@ func (a *Analyzer) analyzeResource(
 	a.analyzeServiceBody(state, block.Body, resourceType, resourceName)
 }
 
-// analyzeNGWAFBody plans the attribute rules of a standalone NGWAF resource.
+// analyzeStandaloneBody plans the attribute rules of a standalone resource.
 // Unlike service bodies, unlisted attributes keep their name and shape: the
-// resource rule covers them, and the compiler owns the per-type removals.
-func (a *Analyzer) analyzeNGWAFBody(
+// resource rule covers them, and the compiler owns any per-type removals.
+func (a *Analyzer) analyzeStandaloneBody(
 	state *analysisState,
 	body *hclsyntax.Body,
 	resourceType string,
@@ -1170,4 +1175,36 @@ func relativePath(root, path string) string {
 		return "."
 	}
 	return filepath.ToSlash(relative)
+}
+
+// legacyEntryContainers maps each legacy entry resource to the singular and
+// plural nouns for its target's entries, for the manage_entries warning.
+var legacyEntryContainers = map[string][2]string{
+	"fastly_compute_acl_entries": {"entry", "entries"},
+	"fastly_configstore_entries": {"item", "items"},
+	"fastly_service_acl_entries": {"entry", "entries"},
+}
+
+// warnSeedOnlyEntries flags an entry resource without manage_entries = true,
+// whose declared entries the target will start enforcing.
+func warnSeedOnlyEntries(state *analysisState, block *hclsyntax.Block, rule compatibility.Rule) {
+	sourceRange := block.TypeRange
+	if attr, ok := block.Body.Attributes["manage_entries"]; ok {
+		if managed, known := staticBool(attr.Expr); known && managed {
+			return
+		}
+		sourceRange = attr.SrcRange
+	}
+	resourceType, resourceName := block.Labels[0], block.Labels[1]
+	state.result.Findings = append(state.result.Findings, Finding{
+		Severity: SeverityWarning,
+		RuleID:   rule.ID,
+		Range:    sourceRange,
+		Message: fmt.Sprintf(
+			"%s.%s does not set manage_entries = true, so the legacy provider only seeded its entries. "+
+				"After migration, %s owns every declared %[4]s: the first apply re-applies each declared %[4]s "+
+				"that changed outside Terraform. Undeclared %[5]s are left unchanged.",
+			resourceType, resourceName, rule.Target, legacyEntryContainers[resourceType][0], legacyEntryContainers[resourceType][1]),
+		Remediation: "Review the first terraform plan after migration before applying it.",
+	})
 }

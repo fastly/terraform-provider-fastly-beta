@@ -373,3 +373,34 @@ func TestReferenceAttributeForVersionlessResources(t *testing.T) {
 		}
 	}
 }
+
+func TestReferenceAttributeForRenamedContainers(t *testing.T) {
+	registry := Default()
+	for _, tc := range []struct {
+		source, target, name, want string
+		ok                         bool
+	}{
+		{"fastly_compute_acl", "fastly_acl", "id", "id", true},
+		{"fastly_compute_acl", "fastly_acl", "name", "name", true},
+		{"fastly_compute_acl_entries", "fastly_acl_entries", "compute_acl_id", "acl_id", true},
+		{"fastly_compute_acl_entries", "fastly_acl_entries", "entries", "entries", true},
+		{"fastly_compute_acl_entries", "fastly_acl_entries", "manage_entries", "", false},
+		{"fastly_configstore_entries", "fastly_configstore_items", "entries", "items", true},
+		{"fastly_configstore_entries", "fastly_configstore_items", "store_id", "store_id", true},
+		// The id suffix changes from /entries to /items.
+		{"fastly_configstore_entries", "fastly_configstore_items", "id", "", false},
+		{"fastly_configstore_entries", "fastly_configstore_items", "manage_entries", "", false},
+		{"fastly_service_acl_entries", "fastly_service_cdn_acl_entries", "id", "id", true},
+		{"fastly_service_acl_entries", "fastly_service_cdn_acl_entries", "acl_id", "acl_id", true},
+		{"fastly_service_acl_entries", "fastly_service_cdn_acl_entries", "service_id", "service_id", true},
+		// Entry blocks gain a numeric subnet.
+		{"fastly_service_acl_entries", "fastly_service_cdn_acl_entries", "entry", "", false},
+		{"fastly_service_acl_entries", "fastly_service_cdn_acl_entries", "manage_entries", "", false},
+		{"fastly_compute_acl", "fastly_acl_entries", "name", "", false},
+	} {
+		got, ok := registry.ReferenceAttribute(tc.source, tc.target, tc.name)
+		if got != tc.want || ok != tc.ok {
+			t.Errorf("ReferenceAttribute(%s, %s, %s) = %q, %t; want %q, %t", tc.source, tc.target, tc.name, got, ok, tc.want, tc.ok)
+		}
+	}
+}

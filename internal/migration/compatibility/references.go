@@ -9,10 +9,16 @@ import (
 // versionless resource migration. Domain description and service_id also keep
 // their value except when unset: SDKv2 persists "" and the target reads null.
 // The legacy-only domain_id is not listed: its registry rule renames it to id.
+// Container outputs whose value changes (Config Store id, ACL entry) are not
+// listed either, so references to them block migration.
 var unchangedReferenceOutputs = map[string][]string{
-	"fastly_domain>fastly_domain":                              {"id", "description", "fqdn", "service_id"},
-	"fastly_domain_v1>fastly_domain":                           {"id", "description", "fqdn", "service_id"},
-	"fastly_domain_v1_service_link>fastly_domain_service_link": {"id", "domain_id", "service_id"},
+	"fastly_domain>fastly_domain":                               {"id", "description", "fqdn", "service_id"},
+	"fastly_domain_v1>fastly_domain":                            {"id", "description", "fqdn", "service_id"},
+	"fastly_domain_v1_service_link>fastly_domain_service_link":  {"id", "domain_id", "service_id"},
+	"fastly_compute_acl>fastly_acl":                             {"id", "name"},
+	"fastly_compute_acl_entries>fastly_acl_entries":             {"id", "entries"},
+	"fastly_configstore_entries>fastly_configstore_items":       {"store_id"},
+	"fastly_service_acl_entries>fastly_service_cdn_acl_entries": {"id", "service_id", "acl_id"},
 }
 
 // ReferenceAttribute resolves a scalar output, not a configurable HCL attribute.

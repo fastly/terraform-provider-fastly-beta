@@ -23,6 +23,10 @@ var versionlessResourceTypes = map[string]string{
 	"fastly_domain":                 "fastly_domain",
 	"fastly_domain_v1":              "fastly_domain",
 	"fastly_domain_v1_service_link": "fastly_domain_service_link",
+	"fastly_compute_acl":            "fastly_acl",
+	"fastly_compute_acl_entries":    "fastly_acl_entries",
+	"fastly_configstore_entries":    "fastly_configstore_items",
+	"fastly_service_acl_entries":    "fastly_service_cdn_acl_entries",
 }
 
 func compileResource(
@@ -307,8 +311,18 @@ func compileVersionlessResource(
 	}
 
 	foundResource := false
+	var attributeEdits []rewrite.Edit
 	for _, a := range actions {
 		rule := a.rule
+		if rule.Kind == compatibility.ConstructAttribute && renamed {
+			edit, err := compileAttribute(key, rule, target)
+			if err != nil {
+				issue(a, err.Error())
+			} else if edit != nil {
+				attributeEdits = append(attributeEdits, edit)
+			}
+			continue
+		}
 		wantHCL, wantState := compatibility.HCLUnchanged, compatibility.StateUpgrade
 		if renamed {
 			wantHCL, wantState = compatibility.HCLRename, compatibility.StateMove
@@ -357,9 +371,10 @@ func compileVersionlessResource(
 		return nil, &Move{Module: module, From: fromAddress, To: toAddress, ReferenceOnly: true}, nil
 	}
 
-	edits := []rewrite.Edit{rewrite.RenameResource{
+	// Attribute edits run against the legacy resource type; rename it last.
+	edits := append(attributeEdits, rewrite.RenameResource{
 		File: key.file, FromType: key.typ, ToType: target, Name: key.name,
-	}}
+	})
 	if _, exists := index.moves[module][fromAddress]; !exists {
 		edits = append(edits, rewrite.AddMoved{
 			File: filepath.ToSlash(filepath.Join(module, "migration.tf")), From: fromAddress, To: toAddress,

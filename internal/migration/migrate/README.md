@@ -94,6 +94,38 @@ The deprecated `fastly_domains_v1` data source is not migrated. The target
 with a finding instead of renaming it. Replace the data source and its references by
 hand, then run the migration again.
 
+## Renamed container resource migration
+
+Versionless ACL and Config Store containers are renamed, with a `moved` block and a
+provider `MoveState` for each:
+
+| Legacy resource              | Target resource                  | HCL changes                                 |
+| ---------------------------- | -------------------------------- | ------------------------------------------- |
+| `fastly_compute_acl`         | `fastly_acl`                     | None                                        |
+| `fastly_compute_acl_entries` | `fastly_acl_entries`             | `compute_acl_id` becomes `acl_id`; `manage_entries` removed |
+| `fastly_configstore_entries` | `fastly_configstore_items`       | `entries` becomes `items`; `manage_entries` removed |
+| `fastly_service_acl_entries` | `fastly_service_cdn_acl_entries` | `manage_entries` removed                    |
+
+The targets own only the entries they declare. Ownership after the move follows the
+persisted legacy `manage_entries` value:
+
+- `manage_entries = true`: the legacy provider kept every remote entry in state and
+  enforced an exact match, so every entry in state stays owned.
+- Otherwise the legacy provider only seeded the configured entries and never read them
+  back, so the target starts owning none. The first plan shows the declared entries as an
+  in-place update; applying it re-applies each declared entry that changed outside
+  Terraform and leaves undeclared entries unchanged. The CLI reports a warning for each
+  resource that does not set the literal `manage_entries = true`.
+
+The Config Store items `id` changes from `<store_id>/entries` to `<store_id>/items`, and
+`fastly_service_cdn_acl_entries` stores `subnet` as a number, so references to the Config
+Store `id`, to `entry`, or to `manage_entries` block the whole plan. Other outputs keep
+their names, except that `compute_acl_id` references become `acl_id` and Config Store
+`entries` references become `items`.
+
+**Verification status.** The four SDKv2 schemas are verified against published releases
+9.1.0 through 10.3.0 by `make test-migration-schemas`.
+
 ## Sensitive nested object transformations
 
 Legacy static CDN and Compute backend `ssl_client_cert` and `ssl_client_key`

@@ -1,3 +1,3 @@
-resource "fastly_service_acl_entries" "demo" {
+resource "fastly_routing_config" "demo" {
   name = "migration-demo"
 }

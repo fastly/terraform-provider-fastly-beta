@@ -324,9 +324,9 @@ func TestAnalyzeTargetParityBlocker(t *testing.T) {
 
 	result := analyzeFixture(t, "parity-blocked")
 
-	finding, ok := findingByRuleID(result, "resource-service-acl-entries")
+	finding, ok := findingByRuleID(result, "resource-routing-config")
 	if !ok {
-		t.Fatalf("Findings = %#v, want resource-service-acl-entries blocker", result.Findings)
+		t.Fatalf("Findings = %#v, want resource-routing-config blocker", result.Findings)
 	}
 	if !strings.Contains(finding.Remediation, "state migration") {
 		t.Fatalf("Remediation = %q, want provider prerequisite", finding.Remediation)
@@ -479,13 +479,13 @@ func TestAnalyzeRenamedVersionlessResourceParityBlocker(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	writeFile(t, dir, "main.tf", `resource "fastly_compute_acl" "example" {}`)
+	writeFile(t, dir, "main.tf", `resource "fastly_routing_config" "example" {}`)
 
 	result := analyzeDir(t, dir)
 
-	finding, ok := findingByRuleID(result, "resource-compute-acl")
+	finding, ok := findingByRuleID(result, "resource-routing-config")
 	if !ok {
-		t.Fatalf("Findings = %#v, want resource-compute-acl blocker", result.Findings)
+		t.Fatalf("Findings = %#v, want resource-routing-config blocker", result.Findings)
 	}
 	if !strings.Contains(finding.Remediation, "renamed versionless resources") {
 		t.Fatalf("Remediation = %q, want state-migration prerequisite", finding.Remediation)
