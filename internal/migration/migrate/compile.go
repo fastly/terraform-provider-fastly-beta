@@ -17,11 +17,22 @@ var serviceAutoTypes = map[string]string{
 	"fastly_service_compute": "fastly_service_compute_auto",
 }
 
+// versionlessResourceTypes maps legacy versionless resources to their target
+// type. fastly_domain keeps its name, so only its references are rewritten.
+var versionlessResourceTypes = map[string]string{
+	"fastly_domain":                 "fastly_domain",
+	"fastly_domain_v1":              "fastly_domain",
+	"fastly_domain_v1_service_link": "fastly_domain_service_link",
+}
+
 func compileResource(
 	key resourceKey,
 	actions []selectedAction,
 	index moduleIndex,
 ) ([]rewrite.Edit, *Move, []Issue) {
+	if target, ok := versionlessResourceTypes[key.typ]; ok {
+		return compileVersionlessResource(key, target, actions, index)
+	}
 	var issues []Issue
 	issue := func(a selectedAction, message string) {
 		issues = append(issues, Issue{
@@ -32,6 +43,9 @@ func compileResource(
 		})
 	}
 
+	if strings.HasPrefix(key.typ, "fastly_ngwaf_") {
+		return compileNGWAFResource(key, actions, index)
+	}
 	autoType, supportedService := serviceAutoTypes[key.typ]
 	if !supportedService {
 		for _, a := range actions {
@@ -43,32 +57,7 @@ func compileResource(
 	module := filepath.ToSlash(filepath.Dir(key.file))
 	fromAddress := key.typ + "." + key.name
 	toAddress := autoType + "." + key.name
-	if index.resources[module][fromAddress] != key.file {
-		issues = append(issues, Issue{
-			File: key.file, Message: fmt.Sprintf("resource %s was not found at its analyzed location", fromAddress),
-			Remediation: "Check for conflicting or modified Terraform resource declarations.",
-		})
-	}
-	if file := index.resources[module][toAddress]; file != "" {
-		issues = append(issues, Issue{
-			File: key.file, Message: fmt.Sprintf("target resource %s already exists in %s", toAddress, file),
-			Remediation: "Resolve the target address collision before migration.",
-		})
-	}
-	if existingTo, found := index.moves[module][fromAddress]; found && existingTo != toAddress {
-		issues = append(issues, Issue{
-			File: key.file, Message: fmt.Sprintf("existing moved block for %s targets %s, not %s", fromAddress, existingTo, toAddress),
-			Remediation: "Resolve conflicting moved blocks before migration.",
-		})
-	}
-	for previousFrom, existingTo := range index.moves[module] {
-		if existingTo == toAddress && previousFrom != fromAddress {
-			issues = append(issues, Issue{
-				File: key.file, Message: fmt.Sprintf("target %s is already used by a moved block from %s", toAddress, previousFrom),
-				Remediation: "Resolve conflicting moved blocks before migration.",
-			})
-		}
-	}
+	issues = append(issues, moveIssues(key, module, fromAddress, toAddress, index)...)
 
 	// Nested HCL operations must run while parent blocks still have legacy
 	// names. Resource and block renames are applied last.
@@ -83,11 +72,28 @@ func compileResource(
 	issues = append(issues, productIssues...)
 	var edits []rewrite.Edit
 	edits = append(edits, productEdits...)
+	// Group object fields before applying any individual attribute edits.
+	// Each backend may configure a different subset of the selected fields.
+	var fields []rewrite.ObjectField
+	for _, action := range actions {
+		if field, ok := backendTLSField(action.rule, key.typ, autoType); ok && !slices.Contains(fields, field) {
+			fields = append(fields, field)
+		}
+	}
+	if len(fields) != 0 {
+		edits = append(edits, rewrite.NestObject{
+			File: key.file, ResourceType: key.typ, ResourceName: key.name,
+			Parents: []string{"backend"}, Target: "ssl_client_secrets", Fields: fields,
+		})
+	}
 	foundResource := false
 	for _, a := range actions {
 		rule := a.rule
 		switch rule.Kind {
 		case compatibility.ConstructAttribute:
+			if _, ok := backendTLSField(rule, key.typ, autoType); ok {
+				continue // grouped above, not one object per field
+			}
 			edit, err := compileAttribute(key, rule, autoType)
 			if err != nil {
 				issue(a, err.Error())
@@ -137,6 +143,24 @@ func compileResource(
 	}
 	move := &Move{Module: module, From: fromAddress, To: toAddress}
 	return edits, move, nil
+}
+
+// backendTLSField authorizes only the exact automatic backend routes already
+// reviewed in the registry. Other object destinations need their own schema
+// and state validation before using the generic writer.
+func backendTLSField(rule compatibility.Rule, legacyType, targetType string) (rewrite.ObjectField, bool) {
+	if rule.Kind != compatibility.ConstructAttribute ||
+		rule.Support != compatibility.SupportAutomatic || rule.HCL != compatibility.HCLReshape ||
+		rule.State != compatibility.StateMove {
+		return rewrite.ObjectField{}, false
+	}
+	for _, name := range []string{"ssl_client_cert", "ssl_client_key"} {
+		if rule.Legacy == legacyType+".backend."+name &&
+			rule.Target == targetType+".backend.ssl_client_secrets."+name {
+			return rewrite.ObjectField{From: name, To: name}, true
+		}
+	}
+	return rewrite.ObjectField{}, false
 }
 
 func rankKind(kind compatibility.ConstructKind) int {
@@ -196,10 +220,9 @@ func compileAttribute(key resourceKey, rule compatibility.Rule, autoType string)
 			}, nil
 		case compatibility.HCLReshape:
 			// Only the top-level CDN settings fields move into an HCL block.
-			// Targets such as backend.ssl_client_secrets, logging.authentication,
-			// and logging.tls are schema.SingleNestedAttribute objects and
-			// require `key = { ... }`, not `key { ... }`. NestAttribute would
-			// produce invalid target HCL for those constructs.
+			// Backend TLS is grouped by the compiler before this function.
+			// Other object routes (e.g. logging) remain blocked until their
+			// schema/state mappings have been reviewed.
 			if len(parents) != 0 || len(targetPath) != 2 ||
 				targetPath[0] != "settings" {
 				return nil, fmt.Errorf("attribute %q requires an object-attribute writer, not an HCL block", rule.Legacy)
@@ -254,4 +277,125 @@ func compileServiceBlock(key resourceKey, rule compatibility.Rule, autoType stri
 		return nil, fmt.Errorf("service block %q uses unsupported HCL strategy %s", rule.Legacy, rule.HCL)
 	}
 	return nil, fmt.Errorf("service block %q is not supported by the dry-run writer", rule.Legacy)
+}
+
+func compileVersionlessResource(
+	key resourceKey,
+	target string,
+	actions []selectedAction,
+	index moduleIndex,
+) ([]rewrite.Edit, *Move, []Issue) {
+	var issues []Issue
+	issue := func(a selectedAction, message string) {
+		issues = append(issues, Issue{
+			RuleID:      a.rule.ID,
+			File:        key.file,
+			Message:     message,
+			Remediation: "Implement a reviewed HCL mapping or migrate this construct manually.",
+		})
+	}
+
+	module := filepath.ToSlash(filepath.Dir(key.file))
+	fromAddress := key.typ + "." + key.name
+	toAddress := target + "." + key.name
+	renamed := key.typ != target
+	if index.resources[module][fromAddress] != key.file {
+		issues = append(issues, Issue{
+			File: key.file, Message: fmt.Sprintf("resource %s was not found at its analyzed location", fromAddress),
+			Remediation: "Check for conflicting or modified Terraform resource declarations.",
+		})
+	}
+
+	foundResource := false
+	for _, a := range actions {
+		rule := a.rule
+		wantHCL, wantState := compatibility.HCLUnchanged, compatibility.StateUpgrade
+		if renamed {
+			wantHCL, wantState = compatibility.HCLRename, compatibility.StateMove
+		}
+		if rule.Kind != compatibility.ConstructResource || rule.Legacy != key.typ || rule.Target != target ||
+			rule.HCL != wantHCL || rule.State != wantState {
+			issue(a, fmt.Sprintf("unimplemented resource conversion %s -> %s", rule.Legacy, rule.Target))
+			continue
+		}
+		foundResource = true
+	}
+	if !foundResource {
+		issues = append(issues, Issue{
+			File: key.file, Message: fmt.Sprintf("resource %s has no supported conversion action", fromAddress),
+			Remediation: "Review the compatibility registry; the migration must include the resource conversion.",
+		})
+	}
+
+	if renamed {
+		if file := index.resources[module][toAddress]; file != "" {
+			issues = append(issues, Issue{
+				File: key.file, Message: fmt.Sprintf("target resource %s already exists in %s", toAddress, file),
+				Remediation: "Resolve the target address collision before migration.",
+			})
+		}
+		if existingTo, found := index.moves[module][fromAddress]; found && existingTo != toAddress {
+			issues = append(issues, Issue{
+				File: key.file, Message: fmt.Sprintf("existing moved block for %s targets %s, not %s", fromAddress, existingTo, toAddress),
+				Remediation: "Resolve conflicting moved blocks before migration.",
+			})
+		}
+		for previousFrom, existingTo := range index.moves[module] {
+			if existingTo == toAddress && previousFrom != fromAddress {
+				issues = append(issues, Issue{
+					File: key.file, Message: fmt.Sprintf("target %s is already used by a moved block from %s", toAddress, previousFrom),
+					Remediation: "Resolve conflicting moved blocks before migration.",
+				})
+			}
+		}
+	}
+	if len(issues) != 0 {
+		return nil, nil, issues
+	}
+
+	if !renamed {
+		return nil, &Move{Module: module, From: fromAddress, To: toAddress, ReferenceOnly: true}, nil
+	}
+
+	edits := []rewrite.Edit{rewrite.RenameResource{
+		File: key.file, FromType: key.typ, ToType: target, Name: key.name,
+	}}
+	if _, exists := index.moves[module][fromAddress]; !exists {
+		edits = append(edits, rewrite.AddMoved{
+			File: filepath.ToSlash(filepath.Join(module, "migration.tf")), From: fromAddress, To: toAddress,
+		})
+	}
+	return edits, &Move{Module: module, From: fromAddress, To: toAddress}, nil
+}
+
+// moveIssues reports resource and moved-block collisions for one planned move.
+func moveIssues(key resourceKey, module, fromAddress, toAddress string, index moduleIndex) []Issue {
+	var issues []Issue
+	if index.resources[module][fromAddress] != key.file {
+		issues = append(issues, Issue{
+			File: key.file, Message: fmt.Sprintf("resource %s was not found at its analyzed location", fromAddress),
+			Remediation: "Check for conflicting or modified Terraform resource declarations.",
+		})
+	}
+	if file := index.resources[module][toAddress]; file != "" {
+		issues = append(issues, Issue{
+			File: key.file, Message: fmt.Sprintf("target resource %s already exists in %s", toAddress, file),
+			Remediation: "Resolve the target address collision before migration.",
+		})
+	}
+	if existingTo, found := index.moves[module][fromAddress]; found && existingTo != toAddress {
+		issues = append(issues, Issue{
+			File: key.file, Message: fmt.Sprintf("existing moved block for %s targets %s, not %s", fromAddress, existingTo, toAddress),
+			Remediation: "Resolve conflicting moved blocks before migration.",
+		})
+	}
+	for previousFrom, existingTo := range index.moves[module] {
+		if existingTo == toAddress && previousFrom != fromAddress {
+			issues = append(issues, Issue{
+				File: key.file, Message: fmt.Sprintf("target %s is already used by a moved block from %s", toAddress, previousFrom),
+				Remediation: "Resolve conflicting moved blocks before migration.",
+			})
+		}
+	}
+	return issues
 }

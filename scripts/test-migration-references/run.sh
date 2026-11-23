@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
-# Opt-in live reference migration test. Creates and deletes two real services.
+# Opt-in live reference migration test, optionally with backend TLS credentials.
+# Creates and deletes two real services; TLS material is generated only for this test.
 set -euo pipefail
 umask 077
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VERSION="${LEGACY_PROVIDER_VERSION:-10.3.0}"
+BACKEND_TLS="${MIGRATION_TEST_BACKEND_TLS:-false}"
+[[ "$BACKEND_TLS" == true || "$BACKEND_TLS" == false ]] || { echo "MIGRATION_TEST_BACKEND_TLS must be true or false" >&2; exit 1; }
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Use an exact legacy release" >&2; exit 1; }
 : "${FASTLY_API_TOKEN:?Set FASTLY_API_TOKEN for an isolated test account}"
 for cmd in go terraform jq cksum; do
     command -v "$cmd" >/dev/null || { echo "Missing command: $cmd" >&2; exit 1; }
 done
+if [[ "$BACKEND_TLS" == true ]]; then
+    command -v openssl >/dev/null || { echo "Missing command: openssl" >&2; exit 1; }
+fi
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/tf-migrate-refs.XXXXXX")"
 PROJECT="$WORK_DIR/project"
 PREFIX="tf-test-migrefs-$$-$(date +%s)"
@@ -142,6 +148,26 @@ resource "fastly_service_compute" "keyed" {
   }
 }
 HCL
+if [[ "$BACKEND_TLS" == true ]]; then
+    # Generate disposable credentials rather than reading any customer files.
+    # Keep all files, state, saved plans and traces in the private workspace.
+    openssl req -x509 -newkey rsa:2048 -nodes -days 2 \
+        -subj "/CN=fastly-migration-backend-test" \
+        -keyout services/client.key -out services/client.crt > "$WORK_DIR/openssl.log" 2>&1
+    # Add the exact same file expressions to the two real service backends.
+    # The migrator must preserve the expressions without reading the files.
+    awk '
+        { print }
+        /^    port = 443$/ {
+            print "    use_ssl = true"
+            print "    ssl_cert_hostname = \"www.example.com\""
+            print "    ssl_sni_hostname = \"www.example.com\""
+            print "    ssl_client_cert = file(\"${path.module}/client.crt\")"
+            print "    ssl_client_key = file(\"${path.module}/client.key\")"
+        }
+    ' services/main.tf > services/main.tmp
+    mv services/main.tmp services/main.tf
+fi
 cat > services/references.tf <<'HCL'
 locals {
   vcl_ids = fastly_service_vcl.counted[*].id
@@ -178,16 +204,60 @@ terraform state pull | jq -e '
   [.resources[] | select(.type=="fastly_service_vcl") | .instances[] | select(.schema_version==1)] | length==1' >/dev/null
 terraform state pull | jq -e '
   [.resources[] | select(.type=="fastly_service_compute") | .instances[] | select(.schema_version==0)] | length==1' >/dev/null
+if [[ "$BACKEND_TLS" == true ]]; then
+    # Store the actual legacy persisted strings in a private, deterministic
+    # snapshot. Check they are populated and correspond to our generated key.
+    terraform state pull | jq -eS '
+      [.resources[] | select(.type=="fastly_service_vcl" or .type=="fastly_service_compute") |
+        {family: (if .type=="fastly_service_vcl" then "cdn" else "compute" end),
+         backends: [.instances[].attributes.backend[] | {name,cert:.ssl_client_cert,key:.ssl_client_key}]}
+      ] | sort_by(.family)
+    ' > "$WORK_DIR/ssl-before.json"
+    jq -e --rawfile cert services/client.crt --rawfile key services/client.key '
+      length==2 and all(.[]; (.backends | length)==1 and
+        all(.backends[]; .name=="origin" and .cert==$cert and .key==$key))
+    ' "$WORK_DIR/ssl-before.json" >/dev/null
+fi
 PHASE=cli
-"$WORK_DIR/migrator" analyze .
+run_migrator() {
+    local report="$1"
+    shift
+    if ! "$WORK_DIR/migrator" "$@" > "$report" 2>&1; then
+        if [[ "$BACKEND_TLS" == false ]]; then
+            cat "$report" >&2
+        else
+            echo "Migration CLI failed; inspect the private report locally" >&2
+        fi
+        return 1
+    fi
+    if [[ "$BACKEND_TLS" == true ]] &&
+        grep -Eq -- '-----BEGIN (CERTIFICATE|.*PRIVATE KEY)-----' "$report"; then
+        echo "Sensitive material appeared in migration output" >&2
+        return 1
+    fi
+}
+run_migrator "$WORK_DIR/analyze.txt" analyze .
 before="$(cksum main.tf services/main.tf services/references.tf .terraform.lock.hcl)"
-"$WORK_DIR/migrator" migrate --dry-run . | tee "$WORK_DIR/preview.txt"
+run_migrator "$WORK_DIR/preview.txt" migrate --dry-run .
+if [[ "$BACKEND_TLS" == true ]]; then
+    grep -Fq 'HCL diff withheld' "$WORK_DIR/preview.txt"
+fi
+cat "$WORK_DIR/analyze.txt" "$WORK_DIR/preview.txt"
 grep -Fxq 'Migration dry-run: READY' "$WORK_DIR/preview.txt"
 grep -Fxq 'Resources to move: 2' "$WORK_DIR/preview.txt"
 [[ "$before" == "$(cksum main.tf services/main.tf services/references.tf .terraform.lock.hcl)" ]]
 [[ ! -e migration.tf && ! -e services/migration.tf ]]
 lock="$(cksum .terraform.lock.hcl)"
-"$WORK_DIR/migrator" migrate --write --backup-dir "$WORK_DIR/backups" .
+run_migrator "$WORK_DIR/write.txt" migrate --write --backup-dir "$WORK_DIR/backups" .
+if [[ "$BACKEND_TLS" == true ]]; then
+    grep -Fq 'HCL diff withheld' "$WORK_DIR/write.txt"
+    [[ "$(grep -Fc 'ssl_client_secrets = {' services/main.tf)" == 2 ]]
+    if grep -Eq '^    ssl_client_(cert|key) =' services/main.tf; then
+        echo "Legacy flat client credential field remains" >&2
+        exit 1
+    fi
+fi
+cat "$WORK_DIR/write.txt"
 [[ "$lock" == "$(cksum .terraform.lock.hcl)" ]]
 grep -Fq 'fastly_service_cdn_auto.counted' services/references.tf
 grep -Fq 'fastly_service_compute_auto.keyed' services/references.tf
@@ -221,10 +291,29 @@ terraform show -json "$WORK_DIR/move.tfplan" | jq -e '
       {from:"module.edge[\"production\"].fastly_service_compute.keyed[\"blue\"]",to:"module.edge[\"production\"].fastly_service_compute_auto.keyed[\"blue\"]"},
       {from:"module.edge[\"production\"].fastly_service_vcl.counted[0]",to:"module.edge[\"production\"].fastly_service_cdn_auto.counted[0]"}
     ]' >/dev/null
+if [[ "$BACKEND_TLS" == true ]]; then
+    terraform show -json "$WORK_DIR/move.tfplan" | jq -e '
+        [.output_changes[]? | select(.actions != ["no-op"])] | length==0
+    ' >/dev/null
+fi
 terraform apply -input=false "$WORK_DIR/move.tfplan"
 terraform plan -input=false -detailed-exitcode
 terraform output -json references | jq -S . > "$WORK_DIR/after.json"
 cmp "$WORK_DIR/before.json" "$WORK_DIR/after.json"
+if [[ "$BACKEND_TLS" == true ]]; then
+    terraform state pull | jq -eS '
+      [.resources[] | select(.type=="fastly_service_cdn_auto" or .type=="fastly_service_compute_auto") |
+        {family: (if .type=="fastly_service_cdn_auto" then "cdn" else "compute" end),
+         backends: [.instances[].attributes.backend[] |
+           {name,cert:.ssl_client_secrets.ssl_client_cert,key:.ssl_client_secrets.ssl_client_key}]}
+      ] | sort_by(.family)
+    ' > "$WORK_DIR/ssl-after.json"
+    cmp -s "$WORK_DIR/ssl-before.json" "$WORK_DIR/ssl-after.json" || {
+        echo "Backend TLS state differs after migration (values withheld)" >&2
+        exit 1
+    }
+    echo "[INFO] Backend TLS certificate and key state preserved for both service families"
+fi
 unset FASTLY_DEBUG_MODE TF_LOG TF_LOG_PATH
 calls="$(grep -a -E -o 'http\.Request \(dump\): \\?"[A-Z]+ [^ ]+' "$TRACE" |
     sed -E 's/^.*"([A-Z]+ )/\1/' | sort -u || true)"
@@ -245,3 +334,6 @@ echo "[INFO] Exact instance moves, stable outputs, no mutating service/product r
 PHASE=cleanup
 terraform destroy -auto-approve -input=false
 echo "[INFO] Reference migration from SDKv2 $VERSION PASSED"
+if [[ "$BACKEND_TLS" == true ]]; then
+    echo "[INFO] Sensitive backend TLS migration from SDKv2 $VERSION PASSED"
+fi

@@ -1,0 +1,15 @@
+{
+  "block": {
+    "attributes": {
+      "applies_to": [
+        "list",
+        "string"
+      ],
+      "description": "string",
+      "id": "string",
+      "name": "string",
+      "reference_id": "string"
+    }
+  },
+  "version": 0
+}

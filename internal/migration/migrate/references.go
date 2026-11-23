@@ -102,7 +102,13 @@ func verifyRenderedReferences(index moduleIndex, edits []rewrite.References, cha
 			continue
 		}
 		inspection := edit.Inspect(body.Body.(*hclsyntax.Body))
-		if len(inspection.References) != 0 || len(inspection.Problems) != 0 {
+		// A route whose address is unchanged keeps matching in rendered HCL;
+		// only a reference that still needs an edit is obsolete.
+		obsolete := len(inspection.Problems) != 0
+		for _, reference := range inspection.References {
+			obsolete = obsolete || reference.Changed
+		}
+		if obsolete {
 			issues = append(issues, Issue{File: file, Message: "rendered HCL contains an obsolete or unsafe migration reference", Remediation: "Review the incomplete reference transformation; no files were modified."})
 		}
 	}

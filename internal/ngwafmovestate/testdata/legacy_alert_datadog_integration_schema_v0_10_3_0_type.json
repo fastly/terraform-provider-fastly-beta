@@ -1,0 +1,12 @@
+{
+  "block": {
+    "attributes": {
+      "description": "string",
+      "id": "string",
+      "key": "string",
+      "site": "string",
+      "workspace_id": "string"
+    }
+  },
+  "version": 0
+}

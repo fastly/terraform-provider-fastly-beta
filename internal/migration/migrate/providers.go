@@ -21,15 +21,25 @@ import (
 
 const gaVersionConstraint = ">= 20.0.0"
 
-// isLegacyServiceAddress reports whether address names a legacy aggregate service
-// (VCL or Compute), either of which moves to a resource only the GA provider has.
-func isLegacyServiceAddress(address string) bool {
-	for legacy := range serviceAutoTypes {
-		if strings.HasPrefix(address, legacy+".") {
-			return true
-		}
-	}
-	return false
+// movesToGAResource reports whether action moves state to a resource type
+// only the GA provider has, such as a service _auto, renamed domain or NGWAF
+// target.
+func movesToGAResource(action analyze.Action) bool {
+	return action.Kind == compatibility.ConstructResource && action.State == compatibility.StateMove
+}
+
+// isRenamedLegacyDomainAddress reports a deprecated domain resource. Its type
+// does not exist in the target provider, so any module declaring it is legacy.
+func isRenamedLegacyDomainAddress(address string) bool {
+	return strings.HasPrefix(address, "fastly_domain_v1.") ||
+		strings.HasPrefix(address, "fastly_domain_v1_service_link.")
+}
+
+// isVersionlessDomainAddress reports a fastly_domain, whose type is shared by
+// the legacy and target providers. Its state needs the target provider to
+// upgrade, but the declaration alone cannot show that a module is still legacy.
+func isVersionlessDomainAddress(address string) bool {
+	return strings.HasPrefix(address, "fastly_domain.")
 }
 
 // compileProviderMigration handles only the original SDKv2 provider address.
@@ -60,15 +70,26 @@ func compileProviderMigration(analysis analyze.Result, index moduleIndex) ([]rew
 		}
 		return modules[module]
 	}
-	migratingService := false
+	// The legacy provider cannot run the state movers and upgraders, so every
+	// module that declares a resource needing one must move to the target
+	// provider, not only modules with services.
+	requiresTargetProvider := false
 	for _, action := range analysis.Actions {
-		if action.Kind == compatibility.ConstructResource && isLegacyServiceAddress(action.From) {
-			migratingService = true
+		if action.Kind != compatibility.ConstructResource {
+			continue
+		}
+		switch {
+		case movesToGAResource(action), isRenamedLegacyDomainAddress(action.From):
+			requiresTargetProvider = true
 			file := displayPath(analysis.Root, action.Range.Filename)
 			infoFor(filepath.ToSlash(filepath.Dir(file))).active = true
+		case isVersionlessDomainAddress(action.From):
+			// Rewrite an existing requirement or provider block, but do not
+			// add one to a module that may already use the target provider.
+			requiresTargetProvider = true
 		}
 	}
-	if !migratingService {
+	if !requiresTargetProvider {
 		return nil, nil
 	}
 	var issues []Issue

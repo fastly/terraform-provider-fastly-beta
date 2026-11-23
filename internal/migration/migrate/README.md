@@ -46,10 +46,153 @@ Any **unsupported** transformation blocks the *entire* plan without writing.
 This includes unknown-expression product enablements,
 unverified reference transformations, ambiguous/exclusionary provider constraints,
 unsupported provider arguments, remote module internals, and the current unsupported
-nested object-attribute targets (`authentication`, `tls`,
-`ssl_client_secrets`) and computed-only rate-limiter ID. These remain for
+nested object-attribute targets (`authentication`, `tls`)
+and computed-only rate-limiter ID. These remain for
 the corresponding dedicated migration tickets. The write command does
 **not** claim all legacy Fastly configurations are supported.
+
+## Standalone domain migration
+
+Versionless domain resources migrate together with the services that reference them:
+
+| Legacy resource                 | Target resource              | HCL                         | State                                  |
+| ------------------------------- | ---------------------------- | --------------------------- | -------------------------------------- |
+| `fastly_domain`                 | `fastly_domain`              | Address kept, no `moved`    | Provider state upgrader (v0 to v1)     |
+| `fastly_domain_v1`              | `fastly_domain`              | Renamed, `moved` block      | Provider `MoveState`                   |
+| `fastly_domain_v1_service_link` | `fastly_domain_service_link` | Renamed, `moved` block      | Provider `MoveState`                   |
+| `fastly_domain_service_link`    | `fastly_domain_service_link` | Unchanged                   | Unchanged                              |
+
+The legacy `domain_id` attribute no longer exists; references to
+`fastly_domain.<name>.domain_id` and `fastly_domain_v1.<name>.domain_id`
+become `.id`. The provider drops the legacy `domain_id` value and turns an unset `description`
+(persisted by SDKv2 as `""`) into null, so no domain is recreated and an omitted
+description plans no change. An explicit `description = ""` takes one
+empty-description update after migration.
+The `id` and `fqdn` outputs are unchanged. An unset `description` or `service_id` reads as
+null instead of `""` after migration, so an expression that compares them to `""` must be
+checked by hand. Whole-resource
+references, other attributes, projections that read `domain_id`, and `moved`, `import` or
+`removed` blocks that address a migrating domain block the whole plan before anything
+is written.
+
+A module that declares a `fastly_domain_v1` or `fastly_domain_v1_service_link` resource moves to the
+target provider requirement even when it has no service, because the legacy provider cannot run the
+`moved` block. An unchanged `fastly_domain` updates an existing Fastly provider requirement or block
+but never adds one, since the type is shared with the target provider.
+
+**Verification status.** The SDKv2 domain schemas are verified against published
+releases 9.1.0 through 10.3.0 by `make test-migration-schemas`. `make test-migration-domains`
+is a live test that creates real services and domains in a test account that can create
+versionless domains. It migrated state from SDKv2 10.3.0 with a zero-change plan and
+no mutating domain or service requests, and left the services' ids and active versions
+unchanged. It covers a direct association, omitted and populated descriptions, a
+standalone link and both `_v1` renames. A linked domain keeps no description there,
+because creating the link leaves the remote description empty.
+
+The deprecated `fastly_domains_v1` data source is not migrated. The target
+`fastly_domains` schema and computed `id` differ, so the CLI blocks the whole plan
+with a finding instead of renaming it. Replace the data source and its references by
+hand, then run the migration again.
+
+## Sensitive nested object transformations
+
+Legacy static CDN and Compute backend `ssl_client_cert` and `ssl_client_key`
+attributes are moved into the target `ssl_client_secrets = { ... }` object.
+The writer uses the exact original expression bytes and does not evaluate
+them, read referenced files, or resolve variables. Repeated backends are
+handled independently, preserving absent fields, explicit `null`, comments,
+and supported references. Heredoc contents are copied without reindentation.
+An existing target object mixed with legacy attributes, inline layouts
+that cannot be separated safely, and dynamic service blocks are rejected.
+
+For example:
+
+```hcl
+# Before
+backend {
+  name = "origin"
+  address = var.origin
+  ssl_client_cert = file(var.cert_file)
+  ssl_client_key = local.client_key
+}
+
+# After
+backend {
+  name = "origin"
+  address = var.origin
+  ssl_client_secrets = {
+    ssl_client_cert = file(var.cert_file)
+    ssl_client_key = local.client_key
+  }
+}
+```
+
+The reusable `rewrite.NestObject` edit groups flat attributes by destination
+and supports renamed object keys. Additional logging mappings must be
+reviewed and enabled in the dedicated logging tickets. Standalone
+`fastly_tls_private_key` and `fastly_integration` remain explicitly blocked
+until their same-name state upgrade prerequisites and precise source schema
+mappings are verified. The target TLS private key uses a required
+`private_key.pem` object member and the target integration uses a sensitive
+`authentication` string map. Both have values that cannot be recovered by
+a remote read; rewriting HCL alone is insufficient. NGWAF alert integration
+credentials are migrated separately; see the NGWAF section below.
+
+## NGWAF resource migration
+
+Renamed and split legacy NGWAF resources move to their dedicated resource
+types, each with a module-local `moved` block. The provider moves the state
+without changing the remote object; the first refresh rebuilds it from the API.
+
+| Legacy | Target |
+| --- | --- |
+| `fastly_ngwaf_account_list`, `fastly_ngwaf_workspace_list` | `fastly_ngwaf_[workspace_]<type>_list`, selected by `type` |
+| `fastly_ngwaf_account_rule` | `fastly_ngwaf_request_rule` or `fastly_ngwaf_signal_rule`, selected by `type` |
+| `fastly_ngwaf_workspace_rule` | `fastly_ngwaf_workspace_{request,signal,rate_limit,templated_signal}_rule`, selected by `type` |
+| `fastly_ngwaf_account_signal` | `fastly_ngwaf_signal` |
+| `fastly_ngwaf_redaction` | `fastly_ngwaf_workspace_redaction` |
+| `fastly_ngwaf_thresholds` | `fastly_ngwaf_workspace_threshold` |
+| `fastly_ngwaf_virtual_patches` | `fastly_ngwaf_workspace_virtual_patch` (`action` becomes `mode`) |
+| `fastly_ngwaf_alert_<kind>_integration` | `fastly_ngwaf_workspace_alert_<kind>_integration` |
+
+The writer removes what the target type no longer has: the `type`
+discriminator; `request_logging` on signal, rate limit and templated signal
+rules; `action.type` on signal and templated signal rules; and the required
+empty `description` on templated signal rules. Alert credentials (`key`,
+`webhook`, or mailing-list `address`) move into `authentication = { ... }`,
+keeping the original expressions. `fastly_ngwaf_workspace` and
+`fastly_ngwaf_workspace_signal` keep their names and are not changed.
+
+References are rewritten to the selected target, including `.action` to
+`.mode` and alert credentials to `.authentication.<name>`. The following block
+the migration before any write:
+
+- a `type` that is not a literal, so the target cannot be selected statically;
+- a signal rule `action.type` other than `exclude_signal`, a templated signal
+  rule `action.type` other than `templated_signal`, or a templated signal
+  `description` other than `""`, since the target cannot represent them;
+- `dynamic "action"` blocks on signal or templated signal rules;
+- references to outputs a target drops, such as `type` or account-list
+  `applies_to`, and indexed `applies_to`, which is now a set.
+
+The target schemas validate some values more strictly than the legacy
+provider, such as list name lengths, signal name characters and condition
+fields. The migrator does not repeat those checks: `terraform validate` and
+`terraform plan` report them before any remote change.
+
+`make test-migration-ngwaf` is an opt-in live test that creates one object for
+each of the 28 targets with an exact legacy release, migrates them with the
+CLI, and requires state-only moves, no NGWAF write requests, unchanged IDs and
+a final no-op plan. It needs an account entitled to Next-Gen WAF and creates
+account-wide lists, rules and a signal.
+
+The CLI does not resolve or inspect remote state. Backend TLS migration
+must be checked with Terraform's migration plan: the existing state movers
+retain service identity and `Read` reconstructs backend fields from Fastly.
+Never apply a migration-only plan that proposes backend changes. The
+opt-in `make test-migration-backend-tls` exercise uses freshly generated
+test certificates and keys and checks exact legacy and target TLS state,
+stable service/consumer identities, no-op plans and no mutating API calls.
 
 ## Terraform reference rewriting
 
@@ -238,8 +381,10 @@ cannot prove them.
 When `--write` is requested:
 
 1. Run the same analysis and completeness checks as `--dry-run`.
-2. Print the **actual deterministic diff**. Any preview output error stops
-   the command before creating backups or touching Terraform files.
+2. Print the deterministic preview. Recognized sensitive configurations use
+   a source-free preview with resource moves, files and compatibility actions
+   instead of a raw HCL diff. Any preview output error stops the command
+   before creating backups or touching Terraform files.
 3. Acquire a per-project exclusive lock and reject unfinished backups from
    earlier interrupted runs.
 4. Verify that all inspected `.tf` files still match the analyzer's snapshot.
@@ -301,7 +446,13 @@ The golden migration fixtures use actual supported Fastly schema fields;
 generic HCL editing primitives are tested separately in
 `internal/migration/rewrite`.
 
-**Security:** Dry-run diffs and backups can contain literal credentials from
-`.tf` files. Do not post their contents to shared tickets or CI logs. Backups
-are written privately outside the repository; they remain until manually
-removed.
+**Security:** For recognized sensitive fields anywhere in the analyzed module
+tree, both dry-run and write previews withhold all source diffs, including
+unchanged context and other files where values could be repeated. The preview
+still reports file paths, moves and compatibility actions. This is a
+conservative schema/name-based policy, not an arbitrary-secret detector:
+ordinary non-sensitive previews can still contain user-supplied literals in
+unrecognized fields. Do not publish raw HCL, state, plans or recovery backups.
+Backups contain original unredacted HCL, are private outside the repository
+and remain until manually removed. Existing source file permissions are
+preserved.

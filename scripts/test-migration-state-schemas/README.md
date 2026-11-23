@@ -44,7 +44,10 @@ Requires the repository Go toolchain, Terraform, jq and registry connectivity,
 but no Fastly token. Exports the exact releases listed above in isolated
 temporary directories, verifies the selected provider versions, compares
 every type and nesting mode, and runs the move RPC using those exported
-shapes. The script does not create infrastructure.
+shapes. It also compares the `fastly_domain`, `fastly_domain_v1`,
+`fastly_domain_service_link` and `fastly_domain_v1_service_link` schemas in every
+release and converts state generated from them. The script does not create
+infrastructure.
 
 ## 3. Live state move verification
 
@@ -71,6 +74,30 @@ exercise real legacy state, reject infrastructure-changing migration
 actions before apply, check identity and active version, audit service API
 traffic, and require a final no-op. Compute also checks the filename and
 package hash before and after apply.
+
+### NGWAF
+
+Every renamed or split legacy NGWAF resource type is unchanged at schema
+version 0 from 9.1.0 through 10.3.0, so one 10.3.0 fixture per type in
+`internal/ngwafmovestate/testdata` covers the matrix. The published-schema
+suite above compares all 16 against each release.
+
+```sh
+for version in 9.1.0 9.5.0 9.8.0 10.2.0 10.3.0; do
+  LEGACY_PROVIDER_VERSION="$version" ./scripts/test-migration-state-schemas/run-ngwaf.sh || exit 1
+done
+```
+
+The NGWAF suite needs an account entitled to Next-Gen WAF. It creates one
+workspace and one object for each of the 28 target types, including
+account-wide lists, rules and a signal, then moves them with hand-written
+target HCL and `moved` blocks. It
+requires 28 state-only moves, no mutating NGWAF API requests, unchanged
+object and workspace IDs, and a final no-op. Set `NGWAF_VIRTUAL_PATCH_ID`
+if `CVE-2017-5638` isn't available to the test account. Set
+`NGWAF_MIGRATION_MODE=cli` (as `make test-migration-ngwaf` does) to have
+`fastly-tf-migrate` write the target HCL and moved blocks instead; it also
+checks that a rerun proposes no further changes.
 
 Start with 10.3.0 for each service type, then run the older releases. Retained
 work directories contain private Terraform state, plan and log files; do not

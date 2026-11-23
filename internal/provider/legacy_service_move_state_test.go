@@ -155,6 +155,12 @@ func legacyMoveStateValue(fixture legacyServiceSchema, populated bool) map[strin
 		return state
 	}
 
+	// Exercise the original flat TLS fields at the actual MoveResourceState
+	// decoding boundary. API-readable backend values are hydrated by Read;
+	// the live backend TLS acceptance test verifies that round trip.
+	backend["ssl_client_cert"] = "synthetic-client-cert"
+	backend["ssl_client_key"] = "synthetic-client-key"
+
 	// Populated nested objects are important: an empty set would never
 	// exercise schema drift inside its element type.
 	gcs := legacyBlockValue(fixture.Block.BlockTypes["logging_gcs"].Block)

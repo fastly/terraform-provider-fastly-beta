@@ -7,6 +7,7 @@ import (
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/errors"
+	"github.com/fastly/terraform-provider-fastly-beta/internal/ngwafmovestate"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/resourceidentity"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -24,6 +25,7 @@ var (
 	_ resource.ResourceWithConfigure   = &Resource{}
 	_ resource.ResourceWithImportState = &Resource{}
 	_ resource.ResourceWithIdentity    = &Resource{}
+	_ resource.ResourceWithMoveState   = &Resource{}
 )
 
 type Resource struct {
@@ -192,4 +194,9 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("workspace_id"), parts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), parts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("virtual_patch_id"), parts[1])...)
+}
+
+// MoveState accepts legacy fastly_ngwaf_virtual_patches state through a Terraform moved block.
+func (r *Resource) MoveState(_ context.Context) []resource.StateMover {
+	return []resource.StateMover{ngwafmovestate.Mover(ngwafmovestate.VirtualPatches, "fastly_ngwaf_workspace_virtual_patch")}
 }

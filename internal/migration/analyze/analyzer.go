@@ -202,10 +202,7 @@ func (a *Analyzer) discover(ctx context.Context, state *analysisState) error {
 						Severity: SeverityWarning,
 						Code:     FindingCodeRemoteModuleSource,
 						Range:    child.sourceRange,
-						Message: fmt.Sprintf(
-							"Remote module source %q is outside the selected local module tree.",
-							child.source,
-						),
+						Message:  "Remote module source is outside the selected local module tree.",
 						Remediation: "If this module manages legacy Fastly resources, analyze and migrate " +
 							"that module's source separately.",
 					})
@@ -285,11 +282,41 @@ func (a *Analyzer) analyzeFile(state *analysisState, parsed parsedFile) {
 	a.analyzeProviderRequirements(state, body)
 
 	for _, block := range body.Blocks {
-		if block.Type != "resource" || len(block.Labels) != 2 {
+		if len(block.Labels) != 2 {
 			continue
 		}
-		a.analyzeResource(state, parsed.moduleDir, block)
+		switch block.Type {
+		case "resource":
+			a.analyzeResource(state, parsed.moduleDir, block)
+		case "data":
+			a.analyzeDataSource(state, block)
+		}
 	}
+}
+
+// unsupportedLegacyDataSources are deprecated SDKv2 data sources that the target
+// provider does not register. Their schemas differ from the replacement, so a
+// rename could leave dependent references pointing at attributes that do not
+// exist. They block migration until they are rewritten by hand.
+var unsupportedLegacyDataSources = map[string]string{
+	"fastly_domains_v1": "fastly_domains",
+}
+
+func (a *Analyzer) analyzeDataSource(state *analysisState, block *hclsyntax.Block) {
+	dataType := block.Labels[0]
+	replacement, ok := unsupportedLegacyDataSources[dataType]
+	if !ok {
+		return
+	}
+	state.result.Findings = append(state.result.Findings, Finding{
+		Severity: SeverityError,
+		Code:     FindingCodeUnsupportedDataSource,
+		Range:    block.TypeRange,
+		Message:  fmt.Sprintf("Data source %q is not supported by the target provider and cannot be migrated automatically.", dataType),
+		Remediation: fmt.Sprintf("Replace data.%s.%s with the %q data source and update every reference to it, "+
+			"after checking the target schema, because the attributes and computed id differ. "+
+			"Then run the migration again.", dataType, block.Labels[1], replacement),
+	})
 }
 
 func (a *Analyzer) analyzeProviderRequirements(state *analysisState, body *hclsyntax.Body) {
@@ -457,11 +484,39 @@ func (a *Analyzer) analyzeResource(
 		state.referenceTargets[moduleDir][address] = rewrite.ResourceReferenceTarget(rule.Target+"."+resourceName, block)
 	}
 
+	if strings.HasPrefix(resourceType, "fastly_ngwaf_") && rule.Support == compatibility.SupportAutomatic {
+		a.analyzeNGWAFBody(state, block.Body, resourceType, resourceName)
+		return
+	}
 	if resourceType != "fastly_service_vcl" && resourceType != "fastly_service_compute" {
 		return
 	}
 
 	a.analyzeServiceBody(state, block.Body, resourceType, resourceName)
+}
+
+// analyzeNGWAFBody plans the attribute rules of a standalone NGWAF resource.
+// Unlike service bodies, unlisted attributes keep their name and shape: the
+// resource rule covers them, and the compiler owns the per-type removals.
+func (a *Analyzer) analyzeNGWAFBody(
+	state *analysisState,
+	body *hclsyntax.Body,
+	resourceType string,
+	resourceName string,
+) {
+	for name, attr := range body.Attributes {
+		rules := filterKind(a.registry.RulesForLegacy(resourceType+"."+name), compatibility.ConstructAttribute)
+		if len(rules) == 0 {
+			continue
+		}
+		rule, ok := selectAttributeRule(rules, attr.Expr)
+		if !ok {
+			a.appendAmbiguousRuleFinding(state, attr.SrcRange, rules,
+				fmt.Sprintf("Value of %q cannot be classified statically.", resourceType+"."+name))
+			continue
+		}
+		a.applyRule(state, rule, attr.SrcRange, resourceType, resourceName)
+	}
 }
 
 // isKnownTargetResource identifies resources that already use a target-model
@@ -542,7 +597,7 @@ func (a *Analyzer) selectResourceRule(
 		state,
 		attr.SrcRange,
 		rules,
-		fmt.Sprintf("No compatibility rule matches %s.", selector),
+		fmt.Sprintf("No compatibility rule matches the configured %q selector.", selectorAttribute),
 	)
 	return compatibility.Rule{}, false
 }
@@ -666,6 +721,15 @@ func (a *Analyzer) analyzeNestedBlock(
 ) {
 	for name, attr := range block.Body.Attributes {
 		legacy := resourceType + "." + block.Type + "." + name
+		if block.Type == "backend" && name == "ssl_client_secrets" {
+			state.result.Findings = append(state.result.Findings, Finding{
+				Severity:    SeverityError,
+				Range:       attr.SrcRange,
+				Message:     "Legacy backend already contains target ssl_client_secrets object.",
+				Remediation: "Use the legacy flat certificate and key fields before migrating; mixed shapes cannot be verified.",
+			})
+			continue
+		}
 
 		if block.Type == "product_enablement" {
 			productRules := filterKind(a.registry.RulesForLegacy(legacy), compatibility.ConstructProduct)
@@ -1003,6 +1067,9 @@ func (a *Analyzer) findReferences(state *analysisState) {
 				Routes: targets, AllRoutes: all, Registry: a.registry,
 			}).Inspect(parsed.body)
 			for _, reference := range inspection.References {
+				if !reference.Changed {
+					continue
+				}
 				state.result.References = append(state.result.References, Reference{
 					From: reference.From, To: reference.To, Range: reference.Range,
 				})
@@ -1071,7 +1138,7 @@ func appendHCLDiagnostics(result *Result, filename string, diags hcl.Diagnostics
 		result.Findings = append(result.Findings, Finding{
 			Severity: SeverityError,
 			Range:    sourceRange,
-			Message:  diagnostic.Summary + ": " + diagnostic.Detail,
+			Message:  "Invalid native Terraform syntax (source text omitted).",
 			Remediation: "Fix the Terraform syntax error before running " +
 				"fastly-tf-migrate analyze again.",
 		})

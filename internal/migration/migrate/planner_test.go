@@ -256,16 +256,20 @@ func TestAllAutomaticResourceRulesAreCovered(t *testing.T) {
 		t.Run(rule.ID, func(t *testing.T) {
 			t.Parallel()
 			dir := t.TempDir()
-			source := fmt.Sprintf("resource %q \"example\" {\n  name = var.name\n}\n", rule.Legacy)
+			selector := ""
+			if rule.Selector != "" {
+				selector = "  " + rule.Selector + "\n"
+			}
+			source := fmt.Sprintf("resource %q \"example\" {\n  name = var.name\n%s}\n", rule.Legacy, selector)
 			writeConfig(t, dir, "main.tf", source)
 			result := newPlan(t, dir)
 			if result.Blocked() {
 				t.Fatalf("automatic resource rule %s blocked: issues=%#v findings=%#v",
 					rule.ID, result.Issues, result.Analysis.Findings)
 			}
-			if rule.Legacy == "fastly_service_vcl" || rule.Legacy == "fastly_service_compute" {
-				if len(result.Changes) != 2 || len(result.Moves) != 1 {
-					t.Fatalf("expected service preview, got %#v", result)
+			if rule.Legacy != rule.Target {
+				if len(result.Changes) != 2 || len(result.Moves) != 1 || result.Moves[0].To != rule.Target+".example" {
+					t.Fatalf("expected a moved-resource preview to %s, got %#v", rule.Target, result)
 				}
 			} else if len(result.Changes) != 0 || len(result.Moves) != 0 {
 				t.Fatalf("unchanged resource %s was transformed: %#v", rule.Legacy, result)
@@ -553,15 +557,6 @@ func TestPlanRejectsUnimplementedObjectAttributesAndComputedTargets(t *testing.T
 		nested string
 		want   string
 	}{
-		{
-			name: "backend TLS client certificate is a nested object attribute",
-			nested: `backend {
-    name = "origin"
-    address = var.origin
-    ssl_client_cert = var.certificate
-  }`,
-			want: "object-attribute writer",
-		},
 		{
 			name: "logging S3 authentication is a nested object attribute",
 			nested: `logging_s3 {

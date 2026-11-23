@@ -37,6 +37,9 @@ type Move struct {
 	Module string
 	From   string
 	To     string
+	// ReferenceOnly marks a resource that keeps its address. It authorizes
+	// reference rewriting but needs no moved block and is not reported as a move.
+	ReferenceOnly bool
 }
 
 // Result contains either a complete read-only preview or blocking diagnostics.
@@ -49,8 +52,9 @@ type Result struct {
 
 	// Keep the validated rewrite plan private: callers may inspect Changes,
 	// but a write must use the exact immutable plan built during preflight.
-	rewritePlan *rewrite.Plan
-	snapshots   map[string][]byte
+	rewritePlan  *rewrite.Plan
+	snapshots    map[string][]byte
+	withholdDiff bool // recognized sensitive configuration anywhere in the analyzed module tree
 }
 
 // Blocked reports whether the preflight or planner found incomplete migration work.
@@ -221,7 +225,12 @@ func (p *Planner) Plan(ctx context.Context, path string) (Result, error) {
 		return result, nil
 	}
 	result.Changes = changes
-	result.Moves = moves
+	result.withholdDiff = containsSensitiveConfiguration(index.snapshots)
+	for _, move := range moves {
+		if !move.ReferenceOnly {
+			result.Moves = append(result.Moves, move)
+		}
+	}
 	result.rewritePlan = plan
 	result.snapshots = index.snapshots
 	return result, nil
@@ -305,7 +314,7 @@ func inspectFiles(ctx context.Context, analysis analyze.Result) (moduleIndex, []
 		index.snapshots[file] = source
 		parsed, diags := hclsyntax.ParseConfig(source, file, hcl.Pos{Line: 1, Column: 1})
 		if diags.HasErrors() || parsed == nil {
-			return moduleIndex{}, nil, fmt.Errorf("parse analyzed file %q: %s", file, diags.Error())
+			return moduleIndex{}, nil, fmt.Errorf("parse analyzed file %q: invalid HCL syntax (source text omitted)", file)
 		}
 		body, ok := parsed.Body.(*hclsyntax.Body)
 		if !ok {
