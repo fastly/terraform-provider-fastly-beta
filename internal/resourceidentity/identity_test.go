@@ -45,6 +45,18 @@ func TestIdentitySchemasAreStable(t *testing.T) {
 			want:   map[string]bool{"service_id": true, "acl_id": true},
 			schema: ACLCollectionSchema(),
 		},
+		"bot management workspace": {
+			want:   map[string]bool{"workspace_id": true},
+			schema: BotManagementWorkspaceSchema(),
+		},
+		"bot management category": {
+			want:   map[string]bool{"workspace_id": true, "category_id": true},
+			schema: BotManagementCategorySchema(),
+		},
+		"bot management bot": {
+			want:   map[string]bool{"workspace_id": true, "category_id": true, "bot_id": true},
+			schema: BotManagementBotSchema(),
+		},
 	}
 
 	for name, tt := range tests {
@@ -88,6 +100,15 @@ func TestImportHelpersRejectMissingIdentity(t *testing.T) {
 		},
 		"ACL collection": func(resp *resource.ImportStateResponse) {
 			ImportACLCollection(ctx, req, resp)
+		},
+		"bot management workspace": func(resp *resource.ImportStateResponse) {
+			ImportBotManagementWorkspace(ctx, req, resp)
+		},
+		"bot management category": func(resp *resource.ImportStateResponse) {
+			ImportBotManagementCategory(ctx, req, resp)
+		},
+		"bot management bot": func(resp *resource.ImportStateResponse) {
+			ImportBotManagementBot(ctx, req, resp)
 		},
 	}
 

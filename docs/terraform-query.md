@@ -94,6 +94,9 @@ It is not used for the automatic compatibility resource family.
 - `fastly_ngwaf_workspace_redaction`
 - `fastly_ngwaf_workspace_threshold`
 - `fastly_ngwaf_workspace_virtual_patch`
+- `fastly_bot_management_workspace`
+- `fastly_bot_management_category`
+- `fastly_bot_management_bot` (bots set to `inherit` are omitted)
 
 These resources are first-class Terraform resources, so they can be discovered
 independently and generated as separate resource blocks.

@@ -1,0 +1,63 @@
+---
+page_title: "fastly_bot_management_bot Resource - fastly"
+subcategory: ""
+description: |-
+  Manages the action of a predefined bot in a Bot Management (ContentGuard) workspace.
+---
+
+# fastly_bot_management_bot (Resource)
+
+Manages the action of a predefined bot in a Bot Management (ContentGuard)
+workspace. Set `action` to `allow`, `block`, or `challenge` to override the
+action of the category the bot belongs to, or to `inherit` to keep the bot on
+its inherited category default.
+
+Bots are predefined and can't be created or deleted. This resource doesn't
+create or delete bots; it sets the action of an existing bot. Destroying the
+resource only removes it from Terraform state, and the bot's action is left
+unchanged. To return the bot to its category's action, set `action = "inherit"`
+and apply before removing the resource.
+
+Setting `action = "inherit"` keeps the bot on its category's action. If the
+bot's action is changed outside Terraform, the next `apply` sets it back to
+`inherit`.
+
+~> **Note:** The `fastly_bot_management_category_overrides_clear` action can be
+used to clear the bot overrides in a category, including those of bots managed
+by this resource. The next `apply` sets bots configured with another action
+back to that action.
+
+Use the `fastly_bot_management_bots` data source to list the bot IDs available
+in a workspace or category.
+
+## Example Usage
+
+```terraform
+data "fastly_bot_management_workspace" "example" {
+  service_id = fastly_service_cdn_auto.example.id
+}
+
+resource "fastly_bot_management_category" "ai_crawler" {
+  workspace_id = data.fastly_bot_management_workspace.example.id
+  category_id  = "cat_ai_crawler"
+  action       = "block"
+}
+
+resource "fastly_bot_management_bot" "gptbot" {
+  workspace_id = data.fastly_bot_management_workspace.example.id
+  category_id  = fastly_bot_management_category.ai_crawler.category_id
+  bot_id       = "bot_gptbot"
+  action       = "allow"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Bot Management bots are imported using the workspace ID, category ID and bot
+ID, separated by `/`.
+
+```shell
+terraform import fastly_bot_management_bot.gptbot WORKSPACE_ID/CATEGORY_ID/BOT_ID
+```

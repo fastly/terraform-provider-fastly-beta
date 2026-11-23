@@ -4,6 +4,7 @@
 
 ### ENHANCEMENTS:
 
+- feat(bot-management): add support for bot management resources, data sources and lists ([#241](https://github.com/fastly/terraform-provider-fastly-beta/pull/241))
 - feat(migration): migrate legacy NGWAF resources to their renamed and split resource types in `fastly-tf-migrate` ([#249](https://github.com/fastly/terraform-provider-fastly-beta/pull/249))
 - feat(migration): move state from legacy NGWAF resources to their renamed and split resource types through Terraform `moved` blocks ([#248](https://github.com/fastly/terraform-provider-fastly-beta/pull/248))
 - feat(migration): add reusable expression-preserving nested object transformations for legacy CDN and Compute backend TLS credentials, withholding HCL diffs for recognized sensitive configurations and rejecting conflicting shapes before writing
