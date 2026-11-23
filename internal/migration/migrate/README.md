@@ -241,9 +241,10 @@ or other managed-resource change. Investigate any masked/missing value or
 default mismatch before proceeding. The new `make test-migration-logging-tls-config`
 target validates synthetic migrated configurations with the local provider
 and no API calls. See `scripts/test-migration-logging-tls/README.md`.
-No receiver-backed logging endpoint migration was executed for any of the five
-types in this PR. The existing VCL, Compute, backend TLS and reference live
-regression tests do not establish live logging credential preservation.
+This configuration-only validation does not exercise receiver-backed migration
+for any of the five logging endpoint types. The existing VCL, Compute, backend
+TLS and reference live regression tests do not establish live logging credential
+preservation.
 For a real migration, independently verify endpoint and credential state
 and reject any infrastructure-changing Terraform plan. Compute shares
 the HCL and HTTPS state hint implementation, but needs separate live

@@ -23,7 +23,7 @@ make test-migration-logging-tls-config
 
 This validates HCL transformations and target provider schemas, **not** live
 logging-endpoint state or remote credential preservation. All five endpoint
-types have golden/schema coverage, but none has receiver-backed migration
-acceptance coverage in this PR. On a real migration, independently review
+types have golden/schema coverage, but this validation suite does not exercise
+receiver-backed migration. On a real migration, independently review
 endpoint state and credentials and require a no-op Terraform plan before
 applying a state move. Never use the synthetic fixtures against Fastly.
