@@ -3,8 +3,10 @@ package migrate
 // The SDKv2 VCL defaults have different whitespace from the Framework
 // defaults. Fastly treats format as a string, not parsed JSON. Preserve the
 // exact former format for omitted fields instead of relying on the new
-// provider default. These literals come from fastly/fastly's constants.go;
-// HTTPS, Elasticsearch, Kafka and Syslog use the same source value.
+// provider default. These literals match the legacy SDKv2 provider sources
+// in github.com/fastly/terraform-provider-fastly/fastly/constants.go:
+// LoggingHTTPSDefaultFormat and LoggingSplunkDefaultFormat. The HTTPS,
+// Elasticsearch, Kafka and Syslog defaults use the same source value.
 func legacyTLSLoggingFormat(block string) string {
 	if block == "logging_splunk" {
 		return legacySplunkFormat
