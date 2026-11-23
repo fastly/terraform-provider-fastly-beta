@@ -1,0 +1,31 @@
+---
+page_title: "fastly_bot_management_bots Data Source - fastly"
+subcategory: ""
+description: |-
+  Use this data source to list the predefined bots in a Bot Management (ContentGuard) workspace.
+---
+
+# fastly_bot_management_bots (Data Source)
+
+Use this data source to list the predefined bots in a Bot Management
+(ContentGuard) workspace, optionally limited to one category, for example to
+find the `bot_id` to use with `fastly_bot_management_bot`.
+
+## Example Usage
+
+```terraform
+data "fastly_bot_management_workspace" "example" {
+  service_id = fastly_service_cdn_auto.example.id
+}
+
+data "fastly_bot_management_bots" "ai_crawler" {
+  workspace_id = data.fastly_bot_management_workspace.example.id
+  category_id  = "cat_ai_crawler" # omit to list bots in every category
+}
+
+output "ai_crawler_bot_ids" {
+  value = [for b in data.fastly_bot_management_bots.ai_crawler.bots : b.bot_id]
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
