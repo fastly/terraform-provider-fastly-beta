@@ -152,11 +152,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	if state.Entry.IsNull() || state.Entry.IsUnknown() {
 		state.Entry = flattenEntries(ctx, remote, state.Entry, &resp.Diagnostics)
 	} else {
-		managed := expandEntries(ctx, state.Entry, &resp.Diagnostics)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		state.Entry = flattenEntries(ctx, filterManagedRemoteEntries(remote, managed), state.Entry, &resp.Diagnostics)
+		state.Entry = refreshOwnedEntries(ctx, remote, state.Entry, &resp.Diagnostics)
 	}
 	if resp.Diagnostics.HasError() {
 		return

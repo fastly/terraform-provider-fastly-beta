@@ -11,6 +11,20 @@ import (
 	"github.com/fastly/go-fastly/v19/fastly"
 )
 
+// refreshOwnedEntries reads back the entries this resource owns. Never null,
+// since null adopts every remote entry on the next refresh.
+func refreshOwnedEntries(ctx context.Context, remote []*fastly.ACLEntry, owned types.Set, diags *diag.Diagnostics) types.Set {
+	managed := expandEntries(ctx, owned, diags)
+	if diags.HasError() {
+		return owned
+	}
+	entries := flattenEntries(ctx, filterManagedRemoteEntries(remote, managed), owned, diags)
+	if entries.IsNull() {
+		return types.SetValueMust(types.ObjectType{AttrTypes: entryAttrTypes}, []attr.Value{})
+	}
+	return entries
+}
+
 func flattenEntries(ctx context.Context, remoteState []*fastly.ACLEntry, plannedEntries types.Set, diags *diag.Diagnostics) types.Set {
 	if len(remoteState) == 0 {
 		return types.SetNull(types.ObjectType{AttrTypes: entryAttrTypes})

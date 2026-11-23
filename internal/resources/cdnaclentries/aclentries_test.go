@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/fastly/go-fastly/v19/fastly"
 )
@@ -808,4 +809,38 @@ func TestRemoteEntryIdentityKey_MatchesEntryIdentityKey(t *testing.T) {
 	model := EntryModel{IP: types.StringValue("10.0.0.1"), Subnet: types.Int64Value(24)}
 
 	assert.Equal(t, entryIdentityKey(model), remoteEntryIdentityKey(remote))
+}
+
+func TestRefreshOwnedEntries_EmptyOwnedSetStaysEmpty(t *testing.T) {
+	ctx := context.Background()
+	objectType := types.ObjectType{AttrTypes: entryAttrTypes}
+	owned := func(ips ...string) types.Set {
+		elements := make([]attr.Value, 0, len(ips))
+		for _, ip := range ips {
+			elements = append(elements, types.ObjectValueMust(entryAttrTypes, map[string]attr.Value{
+				"id": types.StringNull(), "ip": types.StringValue(ip), "subnet": types.Int64Null(),
+				"negated": types.BoolNull(), "comment": types.StringNull(),
+			}))
+		}
+		return types.SetValueMust(objectType, elements)
+	}
+	unowned := []*fastly.ACLEntry{{EntryID: new("E1"), IP: new("192.0.2.1")}}
+
+	for name, tc := range map[string]struct {
+		owned types.Set
+		want  int
+	}{
+		"nothing owned":           {owned(), 0},
+		"owned entry deleted":     {owned("198.51.100.1"), 0},
+		"owned entry still found": {owned("192.0.2.1"), 1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var diags diag.Diagnostics
+			got := refreshOwnedEntries(ctx, unowned, tc.owned, &diags)
+			require.False(t, diags.HasError(), "%v", diags)
+			// A null set would adopt every remote entry on the next refresh.
+			require.False(t, got.IsNull())
+			assert.Len(t, got.Elements(), tc.want)
+		})
+	}
 }
