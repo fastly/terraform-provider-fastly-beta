@@ -15,6 +15,7 @@
 
 ### BUG FIXES:
 
+- fix(bot-management): sort `fastly_bot_management_bots` and `fastly_bot_management_categories` data source results so their lists are stable across refreshes ([#251](https://github.com/fastly/terraform-provider-fastly-beta/pull/251))
 - fix(logging_splunk): allow unknown configured `authentication.token` during validation without requiring `FASTLY_SPLUNK_TOKEN` ([#250](https://github.com/fastly/terraform-provider-fastly-beta/pull/250))
 - fix(migration): extend legacy VCL and Compute state decoders for SDKv2 10.3.0 schema additions and reject configured backend IAM until target parity is available ([#244](https://github.com/fastly/terraform-provider-fastly-beta/pull/244))
 - fix(validation): config validation now handles `dynamic` blocks whose `for_each` isn't known yet, such as one driven by an input variable during `terraform validate` ([#243](https://github.com/fastly/terraform-provider-fastly-beta/pull/243))

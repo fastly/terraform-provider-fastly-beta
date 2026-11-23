@@ -1,7 +1,9 @@
 package botmanagementcategories
 
 import (
+	"cmp"
 	"context"
+	"slices"
 
 	fastlyclient "github.com/fastly/terraform-provider-fastly-beta/internal/client"
 	"github.com/fastly/terraform-provider-fastly-beta/internal/datasources/idhash"
@@ -109,6 +111,9 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 		resp.Diagnostics.AddError("Error listing Bot Management categories", err.Error())
 		return
 	}
+	slices.SortFunc(categories, func(a, b policy.Category) int {
+		return cmp.Compare(a.CategoryID, b.CategoryID)
+	})
 
 	ids := []string{workspaceID}
 	state.Categories = make([]CategoryModel, 0, len(categories))
