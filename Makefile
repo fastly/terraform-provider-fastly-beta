@@ -14,7 +14,7 @@ OVERRIDES_FILE := $(BIN_DIR)/developer_overrides.tfrc
 GOLANGCI_LINT_VERSION := v2.12.2
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 
-.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle test-migration-vcl test-migration-compute test-migration-ngwaf test-migration-products test-migration-schemas test-migration-references test-migration-domains test-migration-backend-tls lint install-linter check-linter-version release-check help
+.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle test-migration-vcl test-migration-compute test-migration-ngwaf test-migration-products test-migration-schemas test-migration-references test-migration-domains test-migration-containers test-migration-backend-tls lint install-linter check-linter-version release-check help
 
 help:
 	@echo "Available targets:"
@@ -40,6 +40,7 @@ help:
 	@echo "  make test-migration-schemas  - Verify published SDKv2 state decoder compatibility (no API token)"
 	@echo "  make test-migration-references - Run live module/reference migration test (requires FASTLY_API_TOKEN)"
 	@echo "  make test-migration-domains  - Run live standalone domain migration test (requires FASTLY_API_TOKEN)"
+	@echo "  make test-migration-containers - Run live ACL and Config Store container migration test (requires FASTLY_API_TOKEN)"
 	@echo "  make test-migration-backend-tls - Run live CDN/Compute backend TLS migration (requires FASTLY_API_TOKEN and openssl)"
 	@echo "  make test-migration-vcl      - Run VCL -> CDN Auto live migration test (requires FASTLY_API_TOKEN)"
 	@echo "                                 Tests only VCL service state move; no product entitlements"
@@ -173,6 +174,11 @@ test-migration-domains:
 	@echo "==> Running live standalone domain migration acceptance test..."
 	@echo "    Note: Creates/destroys real Fastly services and domains; requires FASTLY_API_TOKEN"
 	@./scripts/test-migration-domains/run.sh
+
+test-migration-containers:
+	@echo "==> Running live ACL and Config Store container migration acceptance test..."
+	@echo "    Note: Creates/destroys a real Fastly service, Compute ACLs and Config Stores; requires FASTLY_API_TOKEN"
+	@./scripts/test-migration-containers/run.sh
 test-migration-backend-tls:
 	@echo "==> Running live CDN/Compute backend TLS migration acceptance test..."
 	@MIGRATION_TEST_BACKEND_TLS=true ./scripts/test-migration-references/run.sh
