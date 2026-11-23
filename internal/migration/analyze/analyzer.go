@@ -1177,12 +1177,12 @@ func relativePath(root, path string) string {
 	return filepath.ToSlash(relative)
 }
 
-// legacyEntryContainers maps each legacy entry resource to the singular and
-// plural nouns for its target's entries, for the manage_entries warning.
+// legacyEntryContainers maps each legacy entry resource to the lower- and
+// sentence-case nouns for its entries, for the manage_entries warning.
 var legacyEntryContainers = map[string][2]string{
-	"fastly_compute_acl_entries": {"entry", "entries"},
-	"fastly_configstore_entries": {"item", "items"},
-	"fastly_service_acl_entries": {"entry", "entries"},
+	"fastly_compute_acl_entries": {"entries", "Entries"},
+	"fastly_configstore_entries": {"items", "Items"},
+	"fastly_service_acl_entries": {"entries", "Entries"},
 }
 
 // warnSeedOnlyEntries flags an entry resource without manage_entries = true,
@@ -1196,15 +1196,15 @@ func warnSeedOnlyEntries(state *analysisState, block *hclsyntax.Block, rule comp
 		sourceRange = attr.SrcRange
 	}
 	resourceType, resourceName := block.Labels[0], block.Labels[1]
+	noun := legacyEntryContainers[resourceType]
 	state.result.Findings = append(state.result.Findings, Finding{
 		Severity: SeverityWarning,
 		RuleID:   rule.ID,
 		Range:    sourceRange,
 		Message: fmt.Sprintf(
-			"%s.%s does not set manage_entries = true, so the legacy provider only seeded its entries. "+
-				"After migration, %s owns every declared %[4]s: the first apply re-applies each declared %[4]s "+
-				"that changed outside Terraform. Undeclared %[5]s are left unchanged.",
-			resourceType, resourceName, rule.Target, legacyEntryContainers[resourceType][0], legacyEntryContainers[resourceType][1]),
-		Remediation: "Review the first terraform plan after migration before applying it.",
+			"After migration, Terraform keeps the %s declared in `%s.%s` in sync with your configuration, "+
+				"including any changed outside Terraform. %s not declared there are not affected.",
+			noun[0], resourceType, resourceName, noun[1]),
+		Remediation: fmt.Sprintf("Before applying, check the first plan for changes to declared %s.", noun[0]),
 	})
 }

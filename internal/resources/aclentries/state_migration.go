@@ -53,19 +53,15 @@ func moveLegacyComputeACLEntriesState(ctx context.Context, req resource.MoveStat
 	}
 
 	if !legacystate.HasValue(aclID) {
-		resp.Diagnostics.AddError(
-			"Unable to migrate legacy Fastly ACL entries state",
-			fmt.Sprintf("The %s state does not contain a compute_acl_id.", legacyComputeACLEntriesTypeName),
-		)
+		legacystate.AddImportError(&resp.Diagnostics, legacyComputeACLEntriesTypeName,
+			"The existing state has no `compute_acl_id`.", "fastly_acl_entries", "<acl_id>/entries")
 		return
 	}
 	// The legacy provider always derived id from compute_acl_id.
 	if id.ValueString() != resourceID(aclID.ValueString()) {
-		resp.Diagnostics.AddError(
-			"Unable to migrate legacy Fastly ACL entries state",
-			fmt.Sprintf("The %s state id %q does not match compute_acl_id %q, so the ACL identity is ambiguous.",
-				legacyComputeACLEntriesTypeName, id.ValueString(), aclID.ValueString()),
-		)
+		legacystate.AddImportError(&resp.Diagnostics, legacyComputeACLEntriesTypeName,
+			fmt.Sprintf("The existing state's ID `%s` does not match ACL `%s`.", id.ValueString(), aclID.ValueString()),
+			"fastly_acl_entries", resourceID(aclID.ValueString()))
 		return
 	}
 

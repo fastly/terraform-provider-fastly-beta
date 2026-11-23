@@ -50,10 +50,8 @@ func moveLegacyComputeACLState(ctx context.Context, req resource.MoveStateReques
 		value types.String
 	}{{"id", id}, {"name", name}} {
 		if !legacystate.HasValue(required.value) {
-			resp.Diagnostics.AddError(
-				"Unable to migrate legacy Fastly ACL state",
-				fmt.Sprintf("The %s state does not contain a %s.", legacyComputeACLTypeName, required.name),
-			)
+			legacystate.AddImportError(&resp.Diagnostics, legacyComputeACLTypeName,
+				fmt.Sprintf("The existing state has no `%s`.", required.name), "fastly_acl", "<acl_id>")
 			return
 		}
 	}

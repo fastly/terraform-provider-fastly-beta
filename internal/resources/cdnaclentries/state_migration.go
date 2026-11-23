@@ -16,7 +16,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-const legacyServiceACLEntriesTypeName = "fastly_service_acl_entries"
+const (
+	legacyServiceACLEntriesTypeName = "fastly_service_acl_entries"
+	targetTypeName                  = "fastly_service_cdn_acl_entries"
+)
 
 var _ resource.ResourceWithMoveState = &Resource{}
 
@@ -62,7 +65,7 @@ func (r *Resource) MoveState(_ context.Context) []resource.StateMover {
 }
 
 func moveLegacyServiceACLEntriesState(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
-	if !legacystate.AcceptMove(req, legacyServiceACLEntriesTypeName, "fastly_service_cdn_acl_entries", &resp.Diagnostics) {
+	if !legacystate.AcceptMove(req, legacyServiceACLEntriesTypeName, targetTypeName, &resp.Diagnostics) {
 		return
 	}
 
@@ -83,20 +86,17 @@ func moveLegacyServiceACLEntriesState(ctx context.Context, req resource.MoveStat
 		value types.String
 	}{{"service_id", serviceID}, {"acl_id", aclID}} {
 		if !legacystate.HasValue(required.value) {
-			resp.Diagnostics.AddError(
-				"Unable to migrate legacy Fastly ACL entries state",
-				fmt.Sprintf("The %s state does not contain a %s.", legacyServiceACLEntriesTypeName, required.name),
-			)
+			legacystate.AddImportError(&resp.Diagnostics, legacyServiceACLEntriesTypeName,
+				fmt.Sprintf("The existing state has no `%s`.", required.name), targetTypeName, "<service_id>/<acl_id>")
 			return
 		}
 	}
 	wantID := serviceID.ValueString() + "/" + aclID.ValueString()
 	if id.ValueString() != wantID {
-		resp.Diagnostics.AddError(
-			"Unable to migrate legacy Fastly ACL entries state",
-			fmt.Sprintf("The %s state id %q does not match %q, so the ACL identity is ambiguous.",
-				legacyServiceACLEntriesTypeName, id.ValueString(), wantID),
-		)
+		legacystate.AddImportError(&resp.Diagnostics, legacyServiceACLEntriesTypeName,
+			fmt.Sprintf("The existing state's ID `%s` does not match ACL `%s` in service `%s`.",
+				id.ValueString(), aclID.ValueString(), serviceID.ValueString()),
+			targetTypeName, wantID)
 		return
 	}
 
@@ -104,7 +104,7 @@ func moveLegacyServiceACLEntriesState(ctx context.Context, req resource.MoveStat
 	elements := []attr.Value{}
 	if manageEntries.ValueBool() {
 		for _, legacy := range legacyEntries {
-			element, ok := convertLegacyEntry(legacy, &resp.Diagnostics)
+			element, ok := convertLegacyEntry(legacy, wantID, &resp.Diagnostics)
 			if !ok {
 				return
 			}
@@ -130,12 +130,10 @@ func moveLegacyServiceACLEntriesState(ctx context.Context, req resource.MoveStat
 
 // convertLegacyEntry maps one legacy entry; "" subnet or comment becomes null.
 // Read matches owned entries by (ip, subnet), so an invalid subnet is rejected.
-func convertLegacyEntry(legacy legacyEntryModel, diags *diag.Diagnostics) (attr.Value, bool) {
+func convertLegacyEntry(legacy legacyEntryModel, importID string, diags *diag.Diagnostics) (attr.Value, bool) {
 	if !legacystate.HasValue(legacy.IP) {
-		diags.AddError(
-			"Unable to migrate legacy Fastly ACL entries state",
-			fmt.Sprintf("The %s state contains an entry without an ip.", legacyServiceACLEntriesTypeName),
-		)
+		legacystate.AddImportError(diags, legacyServiceACLEntriesTypeName,
+			"An ACL entry in the existing state has no IP address.", targetTypeName, importID)
 		return nil, false
 	}
 
@@ -143,11 +141,10 @@ func convertLegacyEntry(legacy legacyEntryModel, diags *diag.Diagnostics) (attr.
 	if legacystate.HasValue(legacy.Subnet) {
 		value, err := strconv.ParseInt(legacy.Subnet.ValueString(), 10, 64)
 		if err != nil || value < 0 || value > 128 {
-			diags.AddError(
-				"Unable to migrate legacy Fastly ACL entries state",
-				fmt.Sprintf("The %s entry for ip %q has subnet %q, which is not a prefix length between 0 and 128.",
-					legacyServiceACLEntriesTypeName, legacy.IP.ValueString(), legacy.Subnet.ValueString()),
-			)
+			diags.AddError("Cannot migrate "+legacyServiceACLEntriesTypeName, fmt.Sprintf(
+				"ACL entry `%s` has subnet `%s`, but the subnet must be a prefix length from 0 to 128, such as `24`. "+
+					"Correct it and apply with your current provider version, then migrate again.",
+				legacy.IP.ValueString(), legacy.Subnet.ValueString()))
 			return nil, false
 		}
 		subnet = types.Int64Value(value)

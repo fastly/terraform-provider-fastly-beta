@@ -27,20 +27,24 @@ func AcceptMove(req resource.MoveStateRequest, typeName, target string, diags *d
 		return false
 	}
 	if req.SourceSchemaVersion != 0 {
-		diags.AddError(
-			"Unsupported legacy Fastly state",
-			fmt.Sprintf("%s can only move state from %s schema version 0; received schema version %d.", target, typeName, req.SourceSchemaVersion),
-		)
+		diags.AddError("Cannot migrate "+typeName, fmt.Sprintf(
+			"This state was saved by a Fastly provider release that migration does not support. "+
+				"Remove the `moved` block and import `%s` instead.", target))
 		return false
 	}
 	if req.SourceState == nil {
-		diags.AddError(
-			"Unable to decode legacy Fastly state",
-			fmt.Sprintf("Terraform Plugin Framework did not provide decoded source state for %s schema version 0.", typeName),
-		)
+		diags.AddError("Cannot migrate "+typeName, fmt.Sprintf(
+			"The existing state could not be read. Remove the `moved` block and import `%s` instead.", target))
 		return false
 	}
 	return true
+}
+
+// AddImportError reports state that cannot be moved, and tells the user to
+// import target with importID instead.
+func AddImportError(diags *diag.Diagnostics, typeName, problem, target, importID string) {
+	diags.AddError("Cannot migrate "+typeName, fmt.Sprintf(
+		"%s Remove the `moved` block and import `%s` with the ID `%s`.", problem, target, importID))
 }
 
 // OwnedEntries returns the entries the target owns after a move: all of them

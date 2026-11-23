@@ -136,7 +136,7 @@ func TestPlanWarnsWhenContainerEntriesWereSeedOnly(t *testing.T) {
 				}
 				warned := false
 				for _, finding := range result.Analysis.Findings {
-					if finding.Severity == analyze.SeverityWarning && strings.Contains(finding.Message, "only seeded its entries") {
+					if finding.Severity == analyze.SeverityWarning && strings.Contains(finding.Message, "in sync with your configuration") {
 						warned = true
 					}
 				}

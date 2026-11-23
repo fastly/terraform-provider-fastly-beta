@@ -53,19 +53,15 @@ func moveLegacyConfigStoreEntriesState(ctx context.Context, req resource.MoveSta
 	}
 
 	if !legacystate.HasValue(storeID) {
-		resp.Diagnostics.AddError(
-			"Unable to migrate legacy Fastly Config Store entries state",
-			fmt.Sprintf("The %s state does not contain a store_id.", legacyConfigStoreEntriesTypeName),
-		)
+		legacystate.AddImportError(&resp.Diagnostics, legacyConfigStoreEntriesTypeName,
+			"The existing state has no `store_id`.", "fastly_configstore_items", "<store_id>/items")
 		return
 	}
 	// The legacy id was <store_id>/entries; the target uses <store_id>/items.
 	if id.ValueString() != storeID.ValueString()+"/entries" {
-		resp.Diagnostics.AddError(
-			"Unable to migrate legacy Fastly Config Store entries state",
-			fmt.Sprintf("The %s state id %q does not match store_id %q, so the Config Store identity is ambiguous.",
-				legacyConfigStoreEntriesTypeName, id.ValueString(), storeID.ValueString()),
-		)
+		legacystate.AddImportError(&resp.Diagnostics, legacyConfigStoreEntriesTypeName,
+			fmt.Sprintf("The existing state's ID `%s` does not match Config Store `%s`.", id.ValueString(), storeID.ValueString()),
+			"fastly_configstore_items", resourceID(storeID.ValueString()))
 		return
 	}
 

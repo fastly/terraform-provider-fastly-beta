@@ -35,7 +35,7 @@ func requireMoveRejected(t *testing.T, source, target string, version int64, raw
 		t.Fatal(err)
 	}
 	for _, d := range resp.Diagnostics {
-		if d.Severity == tfprotov6.DiagnosticSeverityError && strings.Contains(d.Summary+" "+d.Detail, contains) {
+		if d.Severity == tfprotov6.DiagnosticSeverityError && d.Summary == "Cannot migrate "+source && strings.Contains(d.Detail, contains) {
 			return
 		}
 	}
@@ -77,9 +77,9 @@ func TestLegacyComputeACLMoveStateRejectsUnsupportedState(t *testing.T) {
 		version       int64
 		raw, contains string
 	}{
-		"future schema version": {1, `{"id":"` + legacyACLID + `","name":"blocklist"}`, "schema version 1"},
-		"missing id":            {0, `{"id":null,"name":"blocklist"}`, "does not contain a id"},
-		"missing name":          {0, `{"id":"` + legacyACLID + `","name":""}`, "does not contain a name"},
+		"future schema version": {1, `{"id":"` + legacyACLID + `","name":"blocklist"}`, "release that migration does not support"},
+		"missing id":            {0, `{"id":null,"name":"blocklist"}`, "has no `id`. Remove the `moved` block and import `fastly_acl` with the ID `<acl_id>`."},
+		"missing name":          {0, `{"id":"` + legacyACLID + `","name":""}`, "has no `name`."},
 	} {
 		t.Run(name, func(t *testing.T) {
 			requireMoveRejected(t, "fastly_compute_acl", "fastly_acl", tc.version, tc.raw, tc.contains)
@@ -160,11 +160,12 @@ func TestLegacyContainerEntriesMoveStateRejectsUnsupportedState(t *testing.T) {
 				version       int64
 				raw, contains string
 			}{
-				"future schema version": {1, valid, "schema version 1"},
+				"future schema version": {1, valid, "release that migration does not support"},
 				"missing container id": {0, strings.Replace(valid, `"`+c.containerAttr+`":"`+legacyContainerID+`"`, `"`+c.containerAttr+`":null`, 1),
-					"does not contain a " + c.containerAttr},
-				"mismatched id": {0, strings.Replace(valid, `"id":"`+legacyContainerID, `"id":"OTHER`, 1), "identity is ambiguous"},
-				"missing id":    {0, strings.Replace(valid, `"id":"`+legacyContainerID+c.legacyIDSuffix+`"`, `"id":null`, 1), "identity is ambiguous"},
+					"has no `" + c.containerAttr + "`."},
+				"mismatched id": {0, strings.Replace(valid, `"id":"`+legacyContainerID, `"id":"OTHER`, 1),
+					"import `" + c.target + "` with the ID `" + legacyContainerID + c.wantTargetSuffix + "`."},
+				"missing id": {0, strings.Replace(valid, `"id":"`+legacyContainerID+c.legacyIDSuffix+`"`, `"id":null`, 1), "does not match"},
 			} {
 				t.Run(name, func(t *testing.T) {
 					requireMoveRejected(t, c.source, c.target, tc.version, tc.raw, tc.contains)
@@ -306,13 +307,14 @@ func TestLegacyServiceACLEntriesMoveStateRejectsUnsupportedState(t *testing.T) {
 		version       int64
 		raw, contains string
 	}{
-		"future schema version": {1, valid, "schema version 1"},
-		"missing service_id":    {0, strings.Replace(valid, `"service_id":"`+legacyServiceID+`"`, `"service_id":""`, 1), "does not contain a service_id"},
-		"missing acl_id":        {0, strings.Replace(valid, `"acl_id":"`+legacyACLID+`"`, `"acl_id":null`, 1), "does not contain a acl_id"},
-		"mismatched id":         {0, strings.Replace(valid, `"id":"`+legacyServiceID, `"id":"OTHER`, 1), "identity is ambiguous"},
-		"entry without ip":      {0, legacyServiceACLEntriesRaw("true", entry(`""`, "24")), "entry without an ip"},
-		"non-numeric subnet":    {0, legacyServiceACLEntriesRaw("true", entry(`"192.0.2.0"`, "255.255.255.0")), "not a prefix length"},
-		"out-of-range subnet":   {0, legacyServiceACLEntriesRaw("true", entry(`"192.0.2.0"`, "129")), "not a prefix length"},
+		"future schema version": {1, valid, "release that migration does not support"},
+		"missing service_id":    {0, strings.Replace(valid, `"service_id":"`+legacyServiceID+`"`, `"service_id":""`, 1), "has no `service_id`."},
+		"missing acl_id":        {0, strings.Replace(valid, `"acl_id":"`+legacyACLID+`"`, `"acl_id":null`, 1), "has no `acl_id`."},
+		"mismatched id": {0, strings.Replace(valid, `"id":"`+legacyServiceID, `"id":"OTHER`, 1),
+			"import `fastly_service_cdn_acl_entries` with the ID `" + legacyServiceID + "/" + legacyACLID + "`."},
+		"entry without ip":    {0, legacyServiceACLEntriesRaw("true", entry(`""`, "24")), "has no IP address"},
+		"non-numeric subnet":  {0, legacyServiceACLEntriesRaw("true", entry(`"192.0.2.0"`, "255.255.255.0")), "must be a prefix length from 0 to 128"},
+		"out-of-range subnet": {0, legacyServiceACLEntriesRaw("true", entry(`"192.0.2.0"`, "129")), "must be a prefix length from 0 to 128"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			requireMoveRejected(t, "fastly_service_acl_entries", "fastly_service_cdn_acl_entries", tc.version, tc.raw, tc.contains)
