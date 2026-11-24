@@ -199,8 +199,11 @@ snapshot_live_service() {
         fail "Live Fastly service identity does not match $SERVICE_ID / $SERVICE_NAME"
     # Ignore volatile API metadata; a migration must not change the identity,
     # name, or active service version.
+    # GET /service/{id} reports the active version only in versions[].
     printf '%s\n' "$body" |
-        jq -S '{id, name, active_version: (.active_version // null)}' > "$destination"
+        jq -S '{id, name, active_version: ([.versions[]? | select(.active == true) | .number] | max)}' > "$destination"
+    jq -e '.active_version | type == "number"' "$destination" >/dev/null ||
+        fail "Live service has no active version"
 }
 
 run_migrator() {
