@@ -168,7 +168,7 @@ func TestPlanLoggingTLSPinsLegacyFormat(t *testing.T) {
 			continue
 		}
 		got, diags := attr.Expr.Value(nil)
-		if diags.HasErrors() || !got.IsKnown() || got.IsNull() || got.Type() != cty.String || got.AsString() != legacyTLSLoggingFormat(block.Type) {
+		if diags.HasErrors() || !got.IsKnown() || got.IsNull() || got.Type() != cty.String || got.AsString() != legacyVCLLoggingFormat(block.Type) {
 			t.Fatal("legacy format bytes changed or literal VCL template was not escaped")
 		}
 	}

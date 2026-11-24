@@ -331,7 +331,7 @@ func compileServiceBlock(key resourceKey, rule compatibility.Rule, autoType stri
 			if key.typ == "fastly_service_vcl" && (compatibility.IsTLSLoggingBlock(source[1]) || (compatibility.IsStorageLoggingBlock(source[1]) && source[1] != "logging_bigquery")) {
 				return rewrite.AddStringDefault{
 					File: key.file, ResourceType: key.typ, ResourceName: key.name,
-					Parents: []string{source[1]}, Attribute: "format", Value: legacyTLSLoggingFormat(source[1]),
+					Parents: []string{source[1]}, Attribute: "format", Value: legacyVCLLoggingFormat(source[1]),
 				}, nil
 			}
 			return nil, nil

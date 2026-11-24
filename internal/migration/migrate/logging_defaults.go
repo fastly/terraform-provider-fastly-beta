@@ -6,8 +6,9 @@ package migrate
 // provider default. These literals match the legacy SDKv2 provider sources
 // in github.com/fastly/terraform-provider-fastly/fastly/constants.go:
 // LoggingHTTPSDefaultFormat and LoggingSplunkDefaultFormat. The HTTPS,
-// Elasticsearch, Kafka and Syslog defaults use the same source value.
-func legacyTLSLoggingFormat(block string) string {
+// Elasticsearch, Kafka and Syslog defaults use the same source value, as
+// do the reviewed non-BigQuery storage/cloud logging blocks.
+func legacyVCLLoggingFormat(block string) string {
 	if block == "logging_splunk" {
 		return legacySplunkFormat
 	}
