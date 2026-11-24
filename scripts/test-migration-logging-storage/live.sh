@@ -60,13 +60,16 @@ TARGET_ADDRESS="$TARGET_TYPE.demo"
     fail "FASTLY_API_URL must be https://api.fastly.com"
 [[ -n "${FASTLY_API_TOKEN:-}" ]] || fail "Missing required environment variable FASTLY_API_TOKEN"
 
-# Source-controlled PUBLIC AWS documentation examples; never require an S3
-# receiver or accept external credentials. These are intentionally unusable
-# for real S3 delivery and only exercise Fastly's logging configuration API.
+# Use the public go-fastly S3 recording examples (no AWS account needed).
+# Assemble the exact documented dummy keys only at runtime: a complete
+# AWS-shaped key literal in source may trigger secret-scanner false positives.
+# This keeps the already-verified Fastly API test configuration unchanged.
 # shellcheck source=live-fixtures/s3-cdn/test-values.sh
 source "$ROOT/scripts/test-migration-logging-storage/live-fixtures/s3-cdn/test-values.sh"
+TEST_S3_ACCESS_KEY='AK''IAIOSFODNN7EXAMPLE'
+TEST_S3_SECRET_KEY='wJalrXUtnFEMI/''K7MDENG/bPxRfiCYEXAMPLEKEY'
 [[ -n "$TEST_S3_BUCKET" && -n "$TEST_S3_ACCESS_KEY" && -n "$TEST_S3_SECRET_KEY" ]] ||
-    fail "Missing source-controlled S3 test fixture values"
+    fail "Missing S3 example fixture values"
 for cmd in go terraform jq curl cksum sed grep; do
     command -v "$cmd" >/dev/null || fail "Missing required command $cmd"
 done

@@ -20,9 +20,11 @@ from the `go-fastly` test recordings:
 - `go-fastly/fastly/fixtures/s3s/create.yaml`
 - `go-fastly/fastly/logging_s3_test.go`
 
-The checked-in values fixture is `live-fixtures/s3-cdn/test-values.sh`,
-shared by the CDN and Compute test configurations. It uses the
-documented AWS example access key and secret and bucket `bucket-name`.
+The checked-in `live-fixtures/s3-cdn/test-values.sh` fixture defines the
+placeholder bucket `bucket-name`. The live runner assembles the documented
+AWS example access key and secret from literal fragments at runtime to avoid
+secret-scanner false positives; the resulting public dummy values match the
+go-fastly recordings for both CDN and Compute.
 **These are not functional AWS credentials or a real test-owned bucket.**
 Fastly's logging configuration API accepts these fields as endpoint
 configuration in the recorded requests; whether the currently deployed Fastly
