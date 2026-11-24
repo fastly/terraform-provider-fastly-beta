@@ -5,7 +5,6 @@
 ### ENHANCEMENTS:
 
 - feat(migration): add guarded storage/cloud logging authentication migrations for S3, GCS, BigQuery, Blob Storage, Cloud Files, DigitalOcean, OpenStack, Google Pub/Sub and Kinesis in CDN and Compute services, preserving expression-based credentials and rejecting ambiguous configurations ([#252](https://github.com/fastly/terraform-provider-fastly-beta/pull/252))
-
 - feat(migration): transform TLS and authentication configuration for HTTPS, Elasticsearch, Kafka, Splunk and Syslog logging endpoints, preserving legacy VCL format defaults and HTTPS gzip-level state hints ([#250](https://github.com/fastly/terraform-provider-fastly-beta/pull/250))
 - feat(bot-management): add support for bot management resources, data sources and lists ([#241](https://github.com/fastly/terraform-provider-fastly-beta/pull/241))
 - feat(migration): migrate legacy NGWAF resources to their renamed and split resource types in `fastly-tf-migrate` ([#249](https://github.com/fastly/terraform-provider-fastly-beta/pull/249))
