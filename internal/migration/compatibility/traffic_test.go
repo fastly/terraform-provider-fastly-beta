@@ -1,0 +1,31 @@
+package compatibility
+
+import "testing"
+
+func TestVCLTrafficTablesMatchAutomaticBlockRules(t *testing.T) {
+	t.Parallel()
+	registry := Default()
+	automatic := func(block string) bool {
+		for _, rule := range registry.RulesForLegacy("fastly_service_vcl." + block) {
+			if rule.Kind == ConstructServiceBlock && rule.Support == SupportAutomatic {
+				return true
+			}
+		}
+		return false
+	}
+	for _, block := range VCLNameOrderedBlocks {
+		if !automatic(block) {
+			t.Errorf("ordered block %q has no automatic VCL block rule", block)
+		}
+	}
+	for _, change := range VCLLiteralRewrites {
+		if !automatic(change.Block) {
+			t.Errorf("literal rewrite block %q has no automatic VCL block rule", change.Block)
+		}
+		for _, rule := range registry.RulesForLegacy("fastly_service_vcl." + change.Block) {
+			if rule.Kind == ConstructServiceBlock && rule.HCL != HCLReshape {
+				t.Errorf("block %q has literal rewrites but HCL strategy %s", change.Block, rule.HCL)
+			}
+		}
+	}
+}

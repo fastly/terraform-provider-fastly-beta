@@ -322,6 +322,41 @@ delivery to an S3 receiver. The harness is not executed by the offline
 suite, and receiver-backed coverage of other endpoint types still requires
 test-owned destinations.
 
+## Traffic-management blocks and block order
+
+`condition`, `healthcheck`, `header`, `gzip`, `cache_setting`,
+`request_setting`, `response_object` and `director` keep their names and
+cross-block references. The writer changes only these literal values:
+
+| Block | Change |
+| --- | --- |
+| `director` | `type` 1, 3 and 4 become `"random"`, `"hash"` and `"client"` |
+| `cache_setting` | `action` is converted to lowercase; `action = ""` and `cache_condition = ""` are removed |
+| `request_setting` | `action` and `xff` are converted to lowercase; `""` values are removed |
+| `gzip` | `cache_condition = ""` is removed |
+| `response_object` | `content_type = ""` is removed |
+
+The legacy provider converted `action` and `xff` to lowercase before sending
+them, so the API already stores the lowercase value. The target reads an empty
+condition or content type back as unset, so leaving `""` in place would fail
+the first apply. A literal value the target cannot represent, such as director
+`type = 2` or `cache_setting.action = "lookup"`, blocks the plan and the
+finding lists the accepted values. Variables and other expressions are kept
+for `terraform validate` to check.
+
+**Expect blocks to move.** The legacy provider stored these nested blocks as
+sets; the target stores them as lists sorted by name. Each repeated block type
+in a VCL service, including `backend`, `domain` and logging blocks, is
+reordered by `name`. Comments move with their blocks, and blocks of other
+types stay where they are. Each repeated block needs a quoted, unique `name`,
+otherwise the plan is blocked. The state mover keeps each gzip name and
+whether its `content_types` and `extensions` were omitted, so the API's
+default lists do not appear as a change on the first refresh.
+
+`make test-migration-traffic` is an opt-in live test that requires an
+unchanged service ID, active version and traffic configuration, and a final
+no-op plan.
+
 ## Terraform reference rewriting
 
 References are resolved against **enabled resource conversions in the same

@@ -63,8 +63,15 @@ make test-migration-vcl
 ./scripts/test-migration-vcl/run.sh
 ```
 
-The script takes **no scenario argument** and requires no optional Fastly
-product entitlement. It needs `terraform` (1.8+), `go`, `jq`, `curl`, and
+The script takes **no arguments** and requires no optional Fastly product
+entitlement. Set `VCL_MIGRATION_SCENARIO=traffic` (or run
+`make test-migration-traffic`) to migrate the multi-block traffic fixture in
+`internal/migration/migrate/testdata/traffic/multi_block/` instead: several
+backends, healthchecks, conditions, directors of each type, headers, gzip
+(including omitted lists), cache and request settings, and response objects,
+written out of name order. That scenario also requires the active version's
+traffic blocks, director backend associations and API-filled gzip lists to be
+unchanged after the migration. It needs `terraform` (1.8+), `go`, `jq`, `curl`, and
 `cksum`, plus network access to Fastly and the legacy provider registry.
 
 Optional environment variables:

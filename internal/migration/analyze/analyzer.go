@@ -637,6 +637,9 @@ func (a *Analyzer) analyzeServiceBody(
 		a.applyRule(state, rule, attr.SrcRange, resourceType, resourceName)
 	}
 
+	if resourceType == "fastly_service_vcl" {
+		analyzeVCLBlockValues(state, body)
+	}
 	for _, block := range body.Blocks {
 		if _, meta := terraformMetaBlocks[block.Type]; meta {
 			continue
