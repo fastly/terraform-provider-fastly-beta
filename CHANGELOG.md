@@ -4,6 +4,14 @@
 
 ### ENHANCEMENTS:
 
+### BUG FIXES:
+
+### Dependencies:
+
+## 0.2.11 (November 24, 2026)
+
+### ENHANCEMENTS:
+
 - feat(migration): transform TLS and authentication configuration for HTTPS, Elasticsearch, Kafka, Splunk and Syslog logging endpoints, preserving legacy VCL format defaults and HTTPS gzip-level state hints ([#250](https://github.com/fastly/terraform-provider-fastly-beta/pull/250))
 - feat(bot-management): add support for bot management resources, data sources and lists ([#241](https://github.com/fastly/terraform-provider-fastly-beta/pull/241))
 - feat(migration): migrate legacy NGWAF resources to their renamed and split resource types in `fastly-tf-migrate` ([#249](https://github.com/fastly/terraform-provider-fastly-beta/pull/249))
@@ -19,8 +27,6 @@
 - fix(logging_splunk): allow unknown configured `authentication.token` during validation without requiring `FASTLY_SPLUNK_TOKEN` ([#250](https://github.com/fastly/terraform-provider-fastly-beta/pull/250))
 - fix(migration): extend legacy VCL and Compute state decoders for SDKv2 10.3.0 schema additions and reject configured backend IAM until target parity is available ([#244](https://github.com/fastly/terraform-provider-fastly-beta/pull/244))
 - fix(validation): config validation now handles `dynamic` blocks whose `for_each` isn't known yet, such as one driven by an input variable during `terraform validate` ([#243](https://github.com/fastly/terraform-provider-fastly-beta/pull/243))
-
-### Dependencies:
 
 ## 0.2.10 (November 18, 2026)
 
