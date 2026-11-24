@@ -93,8 +93,24 @@ func compileResource(
 			edit, err := compileServiceBlock(key, rule, autoType)
 			if err != nil {
 				issue(a, err.Error())
-			} else if edit != nil {
-				edits = append(edits, edit)
+			} else {
+				if edit != nil {
+					edits = append(edits, edit)
+				}
+				// The SDKv2 S3 and Cloud Files message type defaults differ
+				// from their Framework defaults for both CDN and Compute.
+				// Pin the old default only for an authorized block move.
+				block := strings.TrimPrefix(rule.Legacy, key.typ+".")
+				if value, ok := legacyStorageMessageTypeDefaults[block]; ok &&
+					rule.Support == compatibility.SupportAutomatic &&
+					rule.State == compatibility.StateMove &&
+					rule.Legacy == key.typ+"."+block &&
+					rule.Target == autoType+"."+block {
+					edits = append(edits, rewrite.AddStringDefault{
+						File: key.file, ResourceType: key.typ, ResourceName: key.name,
+						Parents: []string{block}, Attribute: "message_type", Value: value,
+					})
+				}
 			}
 		case compatibility.ConstructResource:
 			if rule.Legacy != key.typ || rule.Target != autoType ||
@@ -168,6 +184,9 @@ func serviceObjectField(rule compatibility.Rule, legacyType, targetType string) 
 		return "", "", rewrite.ObjectField{}, false
 	}
 	object, member, ok := compatibility.TLSLoggingObjectRoute(source[1], source[2])
+	if !ok {
+		object, member, ok = compatibility.StorageLoggingObjectRoute(source[1], source[2])
+	}
 	if !ok || rule.Target != targetType+"."+source[1]+"."+object+"."+member {
 		return "", "", rewrite.ObjectField{}, false
 	}
@@ -309,7 +328,7 @@ func compileServiceBlock(key resourceKey, rule compatibility.Rule, autoType stri
 		// every necessary known field-level change. The rule remains the
 		// authority for the rest of the block's compatible shape.
 		if source[1] == target[1] {
-			if key.typ == "fastly_service_vcl" && compatibility.IsTLSLoggingBlock(source[1]) {
+			if key.typ == "fastly_service_vcl" && (compatibility.IsTLSLoggingBlock(source[1]) || (compatibility.IsStorageLoggingBlock(source[1]) && source[1] != "logging_bigquery")) {
 				return rewrite.AddStringDefault{
 					File: key.file, ResourceType: key.typ, ResourceName: key.name,
 					Parents: []string{source[1]}, Attribute: "format", Value: legacyTLSLoggingFormat(source[1]),

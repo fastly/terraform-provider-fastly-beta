@@ -1,0 +1,63 @@
+# Disposable SDKv2 Compute service. S3 credentials are inert public values
+# from go-fastly recordings, supplied by the acceptance runner.
+# Package is the repository's existing migration Compute test fixture.
+terraform {
+  required_providers {
+    fastly = {
+      source  = "fastly/fastly"
+      version = "= @LEGACY_PROVIDER_VERSION@"
+    }
+  }
+}
+
+variable "test_service_name" {
+  type = string
+}
+
+variable "test_s3_bucket" {
+  type = string
+}
+
+variable "test_s3_access_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "test_s3_secret_key" {
+  type      = string
+  sensitive = true
+}
+
+# Use Fastly's own package-hash data source; a plain file digest would
+# produce a spurious package diff after provider refresh.
+data "fastly_package_hash" "pkg" {
+  filename = "package.tar.gz"
+}
+
+resource "fastly_service_compute" "demo" {
+  name          = var.test_service_name
+  force_destroy = true
+
+  domain {
+    name = "${var.test_service_name}.example.com"
+  }
+
+  backend {
+    name    = "origin"
+    address = "www.example.com"
+    port    = 443
+  }
+
+  package {
+    filename         = "package.tar.gz"
+    source_code_hash = data.fastly_package_hash.pkg.hash
+  }
+
+  logging_s3 {
+    name          = "s3-live"
+    bucket_name   = var.test_s3_bucket
+    s3_access_key = var.test_s3_access_key
+    s3_secret_key = var.test_s3_secret_key
+    path          = "migration/${var.test_service_name}/"
+  }
+}

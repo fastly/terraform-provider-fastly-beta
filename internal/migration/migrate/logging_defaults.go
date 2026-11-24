@@ -14,6 +14,16 @@ func legacyTLSLoggingFormat(block string) string {
 	return legacyJSONLoggingFormat
 }
 
+// These SDKv2 block defaults are "classic" in both the VCL and Compute
+// schemas (fastly/block_fastly_service_logging_{s3,cloudfiles}.go).
+// The target provider defaults both to "blank". An omitted or literal-null
+// message_type must therefore be pinned when migrating either service family.
+// Other storage endpoints already have matching defaults or no message_type.
+var legacyStorageMessageTypeDefaults = map[string]string{
+	"logging_s3":         "classic",
+	"logging_cloudfiles": "classic",
+}
+
 const legacyJSONLoggingFormat = `{
     "timestamp": "%{strftime(\{"%Y-%m-%dT%H:%M:%S%z"\}, time.start)}V",
     "client_ip": "%{req.http.Fastly-Client-IP}V",

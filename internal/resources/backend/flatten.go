@@ -42,10 +42,19 @@ func FlattenToNestedModel(b *fastly.Backend) NestedModel {
 	m.SSLCertHostname = service.StringPointerOrDefault(b.SSLCertHostname, DefaultSSLCertHostname)
 	m.SSLCheckCert = service.BoolPointerOrDefault(b.SSLCheckCert, DefaultSSLCheckCert)
 	m.SSLCiphers = service.StringPointerOrDefault(b.SSLCiphers, DefaultSSLCiphers)
-	m.SSLClientSecrets = NewSSLClientSecretsObject(
-		service.StringPointerOrDefault(b.SSLClientCert, DefaultSSLClientCert),
-		service.StringPointerOrDefault(b.SSLClientKey, DefaultSSLClientKey),
-	)
+	// Absent client credentials should be represented as a null optional
+	// object, not an object containing two empty strings. The latter is returned by
+	// the API for ordinary non-mTLS backends but Terraform plans null when the
+	// nested object is omitted from HCL, causing a spurious service update.
+	// Keep an object whenever either credential has a non-empty value: that
+	// must remain visible so an unsafe or redacted migration still fails.
+	cert := service.StringPointerOrDefault(b.SSLClientCert, DefaultSSLClientCert)
+	key := service.StringPointerOrDefault(b.SSLClientKey, DefaultSSLClientKey)
+	if cert.ValueString() == "" && key.ValueString() == "" {
+		m.SSLClientSecrets = types.ObjectNull(sslClientSecretsAttributeTypes)
+	} else {
+		m.SSLClientSecrets = NewSSLClientSecretsObject(cert, key)
+	}
 	m.SSLSNIHostname = service.StringPointerOrDefault(b.SSLSNIHostname, DefaultSSLSNIHostname)
 	m.UseSSL = service.BoolPointerOrDefault(b.UseSSL, DefaultUseSSL)
 	m.Weight = service.Int64PointerOrDefault(b.Weight, DefaultWeight)

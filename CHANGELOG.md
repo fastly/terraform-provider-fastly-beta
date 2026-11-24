@@ -4,6 +4,8 @@
 
 ### ENHANCEMENTS:
 
+- feat(migration): add guarded storage/cloud logging authentication migrations for S3, GCS, BigQuery, Blob Storage, Cloud Files, DigitalOcean, OpenStack, Google Pub/Sub and Kinesis in CDN and Compute services, preserving expression-based credentials and rejecting ambiguous configurations
+
 - feat(migration): transform TLS and authentication configuration for HTTPS, Elasticsearch, Kafka, Splunk and Syslog logging endpoints, preserving legacy VCL format defaults and HTTPS gzip-level state hints ([#250](https://github.com/fastly/terraform-provider-fastly-beta/pull/250))
 - feat(bot-management): add support for bot management resources, data sources and lists ([#241](https://github.com/fastly/terraform-provider-fastly-beta/pull/241))
 - feat(migration): migrate legacy NGWAF resources to their renamed and split resource types in `fastly-tf-migrate` ([#249](https://github.com/fastly/terraform-provider-fastly-beta/pull/249))
@@ -15,6 +17,8 @@
 
 ### BUG FIXES:
 
+- fix(migration): preserve legacy `classic` message type defaults for S3 and Cloud Files logging and normalize absent backend TLS client credentials to avoid unintended service plan changes during CDN/Compute state moves
+- fix(logging): accept unknown configured credentials during GCS, BigQuery, Blob Storage and Google Pub/Sub validation without requiring environment fallbacks; still reject missing or explicitly empty credentials
 - fix(bot-management): sort `fastly_bot_management_bots` and `fastly_bot_management_categories` data source results so their lists are stable across refreshes ([#251](https://github.com/fastly/terraform-provider-fastly-beta/pull/251))
 - fix(logging_splunk): allow unknown configured `authentication.token` during validation without requiring `FASTLY_SPLUNK_TOKEN` ([#250](https://github.com/fastly/terraform-provider-fastly-beta/pull/250))
 - fix(migration): extend legacy VCL and Compute state decoders for SDKv2 10.3.0 schema additions and reject configured backend IAM until target parity is available ([#244](https://github.com/fastly/terraform-provider-fastly-beta/pull/244))

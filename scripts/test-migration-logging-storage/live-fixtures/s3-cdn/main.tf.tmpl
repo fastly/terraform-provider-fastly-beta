@@ -1,0 +1,56 @@
+# Disposable SDKv2 CDN service. Bucket/credentials are inert public examples
+# from go-fastly recordings, supplied by the acceptance runner, not an AWS user.
+# The live harness substitutes only the exact SDKv2 version placeholder.
+terraform {
+  required_providers {
+    fastly = {
+      source  = "fastly/fastly"
+      version = "= @LEGACY_PROVIDER_VERSION@"
+    }
+  }
+}
+
+variable "test_service_name" {
+  type = string
+}
+
+variable "test_s3_bucket" {
+  type = string
+}
+
+variable "test_s3_access_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "test_s3_secret_key" {
+  type      = string
+  sensitive = true
+}
+
+resource "fastly_service_vcl" "demo" {
+  name          = var.test_service_name
+  force_destroy = true
+
+  domain {
+    name = "${var.test_service_name}.example.com"
+  }
+
+  backend {
+    name    = "origin"
+    address = "www.example.com"
+    port    = 443
+  }
+
+  logging_s3 {
+    name          = "s3-live"
+    bucket_name   = var.test_s3_bucket
+    s3_access_key = var.test_s3_access_key
+    s3_secret_key = var.test_s3_secret_key
+
+    # These are deliberately explicit: the live snapshot checks exact state.
+    path           = "migration/${var.test_service_name}/"
+    format         = "%h %l %u %t \"%r\" %>s %b"
+    format_version = 2
+  }
+}

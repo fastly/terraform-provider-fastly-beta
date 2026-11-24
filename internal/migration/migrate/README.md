@@ -250,6 +250,72 @@ and reject any infrastructure-changing Terraform plan. Compute shares
 the HCL and HTTPS state hint implementation, but needs separate live
 logging verification.
 
+## Storage/cloud logging credential migration
+
+The automatic VCL/CDN Auto and Compute/Compute Auto service rewrite supports
+these reviewed SDKv2 flat credential routes:
+
+| Legacy block | Target `authentication` members |
+| --- | --- |
+| `logging_s3` | `s3_access_key` -> `access_key`, `s3_secret_key` -> `secret_key`, `s3_iam_role` -> `iam_role` |
+| `logging_gcs` | `account_name`, `user` -> `email`, `secret_key` |
+| `logging_bigquery` | `account_name`, `email`, `secret_key` |
+| `logging_blobstorage` | `account_name`, `sas_token` |
+| `logging_cloudfiles` | `user`, `access_key` |
+| `logging_digitalocean` | `access_key`, `secret_key` |
+| `logging_openstack` | `user`, `access_key` |
+| `logging_googlepubsub` | `account_name`, `user` -> `email`, `secret_key` |
+| `logging_kinesis` | `access_key`, `secret_key`, `iam_role` |
+
+Only exact automatic compatibility-registry rules are applied. The migration
+preserves the source expression bytes and other configured fields, including
+paths, buckets, topics, regions, formats, compression and response conditions.
+It will not read variables, evaluate files, retrieve credentials or rewrite
+external infrastructure. As with TLS logging, previews containing any of
+these endpoint types withhold HCL diffs.
+
+The analyzer blocks unknown or target-only flat fields, mixed legacy/target
+authentication objects, conflicting IAM-role/key and Google account/email
+authentication modes, explicit `gzip_level = -1`, conflicting codec/level
+settings and known invalid compression or placement. Unresolved expressions
+are never interpreted as credentials; configurations with unresolved
+mutually exclusive options must be made unambiguous before migration.
+VCL format omission for the eight non-BigQuery endpoints pins the reviewed
+SDKv2 JSON-format default; explicit format expressions remain unchanged.
+For S3 and Cloud Files in both VCL and Compute, omitted or literal-null
+`message_type` is pinned to the legacy SDKv2 default `"classic"` because
+the Framework provider defaults these two endpoints to `"blank"`.
+Explicit message-type expressions and values are preserved.
+The target provider also represents *absent* backend TLS client credentials
+as a null optional `ssl_client_secrets` object rather than two empty
+strings; any nonempty API-returned certificate or key remains in state.
+**BigQuery requires an explicit non-null VCL format**, because the historical
+BigQuery default has not been independently established. The target exposes
+a defaulted BigQuery `format_version` which the legacy schema did not:
+review this extra default for your actual endpoint before applying.
+
+`make test-migration-logging-storage-config` exercises golden HCL rewrites and
+Terraform target-provider validation in disposable test directories without
+accessing Fastly. This does **not** establish live API credential
+reconstruction or an infrastructure no-op. The legacy service state mover
+retains ID/lifecycle controls and some logging hints, but does not copy all
+storage/cloud logging credentials into target state; they must be safely
+reconstructed by target refresh. API masking/redaction behavior varies by
+endpoint and is **not verified** by the configuration-only tests.
+
+Before migrating any real service, privately compare legacy and target
+endpoint state, credentials, service ID and active version and require a
+zero-action migration plan followed by a no-op plan. If the API redacts
+credentials or the plan proposes a managed-resource update, replacement,
+create or destroy, do **not** apply. See
+`scripts/test-migration-logging-storage/README.md` for the opt-in S3
+migration acceptance tests on CDN and Compute (`make
+test-migration-logging-storage-live`) using public go-fastly dummy S3
+credentials. These verify real Fastly endpoint/state moves, **not**
+delivery to an S3 receiver. The harness is not executed by the offline
+suite, and receiver-backed coverage of other endpoint types still requires
+test-owned destinations.
+
 ## Terraform reference rewriting
 
 References are resolved against **enabled resource conversions in the same

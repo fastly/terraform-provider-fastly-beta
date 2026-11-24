@@ -40,7 +40,7 @@ func sensitiveBody(body hcl.Body) bool {
 		}
 	}
 	for _, block := range syntaxBody.Blocks {
-		if compatibility.IsTLSLoggingBlock(block.Type) || sensitiveFieldName(block.Type) || sensitiveBody(block.Body) {
+		if compatibility.IsTLSLoggingBlock(block.Type) || compatibility.IsStorageLoggingBlock(block.Type) || sensitiveFieldName(block.Type) || sensitiveBody(block.Body) {
 			return true
 		}
 	}

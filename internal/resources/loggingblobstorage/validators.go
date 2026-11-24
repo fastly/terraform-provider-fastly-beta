@@ -129,9 +129,9 @@ func (authenticationRequired) ValidateObject(ctx context.Context, req validator.
 		return
 	}
 
-	accountName := effectiveAuthValue(ctx, req.ConfigValue, "account_name", "FASTLY_AZURE_ACCOUNT_NAME")
-	sasToken := effectiveAuthValue(ctx, req.ConfigValue, "sas_token", "FASTLY_AZURE_SHARED_ACCESS_SIGNATURE")
-	if accountName != "" && sasToken != "" {
+	accountName := hasEffectiveAuthValue(ctx, req.ConfigValue, "account_name", "FASTLY_AZURE_ACCOUNT_NAME")
+	sasToken := hasEffectiveAuthValue(ctx, req.ConfigValue, "sas_token", "FASTLY_AZURE_SHARED_ACCESS_SIGNATURE")
+	if accountName && sasToken {
 		return
 	}
 
@@ -143,21 +143,17 @@ func (authenticationRequired) ValidateObject(ctx context.Context, req validator.
 	)
 }
 
-// effectiveAuthValue returns the configured value of attrName within the
-// authentication object, or its environment variable default when the
-// config leaves that field unset. req.ConfigValue reflects the raw config
-// (pre-Default), so an omitted field is a real types.StringNull() distinct
-// from one explicitly set to "" — only the former falls back to the
-// environment variable. An explicit "" is returned as-is (and so is caught
-// as missing by the caller) rather than being silently rescued by an
-// environment variable the config never referenced.
-func effectiveAuthValue(ctx context.Context, obj types.Object, attrName, envVar string) string {
+// hasEffectiveAuthValue checks whether a credential is potentially usable.
+// Unknown configured expressions are provisionally accepted during validation,
+// while explicitly empty values remain invalid and cannot use environment
+// fallbacks. Only omitted (null) fields use their environment defaults.
+func hasEffectiveAuthValue(ctx context.Context, obj types.Object, attrName, envVar string) bool {
 	if !obj.IsNull() && !obj.IsUnknown() {
 		if v, ok := obj.Attributes()[attrName]; ok {
-			if sv, ok := v.(types.String); ok && !sv.IsNull() && !sv.IsUnknown() {
-				return sv.ValueString()
+			if sv, ok := v.(types.String); ok && !sv.IsNull() {
+				return sv.IsUnknown() || sv.ValueString() != ""
 			}
 		}
 	}
-	return envStringDefault(ctx, envVar).ValueString()
+	return envStringDefault(ctx, envVar).ValueString() != ""
 }

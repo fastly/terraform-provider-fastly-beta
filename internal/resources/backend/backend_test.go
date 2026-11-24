@@ -151,6 +151,7 @@ func TestFlattenToNestedModel(t *testing.T) {
 			},
 			expected: func() NestedModel {
 				m := defaultNestedModel()
+				m.SSLClientSecrets = types.ObjectNull(sslClientSecretsAttributeTypes)
 				m.Name = types.StringValue("default-backend")
 				m.Address = types.StringValue("api.default.com")
 				return m
@@ -165,6 +166,7 @@ func TestFlattenToNestedModel(t *testing.T) {
 			},
 			expected: func() NestedModel {
 				m := defaultNestedModel()
+				m.SSLClientSecrets = types.ObjectNull(sslClientSecretsAttributeTypes)
 				m.Name = types.StringValue("backend-empty-comment")
 				m.Address = types.StringValue("api.test.com")
 				return m
@@ -179,6 +181,7 @@ func TestFlattenToNestedModel(t *testing.T) {
 			},
 			expected: func() NestedModel {
 				m := defaultNestedModel()
+				m.SSLClientSecrets = types.ObjectNull(sslClientSecretsAttributeTypes)
 				m.Name = types.StringValue("backend-nil-keepalive")
 				m.Address = types.StringValue("api.test.com")
 				return m
@@ -192,6 +195,45 @@ func TestFlattenToNestedModel(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+// Unconfigured backend mTLS must match an omitted optional object in HCL.
+// Preserve a partially returned credential instead of silently dropping it.
+func TestFlattenSSLClientSecretsNullOnlyWhenBothEmpty(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name     string
+		cert     *string
+		key      *string
+		wantNull bool
+	}{
+		{name: "both omitted", wantNull: true},
+		{name: "both API empty strings", cert: new(""), key: new(""), wantNull: true},
+		{name: "only certificate returned", cert: new("cert-content")},
+		{name: "only key returned", key: new("key-content")},
+		{name: "both returned", cert: new("cert-content"), key: new("key-content")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			m := FlattenToNestedModel(&fastly.Backend{SSLClientCert: tc.cert, SSLClientKey: tc.key})
+			if m.SSLClientSecrets.IsNull() != tc.wantNull {
+				t.Fatal("unexpected backend TLS object nullability")
+			}
+			if !tc.wantNull {
+				if m.SSLClientCert().ValueString() != derefOrEmpty(tc.cert) ||
+					m.SSLClientKey().ValueString() != derefOrEmpty(tc.key) {
+					t.Fatal("API-returned client certificate or key was discarded")
+				}
+			}
+		})
+	}
+}
+
+func derefOrEmpty(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 func TestModelEmbedding(t *testing.T) {
