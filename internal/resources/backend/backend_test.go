@@ -229,6 +229,41 @@ func TestFlattenSSLClientSecretsNullOnlyWhenBothEmpty(t *testing.T) {
 	}
 }
 
+// Null in the API means no TLS client credentials, but an empty object in
+// configuration must remain an object after Create, Read, and Update.
+func TestPreserveExplicitEmptySSLClientSecrets(t *testing.T) {
+	t.Parallel()
+	empty := NewSSLClientSecretsObject(types.StringValue(""), types.StringValue(""))
+	populated := NewSSLClientSecretsObject(types.StringValue("sensitive-cert"), types.StringValue("sensitive-key"))
+	remote := FlattenToNestedModel(&fastly.Backend{
+		Name: new("origin"), SSLClientCert: new(""), SSLClientKey: new(""),
+	})
+	for _, tc := range []struct {
+		name     string
+		previous types.Object
+		wantNull bool
+	}{
+		{name: "omitted", previous: types.ObjectNull(sslClientSecretsAttributeTypes), wantNull: true},
+		{name: "explicitly empty object", previous: empty},
+		{name: "previous credentials now absent", previous: populated, wantNull: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			previous := NestedModel{Name: types.StringValue("origin"), SSLClientSecrets: tc.previous}
+			returned := MatchOrder([]NestedModel{remote}, []NestedModel{previous})
+			if len(returned) != 1 || returned[0].SSLClientSecrets.IsNull() != tc.wantNull {
+				t.Fatal("unexpected backend TLS object after ordered refresh")
+			}
+			state := Model{NestedModel: previous}
+			flatten(context.Background(), &fastly.Backend{
+				Name: new("origin"), SSLClientCert: new(""), SSLClientKey: new(""),
+			}, &state)
+			if state.SSLClientSecrets.IsNull() != tc.wantNull {
+				t.Fatal("unexpected standalone backend TLS object after refresh")
+			}
+		})
+	}
+}
+
 func derefOrEmpty(value *string) string {
 	if value == nil {
 		return ""

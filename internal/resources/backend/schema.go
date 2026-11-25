@@ -474,8 +474,37 @@ func Equal(a, b []NestedModel) bool {
 	return reconcile.ModelsEqual(a, b, func(m NestedModel) string { return service.StringValue(m.Name) }, NestedModel.ModelsEqual, true)
 }
 
+// preserveExplicitEmptySSLClientSecrets distinguishes an explicitly configured
+// empty object from an omitted object when the API returns no client credentials.
+// Never carry forward nonempty credentials: an API redaction must remain visible
+// as drift rather than silently retaining a potentially stale secret.
+func preserveExplicitEmptySSLClientSecrets(current, previous NestedModel) NestedModel {
+	if !current.SSLClientSecrets.IsNull() || previous.SSLClientSecrets.IsNull() || previous.SSLClientSecrets.IsUnknown() {
+		return current
+	}
+	attrs := previous.SSLClientSecrets.Attributes()
+	cert, certOK := attrs["ssl_client_cert"].(types.String)
+	key, keyOK := attrs["ssl_client_key"].(types.String)
+	if !certOK || !keyOK || cert.IsNull() || key.IsNull() ||
+		cert.IsUnknown() || key.IsUnknown() || cert.ValueString() != "" || key.ValueString() != "" {
+		return current
+	}
+	current.SSLClientSecrets = previous.SSLClientSecrets
+	return current
+}
+
 func MatchOrder(items, order []NestedModel) []NestedModel {
-	return reconcile.MatchOrder(items, order, func(m NestedModel) string { return service.StringValue(m.Name) })
+	matched := reconcile.MatchOrder(items, order, func(m NestedModel) string { return service.StringValue(m.Name) })
+	previousByName := make(map[string]NestedModel, len(order))
+	for _, item := range order {
+		previousByName[service.StringValue(item.Name)] = item
+	}
+	for i, item := range matched {
+		if previous, ok := previousByName[service.StringValue(item.Name)]; ok {
+			matched[i] = preserveExplicitEmptySSLClientSecrets(item, previous)
+		}
+	}
+	return matched
 }
 
 // ValidateHealthcheckReferences rejects a healthcheck naming a health check block absent from config.

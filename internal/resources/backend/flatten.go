@@ -79,7 +79,7 @@ func flatten(ctx context.Context, b *fastly.Backend, m *Model) {
 	m.Service = types.StringValue(fastly.ToValue(b.ServiceID))
 	m.Version = types.Int64Value(int64(fastly.ToValue(b.ServiceVersion)))
 
-	m.NestedModel = FlattenToNestedModel(b)
+	m.NestedModel = preserveExplicitEmptySSLClientSecrets(FlattenToNestedModel(b), m.NestedModel)
 
 	tflog.Debug(ctx, "Flattened service backend state", map[string]any{
 		"id":      id,
