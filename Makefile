@@ -14,7 +14,7 @@ OVERRIDES_FILE := $(BIN_DIR)/developer_overrides.tfrc
 GOLANGCI_LINT_VERSION := v2.12.2
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 
-.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle test-migration-vcl test-migration-compute test-migration-ngwaf test-migration-products test-migration-schemas test-migration-references test-migration-domains test-migration-backend-tls test-migration-logging-tls-config test-migration-logging-storage-config test-migration-logging-storage-live test-migration-traffic-config test-migration-traffic lint install-linter check-linter-version release-check help
+.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle test-migration-vcl test-migration-compute test-migration-ngwaf test-migration-products test-migration-schemas test-migration-references test-migration-domains test-migration-compute-acl test-migration-backend-tls test-migration-logging-tls-config test-migration-logging-storage-config test-migration-logging-storage-live test-migration-traffic-config test-migration-traffic lint install-linter check-linter-version release-check help
 
 help:
 	@echo "Available targets:"
@@ -40,6 +40,7 @@ help:
 	@echo "  make test-migration-schemas  - Verify published SDKv2 state decoder compatibility (no API token)"
 	@echo "  make test-migration-references - Run live module/reference migration test (requires FASTLY_API_TOKEN)"
 	@echo "  make test-migration-domains  - Run live standalone domain migration test (requires FASTLY_API_TOKEN)"
+	@echo "  make test-migration-compute-acl - Run live fastly_compute_acl state move test (requires FASTLY_API_TOKEN)"
 	@echo "  make test-migration-backend-tls - Run live CDN/Compute backend TLS migration (requires FASTLY_API_TOKEN and openssl)"
 	@echo "  make test-migration-logging-tls-config - Validate CDN/Compute logging migration golden HCL (no API token)"
 	@echo "  make test-migration-logging-storage-config - Validate CDN/Compute storage logging migration HCL (no API token)"
@@ -178,6 +179,11 @@ test-migration-domains:
 	@echo "==> Running live standalone domain migration acceptance test..."
 	@echo "    Note: Creates/destroys real Fastly services and domains; requires FASTLY_API_TOKEN"
 	@./scripts/test-migration-domains/run.sh
+
+test-migration-compute-acl:
+	@echo "==> Running live fastly_compute_acl state move test..."
+	@echo "    Note: Creates/destroys a real Fastly Compute ACL; requires FASTLY_API_TOKEN"
+	@./scripts/test-migration-compute-acl/run.sh
 test-migration-backend-tls:
 	@echo "==> Running live CDN/Compute backend TLS migration acceptance test..."
 	@MIGRATION_TEST_BACKEND_TLS=true ./scripts/test-migration-references/run.sh

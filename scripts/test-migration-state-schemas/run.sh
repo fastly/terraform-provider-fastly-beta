@@ -53,4 +53,4 @@ done
 
 cd "$REPO_ROOT"
 FASTLY_LEGACY_SCHEMA_DIR="$WORK_DIR" go test -count=1 -v ./internal/provider \
-    -run '^(TestLegacyServiceMoveState(PublishedSchemas|HistoricalSchemas|AbsentAndNullValues|ComputePackageInputs|RejectsUnsafeJSON)|TestLegacyDomainPublished(Schemas|SchemaStateConversion)|TestLegacyNGWAFMoveState.*)$'
+    -run '^(TestLegacyServiceMoveState(PublishedSchemas|HistoricalSchemas|AbsentAndNullValues|ComputePackageInputs|RejectsUnsafeJSON)|TestLegacyDomainPublished(Schemas|SchemaStateConversion)|TestLegacyNGWAFMoveState.*|TestLegacyComputeACLMoveStatePublishedSchemas)$'
