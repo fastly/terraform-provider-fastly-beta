@@ -80,9 +80,10 @@ func (authenticationEitherOr) ValidateObject(ctx context.Context, req validator.
 
 // hasEffectiveAuthValue reports whether the raw configured credential is
 // potentially usable, or an omitted field has a nonempty environment default.
-// Unknown expressions are provisionally accepted during terraform validate;
-// they must be checked once known during plan/apply. An explicitly empty
-// string is invalid and must not fall back to an environment variable.
+// Unknown expressions are provisionally accepted. Terraform does not
+// guarantee this validator runs again when an unknown resolves, so a
+// subsequently empty value may still fail at the provider/API boundary.
+// Explicitly empty strings never fall back to environment variables.
 func hasEffectiveAuthValue(ctx context.Context, obj types.Object, attrName, envVar string) bool {
 	if !obj.IsNull() && !obj.IsUnknown() {
 		if v, ok := obj.Attributes()[attrName]; ok {

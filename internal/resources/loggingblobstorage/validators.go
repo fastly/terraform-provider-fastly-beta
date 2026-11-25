@@ -144,9 +144,10 @@ func (authenticationRequired) ValidateObject(ctx context.Context, req validator.
 }
 
 // hasEffectiveAuthValue checks whether a credential is potentially usable.
-// Unknown configured expressions are provisionally accepted during validation,
-// while explicitly empty values remain invalid and cannot use environment
-// fallbacks. Only omitted (null) fields use their environment defaults.
+// Unknown expressions are provisionally accepted; this validator may not
+// rerun once they resolve, so a later empty value can still fail at the API.
+// Explicitly empty values do not use environment fallbacks; only omitted
+// (null) fields do.
 func hasEffectiveAuthValue(ctx context.Context, obj types.Object, attrName, envVar string) bool {
 	if !obj.IsNull() && !obj.IsUnknown() {
 		if v, ok := obj.Attributes()[attrName]; ok {
