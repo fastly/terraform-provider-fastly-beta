@@ -4,6 +4,7 @@
 
 ### ENHANCEMENTS:
 
+- feat(migration): move legacy `fastly_compute_acl` state to `fastly_acl` through Terraform `moved` blocks ([#257](https://github.com/fastly/terraform-provider-fastly-beta/pull/257))
 - feat(migration): add guarded storage/cloud logging authentication migrations for S3, GCS, BigQuery, Blob Storage, Cloud Files, DigitalOcean, OpenStack, Google Pub/Sub and Kinesis in CDN and Compute services, preserving expression-based credentials and rejecting ambiguous configurations ([#252](https://github.com/fastly/terraform-provider-fastly-beta/pull/252))
 - feat(migration): migrate legacy VCL condition, healthcheck, header, gzip, cache, request, response object and director blocks to `fastly_service_cdn_auto` ([#253](https://github.com/fastly/terraform-provider-fastly-beta/pull/253))
 
