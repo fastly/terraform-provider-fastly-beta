@@ -134,62 +134,78 @@ func TestRemoveLiteralString(t *testing.T) {
 	}
 }
 
-func TestLowercaseExpression(t *testing.T) {
+func TestNormalizeStringExpression(t *testing.T) {
 	t.Parallel()
 	source := []byte(`resource "fastly_service_vcl" "demo" {
   cache_setting {
-    name   = "literal"
-    action = "PASS"
+    name            = "literal"
+    action          = "PASS"
+    cache_condition = "c"
   }
   cache_setting {
-    name   = "variable"
-    action = var.action # keep
+    name            = "variable"
+    action          = var.action # keep
+    cache_condition = var.condition
   }
   cache_setting {
-    name   = "conditional"
-    action = var.pass ? "PASS" : null
+    name            = "conditional"
+    action          = var.pass ? "PASS" : null
+    cache_condition = var.on ? "c" : ""
   }
   cache_setting {
-    name   = "lowered"
-    action = lower(var.action)
+    name            = "lowered"
+    action          = lower(var.action)
+    cache_condition = lower(var.condition)
   }
   cache_setting {
-    name   = "null"
-    action = null
+    name            = "null"
+    action          = null
+    cache_condition = null
   }
   cache_setting {
     name = "omitted"
   }
 }
 `)
-	edit := LowercaseExpression{
+	got, err := (NormalizeStringExpression{
 		ResourceType: "fastly_service_vcl", ResourceName: "demo",
-		Parents: []string{"cache_setting"}, Attribute: "action",
+		Parents: []string{"cache_setting"}, Attribute: "action", Lowercase: true,
+	}).apply(source, "main.tf")
+	if err != nil {
+		t.Fatal(err)
 	}
-	got, err := edit.apply(source, "main.tf")
+	got, err = (NormalizeStringExpression{
+		ResourceType: "fastly_service_vcl", ResourceName: "demo",
+		Parents: []string{"cache_setting"}, Attribute: "cache_condition",
+	}).apply(got, "main.tf")
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := `resource "fastly_service_vcl" "demo" {
   cache_setting {
-    name   = "literal"
-    action = "PASS"
+    name            = "literal"
+    action          = "PASS"
+    cache_condition = "c"
   }
   cache_setting {
-    name   = "variable"
-    action = var.action == null ? null : lower(var.action) # keep
+    name            = "variable"
+    action          = var.action == null || var.action == "" ? null : lower(var.action) # keep
+    cache_condition = var.condition == "" ? null : var.condition
   }
   cache_setting {
-    name   = "conditional"
-    action = (var.pass ? "PASS" : null) == null ? null : lower(var.pass ? "PASS" : null)
+    name            = "conditional"
+    action          = (var.pass ? "PASS" : null) == null || (var.pass ? "PASS" : null) == "" ? null : lower(var.pass ? "PASS" : null)
+    cache_condition = (var.on ? "c" : "") == "" ? null : (var.on ? "c" : "")
   }
   cache_setting {
-    name   = "lowered"
-    action = lower(var.action)
+    name            = "lowered"
+    action          = lower(var.action) == "" ? null : lower(var.action)
+    cache_condition = lower(var.condition) == "" ? null : lower(var.condition)
   }
   cache_setting {
-    name   = "null"
-    action = null
+    name            = "null"
+    action          = null
+    cache_condition = null
   }
   cache_setting {
     name = "omitted"

@@ -23,6 +23,11 @@ variable "gzip_content_types" {
   default = ["text/plain"]
 }
 
+variable "empty_string" {
+  type    = string
+  default = ""
+}
+
 resource "fastly_service_vcl" "traffic" {
   name = "traffic-migration"
 
@@ -109,6 +114,12 @@ resource "fastly_service_vcl" "traffic" {
     type      = "REQUEST"
   }
 
+  condition {
+    name      = "is_not_modified"
+    statement = "beresp.status == 304"
+    type      = "CACHE"
+  }
+
   director {
     name     = "pool_random"
     backends = ["origin_a", "origin_b"]
@@ -176,9 +187,10 @@ resource "fastly_service_vcl" "traffic" {
   }
 
   gzip {
-    name          = "variable_lists"
-    content_types = var.gzip_content_types
-    extensions    = var.gzip_extensions
+    name            = "variable_lists"
+    content_types   = var.gzip_content_types
+    extensions      = var.gzip_extensions
+    cache_condition = var.empty_string
   }
 
   cache_setting {
@@ -205,6 +217,13 @@ resource "fastly_service_vcl" "traffic" {
     name            = "variable_action"
     action          = var.cache_action
     cache_condition = "is_redirect"
+  }
+
+  cache_setting {
+    name            = "variable_empty"
+    action          = var.empty_string
+    cache_condition = "is_not_modified"
+    ttl             = 60
   }
 
   request_setting {
@@ -243,6 +262,15 @@ resource "fastly_service_vcl" "traffic" {
     response        = "Unavailable"
     content_type    = ""
     cache_condition = "is_error"
+  }
+
+  response_object {
+    name              = "variable_content_type"
+    status            = 200
+    response          = "OK"
+    content           = "internal"
+    content_type      = var.empty_string
+    request_condition = "is_internal"
   }
 
   force_destroy = true

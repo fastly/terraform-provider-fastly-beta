@@ -343,8 +343,10 @@ the first apply. A literal value the target cannot represent, such as director
 `type = 2` or `cache_setting.action = "lookup"`, blocks the plan and the
 finding lists the accepted values. Other director expressions are kept for
 Terraform to check. An `action` or `xff` set from a variable or other
-expression is wrapped as `var.x == null ? null : lower(var.x)`, so values the
-legacy provider accepted in any case still pass the target's validation. The
+expression is wrapped as `var.x == null || var.x == "" ? null : lower(var.x)`,
+so values the legacy provider accepted in any case, and `""`, still pass the
+target's validation. Other attributes in the table that are set from an
+expression are wrapped so `""` resolves to null. The
 legacy provider sent an empty gzip list the same way as an omitted one, and
 the target reads both back as null. A gzip list set from an expression is
 wrapped so it resolves to null when empty.

@@ -90,7 +90,7 @@ func TestPlanTrafficBlocksExpressions(t *testing.T) {
 	got := changedFile(t, result, "main.tf")
 	for _, keep := range []string{
 		"type     = var.director_type",
-		"action = var.action == null ? null : lower(var.action)",
+		"action = var.action == null || var.action == \"\" ? null : lower(var.action)",
 	} {
 		if !strings.Contains(got, keep) {
 			t.Fatalf("expression %q missing:\n%s", keep, got)

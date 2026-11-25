@@ -61,22 +61,25 @@ func (e ReplaceLiteral) apply(source []byte, filename string) ([]byte, error) {
 	return replace(source, edits)
 }
 
-// LowercaseExpression wraps a string expression that references variables or
-// other values in a null-safe lower() call, so values the legacy provider
-// lowercased before sending still pass the target's lowercase validation.
-// Literals, constant expressions and existing lower() calls are left alone.
-type LowercaseExpression struct {
+// NormalizeStringExpression wraps a string expression that references
+// variables or other values so that "" resolves to null, which the target
+// reads back for an empty value. With Lowercase, it also applies a null-safe
+// lower(), so values the legacy provider lowercased before sending still pass
+// the target's lowercase validation. Literals and constant expressions are
+// left alone.
+type NormalizeStringExpression struct {
 	File         string
 	ResourceType string
 	ResourceName string
 	Parents      []string
 	Attribute    string
+	Lowercase    bool
 }
 
-func (e LowercaseExpression) file() string    { return e.File }
-func (e LowercaseExpression) canCreate() bool { return false }
+func (e NormalizeStringExpression) file() string    { return e.File }
+func (e NormalizeStringExpression) canCreate() bool { return false }
 
-func (e LowercaseExpression) apply(source []byte, filename string) ([]byte, error) {
+func (e NormalizeStringExpression) apply(source []byte, filename string) ([]byte, error) {
 	if err := validateIdentifier(e.Attribute); err != nil {
 		return nil, err
 	}
@@ -93,15 +96,14 @@ func (e LowercaseExpression) apply(source []byte, filename string) ([]byte, erro
 		if _, diags := attr.Expr.Value(nil); !diags.HasErrors() {
 			continue
 		}
-		if call, ok := attr.Expr.(*hclsyntax.FunctionCallExpr); ok && call.Name == "lower" {
-			continue
-		}
 		rng := attr.Expr.Range()
 		expr, subject := operandSource(source, attr.Expr)
-		edits = append(edits, replacement{
-			start: rng.Start.Byte, end: rng.End.Byte,
-			value: []byte(subject + " == null ? null : lower(" + expr + ")"),
-		})
+		value := subject + ` == "" ? null : ` + subject
+		call, isLower := attr.Expr.(*hclsyntax.FunctionCallExpr)
+		if e.Lowercase && (!isLower || call.Name != "lower") {
+			value = subject + ` == null || ` + subject + ` == "" ? null : lower(` + expr + ")"
+		}
+		edits = append(edits, replacement{start: rng.Start.Byte, end: rng.End.Byte, value: []byte(value)})
 	}
 	return replace(source, edits)
 }

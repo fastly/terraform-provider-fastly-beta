@@ -52,7 +52,9 @@ var VCLNameOrderedBlocks = []string{
 // LiteralRewrite describes a value change for one nested attribute.
 // Values maps a legacy literal (whole numbers in decimal form) to the target
 // literal; every key is also an accepted legacy value. RemoveEmpty drops a
-// literal "" that the target would read back as null.
+// literal "" that the target would read back as null, and makes an
+// expression resolve to null instead of "". CaseInsensitive expressions are
+// lowercased by the same rewrite, so they also require RemoveEmpty.
 type LiteralRewrite struct {
 	Block           string
 	Attribute       string

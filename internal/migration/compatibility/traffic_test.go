@@ -22,6 +22,9 @@ func TestVCLTrafficTablesMatchAutomaticBlockRules(t *testing.T) {
 		if !automatic(change.Block) {
 			t.Errorf("literal rewrite block %q has no automatic VCL block rule", change.Block)
 		}
+		if change.CaseInsensitive && !change.RemoveEmpty {
+			t.Errorf("%s.%s is case-insensitive without RemoveEmpty", change.Block, change.Attribute)
+		}
 		for _, rule := range registry.RulesForLegacy("fastly_service_vcl." + change.Block) {
 			if rule.Kind == ConstructServiceBlock && rule.HCL != HCLReshape {
 				t.Errorf("block %q has literal rewrites but HCL strategy %s", change.Block, rule.HCL)

@@ -23,6 +23,11 @@ variable "gzip_content_types" {
   default = ["text/plain"]
 }
 
+variable "empty_string" {
+  type    = string
+  default = ""
+}
+
 resource "fastly_service_cdn_auto" "traffic" {
   name = "traffic-migration"
 
@@ -104,6 +109,12 @@ resource "fastly_service_cdn_auto" "traffic" {
   }
 
   condition {
+    name      = "is_not_modified"
+    statement = "beresp.status == 304"
+    type      = "CACHE"
+  }
+
+  condition {
     name      = "is_redirect"
     statement = "beresp.status == 301"
     type      = "CACHE"
@@ -173,9 +184,10 @@ resource "fastly_service_cdn_auto" "traffic" {
   }
 
   gzip {
-    name          = "variable_lists"
-    content_types = var.gzip_content_types == null ? null : (length(var.gzip_content_types) == 0 ? null : var.gzip_content_types)
-    extensions    = var.gzip_extensions == null ? null : (length(var.gzip_extensions) == 0 ? null : var.gzip_extensions)
+    name            = "variable_lists"
+    content_types   = var.gzip_content_types == null ? null : (length(var.gzip_content_types) == 0 ? null : var.gzip_content_types)
+    extensions      = var.gzip_extensions == null ? null : (length(var.gzip_extensions) == 0 ? null : var.gzip_extensions)
+    cache_condition = var.empty_string == "" ? null : var.empty_string
   }
 
   cache_setting {
@@ -198,8 +210,15 @@ resource "fastly_service_cdn_auto" "traffic" {
 
   cache_setting {
     name            = "variable_action"
-    action          = var.cache_action == null ? null : lower(var.cache_action)
+    action          = var.cache_action == null || var.cache_action == "" ? null : lower(var.cache_action)
     cache_condition = "is_redirect"
+  }
+
+  cache_setting {
+    name            = "variable_empty"
+    action          = var.empty_string == null || var.empty_string == "" ? null : lower(var.empty_string)
+    cache_condition = "is_not_modified"
+    ttl             = 60
   }
 
   request_setting {
@@ -216,8 +235,8 @@ resource "fastly_service_cdn_auto" "traffic" {
 
   request_setting {
     name              = "variable_xff"
-    action            = var.request_action == null ? null : lower(var.request_action)
-    xff               = var.request_xff == null ? null : lower(var.request_xff)
+    action            = var.request_action == null || var.request_action == "" ? null : lower(var.request_action)
+    xff               = var.request_xff == null || var.request_xff == "" ? null : lower(var.request_xff)
     request_condition = "is_internal"
   }
 
@@ -235,6 +254,15 @@ resource "fastly_service_cdn_auto" "traffic" {
     content           = "missing"
     content_type      = "text/plain"
     request_condition = "is_api"
+  }
+
+  response_object {
+    name              = "variable_content_type"
+    status            = 200
+    response          = "OK"
+    content           = "internal"
+    content_type      = var.empty_string == "" ? null : var.empty_string
+    request_condition = "is_internal"
   }
 
   force_destroy = true
