@@ -8,6 +8,9 @@
 
 ### BUG FIXES:
 
+- fix(migration): preserve legacy `classic` message type defaults for S3 and Cloud Files logging and normalize absent backend TLS client credentials to avoid unintended service plan changes during CDN/Compute state moves ([#252](https://github.com/fastly/terraform-provider-fastly-beta/pull/252))
+- fix(logging): accept unknown configured credentials during GCS, BigQuery, Blob Storage and Google Pub/Sub validation without requiring environment fallbacks; still reject missing or explicitly empty credentials ([#252](https://github.com/fastly/terraform-provider-fastly-beta/pull/252))
+
 ### Dependencies:
 
 ## 0.2.11 (November 24, 2026)
@@ -25,8 +28,6 @@
 
 ### BUG FIXES:
 
-- fix(migration): preserve legacy `classic` message type defaults for S3 and Cloud Files logging and normalize absent backend TLS client credentials to avoid unintended service plan changes during CDN/Compute state moves ([#252](https://github.com/fastly/terraform-provider-fastly-beta/pull/252))
-- fix(logging): accept unknown configured credentials during GCS, BigQuery, Blob Storage and Google Pub/Sub validation without requiring environment fallbacks; still reject missing or explicitly empty credentials ([#252](https://github.com/fastly/terraform-provider-fastly-beta/pull/252))
 - fix(bot-management): sort `fastly_bot_management_bots` and `fastly_bot_management_categories` data source results so their lists are stable across refreshes ([#251](https://github.com/fastly/terraform-provider-fastly-beta/pull/251))
 - fix(logging_splunk): allow unknown configured `authentication.token` during validation without requiring `FASTLY_SPLUNK_TOKEN` ([#250](https://github.com/fastly/terraform-provider-fastly-beta/pull/250))
 - fix(migration): extend legacy VCL and Compute state decoders for SDKv2 10.3.0 schema additions and reject configured backend IAM until target parity is available ([#244](https://github.com/fastly/terraform-provider-fastly-beta/pull/244))
