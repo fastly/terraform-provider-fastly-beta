@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 )
 
@@ -45,6 +46,10 @@ func (e SortBlocksByName) apply(source []byte, filename string) ([]byte, error) 
 	if len(blocks) < 2 {
 		return source, nil
 	}
+	tokens, diags := hclsyntax.LexConfig(source, filename, hcl.InitialPos)
+	if diags.HasErrors() {
+		return nil, diags
+	}
 	var segments []segment
 	seen := map[string]bool{}
 	for _, block := range blocks {
@@ -56,7 +61,7 @@ func (e SortBlocksByName) apply(source []byte, filename string) ([]byte, error) 
 			return nil, fmt.Errorf("%s blocks have duplicate names", e.Block)
 		}
 		seen[name] = true
-		start, end, err := blockLines(source, block)
+		start, end, err := blockLines(source, tokens, block)
 		if err != nil {
 			return nil, err
 		}
@@ -90,13 +95,14 @@ func literalBlockName(block *hclsyntax.Block) (string, error) {
 }
 
 // blockLines returns a block's full lines, including adjacent comment-only
-// lines immediately above it. A block must start and end on its own lines.
-func blockLines(source []byte, block *hclsyntax.Block) (int, int, error) {
+// lines immediately above it and comments after its closing brace. A block
+// must start and end on its own lines.
+func blockLines(source []byte, tokens hclsyntax.Tokens, block *hclsyntax.Block) (int, int, error) {
 	pos := block.TypeRange.Start.Byte
 	if pos < 0 || pos > len(source) {
 		return 0, 0, fmt.Errorf("invalid block source range")
 	}
-	start := bytes.LastIndexByte(source[:pos], '\n') + 1
+	start := lineStart(source, pos)
 	indent := string(source[start:pos])
 	if strings.TrimSpace(indent) != "" {
 		return 0, 0, fmt.Errorf("%s block must start on its own line", block.Type)
@@ -105,25 +111,47 @@ func blockLines(source []byte, block *hclsyntax.Block) (int, int, error) {
 	if closeEnd < pos || closeEnd > len(source) {
 		return 0, 0, fmt.Errorf("invalid block end range")
 	}
+	first := sort.Search(len(tokens), func(i int) bool { return tokens[i].Range.Start.Byte >= pos })
+	next := sort.Search(len(tokens), func(i int) bool { return tokens[i].Range.Start.Byte >= closeEnd })
+
 	end := len(source)
-	if next := bytes.IndexByte(source[closeEnd:], '\n'); next >= 0 {
-		end = closeEnd + next + 1
-	}
-	trailer := strings.TrimSpace(string(source[closeEnd:end]))
-	if trailer != "" && !strings.HasPrefix(trailer, "#") && !strings.HasPrefix(trailer, "//") {
-		return 0, 0, fmt.Errorf("%s block has additional syntax after its closing brace", block.Type)
-	}
-	for start > 0 {
-		previousEnd := start - 1
-		previousStart := bytes.LastIndexByte(source[:previousEnd], '\n') + 1
-		line := string(source[previousStart:previousEnd])
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(line, indent) &&
-			(strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, "//")) {
-			start = previousStart
-			continue
+trailer:
+	for ; next < len(tokens); next++ {
+		token := tokens[next]
+		switch {
+		case token.Type == hclsyntax.TokenEOF:
+			break trailer
+		case token.Type == hclsyntax.TokenNewline,
+			token.Type == hclsyntax.TokenComment && bytes.HasSuffix(token.Bytes, []byte("\n")):
+			end = token.Range.End.Byte
+			break trailer
+		case token.Type == hclsyntax.TokenComment && !bytes.Contains(token.Bytes, []byte("\n")):
+		default:
+			return 0, 0, fmt.Errorf("%s block has additional syntax after its closing brace", block.Type)
 		}
-		break
+	}
+
+	// Line comments include their newline; block comments are followed by a
+	// separate newline token.
+	for i := first - 1; i >= 0; i-- {
+		comment := tokens[i]
+		if comment.Type == hclsyntax.TokenNewline && i > 0 &&
+			tokens[i-1].Type == hclsyntax.TokenComment && !bytes.HasSuffix(tokens[i-1].Bytes, []byte("\n")) {
+			i--
+			comment = tokens[i]
+		} else if comment.Type != hclsyntax.TokenComment || !bytes.HasSuffix(comment.Bytes, []byte("\n")) {
+			break
+		}
+		commentStart := lineStart(source, comment.Range.Start.Byte)
+		lead := string(source[commentStart:comment.Range.Start.Byte])
+		if !strings.HasPrefix(lead, indent) || strings.TrimSpace(lead) != "" {
+			break
+		}
+		start = commentStart
 	}
 	return start, end, nil
+}
+
+func lineStart(source []byte, pos int) int {
+	return bytes.LastIndexByte(source[:pos], '\n') + 1
 }
