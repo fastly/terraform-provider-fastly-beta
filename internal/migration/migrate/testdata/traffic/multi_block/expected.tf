@@ -1,3 +1,18 @@
+variable "cache_action" {
+  type    = string
+  default = "PASS"
+}
+
+variable "request_action" {
+  type    = string
+  default = null
+}
+
+variable "request_xff" {
+  type    = string
+  default = "Append"
+}
+
 resource "fastly_service_cdn_auto" "traffic" {
   name = "traffic-migration"
 
@@ -67,9 +82,21 @@ resource "fastly_service_cdn_auto" "traffic" {
   }
 
   condition {
+    name      = "is_internal"
+    statement = "req.url ~ \"^/internal/\""
+    type      = "REQUEST"
+  }
+
+  condition {
     name      = "is_missing"
     statement = "resp.status == 404"
     type      = "RESPONSE"
+  }
+
+  condition {
+    name      = "is_redirect"
+    statement = "beresp.status == 301"
+    type      = "CACHE"
   }
 
   director {
@@ -149,6 +176,12 @@ resource "fastly_service_cdn_auto" "traffic" {
     stale_ttl       = 60
   }
 
+  cache_setting {
+    name            = "variable_action"
+    action          = var.cache_action == null ? null : lower(var.cache_action)
+    cache_condition = "is_redirect"
+  }
+
   request_setting {
     name              = "api"
     action            = "pass"
@@ -159,6 +192,13 @@ resource "fastly_service_cdn_auto" "traffic" {
   request_setting {
     name      = "force_tls"
     force_ssl = true
+  }
+
+  request_setting {
+    name              = "variable_xff"
+    action            = var.request_action == null ? null : lower(var.request_action)
+    xff               = var.request_xff == null ? null : lower(var.request_xff)
+    request_condition = "is_internal"
   }
 
   response_object {

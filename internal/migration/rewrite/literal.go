@@ -61,6 +61,58 @@ func (e ReplaceLiteral) apply(source []byte, filename string) ([]byte, error) {
 	return replace(source, edits)
 }
 
+// LowercaseExpression wraps a string expression that references variables or
+// other values in a null-safe lower() call, so values the legacy provider
+// lowercased before sending still pass the target's lowercase validation.
+// Literals, constant expressions and existing lower() calls are left alone.
+type LowercaseExpression struct {
+	File         string
+	ResourceType string
+	ResourceName string
+	Parents      []string
+	Attribute    string
+}
+
+func (e LowercaseExpression) file() string    { return e.File }
+func (e LowercaseExpression) canCreate() bool { return false }
+
+func (e LowercaseExpression) apply(source []byte, filename string) ([]byte, error) {
+	if err := validateIdentifier(e.Attribute); err != nil {
+		return nil, err
+	}
+	resource, err := requireResource(source, filename, e.ResourceType, e.ResourceName)
+	if err != nil {
+		return nil, err
+	}
+	var edits []replacement
+	for _, body := range matchingBodies(resource.Body, e.Parents) {
+		attr := body.Attributes[e.Attribute]
+		if attr == nil {
+			continue
+		}
+		if _, diags := attr.Expr.Value(nil); !diags.HasErrors() {
+			continue
+		}
+		if call, ok := attr.Expr.(*hclsyntax.FunctionCallExpr); ok && call.Name == "lower" {
+			continue
+		}
+		rng := attr.Expr.Range()
+		expr := string(source[rng.Start.Byte:rng.End.Byte])
+		subject := expr
+		switch attr.Expr.(type) {
+		case *hclsyntax.ScopeTraversalExpr, *hclsyntax.RelativeTraversalExpr,
+			*hclsyntax.IndexExpr, *hclsyntax.FunctionCallExpr, *hclsyntax.ParenthesesExpr:
+		default:
+			subject = "(" + expr + ")"
+		}
+		edits = append(edits, replacement{
+			start: rng.Start.Byte, end: rng.End.Byte,
+			value: []byte(subject + " == null ? null : lower(" + expr + ")"),
+		})
+	}
+	return replace(source, edits)
+}
+
 // RemoveLiteralString removes an attribute (and its attached comments) only
 // where its value is exactly the literal string Value.
 type RemoveLiteralString struct {

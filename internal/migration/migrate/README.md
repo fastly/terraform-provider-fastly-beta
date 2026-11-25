@@ -341,8 +341,10 @@ them, so the API already stores the lowercase value. The target reads an empty
 condition or content type back as unset, so leaving `""` in place would fail
 the first apply. A literal value the target cannot represent, such as director
 `type = 2` or `cache_setting.action = "lookup"`, blocks the plan and the
-finding lists the accepted values. Variables and other expressions are kept
-for `terraform validate` to check.
+finding lists the accepted values. Other director expressions are kept for
+Terraform to check. An `action` or `xff` set from a variable or other
+expression is wrapped as `var.x == null ? null : lower(var.x)`, so values the
+legacy provider accepted in any case still pass the target's validation.
 
 **Expect blocks to move.** The legacy provider stored these nested blocks as
 sets; the target stores them as lists sorted by name. Each repeated block type

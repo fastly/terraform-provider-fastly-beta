@@ -66,7 +66,7 @@ func TestPlanTrafficBlocksRejectsUnsupportedValues(t *testing.T) {
 	}
 }
 
-func TestPlanTrafficBlocksLeavesExpressionsForTerraform(t *testing.T) {
+func TestPlanTrafficBlocksExpressions(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	source := `resource "fastly_service_vcl" "demo" {
@@ -88,9 +88,12 @@ func TestPlanTrafficBlocksLeavesExpressionsForTerraform(t *testing.T) {
 		t.Fatalf("expression values blocked: %v %v", result.Issues, result.Analysis.Findings)
 	}
 	got := changedFile(t, result, "main.tf")
-	for _, keep := range []string{"type     = var.director_type", "action = var.action"} {
+	for _, keep := range []string{
+		"type     = var.director_type",
+		"action = var.action == null ? null : lower(var.action)",
+	} {
 		if !strings.Contains(got, keep) {
-			t.Fatalf("expression %q was rewritten:\n%s", keep, got)
+			t.Fatalf("expression %q missing:\n%s", keep, got)
 		}
 	}
 }

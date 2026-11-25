@@ -133,3 +133,70 @@ func TestRemoveLiteralString(t *testing.T) {
 		t.Fatalf("unexpected rewrite:\n%s", got)
 	}
 }
+
+func TestLowercaseExpression(t *testing.T) {
+	t.Parallel()
+	source := []byte(`resource "fastly_service_vcl" "demo" {
+  cache_setting {
+    name   = "literal"
+    action = "PASS"
+  }
+  cache_setting {
+    name   = "variable"
+    action = var.action # keep
+  }
+  cache_setting {
+    name   = "conditional"
+    action = var.pass ? "PASS" : null
+  }
+  cache_setting {
+    name   = "lowered"
+    action = lower(var.action)
+  }
+  cache_setting {
+    name   = "null"
+    action = null
+  }
+  cache_setting {
+    name = "omitted"
+  }
+}
+`)
+	edit := LowercaseExpression{
+		ResourceType: "fastly_service_vcl", ResourceName: "demo",
+		Parents: []string{"cache_setting"}, Attribute: "action",
+	}
+	got, err := edit.apply(source, "main.tf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `resource "fastly_service_vcl" "demo" {
+  cache_setting {
+    name   = "literal"
+    action = "PASS"
+  }
+  cache_setting {
+    name   = "variable"
+    action = var.action == null ? null : lower(var.action) # keep
+  }
+  cache_setting {
+    name   = "conditional"
+    action = (var.pass ? "PASS" : null) == null ? null : lower(var.pass ? "PASS" : null)
+  }
+  cache_setting {
+    name   = "lowered"
+    action = lower(var.action)
+  }
+  cache_setting {
+    name   = "null"
+    action = null
+  }
+  cache_setting {
+    name = "omitted"
+  }
+}
+`
+	if string(got) != want {
+		t.Fatalf("unexpected rewrite:\n%s", got)
+	}
+}

@@ -23,6 +23,12 @@ func compileVCLBlockEdits(key resourceKey) []rewrite.Edit {
 				Values: change.Values, CaseInsensitive: change.CaseInsensitive,
 			})
 		}
+		if change.CaseInsensitive {
+			edits = append(edits, rewrite.LowercaseExpression{
+				File: key.file, ResourceType: key.typ, ResourceName: key.name,
+				Parents: []string{change.Block}, Attribute: change.Attribute,
+			})
+		}
 		if change.RemoveEmpty {
 			edits = append(edits, rewrite.RemoveLiteralString{
 				File: key.file, ResourceType: key.typ, ResourceName: key.name,
