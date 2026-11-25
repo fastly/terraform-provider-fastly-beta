@@ -14,7 +14,7 @@ OVERRIDES_FILE := $(BIN_DIR)/developer_overrides.tfrc
 GOLANGCI_LINT_VERSION := v2.12.2
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 
-.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle test-migration-vcl test-migration-compute test-migration-ngwaf test-migration-products test-migration-schemas test-migration-references test-migration-domains test-migration-backend-tls test-migration-logging-tls-config test-migration-logging-storage-config test-migration-logging-storage-live lint install-linter check-linter-version release-check help
+.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle test-migration-vcl test-migration-compute test-migration-ngwaf test-migration-products test-migration-schemas test-migration-references test-migration-domains test-migration-backend-tls test-migration-logging-tls-config test-migration-logging-storage-config test-migration-logging-storage-live test-migration-traffic-config test-migration-traffic lint install-linter check-linter-version release-check help
 
 help:
 	@echo "Available targets:"
@@ -44,6 +44,8 @@ help:
 	@echo "  make test-migration-logging-tls-config - Validate CDN/Compute logging migration golden HCL (no API token)"
 	@echo "  make test-migration-logging-storage-config - Validate CDN/Compute storage logging migration HCL (no API token)"
 	@echo "  make test-migration-logging-storage-live - Run live S3 CDN/Compute migrations (FASTLY_API_TOKEN only; dummy S3 credentials, no delivery)"
+	@echo "  make test-migration-traffic-config - Validate migrated CDN traffic-block test configurations (no API token)"
+	@echo "  make test-migration-traffic  - Run VCL -> CDN Auto live traffic-block migration test (requires FASTLY_API_TOKEN)"
 	@echo "  make test-migration-vcl      - Run VCL -> CDN Auto live migration test (requires FASTLY_API_TOKEN)"
 	@echo "                                 Tests only VCL service state move; no product entitlements"
 	@echo "  make test-migration-compute  - Run Compute -> Compute Auto live migration test (requires FASTLY_API_TOKEN)"
@@ -193,11 +195,19 @@ test-migration-logging-storage-live:
 	@./scripts/test-migration-logging-storage/live.sh cdn
 	@./scripts/test-migration-logging-storage/live.sh compute
 
+test-migration-traffic-config:
+	@./scripts/test-migration-traffic/validate.sh
+
 # Opt-in live migration tests: not part of routine CI or release-check.
 test-migration-vcl:
 	@echo "==> Running VCL -> CDN Auto live migration acceptance test (no products)..."
 	@echo "    Note: Creates/destroys a real Fastly test service; requires FASTLY_API_TOKEN"
 	@./scripts/test-migration-vcl/run.sh
+
+test-migration-traffic:
+	@echo "==> Running VCL -> CDN Auto live traffic-block migration acceptance test..."
+	@echo "    Note: Creates/destroys a real Fastly test service; requires FASTLY_API_TOKEN"
+	@VCL_MIGRATION_SCENARIO=traffic ./scripts/test-migration-vcl/run.sh
 
 test-migration-products:
 	@echo "==> Running CDN product migration E2E tests (scenario: $(or $(SCENARIO),all))..."

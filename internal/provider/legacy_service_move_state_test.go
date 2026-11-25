@@ -185,6 +185,15 @@ func legacyMoveStateValue(fixture legacyServiceSchema, populated bool) map[strin
 		state[block] = []any{endpoint}
 	}
 
+	if gzip, exists := fixture.Block.BlockTypes["gzip"]; exists {
+		config := legacyBlockValue(gzip.Block)
+		config["name"] = "synthetic-gzip"
+		config["cache_condition"] = ""
+		config["content_types"] = []any{}
+		config["extensions"] = []any{"css"}
+		state["gzip"] = []any{config}
+	}
+
 	if fos, exists := fixture.Block.BlockTypes["logging_fos"]; exists {
 		endpoint := legacyBlockValue(fos.Block)
 		endpoint["name"] = "fos-test"
@@ -357,6 +366,27 @@ func assertLegacyMoveState(t *testing.T, tc legacyMoveCase, fixture legacyServic
 			if field != "name" && field != "gzip_level" && !value.IsNull() {
 				t.Fatalf("HTTPS field %s was copied instead of refreshed", field)
 			}
+		}
+	}
+	if configs, _ := state["gzip"].([]any); len(configs) == 0 {
+		if _, exists := attrs["gzip"]; exists {
+			assertUnpopulatedLegacyMoveBlock(t, attrs, "gzip")
+		}
+	} else {
+		var models []tftypes.Value
+		if err := attrs["gzip"].As(&models); err != nil || len(models) != 1 {
+			t.Fatal("missing gzip list hint")
+		}
+		var fields map[string]tftypes.Value
+		if err := models[0].As(&fields); err != nil {
+			t.Fatal(err)
+		}
+		var name string
+		if err := fields["name"].As(&name); err != nil || name != "synthetic-gzip" {
+			t.Fatal("gzip name hint not preserved")
+		}
+		if !fields["content_types"].IsNull() || fields["extensions"].IsNull() || !fields["cache_condition"].IsNull() {
+			t.Fatal("gzip unset-list hints not preserved")
 		}
 	}
 	if tc.source == "fastly_service_compute" {

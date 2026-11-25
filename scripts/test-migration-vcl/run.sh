@@ -2,7 +2,9 @@
 #
 # Real Fastly/Terraform acceptance test for the legacy VCL -> CDN Auto state move.
 # Deliberately does NOT enable or import any Fastly products.
-# Scope: a VCL service with domain and backend, without any product enablement.
+# Scope: a VCL service without any product enablement. The default "basic"
+# scenario has one domain and backend; VCL_MIGRATION_SCENARIO=traffic uses the
+# multi-block traffic-management test configuration.
 #
 # This is deliberately opt-in: it creates and destroys LIVE Fastly services.
 set -euo pipefail
@@ -19,6 +21,8 @@ SERVICE_NAME="$NAME_PREFIX-svc"
 API_BASE="${FASTLY_API_URL:-https://api.fastly.com}"
 LEGACY_PROVIDER_VERSION="${LEGACY_PROVIDER_VERSION:-10.3.0}"
 KEEP_WORK_DIR="${KEEP_WORK_DIR:-}"
+VCL_MIGRATION_SCENARIO="${VCL_MIGRATION_SCENARIO:-basic}"
+TRAFFIC_FIXTURE="$REPO_ROOT/internal/migration/migrate/testdata/traffic/multi_block/legacy.tf"
 
 PHASE="setup"
 PROJECT_DIR="$WORK_DIR/project"
@@ -80,6 +84,8 @@ check_prerequisites() {
     [[ "$API_BASE" == https://* ]] || fail "FASTLY_API_URL must be an HTTPS URL"
     [[ "$LEGACY_PROVIDER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
         fail "LEGACY_PROVIDER_VERSION must be an exact published release (for example 10.3.0)"
+    [[ "$VCL_MIGRATION_SCENARIO" == basic || "$VCL_MIGRATION_SCENARIO" == traffic ]] ||
+        fail "VCL_MIGRATION_SCENARIO must be basic or traffic"
     local cmd
     for cmd in terraform go jq curl cksum; do
         command -v "$cmd" >/dev/null 2>&1 || fail "Missing prerequisite: $cmd"
@@ -126,6 +132,17 @@ terraform {
 
 provider "fastly" {}
 
+EOF
+    if [[ "$VCL_MIGRATION_SCENARIO" == traffic ]]; then
+        sed -e 's/^resource "fastly_service_vcl" "traffic"/resource "fastly_service_vcl" "demo"/' \
+            -e "s/\"traffic-migration\"/\"$SERVICE_NAME\"/" \
+            -e "s/\"traffic\\.example\\.com\"/\"$SERVICE_NAME.example.com\"/" \
+            "$TRAFFIC_FIXTURE" >> "$PROJECT_DIR/main.tf"
+        grep -Fq 'resource "fastly_service_vcl" "demo"' "$PROJECT_DIR/main.tf" ||
+            fail "Traffic fixture could not be rendered"
+        return
+    fi
+    cat >> "$PROJECT_DIR/main.tf" <<EOF
 resource "fastly_service_vcl" "demo" {
   name          = "$SERVICE_NAME"
   force_destroy = true
@@ -199,8 +216,28 @@ snapshot_live_service() {
         fail "Live Fastly service identity does not match $SERVICE_ID / $SERVICE_NAME"
     # Ignore volatile API metadata; a migration must not change the identity,
     # name, or active service version.
+    # GET /service/{id} reports the active version only in versions[].
     printf '%s\n' "$body" |
-        jq -S '{id, name, active_version: (.active_version // null)}' > "$destination"
+        jq -S '{id, name, active_version: ([.versions[]? | select(.active == true) | .number] | max)}' > "$destination"
+    jq -e '.active_version | type == "number"' "$destination" >/dev/null ||
+        fail "Live service has no active version"
+    [[ "$VCL_MIGRATION_SCENARIO" == traffic ]] || return 0
+
+    # Traffic blocks on the active version, including director backend
+    # associations and API-filled gzip lists, must be unchanged.
+    local version kind
+    version="$(jq -r '.active_version' "$destination")"
+    for kind in backend healthcheck condition director header gzip cache_settings request_settings response_object; do
+        curl --fail --silent --show-error -H "Fastly-Key: $FASTLY_API_TOKEN" \
+            "$API_BASE/service/$SERVICE_ID/version/$version/$kind" |
+            jq -S --arg kind "$kind" '{($kind): [.[]
+                | del(.created_at, .updated_at, .deleted_at, .version, .service_id)
+                | if has("backends") then .backends |= sort else . end] | sort_by(.name)}' \
+            > "$destination.$kind.part"
+    done
+    jq -s -S 'add' "$destination" "$destination".*.part > "$destination.tmp"
+    rm -f -- "$destination".*.part
+    mv -- "$destination.tmp" "$destination"
 }
 
 run_migrator() {
@@ -344,7 +381,7 @@ main() {
     build_binaries
 
     mkdir -p "$PROJECT_DIR"
-    info "Starting VCL -> CDN Auto state-migration acceptance test"
+    info "Starting VCL -> CDN Auto state-migration acceptance test ($VCL_MIGRATION_SCENARIO scenario)"
     write_legacy_config
     apply_legacy
     snapshot_live_service "$WORK_DIR/service-before.json"
@@ -355,7 +392,7 @@ main() {
     PHASE="verify-live"
     snapshot_live_service "$WORK_DIR/service-after.json"
     diff -u "$WORK_DIR/service-before.json" "$WORK_DIR/service-after.json" ||
-        fail "Live Fastly service identity/name/active version changed during migration"
+        fail "Live Fastly service identity/name/active version or traffic configuration changed during migration"
 
     PHASE="destroy"
     cd "$PROJECT_DIR"

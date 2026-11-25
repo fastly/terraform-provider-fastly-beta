@@ -72,6 +72,7 @@ func compileResource(
 	issues = append(issues, productIssues...)
 	var edits []rewrite.Edit
 	edits = append(edits, productEdits...)
+	edits = append(edits, compileVCLBlockEdits(key)...)
 	// Group every authorized flat field by its parent and destination.
 	// Preserve the legacy block names until every nested edit is finished.
 	edits = append(edits, compileServiceObjects(key, actions, autoType)...)
