@@ -13,6 +13,16 @@ variable "request_xff" {
   default = "Append"
 }
 
+variable "gzip_extensions" {
+  type    = list(string)
+  default = []
+}
+
+variable "gzip_content_types" {
+  type    = list(string)
+  default = ["text/plain"]
+}
+
 resource "fastly_service_vcl" "traffic" {
   name = "traffic-migration"
 
@@ -157,6 +167,18 @@ resource "fastly_service_vcl" "traffic" {
     name            = "blank_condition"
     extensions      = ["html"]
     cache_condition = ""
+  }
+
+  gzip {
+    name          = "empty_lists"
+    content_types = []
+    extensions    = []
+  }
+
+  gzip {
+    name          = "variable_lists"
+    content_types = var.gzip_content_types
+    extensions    = var.gzip_extensions
   }
 
   cache_setting {

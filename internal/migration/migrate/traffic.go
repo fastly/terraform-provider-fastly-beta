@@ -36,6 +36,12 @@ func compileVCLBlockEdits(key resourceKey) []rewrite.Edit {
 			})
 		}
 	}
+	for _, list := range compatibility.VCLEmptyListAttributes {
+		edits = append(edits, rewrite.NormalizeEmptyList{
+			File: key.file, ResourceType: key.typ, ResourceName: key.name,
+			Parents: []string{list.Block}, Attribute: list.Attribute,
+		})
+	}
 	for _, block := range compatibility.VCLNameOrderedBlocks {
 		edits = append(edits, rewrite.SortBlocksByName{
 			File: key.file, ResourceType: key.typ, ResourceName: key.name, Block: block,

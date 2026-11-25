@@ -200,3 +200,70 @@ func TestLowercaseExpression(t *testing.T) {
 		t.Fatalf("unexpected rewrite:\n%s", got)
 	}
 }
+
+func TestNormalizeEmptyList(t *testing.T) {
+	t.Parallel()
+	source := []byte(`resource "fastly_service_vcl" "demo" {
+  gzip {
+    name = "empty"
+    # Explicitly empty.
+    extensions = []
+  }
+  gzip {
+    name       = "set"
+    extensions = ["css"]
+  }
+  gzip {
+    name       = "variable"
+    extensions = var.extensions # keep
+  }
+  gzip {
+    name       = "conditional"
+    extensions = var.on ? ["css"] : []
+  }
+  gzip {
+    name       = "null"
+    extensions = null
+  }
+  gzip {
+    name = "omitted"
+  }
+}
+`)
+	edit := NormalizeEmptyList{
+		ResourceType: "fastly_service_vcl", ResourceName: "demo",
+		Parents: []string{"gzip"}, Attribute: "extensions",
+	}
+	got, err := edit.apply(source, "main.tf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `resource "fastly_service_vcl" "demo" {
+  gzip {
+    name = "empty"
+  }
+  gzip {
+    name       = "set"
+    extensions = ["css"]
+  }
+  gzip {
+    name       = "variable"
+    extensions = var.extensions == null ? null : (length(var.extensions) == 0 ? null : var.extensions) # keep
+  }
+  gzip {
+    name       = "conditional"
+    extensions = (var.on ? ["css"] : []) == null ? null : (length(var.on ? ["css"] : []) == 0 ? null : (var.on ? ["css"] : []))
+  }
+  gzip {
+    name       = "null"
+    extensions = null
+  }
+  gzip {
+    name = "omitted"
+  }
+}
+`
+	if string(got) != want {
+		t.Fatalf("unexpected rewrite:\n%s", got)
+	}
+}

@@ -28,4 +28,14 @@ func TestVCLTrafficTablesMatchAutomaticBlockRules(t *testing.T) {
 			}
 		}
 	}
+	for _, list := range VCLEmptyListAttributes {
+		if !automatic(list.Block) {
+			t.Errorf("empty-list block %q has no automatic VCL block rule", list.Block)
+		}
+		for _, rule := range registry.RulesForLegacy("fastly_service_vcl." + list.Block) {
+			if rule.Kind == ConstructServiceBlock && rule.HCL != HCLReshape {
+				t.Errorf("block %q has empty-list rewrites but HCL strategy %s", list.Block, rule.HCL)
+			}
+		}
+	}
 }

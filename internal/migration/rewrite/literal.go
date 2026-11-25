@@ -97,20 +97,76 @@ func (e LowercaseExpression) apply(source []byte, filename string) ([]byte, erro
 			continue
 		}
 		rng := attr.Expr.Range()
-		expr := string(source[rng.Start.Byte:rng.End.Byte])
-		subject := expr
-		switch attr.Expr.(type) {
-		case *hclsyntax.ScopeTraversalExpr, *hclsyntax.RelativeTraversalExpr,
-			*hclsyntax.IndexExpr, *hclsyntax.FunctionCallExpr, *hclsyntax.ParenthesesExpr:
-		default:
-			subject = "(" + expr + ")"
-		}
+		expr, subject := operandSource(source, attr.Expr)
 		edits = append(edits, replacement{
 			start: rng.Start.Byte, end: rng.End.Byte,
 			value: []byte(subject + " == null ? null : lower(" + expr + ")"),
 		})
 	}
 	return replace(source, edits)
+}
+
+// NormalizeEmptyList removes a literal empty list and wraps a list
+// expression that references variables or other values so it resolves to
+// null when empty. The target stores an unset list as null, so an empty list
+// in configuration would otherwise plan a migration-only update.
+type NormalizeEmptyList struct {
+	File         string
+	ResourceType string
+	ResourceName string
+	Parents      []string
+	Attribute    string
+}
+
+func (e NormalizeEmptyList) file() string    { return e.File }
+func (e NormalizeEmptyList) canCreate() bool { return false }
+
+func (e NormalizeEmptyList) apply(source []byte, filename string) ([]byte, error) {
+	if err := validateIdentifier(e.Attribute); err != nil {
+		return nil, err
+	}
+	resource, err := requireResource(source, filename, e.ResourceType, e.ResourceName)
+	if err != nil {
+		return nil, err
+	}
+	var edits []replacement
+	for _, body := range matchingBodies(resource.Body, e.Parents) {
+		attr := body.Attributes[e.Attribute]
+		if attr == nil {
+			continue
+		}
+		if tuple, ok := attr.Expr.(*hclsyntax.TupleConsExpr); ok && len(tuple.Exprs) == 0 {
+			start, end, _, _, err := attributeLines(source, attr)
+			if err != nil {
+				return nil, err
+			}
+			edits = append(edits, replacement{start: start, end: end})
+			continue
+		}
+		if _, diags := attr.Expr.Value(nil); !diags.HasErrors() {
+			continue
+		}
+		rng := attr.Expr.Range()
+		expr, subject := operandSource(source, attr.Expr)
+		edits = append(edits, replacement{
+			start: rng.Start.Byte, end: rng.End.Byte,
+			value: []byte(subject + " == null ? null : (length(" + expr + ") == 0 ? null : " + subject + ")"),
+		})
+	}
+	return replace(source, edits)
+}
+
+// operandSource returns an expression's source text, and the same text
+// parenthesized where needed to use it as an operand.
+func operandSource(source []byte, expr hclsyntax.Expression) (string, string) {
+	rng := expr.Range()
+	text := string(source[rng.Start.Byte:rng.End.Byte])
+	switch expr.(type) {
+	case *hclsyntax.ScopeTraversalExpr, *hclsyntax.RelativeTraversalExpr,
+		*hclsyntax.IndexExpr, *hclsyntax.FunctionCallExpr, *hclsyntax.ParenthesesExpr:
+		return text, text
+	}
+	return text, "(" + text + ")"
 }
 
 // RemoveLiteralString removes an attribute (and its attached comments) only

@@ -91,3 +91,17 @@ var VCLLiteralRewrites = []LiteralRewrite{
 	},
 	{Block: "response_object", Attribute: "content_type", RemoveEmpty: true},
 }
+
+// BlockAttribute names one attribute of a nested block.
+type BlockAttribute struct {
+	Block     string
+	Attribute string
+}
+
+// VCLEmptyListAttributes are lists that legacy sent the same way whether
+// they were empty or omitted. The target reads both back as null, so the
+// migrator normalizes empty values to null.
+var VCLEmptyListAttributes = []BlockAttribute{
+	{Block: "gzip", Attribute: "content_types"},
+	{Block: "gzip", Attribute: "extensions"},
+}

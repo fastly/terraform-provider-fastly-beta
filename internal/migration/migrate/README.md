@@ -333,7 +333,7 @@ cross-block references. The writer changes only these literal values:
 | `director` | `type` 1, 3 and 4 become `"random"`, `"hash"` and `"client"` |
 | `cache_setting` | `action` is converted to lowercase; `action = ""` and `cache_condition = ""` are removed |
 | `request_setting` | `action` and `xff` are converted to lowercase; `""` values are removed |
-| `gzip` | `cache_condition = ""` is removed |
+| `gzip` | `cache_condition = ""`, `content_types = []` and `extensions = []` are removed |
 | `response_object` | `content_type = ""` is removed |
 
 The legacy provider converted `action` and `xff` to lowercase before sending
@@ -344,7 +344,10 @@ the first apply. A literal value the target cannot represent, such as director
 finding lists the accepted values. Other director expressions are kept for
 Terraform to check. An `action` or `xff` set from a variable or other
 expression is wrapped as `var.x == null ? null : lower(var.x)`, so values the
-legacy provider accepted in any case still pass the target's validation.
+legacy provider accepted in any case still pass the target's validation. The
+legacy provider sent an empty gzip list the same way as an omitted one, and
+the target reads both back as null. A gzip list set from an expression is
+wrapped so it resolves to null when empty.
 
 **Expect blocks to move.** The legacy provider stored these nested blocks as
 sets; the target stores them as lists sorted by name. Each repeated block type
