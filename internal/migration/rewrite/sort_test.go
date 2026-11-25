@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+func sortBackends(source []byte) ([]byte, error) {
+	return (SortBlocksByName{ResourceType: "fastly_service_vcl", ResourceName: "demo", Block: "backend"}).apply(source, "main.tf")
+}
+
 func TestSortBlocksByName(t *testing.T) {
 	t.Parallel()
 	source := []byte(`resource "fastly_service_vcl" "demo" {
@@ -35,7 +39,7 @@ func TestSortBlocksByName(t *testing.T) {
   }
 }
 `)
-	got, err := (SortBlocksByName{ResourceType: "fastly_service_vcl", ResourceName: "demo", Block: "backend"}).apply(source, "main.tf")
+	got, err := sortBackends(source)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +74,7 @@ func TestSortBlocksByName(t *testing.T) {
 	if string(got) != want {
 		t.Fatalf("unexpected order:\n%s", got)
 	}
-	again, err := (SortBlocksByName{ResourceType: "fastly_service_vcl", ResourceName: "demo", Block: "backend"}).apply(got, "main.tf")
+	again, err := sortBackends(got)
 	if err != nil || string(again) != want {
 		t.Fatal("sorting is not idempotent")
 	}
@@ -85,7 +89,7 @@ func TestSortBlocksByNameNames(t *testing.T) {
 		{"backend {\n    name = var.name\n  }", ""},
 	} {
 		source := []byte("resource \"fastly_service_vcl\" \"demo\" {\n  " + tc.body + "\n}\n")
-		_, err := (SortBlocksByName{ResourceType: "fastly_service_vcl", ResourceName: "demo", Block: "backend"}).apply(source, "main.tf")
+		_, err := sortBackends(source)
 		if tc.want == "" {
 			if err != nil {
 				t.Fatalf("single block unexpectedly rejected: %v", err)
@@ -120,7 +124,7 @@ func TestSortBlocksByNameBlockComments(t *testing.T) {
   } /* Primary origin */
 }
 `)
-	got, err := (SortBlocksByName{ResourceType: "fastly_service_vcl", ResourceName: "demo", Block: "backend"}).apply(source, "main.tf")
+	got, err := sortBackends(source)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +156,7 @@ func TestSortBlocksByNameBlockComments(t *testing.T) {
 func TestSortBlocksByNameRejectsMultilineTrailingComment(t *testing.T) {
 	t.Parallel()
 	source := []byte("resource \"fastly_service_vcl\" \"demo\" {\n  backend {\n    name = \"b\"\n  } /* spans\n  lines */\n  backend {\n    name = \"a\"\n  }\n}\n")
-	_, err := (SortBlocksByName{ResourceType: "fastly_service_vcl", ResourceName: "demo", Block: "backend"}).apply(source, "main.tf")
+	_, err := sortBackends(source)
 	if err == nil || !strings.Contains(err.Error(), "additional syntax after its closing brace") {
 		t.Fatalf("got %v", err)
 	}

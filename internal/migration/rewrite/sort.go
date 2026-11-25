@@ -48,7 +48,7 @@ func (e SortBlocksByName) apply(source []byte, filename string) ([]byte, error) 
 	}
 	tokens, diags := hclsyntax.LexConfig(source, filename, hcl.InitialPos)
 	if diags.HasErrors() {
-		return nil, diags
+		return nil, nativeSyntaxError(filename, diags)
 	}
 	var segments []segment
 	seen := map[string]bool{}
