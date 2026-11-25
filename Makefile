@@ -14,7 +14,7 @@ OVERRIDES_FILE := $(BIN_DIR)/developer_overrides.tfrc
 GOLANGCI_LINT_VERSION := v2.12.2
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 
-.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle test-migration-vcl test-migration-compute test-migration-ngwaf test-migration-products test-migration-schemas test-migration-references test-migration-domains test-migration-backend-tls test-migration-logging-tls-config test-migration-logging-storage-config test-migration-logging-storage-live test-migration-traffic-config test-migration-traffic lint install-linter check-linter-version release-check help
+.PHONY: fmt build build-migrator dev-overrides clean test-unit test-migrator test-acc test-baseline generate-docs validate-docs docs test-lifecycle-cdn test-lifecycle-compute test-lifecycle test-migration-vcl test-migration-compute test-migration-ngwaf test-migration-products test-migration-schemas test-migration-references test-migration-domains test-migration-backend-tls test-migration-logging-tls-config test-migration-logging-storage-config test-migration-logging-storage-live test-migration-logging-remaining-config test-migration-logging-remaining-live test-migration-fos-live test-migration-traffic-config test-migration-traffic lint install-linter check-linter-version release-check help
 
 help:
 	@echo "Available targets:"
@@ -43,6 +43,9 @@ help:
 	@echo "  make test-migration-backend-tls - Run live CDN/Compute backend TLS migration (requires FASTLY_API_TOKEN and openssl)"
 	@echo "  make test-migration-logging-tls-config - Validate CDN/Compute logging migration golden HCL (no API token)"
 	@echo "  make test-migration-logging-storage-config - Validate CDN/Compute storage logging migration HCL (no API token)"
+	@echo "  make test-migration-logging-remaining-config - Validate 14 CDN VCL-07 endpoints with local target provider (no API token)"
+	@echo "  make test-migration-logging-remaining-live - Run opt-in live Papertrail CDN migration test"
+	@echo "  make test-migration-fos-live - Run opt-in live FOS CDN migration test (requires entitlement and test bucket)"
 	@echo "  make test-migration-logging-storage-live - Run live S3 CDN/Compute migrations (FASTLY_API_TOKEN only; dummy S3 credentials, no delivery)"
 	@echo "  make test-migration-traffic-config - Validate migrated CDN traffic-block test configurations (no API token)"
 	@echo "  make test-migration-traffic  - Run VCL -> CDN Auto live traffic-block migration test (requires FASTLY_API_TOKEN)"
@@ -184,6 +187,16 @@ test-migration-backend-tls:
 
 test-migration-logging-tls-config:
 	@./scripts/test-migration-logging-tls/validate.sh
+
+# Opt-in API-backed migration tests; not part of routine CI.
+test-migration-logging-remaining-live:
+	@./scripts/test-migration-logging-remaining/live.sh papertrail
+
+test-migration-fos-live:
+	@./scripts/test-migration-logging-remaining/live.sh fos
+
+test-migration-logging-remaining-config:
+	@./scripts/test-migration-logging-remaining/validate.sh
 
 test-migration-logging-storage-config:
 	@./scripts/test-migration-logging-storage/validate.sh

@@ -728,6 +728,9 @@ func (a *Analyzer) analyzeNestedBlock(
 	if compatibility.IsStorageLoggingBlock(block.Type) {
 		analyzeStorageLoggingBlock(state, block, resourceType == "fastly_service_vcl")
 	}
+	if resourceType == "fastly_service_vcl" && compatibility.IsRemainingCDNLoggingBlock(block.Type) {
+		analyzeRemainingCDNLoggingBlock(state, block)
+	}
 	for name, attr := range block.Body.Attributes {
 		legacy := resourceType + "." + block.Type + "." + name
 		if block.Type == "backend" && name == "ssl_client_secrets" {

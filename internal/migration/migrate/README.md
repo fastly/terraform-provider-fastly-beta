@@ -364,6 +364,19 @@ default lists do not appear as a change on the first refresh.
 unchanged service ID, active version and traffic configuration, and a final
 no-op plan.
 
+## Remaining VCL logging endpoints and FOS (CDTOOL-1925)
+
+The VCL-07 migration provides reviewed HCL authentication rewrites and
+legacy format defaults for 14 logging endpoints, including SDKv2 10.3.0
+`logging_fos`. Sumo Logic also pins its legacy `message_type = "classic"`.
+`logging_logentries` remains unsupported. This ticket does not enable
+Compute FOS or unreviewed Compute token/password migrations.
+
+See [LOGGING_ENDPOINT_COVERAGE.md](LOGGING_ENDPOINT_COVERAGE.md) for the
+complete 29-type inventory, prerequisites, offline and live verification
+commands, and untested/entitlement-dependent scenarios. **Never apply**
+a migration plan proposing a remote Fastly service or endpoint change.
+
 ## Terraform reference rewriting
 
 References are resolved against **enabled resource conversions in the same

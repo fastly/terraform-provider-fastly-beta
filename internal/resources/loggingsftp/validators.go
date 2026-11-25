@@ -98,16 +98,17 @@ func (requireOneCredential) ValidateObject(_ context.Context, req validator.Obje
 
 	attrs := req.ConfigValue.Attributes()
 
-	hasValue := func(name string) bool {
+	mayHaveValue := func(name string) bool {
 		v, ok := attrs[name]
-		if !ok || v == nil || v.IsNull() || v.IsUnknown() {
+		if !ok || v == nil || v.IsNull() {
 			return false
 		}
 		s, ok := v.(types.String)
-		return ok && s.ValueString() != ""
+		// A variable-backed credential may still be unknown during validation.
+		return ok && (s.IsUnknown() || s.ValueString() != "")
 	}
 
-	if hasValue("password") || hasValue("secret_key") {
+	if mayHaveValue("password") || mayHaveValue("secret_key") {
 		return
 	}
 

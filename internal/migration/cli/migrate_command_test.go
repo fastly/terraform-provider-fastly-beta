@@ -619,21 +619,78 @@ func TestMigrateWriteBlockedByMissingLegacyLockfileWritesNothing(t *testing.T) {
 	}
 }
 
+// CDN FOS is supported by the 10.3.0 provider; a previous regression test
+// expected it to remain blocked. Compute FOS is still a separate manual gate.
+func TestMigrateVCLFOSIsSupported(t *testing.T) {
+	t.Parallel()
+
+	dir, backups := t.TempDir(), privateBackupDir(t)
+	input := []byte(`resource "fastly_service_vcl" "demo" {
+  name = "demo"
+  logging_fos {
+    name        = "fos"
+    bucket_name = "test-owned-bucket"
+    region      = "us-east"
+  }
+}
+`)
+	path := filepath.Join(dir, "main.tf")
+	if err := writeConfigFile(path, input); err != nil {
+		t.Fatal(err)
+	}
+	lock := []byte(`provider "registry.terraform.io/fastly/fastly" {
+  version = "10.3.0"
+}
+`)
+	if err := os.WriteFile(filepath.Join(dir, ".terraform.lock.hcl"), lock, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, mode := range []string{"--dry-run", "--write"} {
+		args := []string{commandName, "migrate", mode}
+		if mode == "--write" {
+			args = append(args, "--backup-dir", backups)
+		}
+		var output, stderr bytes.Buffer
+		if err := NewCommand(Config{Writer: &output, ErrWriter: &stderr}).Run(
+			context.Background(), append(args, dir)); err != nil {
+			t.Fatalf("%s: supported CDN FOS was blocked: %v; output: %s; stderr: %s",
+				mode, err, output.String(), stderr.String())
+		}
+		if !strings.Contains(output.String(), "READY") ||
+			!strings.Contains(output.String(), "fastly_service_cdn_auto.demo") {
+			t.Fatalf("%s: missing supported VCL FOS migration: %s", mode, output.String())
+		}
+		if mode == "--dry-run" {
+			got, err := os.ReadFile(path)
+			if err != nil || !bytes.Equal(got, input) {
+				t.Fatal("CDN FOS dry-run modified source")
+			}
+			if _, err := os.Stat(filepath.Join(dir, "migration.tf")); !errors.Is(err, os.ErrNotExist) {
+				t.Fatal("CDN FOS dry-run created migration.tf")
+			}
+		}
+	}
+	got, err := os.ReadFile(path)
+	if err != nil || !bytes.Contains(got, []byte(`resource "fastly_service_cdn_auto" "demo"`)) ||
+		!bytes.Contains(got, []byte(`logging_fos {`)) ||
+		!bytes.Contains(got, []byte(`format = `)) {
+		t.Fatal("CDN FOS write did not preserve the endpoint and pin its legacy format")
+	}
+	moved, err := os.ReadFile(filepath.Join(dir, "migration.tf"))
+	if err != nil ||
+		!bytes.Contains(moved, []byte("from = fastly_service_vcl.demo")) ||
+		!bytes.Contains(moved, []byte("to   = fastly_service_cdn_auto.demo")) {
+		t.Fatal("CDN FOS write did not generate the expected moved block")
+	}
+}
+
 func TestMigrateNewLegacySchemaConfigurationRemainsBlocked(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name, resource, block, finding string
 	}{
-		{
-			name: "VCL FOS", resource: "fastly_service_vcl",
-			block: `logging_fos {
-    name = "fos"
-    bucket_name = "example"
-    region = "us-east"
-  }`,
-			finding: "fastly_service_vcl.logging_fos is blocked",
-		},
 		{
 			name: "Compute FOS", resource: "fastly_service_compute",
 			block: `logging_fos {

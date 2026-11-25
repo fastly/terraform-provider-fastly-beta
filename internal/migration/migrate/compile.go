@@ -102,7 +102,7 @@ func compileResource(
 				// from their Framework defaults for both CDN and Compute.
 				// Pin the old default only for an authorized block move.
 				block := strings.TrimPrefix(rule.Legacy, key.typ+".")
-				if value, ok := legacyStorageMessageTypeDefaults[block]; ok &&
+				if value, ok := legacyLoggingMessageTypeDefaults[block]; ok &&
 					rule.Support == compatibility.SupportAutomatic &&
 					rule.State == compatibility.StateMove &&
 					rule.Legacy == key.typ+"."+block &&
@@ -187,6 +187,9 @@ func serviceObjectField(rule compatibility.Rule, legacyType, targetType string) 
 	object, member, ok := compatibility.TLSLoggingObjectRoute(source[1], source[2])
 	if !ok {
 		object, member, ok = compatibility.StorageLoggingObjectRoute(source[1], source[2])
+	}
+	if !ok && legacyType == "fastly_service_vcl" {
+		object, member, ok = compatibility.RemainingCDNLoggingObjectRoute(source[1], source[2])
 	}
 	if !ok || rule.Target != targetType+"."+source[1]+"."+object+"."+member {
 		return "", "", rewrite.ObjectField{}, false
@@ -329,7 +332,7 @@ func compileServiceBlock(key resourceKey, rule compatibility.Rule, autoType stri
 		// every necessary known field-level change. The rule remains the
 		// authority for the rest of the block's compatible shape.
 		if source[1] == target[1] {
-			if key.typ == "fastly_service_vcl" && (compatibility.IsTLSLoggingBlock(source[1]) || compatibility.IsStorageLoggingBlock(source[1])) {
+			if key.typ == "fastly_service_vcl" && (compatibility.IsTLSLoggingBlock(source[1]) || compatibility.IsStorageLoggingBlock(source[1]) || compatibility.IsRemainingCDNLoggingBlock(source[1])) {
 				return rewrite.AddStringDefault{
 					File: key.file, ResourceType: key.typ, ResourceName: key.name,
 					Parents: []string{source[1]}, Attribute: "format", Value: legacyVCLLoggingFormat(source[1]),
