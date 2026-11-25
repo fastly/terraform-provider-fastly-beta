@@ -550,7 +550,7 @@ func TestCheckSnapshotsRejectsConcurrentChangeAndUnexpectedCreation(t *testing.T
 	}
 }
 
-func TestPlanRejectsUnimplementedObjectAttributesAndComputedTargets(t *testing.T) {
+func TestPlanRejectsUnsafeAuthenticationAndComputedTargets(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name   string
@@ -558,13 +558,13 @@ func TestPlanRejectsUnimplementedObjectAttributesAndComputedTargets(t *testing.T
 		want   string
 	}{
 		{
-			name: "logging S3 authentication is a nested object attribute",
-			nested: `logging_s3 {
-    name = "bucket"
-    bucket_name = var.bucket
-    s3_access_key = var.key
+			name: "logging Kinesis partial credential pair is unsafe",
+			nested: `logging_kinesis {
+    name = "stream"
+    topic = var.topic
+    access_key = var.key
   }`,
-			want: "object-attribute writer",
+			want: "Kinesis credential fields",
 		},
 		{
 			name: "rate limiter target id is computed-only",

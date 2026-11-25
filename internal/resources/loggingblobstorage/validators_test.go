@@ -30,6 +30,36 @@ func TestAuthenticationRequired(t *testing.T) {
 			wantError:   false,
 		},
 		{
+			name:        "both configured values unknown",
+			accountName: types.StringUnknown(),
+			sasToken:    types.StringUnknown(),
+			wantError:   false,
+		},
+		{
+			name:        "account name known and sas token unknown",
+			accountName: types.StringValue("myaccount"),
+			sasToken:    types.StringUnknown(),
+			wantError:   false,
+		},
+		{
+			name:        "account name unknown and sas token known",
+			accountName: types.StringUnknown(),
+			sasToken:    types.StringValue("sv=token"),
+			wantError:   false,
+		},
+		{
+			name:        "account name unknown and sas token absent",
+			accountName: types.StringUnknown(),
+			sasToken:    types.StringNull(),
+			wantError:   true,
+		},
+		{
+			name:        "account name blank and sas token unknown",
+			accountName: types.StringValue(""),
+			sasToken:    types.StringUnknown(),
+			wantError:   true,
+		},
+		{
 			name:        "account_name only",
 			accountName: types.StringValue("myaccount"),
 			sasToken:    types.StringNull(),

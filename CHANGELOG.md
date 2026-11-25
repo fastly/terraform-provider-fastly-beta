@@ -4,7 +4,12 @@
 
 ### ENHANCEMENTS:
 
+- feat(migration): add guarded storage/cloud logging authentication migrations for S3, GCS, BigQuery, Blob Storage, Cloud Files, DigitalOcean, OpenStack, Google Pub/Sub and Kinesis in CDN and Compute services, preserving expression-based credentials and rejecting ambiguous configurations ([#252](https://github.com/fastly/terraform-provider-fastly-beta/pull/252))
+
 ### BUG FIXES:
+
+- fix(migration): preserve legacy `classic` message type defaults for S3 and Cloud Files logging and normalize absent backend TLS client credentials to avoid unintended service plan changes during CDN/Compute state moves ([#252](https://github.com/fastly/terraform-provider-fastly-beta/pull/252))
+- fix(logging): accept unknown configured credentials during GCS, BigQuery, Blob Storage and Google Pub/Sub validation without requiring environment fallbacks; still reject missing or explicitly empty credentials ([#252](https://github.com/fastly/terraform-provider-fastly-beta/pull/252))
 
 ### Dependencies:
 

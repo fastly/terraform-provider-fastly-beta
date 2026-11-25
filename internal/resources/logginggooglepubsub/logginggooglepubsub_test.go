@@ -951,6 +951,36 @@ func TestAuthenticationEitherOr(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "unknown account name",
+			obj:     NewAuthenticationObject(types.StringUnknown(), types.StringNull(), types.StringNull()),
+			wantErr: false,
+		},
+		{
+			name:    "unknown email and secret key",
+			obj:     NewAuthenticationObject(types.StringNull(), types.StringUnknown(), types.StringUnknown()),
+			wantErr: false,
+		},
+		{
+			name:    "known email and unknown secret key",
+			obj:     NewAuthenticationObject(types.StringNull(), types.StringValue("email"), types.StringUnknown()),
+			wantErr: false,
+		},
+		{
+			name:    "unknown email and known secret key",
+			obj:     NewAuthenticationObject(types.StringNull(), types.StringUnknown(), types.StringValue("key")),
+			wantErr: false,
+		},
+		{
+			name:    "unknown email with secret key omitted",
+			obj:     NewAuthenticationObject(types.StringNull(), types.StringUnknown(), types.StringNull()),
+			wantErr: true,
+		},
+		{
+			name:    "blank email and unknown secret key",
+			obj:     NewAuthenticationObject(types.StringNull(), types.StringValue(""), types.StringUnknown()),
+			wantErr: true,
+		},
+		{
 			name:    "neither set",
 			obj:     NewAuthenticationObject(types.StringNull(), types.StringNull(), types.StringNull()),
 			wantErr: true,

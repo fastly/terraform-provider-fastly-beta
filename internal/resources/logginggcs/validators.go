@@ -103,13 +103,13 @@ func (authenticationEitherOr) ValidateObject(ctx context.Context, req validator.
 		return
 	}
 
-	if effectiveAccountName(ctx, req.ConfigValue) != "" {
+	if hasEffectiveAccountName(ctx, req.ConfigValue) {
 		return
 	}
 
-	email := effectiveAuthValue(ctx, req.ConfigValue, "email", "FASTLY_GCS_EMAIL")
-	secretKey := effectiveAuthValue(ctx, req.ConfigValue, "secret_key", "FASTLY_GCS_SECRET_KEY")
-	if email != "" && secretKey != "" {
+	email := hasEffectiveAuthValue(ctx, req.ConfigValue, "email", "FASTLY_GCS_EMAIL")
+	secretKey := hasEffectiveAuthValue(ctx, req.ConfigValue, "secret_key", "FASTLY_GCS_SECRET_KEY")
+	if email && secretKey {
 		return
 	}
 
@@ -121,38 +121,33 @@ func (authenticationEitherOr) ValidateObject(ctx context.Context, req validator.
 	)
 }
 
-// effectiveAuthValue returns the configured value of attrName within the
-// authentication object, or its environment variable default when the
-// config leaves that field unset. obj is req.ConfigValue — the raw,
-// pre-Default config — so IsNull()/IsUnknown() alone correctly distinguish
-// "omitted" (falls through to the env var) from "present, even if blank"
-// (returned verbatim); a field explicitly set to "" is not the same as an
-// unconfigured one, since Terraform's schema Default only fills attributes
-// that are truly null, not ones explicitly set to a zero value.
-func effectiveAuthValue(ctx context.Context, obj types.Object, attrName, envVar string) string {
+// hasEffectiveAuthValue reports whether the raw configured credential is
+// potentially usable, or an omitted field has a nonempty environment default.
+// Unknown expressions are provisionally accepted. Terraform does not
+// guarantee this validator runs again when an unknown resolves, so a
+// subsequently empty value may still fail at the provider/API boundary.
+// Explicitly empty strings never fall back to environment variables.
+func hasEffectiveAuthValue(ctx context.Context, obj types.Object, attrName, envVar string) bool {
 	if !obj.IsNull() && !obj.IsUnknown() {
 		if v, ok := obj.Attributes()[attrName]; ok {
-			if sv, ok := v.(types.String); ok && !sv.IsNull() && !sv.IsUnknown() {
-				return sv.ValueString()
+			if sv, ok := v.(types.String); ok && !sv.IsNull() {
+				return sv.IsUnknown() || sv.ValueString() != ""
 			}
 		}
 	}
-	return envStringDefault(ctx, envVar).ValueString()
+	return envStringDefault(ctx, envVar).ValueString() != ""
 }
 
-// effectiveAccountName returns the configured account_name within the
-// authentication object, or its environment variable default (preferring
-// FASTLY_GOOGLE_SERVICE_ACCOUNT_NAME, falling back to FASTLY_GCS_ACCOUNT_NAME)
-// when the config leaves it unset. See effectiveAuthValue for why
-// IsNull()/IsUnknown() alone — not also checking for a blank string — is the
-// correct test here.
-func effectiveAccountName(_ context.Context, obj types.Object) string {
+// hasEffectiveAccountName checks configured account_name before using its
+// environment fallback. A configured unknown value is provisionally accepted;
+// a configured empty string must not silently use an environment variable.
+func hasEffectiveAccountName(_ context.Context, obj types.Object) bool {
 	if !obj.IsNull() && !obj.IsUnknown() {
 		if v, ok := obj.Attributes()["account_name"]; ok {
-			if sv, ok := v.(types.String); ok && !sv.IsNull() && !sv.IsUnknown() {
-				return sv.ValueString()
+			if sv, ok := v.(types.String); ok && !sv.IsNull() {
+				return sv.IsUnknown() || sv.ValueString() != ""
 			}
 		}
 	}
-	return accountNameEnvValue()
+	return accountNameEnvValue() != ""
 }
