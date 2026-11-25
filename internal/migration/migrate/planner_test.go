@@ -558,13 +558,13 @@ func TestPlanRejectsUnsafeAuthenticationAndComputedTargets(t *testing.T) {
 		want   string
 	}{
 		{
-			name: "logging S3 partial credential pair is unsafe",
-			nested: `logging_s3 {
-    name = "bucket"
-    bucket_name = var.bucket
-    s3_access_key = var.key
+			name: "logging Kinesis partial credential pair is unsafe",
+			nested: `logging_kinesis {
+    name = "stream"
+    topic = var.topic
+    access_key = var.key
   }`,
-			want: "partial credential pair",
+			want: "Kinesis credential fields",
 		},
 		{
 			name: "rate limiter target id is computed-only",

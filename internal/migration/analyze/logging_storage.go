@@ -79,17 +79,13 @@ func analyzeStorageLoggingBlock(state *analysisState, block *hclsyntax.Block, vc
 		value, ok := known(name)
 		return !ok || !value.IsNull()
 	}
-	// When credentials are explicitly configured, do not depend on
-	// unspecified environment defaults to fill in a missing partner field.
-	// Omitted credential blocks can still use the provider's existing
-	// environment fallback where supported.
+	// Kinesis has no per-field environment defaults in the Framework
+	// provider, so one access/secret key alone cannot form valid target
+	// authentication. S3, GCS, BigQuery, Pub/Sub and Azure Blob Storage do
+	// support per-field environment defaults: allow a partial configured pair
+	// and leave target-provider validation to check its environment fallback.
 	pairs := map[string][2]string{
-		"logging_s3":           {"s3_access_key", "s3_secret_key"},
-		"logging_kinesis":      {"access_key", "secret_key"},
-		"logging_gcs":          {"user", "secret_key"},
-		"logging_bigquery":     {"email", "secret_key"},
-		"logging_googlepubsub": {"user", "secret_key"},
-		"logging_blobstorage":  {"account_name", "sas_token"},
+		"logging_kinesis": {"access_key", "secret_key"},
 	}
 	if fields, ok := pairs[block.Type]; ok && present(fields[0]) != present(fields[1]) {
 		name := fields[0]
@@ -97,7 +93,7 @@ func analyzeStorageLoggingBlock(state *analysisState, block *hclsyntax.Block, vc
 			name = fields[1]
 		}
 		reject(attrs[name].NameRange, name,
-			"Configure both credential fields or omit both; a partial credential pair cannot be verified.")
+			"Configure both Kinesis credential fields or use an IAM role; Kinesis has no environment fallback.")
 	}
 	switch block.Type {
 	case "logging_s3":

@@ -530,18 +530,46 @@ func TestPlanStorageLoggingAlternativeAuthModes(t *testing.T) {
 	}
 }
 
+// Unlike Kinesis, these endpoints let a missing credential field take its
+// value from an environment default in the target Framework schema.
+func TestPlanStorageLoggingAllowsEnvBackedPartialCredentials(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ block, remove string }{
+		{"logging_s3", "    s3_secret_key = trimspace(var.secret)\n"},
+		{"logging_gcs", "    secret_key = var.secret\n"},
+		{"logging_bigquery", "    secret_key = var.secret\n"},
+		{"logging_blobstorage", "    sas_token = var.secret\n"},
+		{"logging_googlepubsub", "    secret_key = var.secret\n"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.block, func(t *testing.T) {
+			t.Parallel()
+			source := oneStorageFixture(t, storageFixture(t, "cdn", "legacy.tf"), tc.block)
+			if !strings.Contains(source, tc.remove) {
+				t.Fatal("fixture drift")
+			}
+			source = strings.Replace(source, tc.remove, "", 1)
+			dir := t.TempDir()
+			writeConfig(t, dir, "main.tf", source)
+			plan := newPlan(t, dir)
+			if plan.Blocked() || len(plan.Moves) != 1 {
+				t.Fatalf("environment-backed partial credentials were blocked: %v %v", plan.Issues, plan.Analysis.Findings)
+			}
+			if !strings.Contains(changedFile(t, plan, "main.tf"), "authentication = {") {
+				t.Fatal("remaining configured credential was not migrated")
+			}
+			requireStableAfterApply(t, dir, plan)
+		})
+	}
+}
+
 func TestPlanStorageLoggingRejectsPartialCredentialsAndMissingRequired(t *testing.T) {
 	t.Parallel()
 	cases := []struct{ block, remove, expect string }{
-		{"logging_s3", "    s3_secret_key = trimspace(var.secret)\n", "s3_access_key"},
 		{"logging_kinesis", "    secret_key = var.secret\n", "access_key"},
-		{"logging_gcs", "    secret_key = var.secret\n", "user"},
-		{"logging_bigquery", "    secret_key = var.secret\n", "email"},
-		{"logging_blobstorage", "    sas_token = var.secret\n", "account_name"},
 		{"logging_cloudfiles", "    bucket_name = \"logs\"\n", "bucket_name"},
 		{"logging_digitalocean", "    secret_key = var.secret\n", "secret_key"},
 		{"logging_openstack", "    url = \"https://storage.example.invalid\"\n", "url"},
-		{"logging_googlepubsub", "    secret_key = var.secret\n", "user"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.block, func(t *testing.T) {

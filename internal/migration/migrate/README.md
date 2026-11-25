@@ -276,10 +276,15 @@ these endpoint types withhold HCL diffs.
 
 The analyzer blocks unknown or target-only flat fields, mixed legacy/target
 authentication objects, conflicting IAM-role/key and Google account/email
-authentication modes, explicit `gzip_level = -1`, conflicting codec/level
+authentication modes, incomplete Kinesis key pairs (Kinesis has no per-field
+environment fallback), explicit `gzip_level = -1`, conflicting codec/level
 settings and known invalid compression or placement. Unresolved expressions
 are never interpreted as credentials; configurations with unresolved
 mutually exclusive options must be made unambiguous before migration.
+S3, GCS, BigQuery, Azure Blob Storage and Pub/Sub may mix explicit credentials
+with their supported environment fallbacks. The migrator cannot verify
+environment values: target-provider validation and a zero-change plan are
+still required.
 VCL format omission pins the exact SDKv2 default for all nine storage
 endpoints; BigQuery uses its distinct format (timestamp without %z).
 Explicit format expressions remain unchanged.
