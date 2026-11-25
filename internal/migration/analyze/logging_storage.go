@@ -68,15 +68,6 @@ func analyzeStorageLoggingBlock(state *analysisState, block *hclsyntax.Block, vc
 			(value.Type() != cty.String || strings.TrimSpace(value.AsString()) == "") {
 			reject(attrs["format"].NameRange, "format", "Configure a non-empty format or omit it to preserve a verified legacy default.")
 		}
-		// The legacy BigQuery SDKv2 format default has not been established
-		// from historical provider constants; never substitute the Framework
-		// default blindly. An explicit non-null format is safe to retain.
-		if block.Type == "logging_bigquery" {
-			value, ok := known("format")
-			if attrs["format"] == nil || (ok && value.IsNull()) {
-				reject(block.TypeRange, "format", "Set an explicit legacy BigQuery log format before migration; the historical default has not been verified.")
-			}
-		}
 	}
 	// Validate mutually exclusive target authentication modes without
 	// inspecting credential contents. Unknown expressions count as configured

@@ -180,18 +180,6 @@ func TestPlanStorageLoggingPreservesExpressionPlacement(t *testing.T) {
 	}
 }
 
-func TestPlanStorageBigQueryRequiresExplicitFormat(t *testing.T) {
-	t.Parallel()
-	source := oneStorageFixture(t, storageFixture(t, "cdn", "legacy.tf"), "logging_bigquery")
-	source = strings.Replace(source, "    format = var.format\n", "", 1)
-	dir := t.TempDir()
-	writeConfig(t, dir, "main.tf", source)
-	plan := newPlan(t, dir)
-	if !plan.Blocked() {
-		t.Fatal("unverified historical BigQuery default was silently accepted")
-	}
-}
-
 func TestStorageLoggingRoutesMatchPublishedSchemas(t *testing.T) {
 	t.Parallel()
 	targets := map[string][2]schema.ListNestedBlock{
@@ -302,14 +290,11 @@ func TestStorageLoggingGoldenSyntax(t *testing.T) {
 }
 
 // TestPlanStorageLoggingPinsVCLDefaults verifies that an omitted or literal
-// null format is replaced with the exact reviewed SDKv2 bytes. BigQuery
-// deliberately requires an explicit format instead.
+// null format is replaced with the exact reviewed SDKv2 bytes, including
+// BigQuery's different timestamp format.
 func TestPlanStorageLoggingPinsVCLDefaults(t *testing.T) {
 	t.Parallel()
 	for _, block := range storageLoggingBlocks {
-		if block == "logging_bigquery" {
-			continue
-		}
 		for _, literalNull := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/null=%t", block, literalNull), func(t *testing.T) {
 				t.Parallel()
@@ -337,7 +322,7 @@ func TestPlanStorageLoggingPinsVCLDefaults(t *testing.T) {
 					}
 					value, diags := a.Expr.Value(nil)
 					if diags.HasErrors() || !value.IsKnown() || value.IsNull() ||
-						value.AsString() != legacyJSONLoggingFormat {
+						value.AsString() != legacyVCLLoggingFormat(block) {
 						t.Fatal("default format does not match legacy bytes")
 					}
 				}

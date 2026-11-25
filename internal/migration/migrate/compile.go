@@ -328,7 +328,7 @@ func compileServiceBlock(key resourceKey, rule compatibility.Rule, autoType stri
 		// every necessary known field-level change. The rule remains the
 		// authority for the rest of the block's compatible shape.
 		if source[1] == target[1] {
-			if key.typ == "fastly_service_vcl" && (compatibility.IsTLSLoggingBlock(source[1]) || (compatibility.IsStorageLoggingBlock(source[1]) && source[1] != "logging_bigquery")) {
+			if key.typ == "fastly_service_vcl" && (compatibility.IsTLSLoggingBlock(source[1]) || compatibility.IsStorageLoggingBlock(source[1])) {
 				return rewrite.AddStringDefault{
 					File: key.file, ResourceType: key.typ, ResourceName: key.name,
 					Parents: []string{source[1]}, Attribute: "format", Value: legacyVCLLoggingFormat(source[1]),

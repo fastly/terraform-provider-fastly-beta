@@ -280,8 +280,9 @@ authentication modes, explicit `gzip_level = -1`, conflicting codec/level
 settings and known invalid compression or placement. Unresolved expressions
 are never interpreted as credentials; configurations with unresolved
 mutually exclusive options must be made unambiguous before migration.
-VCL format omission for the eight non-BigQuery endpoints pins the reviewed
-SDKv2 JSON-format default; explicit format expressions remain unchanged.
+VCL format omission pins the exact SDKv2 default for all nine storage
+endpoints; BigQuery uses its distinct format (timestamp without %z).
+Explicit format expressions remain unchanged.
 For S3 and Cloud Files in both VCL and Compute, omitted or literal-null
 `message_type` is pinned to the legacy SDKv2 default `"classic"` because
 the Framework provider defaults these two endpoints to `"blank"`.
@@ -289,10 +290,10 @@ Explicit message-type expressions and values are preserved.
 The target provider also represents *absent* backend TLS client credentials
 as a null optional `ssl_client_secrets` object rather than two empty
 strings; any nonempty API-returned certificate or key remains in state.
-**BigQuery requires an explicit non-null VCL format**, because the historical
-BigQuery default has not been independently established. The target exposes
-a defaulted BigQuery `format_version` which the legacy schema did not:
-review this extra default for your actual endpoint before applying.
+BigQuery's omitted or null VCL format is pinned to its verified SDKv2
+default. The target exposes a defaulted BigQuery `format_version` which
+the legacy schema did not: review this extra default for your actual
+endpoint before applying.
 
 `make test-migration-logging-storage-config` exercises golden HCL rewrites and
 Terraform target-provider validation in disposable test directories without
