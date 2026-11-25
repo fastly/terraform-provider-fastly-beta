@@ -108,7 +108,7 @@ func (e NormalizeStringExpression) apply(source []byte, filename string) ([]byte
 	return replace(source, edits)
 }
 
-// NormalizeEmptyList removes a literal empty list and wraps a list
+// NormalizeEmptyList removes a constant empty list and wraps a list
 // expression that references variables or other values so it resolves to
 // null when empty. The target stores an unset list as null, so an empty list
 // in configuration would otherwise plan a migration-only update.
@@ -137,15 +137,15 @@ func (e NormalizeEmptyList) apply(source []byte, filename string) ([]byte, error
 		if attr == nil {
 			continue
 		}
-		if tuple, ok := attr.Expr.(*hclsyntax.TupleConsExpr); ok && len(tuple.Exprs) == 0 {
+		if value, diags := attr.Expr.Value(nil); !diags.HasErrors() {
+			if !emptyCollection(value) {
+				continue
+			}
 			start, end, _, _, err := attributeLines(source, attr)
 			if err != nil {
 				return nil, err
 			}
 			edits = append(edits, replacement{start: start, end: end})
-			continue
-		}
-		if _, diags := attr.Expr.Value(nil); !diags.HasErrors() {
 			continue
 		}
 		rng := attr.Expr.Range()
@@ -156,6 +156,14 @@ func (e NormalizeEmptyList) apply(source []byte, filename string) ([]byte, error
 		})
 	}
 	return replace(source, edits)
+}
+
+func emptyCollection(value cty.Value) bool {
+	if !value.IsWhollyKnown() || value.IsNull() {
+		return false
+	}
+	ty := value.Type()
+	return (ty.IsTupleType() || ty.IsListType() || ty.IsSetType()) && value.LengthInt() == 0
 }
 
 // operandSource returns an expression's source text, and the same text

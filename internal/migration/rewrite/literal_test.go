@@ -242,6 +242,22 @@ func TestNormalizeEmptyList(t *testing.T) {
     extensions = null
   }
   gzip {
+    name       = "for_empty"
+    extensions = [for item in [] : item]
+  }
+  gzip {
+    name       = "parenthesized"
+    extensions = ([])
+  }
+  gzip {
+    name       = "constant_conditional"
+    extensions = true ? [] : ["css"]
+  }
+  gzip {
+    name       = "for_set"
+    extensions = [for item in ["css"] : item]
+  }
+  gzip {
     name = "omitted"
   }
 }
@@ -273,6 +289,19 @@ func TestNormalizeEmptyList(t *testing.T) {
   gzip {
     name       = "null"
     extensions = null
+  }
+  gzip {
+    name       = "for_empty"
+  }
+  gzip {
+    name       = "parenthesized"
+  }
+  gzip {
+    name       = "constant_conditional"
+  }
+  gzip {
+    name       = "for_set"
+    extensions = [for item in ["css"] : item]
   }
   gzip {
     name = "omitted"

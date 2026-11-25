@@ -333,7 +333,7 @@ cross-block references. The writer changes only these literal values:
 | `director` | `type` 1, 3 and 4 become `"random"`, `"hash"` and `"client"` |
 | `cache_setting` | `action` is converted to lowercase; `action = ""` and `cache_condition = ""` are removed |
 | `request_setting` | `action` and `xff` are converted to lowercase; `""` values are removed |
-| `gzip` | `cache_condition = ""`, `content_types = []` and `extensions = []` are removed |
+| `gzip` | `cache_condition = ""` is removed, and so are `content_types` and `extensions` when they are `[]` or a constant expression that evaluates to an empty list |
 | `response_object` | `content_type = ""` is removed |
 
 The legacy provider converted `action` and `xff` to lowercase before sending
