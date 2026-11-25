@@ -165,6 +165,21 @@ func TestPlanStorageLoggingRejectsUnsafeShapes(t *testing.T) {
 	}
 }
 
+func TestPlanStorageLoggingPreservesExpressionPlacement(t *testing.T) {
+	t.Parallel()
+	source := oneStorageFixture(t, storageFixture(t, "cdn", "legacy.tf"), "logging_s3")
+	source = strings.Replace(source, "  logging_s3 {\n", "  logging_s3 {\n    placement = var.placement\n", 1)
+	dir := t.TempDir()
+	writeConfig(t, dir, "main.tf", source)
+	plan := newPlan(t, dir)
+	if plan.Blocked() {
+		t.Fatalf("unresolved placement should be left for target validation: %v %v", plan.Issues, plan.Analysis.Findings)
+	}
+	if !strings.Contains(changedFile(t, plan, "main.tf"), "placement = var.placement") {
+		t.Fatal("placement expression was lost")
+	}
+}
+
 func TestPlanStorageBigQueryRequiresExplicitFormat(t *testing.T) {
 	t.Parallel()
 	source := oneStorageFixture(t, storageFixture(t, "cdn", "legacy.tf"), "logging_bigquery")

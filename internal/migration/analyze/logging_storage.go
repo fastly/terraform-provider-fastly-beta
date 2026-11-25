@@ -62,7 +62,7 @@ func analyzeStorageLoggingBlock(state *analysisState, block *hclsyntax.Block, vc
 	if vcl {
 		if value, ok := known("placement"); ok && !value.IsNull() &&
 			(value.Type() != cty.String || value.AsString() != "none") {
-			reject(attrs["placement"].NameRange, "placement", "Only literal placement = \"none\" is verified for the target provider.")
+			reject(attrs["placement"].NameRange, "placement", "Known placement values must be \"none\"; unresolved expressions are preserved for target-provider validation.")
 		}
 		if value, ok := known("format"); ok && !value.IsNull() &&
 			(value.Type() != cty.String || strings.TrimSpace(value.AsString()) == "") {
