@@ -126,7 +126,7 @@ func TestRequireOneCredential(t *testing.T) {
 		{
 			name:      "password only",
 			user:      types.StringValue("user"),
-			password:  types.StringValue("pw"),
+			password:  types.StringValue("password"),
 			secretKey: types.StringNull(),
 			wantError: false,
 		},
@@ -138,9 +138,21 @@ func TestRequireOneCredential(t *testing.T) {
 			wantError: false,
 		},
 		{
+			name:      "unknown password",
+			user:      types.StringValue("username"),
+			password:  types.StringUnknown(),
+			secretKey: types.StringNull(),
+		},
+		{
+			name:      "unknown secret_key",
+			user:      types.StringValue("username"),
+			password:  types.StringNull(),
+			secretKey: types.StringUnknown(),
+		},
+		{
 			name:      "both set",
 			user:      types.StringValue("user"),
-			password:  types.StringValue("pw"),
+			password:  types.StringValue("password"),
 			secretKey: types.StringValue("key"),
 			wantError: false,
 		},

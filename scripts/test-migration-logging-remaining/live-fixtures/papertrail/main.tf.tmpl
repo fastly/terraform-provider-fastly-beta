@@ -1,0 +1,35 @@
+# Disposable SDKv2 CDN service with an inert Papertrail receiver.
+terraform {
+  required_providers {
+    fastly = {
+      source  = "fastly/fastly"
+      version = "= @LEGACY_PROVIDER_VERSION@"
+    }
+  }
+}
+
+variable "test_service_name" {
+  type = string
+}
+
+resource "fastly_service_vcl" "demo" {
+  name          = var.test_service_name
+  force_destroy = true
+
+  domain {
+    name = "${var.test_service_name}.example.com"
+  }
+
+  backend {
+    name    = "origin"
+    address = "www.example.com"
+    port    = 443
+  }
+
+  logging_papertrail {
+    name    = "papertrail-live"
+    address = "logs.example.invalid"
+    port    = 514
+    format  = "%h %t %s"
+  }
+}

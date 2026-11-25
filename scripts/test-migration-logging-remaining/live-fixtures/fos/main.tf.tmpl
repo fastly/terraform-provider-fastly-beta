@@ -1,0 +1,44 @@
+# Disposable SDKv2 VCL service, never a customer service.
+terraform {
+  required_providers {
+    fastly = {
+      source  = "fastly/fastly"
+      version = "= @LEGACY_PROVIDER_VERSION@"
+    }
+  }
+}
+
+variable "test_service_name" {
+  type = string
+}
+
+variable "test_fos_bucket" {
+  type = string
+}
+
+variable "test_fos_region" {
+  type = string
+}
+
+resource "fastly_service_vcl" "demo" {
+  name          = var.test_service_name
+  force_destroy = true
+
+  domain {
+    name = "${var.test_service_name}.example.com"
+  }
+
+  backend {
+    name    = "origin"
+    address = "www.example.com"
+    port    = 443
+  }
+
+  logging_fos {
+    name        = "fos-live"
+    bucket_name = var.test_fos_bucket
+    region      = var.test_fos_region
+    path        = "migration/${var.test_service_name}/"
+    format      = "%h %t %s"
+  }
+}
